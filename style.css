@@ -67,7 +67,7 @@ a, a:visited, a:hover, a:link {
   color: #fff;
 }
 
-
+p {margin: 0 0 3rem}
 
 
 
@@ -184,8 +184,18 @@ iframe {
 
 
 
+#about {
+  background: #fff;
+  color: #000;
+}
 
-
+#about-data {
+    column-count: 2;
+    column-gap: 2rem;
+    max-width: 1000px;
+    margin: auto;
+    line-height: 1.5rem;
+}
 
 
 
