@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="utf-8">
+    <title>Title Here</title>
+    <meta name="description" content="Description here" />
+    <!-- Schema.org markup for Google+ -->
+    <meta itemprop="name" content="Title Here">
+    <meta itemprop="description" content="Description here">
+    <meta itemprop="image" content="https://xxx.io/image.jpg">
+    <!-- Twitter Card data -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@publisher_handle">
+    <meta name="twitter:title" content="Title Here">
+    <meta name="twitter:description" content="Description here">
+    <meta name="twitter:creator" content="@author_handle">
+    <meta name="twitter:image:src" content="https://xxx.io/image.jpg">
+    <!-- Open Graph data -->
+    <meta property="og:title" content="Title Here" />
+    <meta property="og:type" content="page" />
+    <meta property="og:url" content="https://xxx.io/" />
+    <meta property="og:image" content="https://xxx.io/image.jpg" />
+    <meta property="og:description" content="Description here" />
+    <meta property="og:site_name" content="Title Here" />
+    <link rel="stylesheet" href="style.css">
+    <script src="jquery-3.5.1.min.js"></script>
+    <script src="script.js"></script>
+  </head>
+
+  <body>
+
+    <div id="container">
+
+      <div id="landing" class="module">
+        <h1 style="margin: 0">Anatomy of Bitcoin
+          <div>
+            <button type="submit" class="submit" name="submit" style="background: #fff; display: inline-block; max-width: 220px; margin: 2rem auto 0 auto;" alt="Sponsor with BtcPay">
+              <span style="color:#000">
+                Sponsor
+              </span>
+            </button>
+            <button type="submit" class="submit popup__toggle" data-target="video__popup__overlay" name="submit" style="background: #fff; display: inline-block; max-width: 220px; margin: 2rem auto 0 auto;" alt="Sponsor with BtcPay">
+              <span style="color:#000">
+                Watch Trailer
+              </span>
+            </button>
+          </div>
+        </h1>
+      </div>
+
+
+      <div class="popup__overlay" id="video__popup__overlay">
+        <div class="popup" id="popupVid">
+          <div class="popup__close">X</div>
+          <iframe width="640" src="https://www.youtube.com/embed/hFBYE766XIE" frameborder="0" allowfullscreen></iframe>
+        </div>
+      </div>
+
+
+
+      <div id="options" class="module">
+        <h2 class="options-hero">
+          <span>Lorem consectetur adipiscing elit ipsum dolor sit amet</span>
+        </h2>
+
+        <div class="option">
+          <h3>Institutional</h3>
+          <div>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit
+            </p>
+            <button type="submit" class="submit popup__toggle" data-target="institutional__popup__overlay" name="submit" alt="Sponsor with BtcPay">
+              <span style="color:#fff">
+                Sponsor
+              </span>
+            </button>
+            <div class="amount">
+              0.5 — 2 <span class="amount-currancy">BTC</span>
+            </div>
+          </div>
+        </div>
+
+
+
+        <div class="option option-middle">
+          <h3>Whale</h3>
+          <div>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit
+            </p>
+            <button type="submit" class="submit popup__toggle" data-target="whale__popup__overlay" name="submit" alt="Sponsor with BtcPay">
+              <span style="color:#fff">
+                Sponsor
+              </span>
+            </button>
+            <div class="amount">
+              0.01 — 0.5 <span class="amount-currancy">BTC</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="option">
+          <h3>Plebe</h3>
+          <div>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit
+            </p>
+            <button type="submit" class="submit popup__toggle" data-target="plebe__popup__overlay" name="submit" alt="Sponsor with BtcPay">
+              <span style="color:#fff">
+                Sponsor
+              </span>
+            </button>
+            <div class="amount">
+              bellow 1,000,000 <span class="amount-currancy">sats</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+
+
+
+
+      <div class="popup__overlay" id="institutional__popup__overlay">
+        <div class="popup">
+          <div class="popup__close">X</div>
+           <h2>Institutional</h2>
+           <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
+
+          <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
+            <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
+            <input type="hidden" name="jsonResponse" value="true" />
+          	<input type="hidden" name="browserRedirect" value="https://google.com" />
+            <input class="btcpay-input" name="orderId" value="" placeholder="Twitter handle" />
+            <input class="btcpay-input" name="checkoutDesc" value="" placeholder="Your company" />
+
+            <input type="hidden" name="checkoutQueryString" value="payerData" />
+            <div class="btcpay-custom-container">
+              <input
+                class="btcpay-input"
+                id="btcpay-input-price"
+                name="price" type="text"
+                min="0" max="none" step="any" value="1000"
+                oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price').value = 1000 : event.target.value"
+                onchange="document.querySelector('#btcpay-input-range').value = document.querySelector('#btcpay-input-price').value"
+              />
+              <select name="currency">
+                <option value="BTC">BTC</option>
+                <option value="USD" selected>USD</option>
+                <option value="GBP">GBP</option>
+                <option value="EUR">EUR</option>
+              </select>
+              <input
+                class="btcpay-input-range"
+                id="btcpay-input-range"
+                value="1000" type="range" min="1" max="100000"
+                step="100"
+                oninput="document.querySelector('#btcpay-input-price').value = document.querySelector('#btcpay-input-range').value"
+              />
+            </div>
+            <button type="submit" class="submit" name="submit" style="min-width:209px; border-radius: 4px;border-style: none;" alt="Sponsor with BtcPay">
+              <span style="color:#fff">
+                Sponsor
+              </span>
+            </button>
+          </form>
+
+      </div>
+    </div>
+
+
+    <div class="popup__overlay" id="whale__popup__overlay">
+      <div class="popup">
+        <div class="popup__close">X</div>
+        <h2>Whale</h2>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
+
+       <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
+         <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
+         <input type="hidden" name="jsonResponse" value="true" />
+         <input type="hidden" name="browserRedirect" value="https://google.com" />
+         <input class="btcpay-input" name="orderId" value="" placeholder="Twitter handle" />
+         <input class="btcpay-input" name="checkoutDesc" value="" placeholder="Your company" />
+
+         <input type="hidden" name="checkoutQueryString" value="payerData" />
+         <div class="btcpay-custom-container">
+           <input
+             class="btcpay-input"
+             id="btcpay-input-price"
+             name="price" type="text"
+             min="0" max="none" step="any" value="1000"
+             oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price').value = 1000 : event.target.value"
+             onchange="document.querySelector('#btcpay-input-range').value = document.querySelector('#btcpay-input-price').value"
+           />
+           <select name="currency">
+             <option value="BTC">BTC</option>
+             <option value="USD" selected>USD</option>
+             <option value="GBP">GBP</option>
+             <option value="EUR">EUR</option>
+           </select>
+           <input
+             class="btcpay-input-range"
+             id="btcpay-input-range"
+             value="1000" type="range" min="1" max="100000"
+             step="100"
+             oninput="document.querySelector('#btcpay-input-price').value = document.querySelector('#btcpay-input-range').value"
+           />
+         </div>
+         <button type="submit" class="submit" name="submit" style="min-width:209px; border-radius: 4px;border-style: none;" alt="Sponsor with BtcPay">
+           <span style="color:#fff">
+             Sponsor
+           </span>
+         </button>
+       </form>
+      </div>
+    </div>
+
+
+
+
+
+    <div class="popup__overlay" id="plebe__popup__overlay">
+      <div class="popup">
+        <div class="popup__close">X</div>
+        <h2>Plebe</h2>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
+
+       <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
+         <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
+         <input type="hidden" name="jsonResponse" value="true" />
+         <input type="hidden" name="browserRedirect" value="https://google.com" />
+         <input class="btcpay-input" name="orderId" value="" placeholder="Twitter handle" />
+         <input class="btcpay-input" name="checkoutDesc" value="" placeholder="Your company" />
+
+         <input type="hidden" name="checkoutQueryString" value="payerData" />
+         <div class="btcpay-custom-container">
+           <input
+             class="btcpay-input"
+             id="btcpay-input-price"
+             name="price" type="text"
+             min="0" max="none" step="any" value="1000"
+             oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price').value = 1000 : event.target.value"
+             onchange="document.querySelector('#btcpay-input-range').value = document.querySelector('#btcpay-input-price').value"
+           />
+           <select name="currency">
+             <option value="BTC">BTC</option>
+             <option value="USD" selected>USD</option>
+             <option value="GBP">GBP</option>
+             <option value="EUR">EUR</option>
+           </select>
+           <input
+             class="btcpay-input-range"
+             id="btcpay-input-range"
+             value="1000" type="range" min="1" max="100000"
+             step="100"
+             oninput="document.querySelector('#btcpay-input-price').value = document.querySelector('#btcpay-input-range').value"
+           />
+         </div>
+         <button type="submit" class="submit" name="submit" style="min-width:209px; border-radius: 4px;border-style: none;" alt="Sponsor with BtcPay">
+           <span style="color:#fff">
+             Sponsor
+           </span>
+         </button>
+       </form>
+      </div>
+    </div>
+
+
+
+
+
+
+
+
+      <div id="scenes" class="module">
+        <h2 class="scenes-hero">
+          <span>Lorem consectetur adipiscing elit ipsum dolor sit amet</span>
+        </h2>
+        <div id="scenes-nav">
+        </div>
+
+        <a href="https://docs.google.com/spreadsheets/d/1JTdEbmcEsAtAz1-FyO9LyxF-FsBwEJ-9MCthfWktfv8/edit?usp=sharing" target="_blank" class="edits">Suggest Edits</a>
+
+        <div id="scenes-data">
+        </div>
+      </div>
+    </div>
+
+
+    <div id="team" class="module">
+      <h2 class="team-hero">
+        <span>Lorem consectetur adipiscing elit ipsum dolor sit amet</span>
+      </h2>
+      <div id="team-data">
+          <table>
+            <tr>
+              <td class="team-position">Production Designer</td>
+              <td class="team-person">Steve Pilcher</td>
+            </tr>
+            <tr>
+              <td class="team-position">Associate Producer</td>
+              <td class="team-person">Michael Warch</td>
+            </tr>
+            <tr>
+              <td class="team-position">Shading Art Direction</td>
+              <td class="team-person">Bert Berry<br>Carolina Ángel<br>	Ryan Heuett</td>
+            </tr>
+            <tr>
+              <td class="team-position">Layout Artist</td>
+              <td class="team-person">Leo Santos</td>
+            </tr>
+            <tr>
+              <td class="team-position">Directing Animators</td>
+              <td class="team-person">Jaime Roe<br>Gini Cruz Santos<br>Royce Wesley</td>
+            </tr>
+            <tr>
+              <td class="team-position">Directing Animators</td>
+              <td class="team-person">Jaime Roe<br>Gini Cruz Santos<br>Royce Wesley</td>
+            </tr>
+            <tr>
+              <td class="team-position">Sound Designer</td>
+              <td class="team-person">Ren Klyce</td>
+            </tr>
+            <tr>
+              <td class="team-position">Creative Advisor</td>
+              <td class="team-person">Kevin Nolting</td>
+            </tr>
+          </table
+      </div>
+    </div>
+  </div>
+
+
+
+  <div id="script">
+  </div>
+
+
+
+  </body>
+</html>
