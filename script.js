@@ -73,7 +73,7 @@ $( document ).ready(function() {
   var totalScenes = 4;
   var sceneData = [];
   var shots = [];
-  var tableDeader = "<thead><tr> <th span='1' class='table-col-section'>section</th>  <th span='1' class='table-col-vo'>vo</th>  <th span='1' class='table-col-board'>board</th>  <th span='1' class='table-col-visual'>visual</th> </tr></thead>"
+  var tableDeader = "<thead><tr> <th span='1' class='table-col-section'><h4>Section</h4></th>  <th span='1' class='table-col-vo'><h4>Voice Over</h4></th>  <th span='1' class='table-col-board'><h4>Story Board</h4></th>  <th span='1' class='table-col-visual'><h4>Shoot Description</h4></th> </tr></thead>"
   //and in your call will listen for the custom deferred's done
   for (i = 1; i <= totalScenes; i++) {
     getGoogleSheetData(i).then(function(returndata){
@@ -85,13 +85,13 @@ $( document ).ready(function() {
         //iterate all scenes
         $.each(sceneData, function( key, scene ) {
             //print title nav
-            $( "<div/>", { "id": "scene-select-"+scene.sort, "class": "scene-select inactive", html: scene.title }).appendTo( "#scenes-nav" );
+            $( "<h4/>", { "id": "scene-select-"+scene.sort, "class": "scene-select inactive", html: scene.title }).appendTo( "#scenes-nav" );
             shots.push(tableDeader);
             shots.push("<tbody>");
             $.each( scene.shots, function( key, shot ) {
               //console.log(shot);
               shots.push( "<tr id='sheet"+scene.sort+" row-" + key + "'> ");
-                shots.push( "<td span='1' class='table-col-sectio'>" + shot.gsx$section.$t + "</td>");
+                shots.push( "<td span='1' class='table-col-sectio'><h4>" + shot.gsx$section.$t + "</h4></td>");
                 shots.push( "<td span='1' class='table-col-vo'>" + shot.gsx$vo.$t + "</td>");
                 shots.push( "<td span='1' class='table-col-board'>");
                 if(shot.gsx$board.$t != ""){

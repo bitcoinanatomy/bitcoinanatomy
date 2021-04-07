@@ -1,3 +1,5 @@
+@font-face {font-family: "BureauGrotesque"; src: url("//db.onlinewebfonts.com/t/d1e5e6eb429b272bdc4116c7675b42db.eot"); src: url("//db.onlinewebfonts.com/t/d1e5e6eb429b272bdc4116c7675b42db.eot?#iefix") format("embedded-opentype"), url("//db.onlinewebfonts.com/t/d1e5e6eb429b272bdc4116c7675b42db.woff2") format("woff2"), url("//db.onlinewebfonts.com/t/d1e5e6eb429b272bdc4116c7675b42db.woff") format("woff"), url("//db.onlinewebfonts.com/t/d1e5e6eb429b272bdc4116c7675b42db.ttf") format("truetype"), url("//db.onlinewebfonts.com/t/d1e5e6eb429b272bdc4116c7675b42db.svg#BureauGrotesque") format("svg"); }
+
 body{
   font-family: sans-serif;
   color: #fff;
@@ -32,6 +34,20 @@ body{
   background-position: center;
 }
 
+
+
+h1, h2, h3, h4 {
+  margin-top: 0px;
+  /* text-transform: uppercase; */
+  line-height: 0.95;
+  text-align: center;
+  font-family: "BureauGrotesque";
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: -0.05rem;
+}
+
+
 h1{
   /* flex-grow: 1; */
   width: 74%;
@@ -39,15 +55,22 @@ h1{
   padding: 31px;
   box-sizing: border-box;
   font-size: 8vw;
+  letter-spacing: -0.2rem;
 }
 
-h1, h2 {
-  margin-top: 0px;
-  /* text-transform: uppercase; */
-  line-height: 0.95;
-  text-align: center;
+h2 {
+  font-size: 2.8em;
 }
 
+h3 {
+  font-size: 1.8em;
+  letter-spacing: 0rem;
+}
+
+h4 {
+  font-size: 1.1em;
+  letter-spacing: 0.05rem;
+}
 
 h2.options-hero {
     width: 100%;
@@ -336,6 +359,11 @@ td.team-person {font-size: 18px;}
 td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 1.5em; vertical-align: baseline;}
 
 
+
+#scenes-data h4 {
+  text-align: left;
+  margin: 0;
+}
 
 
 
