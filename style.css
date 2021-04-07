@@ -14,14 +14,14 @@ body{
 }
 
 .module {
-  padding: 15vh 5vw;
+  padding: 25vh 5vw;
 }
 
 
 #landing{
   width: 100%;
   height: 100vh;
-  max-height: 700px;
+  max-height: 730px;
   text-align: center;
   display: flex;
   flex-wrap: wrap;
@@ -38,7 +38,6 @@ body{
 
 h1, h2, h3, h4 {
   margin-top: 0px;
-  /* text-transform: uppercase; */
   line-height: 0.95;
   text-align: center;
   font-family: "BureauGrotesque";
@@ -90,9 +89,14 @@ a, a:visited, a:hover, a:link {
   color: #fff;
 }
 
-p {margin: 0 0 3rem}
+p {
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
 
-
+.grey {
+  color: #404040;
+}
 
 #options {
   background: #fff;
@@ -120,9 +124,9 @@ p {margin: 0 0 3rem}
 }
 
 .amount {
-  padding: 1rem;
+  padding: 0.5rem;
   font-size: 90%;
-  font-weight: 400
+  font-weight: 400;
 }
 .amount-currancy {
   color: #ccc;
@@ -297,7 +301,9 @@ a.edits{
     cursor: pointer;
 }
 
-.scene-select.inactive{opacity: 0.5}
+.scene-select.inactive{
+  opacity: 0.5
+}
 
 
 
@@ -309,9 +315,10 @@ table {
   width: 100%;
   table-layout: fixed;
 }
+
 table thead th,
 table tfoot th {
-  color: #777;
+  color: #fff;
   background: black;
   text-align: left;
   box-sizing: border-box;
@@ -329,6 +336,8 @@ table td {
   padding: 1em 2em 2em 0;
   border-top: 1px solid #232323;
   box-sizing: border-box;
+  line-height: 1.5;
+  overflow: hidden;
 }
 tr {
     vertical-align: top;
@@ -342,8 +351,8 @@ th {
 }
 
 .table-col-section {width: 10%}
-.table-col-vo, .table-board, .table-col-visual {width: 30%}
-.table-col-visual { padding-right: 0px;}
+.table-col-vo, .table-board, .table-col-visual {width: 30%;}
+.table-col-visual {padding-right: 0px;}
 
 
 
@@ -362,7 +371,7 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 
 #scenes-data h4 {
   text-align: left;
-  margin: 0;
+  margin: 1px;
 }
 
 

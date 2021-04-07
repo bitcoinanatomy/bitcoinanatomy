@@ -73,7 +73,7 @@ $( document ).ready(function() {
   var totalScenes = 4;
   var sceneData = [];
   var shots = [];
-  var tableDeader = "<thead><tr> <th span='1' class='table-col-section'><h4>Section</h4></th>  <th span='1' class='table-col-vo'><h4>Voice Over</h4></th>  <th span='1' class='table-col-board'><h4>Story Board</h4></th>  <th span='1' class='table-col-visual'><h4>Shoot Description</h4></th> </tr></thead>"
+  var tableDeader = "<thead><tr> <th span='1' class='table-col-section'><h4>Section</h4></th>  <th span='1' class='table-col-vo'><h4>Voice</h4></th>  <th span='1' class='table-col-board'><h4>Board</h4></th>  <th span='1' class='table-col-visual'><h4>Shoot</h4></th> </tr></thead>"
   //and in your call will listen for the custom deferred's done
   for (i = 1; i <= totalScenes; i++) {
     getGoogleSheetData(i).then(function(returndata){
@@ -98,7 +98,7 @@ $( document ).ready(function() {
                   shots.push( "<img width='100%' src=" + shot.gsx$board.$t + " />");
                 }
                 shots.push( "</td>");
-                shots.push( "<td span='1' class='table-col-visual'>" + shot.gsx$visual.$t + "</td>");
+                shots.push( "<td span='1' class='table-col-visual grey'>" + shot.gsx$visual.$t + "</td>");
               shots.push( "</tr>");
             });
             shots.push("</tbody>");
