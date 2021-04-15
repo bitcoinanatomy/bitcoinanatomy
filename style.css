@@ -414,6 +414,22 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 
 
 
+
+#footer{
+  border-top: #181818 solid 1px;
+  text-align: center;
+  padding: 4rem;
+}
+
+
+#footer span {
+  color: #7b7b7b;
+  margin-top: 1rem;
+  display: block;
+}
+
+
+
 .btcpay-form { display: inline-flex; align-items: center; justify-content: center; }
 .btcpay-form--inline { flex-direction: row; } .btcpay-form--block { flex-direction: column; }
 .btcpay-form .btcpay-custom-container{ text-align: center; }.btcpay-custom { display: flex; align-items: center; justify-content: center; }
