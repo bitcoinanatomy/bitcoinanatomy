@@ -23,57 +23,38 @@ if(!window.btcpay){
 $( document ).ready(function() {
 
 
+    $("#hero-cta").click(function() {
+      $('html, body').animate({
+          scrollTop: $("#producership-options ").offset().top
+      }, 1000);
+    });
 
 
-
-    $(".popup__toggle").click(function() {
+    $(".popup-toggle").click(function() {
       $("#"+$(this).attr("data-target")).fadeIn(300);
     });
 
-    $(".popup__overlay").click(function(event) {
+    $(".popup-overlay").click(function(event) {
       e = event || window.event;
       if (e.target == this) {
         $("#"+$(this).attr("data-target")).fadeOut(300);
       }
     });
 
-    $(".popup__close").click(function() {
-      $(".popup__overlay").fadeOut(300);
+    $(".popup-close").click(function() {
+      $(".popup-overlay").fadeOut(300);
       $('iframe').attr('src', $('iframe').attr('src'));
     });
 
 
 
 
-    /*
-
-    $(".popup__toggle").click(function(event) {
-      e = event || window.event;
-      $("#"+$(this).attr("data-target")).fadeIn(300);
-      if (e.target == this) {
-        $("#"+$(this).attr("data-target")).css("visibility", "hidden").css("opacity", "0");
-        toggleVideo("hide");
-      }
-    });
-
-    $(".popup__close").click(function() {
-      $(".popup__overlay").css("visibility", "hidden").css("opacity", "0");
-      toggleVideo("hide");
-    });
-    */
-
-
-
-
-
-
-
 
   //load scenes from google docs
-  var totalScenes = 4;
+  var totalScenes = 5;
   var sceneData = [];
   var shots = [];
-  var tableDeader = "<thead><tr> <th span='1' class='table-col-section'><h4>Section</h4></th>  <th span='1' class='table-col-vo'><h4>Voice</h4></th>  <th span='1' class='table-col-board'><h4>Board</h4></th>  <th span='1' class='table-col-visual'><h4>Shoot</h4></th> </tr></thead>"
+  var tableDeader = "<thead><tr> <th span='1' class='table-col-section'><h4>Section</h4></th>  <th span='1' class='table-col-vo'><h4>Voice</h4></th>  <th span='1' class='table-col-board'><h4>Board</h4></th>  <th span='1' class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
   //and in your call will listen for the custom deferred's done
   for (i = 1; i <= totalScenes; i++) {
     getGoogleSheetData(i).then(function(returndata){
@@ -104,7 +85,7 @@ $( document ).ready(function() {
             shots.push("</tbody>");
 
             //Print shots table
-            $( "<table/>", { "id": "scene-select-"+scene.sort+"-table" , "class": "scene", html: shots.join( "" )}).appendTo( "#scenes-data" );
+            $( "<table/>", { "id": "scene-select-"+scene.sort+"-table" , "class": "scene", html: shots.join( "" ) }).appendTo( "#scenes-data" );
 
             shots = [];
         });
@@ -136,7 +117,7 @@ $( document ).ready(function() {
 
 
 
-
+  getProducerData();
 
 });
 
@@ -158,6 +139,15 @@ function getGoogleSheetData(i){
         title:data.feed.title.$t,
         shots:data.feed.entry
       }
+    });
+};
+
+
+function getProducerData(){
+    $.getJSON("http://pvxg.net/BTCpaySponsor/").then(function(data){
+       $.each(data, function (key, producer) {
+         $( "<div/>", { "class": "producer", html: producer.metadata.itemDesc }).appendTo( "#producers-inner" );
+       });
     });
 };
 
