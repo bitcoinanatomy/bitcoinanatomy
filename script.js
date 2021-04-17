@@ -123,40 +123,12 @@ $( document ).ready(function() {
 
 
   getProducerData();
-  diagramAnimations(totalScenes);
 
 });
 
 
 
 
-
-
-
-
-
-
-function diagramAnimations(totalScenes){
-    var currentFrame = 0;
-    let iconSkipForward = document.querySelector('.bodymovinanim');
-    let animationSkipForward = bodymovin.loadAnimation({
-            container: iconSkipForward,
-            renderer: 'svg',
-            loop: false,
-            autoplay: false,
-            path: "https://raw.githubusercontent.com/thesvbd/Lottie-examples/master/assets/animations/skip-forward.json"
-    });
-
-
-    for (i = 1; i <= totalScenes; i++) {
-      $('.bodymovinanim'+i).click(function() {
-        console.log(totalScenes*i);
-        animationSkipForward.playSegments([currentFrame,totalScenes*i], true);
-        currentFrame = totalScenes*i;
-      });
-    }
-
-}
 
 
 
@@ -173,7 +145,7 @@ function diagramAnimations(totalScenes){
 
 
 function getGoogleSheetData(i){
-    return $.getJSON("https://spreadsheets.google.com/feeds/list/1JTdEbmcEsAtAz1-FyO9LyxF-FsBwEJ-9MCthfWktfv8/"+i+"/public/values?alt=json").then(function(data){
+    return $.getJSON("https://spreadsheets.google.com/feeds/list/1JTdEbmcEsAtAz1-FyO9LyxF-FsBwEJ-9MCthfWktfv8/"+(i+1)+"/public/values?alt=json").then(function(data){
       return {
         sort:i,
         title:data.feed.title.$t,
