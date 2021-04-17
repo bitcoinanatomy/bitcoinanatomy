@@ -73,12 +73,12 @@
         </h2>
 
         <div class="option">
-          <h3>Institutional</h3>
+          <h3>Producer</h3>
           <div>
             <p>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit
             </p>
-            <button style="background: #ff9800;" type="submit" class="submit popup-toggle" data-target="institutional__popup-overlay" name="submit" alt="Sponsor with BtcPay">
+            <button style="background: #ff9800;" type="submit" class="submit popup-toggle" data-target="producer__popup-overlay" name="submit" alt="Sponsor with BtcPay">
               <span>
                 Become a Producer
               </span>
@@ -92,12 +92,12 @@
 
 
         <div class="option option-middle">
-          <h3>Whale</h3>
+          <h3>Sponsor</h3>
           <div>
             <p>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit
             </p>
-            <button type="submit" class="submit popup-toggle" data-target="whale__popup-overlay" name="submit" alt="Sponsor with BtcPay">
+            <button type="submit" class="submit popup-toggle" data-target="sponsor__popup-overlay" name="submit" alt="Sponsor with BtcPay">
               <span style="color:#fff">
                 Sponsor
               </span>
@@ -109,12 +109,12 @@
         </div>
 
         <div class="option">
-          <h3>Plebe</h3>
+          <h3>Contributor</h3>
           <div>
             <p>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit
             </p>
-            <button type="submit" class="submit popup-toggle" data-target="plebe__popup-overlay" name="submit" alt="Sponsor with BtcPay">
+            <button type="submit" class="submit popup-toggle" data-target="contributor__popup-overlay" name="submit" alt="Sponsor with BtcPay">
               <span style="color:#fff">
                 Contribute
               </span>
@@ -125,9 +125,30 @@
           </div>
         </div>
 
+
+
+
+
         <div id="producers">
           <h3>
-            <span>Current Producers</span>
+            <span>Producers</span>
+          </h3>
+          <div id="producers-inner">
+          </div>
+        </div>
+
+
+        <div id="sponsors">
+          <h3>
+            <span>Sponsors</span>
+          </h3>
+          <div id="producers-inner">
+          </div>
+        </div>
+
+        <div id="contributors">
+          <h3>
+            <span>Contributors</span>
           </h3>
           <div id="producers-inner">
           </div>
@@ -200,7 +221,7 @@
 
     <div id="team" class="module">
       <h2 class="team-hero">
-        <span>Contributors</span>
+        <span>Team</span>
       </h2>
       <div id="team-data">
           <table>
@@ -273,10 +294,10 @@
     </div>
   </div>
 
-  <div class="popup-overlay" id="institutional__popup-overlay">
+  <div class="popup-overlay" id="producer__popup-overlay">
     <div class="popup">
       <div class="popup-close">X</div>
-       <h2>Institutional</h2>
+       <h2>producer</h2>
        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
 
       <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
@@ -290,11 +311,11 @@
         <div class="btcpay-custom-container">
           <input
             class="btcpay-input"
-            id="btcpay-input-price-institutional"
+            id="btcpay-input-price-producer"
             name="price" type="text"
             min="0.5" max="10" step="0.1" value="2"
-            oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-institutional').value = 2 : event.target.value"
-            onchange="document.querySelector('#btcpay-input-range-institutional').value = document.querySelector('#btcpay-input-price-institutional').value"
+            oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-producer').value = 2 : event.target.value"
+            onchange="document.querySelector('#btcpay-input-range-producer').value = document.querySelector('#btcpay-input-price-producer').value"
           />
           <select name="currency">
             <option value="BTC" selected>BTC</option>
@@ -304,10 +325,10 @@
           </select>
           <input
             class="btcpay-input-range"
-            id="btcpay-input-range-institutional"
+            id="btcpay-input-range-producer"
             type="range"
             min="0.5" max="10" step="0.1" value="2"
-            oninput="document.querySelector('#btcpay-input-price-institutional').value = document.querySelector('#btcpay-input-range-institutional').value"
+            oninput="document.querySelector('#btcpay-input-price-producer').value = document.querySelector('#btcpay-input-range-producer').value"
           />
         </div>
         <button type="submit" class="submit" name="submit" style="min-width:209px; border-radius: 4px;border-style: none;" alt="Sponsor with BtcPay">
@@ -321,10 +342,10 @@
 </div>
 
 
-<div class="popup-overlay" id="whale__popup-overlay">
+<div class="popup-overlay" id="sponsor__popup-overlay">
   <div class="popup">
     <div class="popup-close">X</div>
-    <h2>Whale</h2>
+    <h2>sponsor</h2>
     <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
 
    <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
@@ -338,11 +359,11 @@
      <div class="btcpay-custom-container">
        <input
          class="btcpay-input"
-         id="btcpay-input-price-whale"
+         id="btcpay-input-price-sponsor"
          name="price" type="text"
          min="0.001" max="0.5" step="0.001" value="0.01"
-         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-whale').value = 0.01 : event.target.value"
-         onchange="document.querySelector('#btcpay-input-range-whale').value = document.querySelector('#btcpay-input-price-whale').value"
+         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-sponsor').value = 0.01 : event.target.value"
+         onchange="document.querySelector('#btcpay-input-range-sponsor').value = document.querySelector('#btcpay-input-price-sponsor').value"
        />
        <select name="currency">
          <option value="BTC" selected>BTC</option>
@@ -352,10 +373,10 @@
        </select>
        <input
          class="btcpay-input-range"
-         id="btcpay-input-range-whale"
+         id="btcpay-input-range-sponsor"
          type="range"
          min="0.001" max="0.5" step="0.001" value="0.01"
-         oninput="document.querySelector('#btcpay-input-price-whale').value = document.querySelector('#btcpay-input-range-whale').value"
+         oninput="document.querySelector('#btcpay-input-price-sponsor').value = document.querySelector('#btcpay-input-range-sponsor').value"
        />
      </div>
      <button type="submit" class="submit" name="submit" style="min-width:209px; border-radius: 4px;border-style: none;" alt="Sponsor with BtcPay">
@@ -371,10 +392,10 @@
 
 
 
-<div class="popup-overlay" id="plebe__popup-overlay">
+<div class="popup-overlay" id="contributor__popup-overlay">
   <div class="popup">
     <div class="popup-close">X</div>
-    <h2>Plebe</h2>
+    <h2>contributor</h2>
     <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
 
    <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
@@ -394,8 +415,8 @@
          id="btcpay-input-price"
          name="price" type="text"
          min="0.000001" max="0.00001" step="0.000001" value="0.00001"
-         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-plebe').value = 0.00001 : event.target.value"
-         onchange="document.querySelector('#btcpay-input-range-plebe').value = document.querySelector('#btcpay-input-price-plebe').value"
+         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-contributor').value = 0.00001 : event.target.value"
+         onchange="document.querySelector('#btcpay-input-range-contributor').value = document.querySelector('#btcpay-input-price-contributor').value"
        />
        <select name="currency">
          <option value="BTC" selected>BTC</option>
@@ -405,10 +426,10 @@
        </select>
        <input
          class="btcpay-input-range"
-         id="btcpay-input-range-plebe"
+         id="btcpay-input-range-contributor"
          type="range"
          min="0.000001" max="0.00001" step="0.000001" value="0.00001"
-         oninput="document.querySelector('#btcpay-input-price').value = document.querySelector('#btcpay-input-range-plebe').value"
+         oninput="document.querySelector('#btcpay-input-price').value = document.querySelector('#btcpay-input-range-contributor').value"
        />
      </div>
      <button type="submit" class="submit" name="submit" style="min-width:209px; border-radius: 4px;border-style: none;" alt="Sponsor with BtcPay">
