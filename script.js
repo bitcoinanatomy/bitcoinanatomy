@@ -72,7 +72,7 @@ $( document ).ready(function() {
             $.each( scene.shots, function( key, shot ) {
               //console.log(shot);
               shots.push( "<tr id='sheet"+scene.sort+" row-" + key + "'> ");
-                shots.push( "<td span='1' class='table-col-sectio'><h4>" + shot.gsx$section.$t + "</h4></td>");
+                shots.push( "<td span='1' class='table-col-section'><h4>" + shot.gsx$section.$t + "</h4></td>");
                 shots.push( "<td span='1' class='table-col-vo'>" + shot.gsx$vo.$t + "</td>");
                 shots.push( "<td span='1' class='table-col-board'>");
                 if(shot.gsx$board.$t != ""){

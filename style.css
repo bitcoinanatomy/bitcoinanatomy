@@ -63,6 +63,13 @@ body{
     opacity: 0.5;
 }
 
+#landing .submit {
+  background: #fff;
+  display: inline-block;
+  max-width: 220px;
+  margin: 2rem auto 0 auto;
+}
+
 
 
 h1, h2, h3, h4 {
@@ -471,6 +478,21 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 /* Smartphones (portrait and landscape) ----------- */
 @media only screen and (max-width : 880px) {
 
+
+  #landing h1 {
+    font-size: 96px;
+    width: 100%;
+    display: block;
+    letter-spacing: -0.15rem;
+    padding: 0;
+  }
+
+  #landing .submit {
+    margin: 0.5rem auto 0 auto;
+    display: inline-block;
+    width: 40%;
+  }
+
   #producership-options .option-middle {
       border-top:  1px #eaeaea solid;
       border-bottom:  1px #eaeaea solid;
@@ -479,7 +501,25 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
   }
   #producership-options .option {
       width: 100%;
-      max-width: 340px;
+      max-width: 450px;
+  }
+
+  .scene h4{
+    font-size: 12px;
+    letter-spacing: 0;
+    padding-right: 1rem;
+  }
+
+  .table-col-section {
+    width: 15%;
+  }
+
+  tbody .table-col-vo, tbody .table-col-visual{
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .table-col-vo{
+    padding-left: 3px;
   }
 
   #scenes-diagrams{
@@ -487,6 +527,32 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
     height: 70vw;
   }
 
+  .scene-select{
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 15px;
+    padding: 1rem;
+  }
+
+  h4.scene-select {
+    margin: 0.2rem;
+    padding: 0.5rem;
+  }
+
+  #about-data {
+    column-count: 1;
+  }
+
+
+}
+
+
+@media only screen and (max-width : 780px) {
+  #landing .submit {
+    margin: 0.5rem auto 0 auto;
+    display: inline-block;
+    width: 46%;
+  }
 }
 
 /* iPads (landscape) ----------- */
@@ -509,6 +575,12 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 and (min-width : 1824px) {
 /* Styles */
 }
+
+
+
+
+
+King Corn irrefutably proves the damaging effects of subsidized agriculture. Great recommenation by @saif https://www.youtube.com/watch?v=TWv29KRsQXU
 
 
 
