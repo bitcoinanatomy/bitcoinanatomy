@@ -420,16 +420,16 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 #scenes-diagram-3 {transform: translateZ(-200px);}
 #scenes-diagram-4 {transform: translateZ(-300px);}
 #scenes-diagram-5 {transform: translateZ(-400px);}
-#scenes-diagram-6 {transform: translateZ(-500px) translateY(1px); }
-#scenes-diagram-7 {transform: translateZ(-600px) translateY(5px); }
-#scenes-diagram-8 {transform: translateZ(-700px) translateY(10px); }
+#scenes-diagram-6 {transform: translateZ(-500px) translateY(1px);}
+#scenes-diagram-7 {transform: translateZ(-600px) translateY(5px);}
+#scenes-diagram-8 {transform: translateZ(-700px) translateY(10px);}
 #scenes-diagram-9 {transform: translateZ(-800px) translateY(15px);}
 
 
 
 
 .diagram-scene-select-1 #scenes-diagram-1 { opacity:1; }
-.diagram-scene-select-1 #scenes-diagrams-container {transform: translateZ(0px)    perspective(6000px);}
+.diagram-scene-select-1 #scenes-diagrams-container {transform: translateZ(000px)  perspective(6000px);}
 
 .diagram-scene-select-2 #scenes-diagram-2 { opacity:1; }
 .diagram-scene-select-2 #scenes-diagrams-container {transform: translateZ(100px)  perspective(6000px);}
