@@ -15,7 +15,7 @@ html, body, button { font-family: 'Inter', sans-serif; }
 
 body{
   color: #fff;
-  background-color: #000;
+  background-color: #000000;
   margin: 0;
   letter-spacing: 0.03rem;
   font-weight: 100;
@@ -26,7 +26,7 @@ body{
 }
 
 .module {
-  padding: 25vh 5vw;
+  padding: 15vh 5vw;
 }
 
 
@@ -108,7 +108,7 @@ h2.options-hero {
 
 h2 span {
   margin-top: 0px;
-  max-width: 460px;
+  max-width: 590px;
   margin: 0 auto 3rem auto;
   display: block;
 }
@@ -268,42 +268,6 @@ iframe {
 
 
 
-/* Smartphones (portrait and landscape) ----------- */
-@media only screen and (max-width : 880px) {
-
-  #producership-options .option-middle {
-      border-top:  1px #eaeaea solid;
-      border-bottom:  1px #eaeaea solid;
-      border-left: none;
-      border-right: none;
-  }
-  #producership-options .option {
-      width: 100%;
-      max-width: 340px;
-  }
-
-}
-
-/* iPads (landscape) ----------- */
-@media only screen and (min-device-width : 768px) and (max-device-width : 1024px) and (orientation : landscape) {
-}
-
-/* iPads (portrait) ----------- */
-@media only screen and (min-device-width : 768px) and (max-device-width : 1024px) and (orientation : portrait) {
-}
-
-/* Desktops and laptops ----------- */
-@media only screen and (min-width : 1224px) {
-  h1{
-    font-size: 100px;
-  }
-}
-
-/* Large screens ----------- */
-@media only screen
-and (min-width : 1824px) {
-/* Styles */
-}
 
 
 
@@ -317,11 +281,13 @@ div#scenes-nav {
 }
 
 a.edits{
-  float: right;
-  margin-top: -5.5rem;
+  display: block;
+  margin: 2rem 0;
   text-decoration: none;
   color: #777;
   font-size: 12px;
+  width: 100%;
+  text-align: center;
 }
 
 .scenes-hero{
@@ -329,16 +295,19 @@ a.edits{
   width: 100%;
 }
 
-.scene-select {
+h4.scene-select {
     display: inline-block;
     margin: 0.5rem;
     padding: 1rem;
-    background: #222;
+    background: #fff;
     cursor: pointer;
+    color: #000;:;
 }
 
 .scene-select.inactive{
-  opacity: 0.5
+  /* opacity: 0.5; */
+  background: #1f1f1f;
+  color: #fff;
 }
 
 
@@ -413,6 +382,72 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 
 
 
+#scenes-diagrams{
+  position: relative;
+  width: 20vw;
+  height: 20vw;
+  margin: auto;
+  transform: perspective(600px);
+  transform-style: preserve-3d;
+  z-index: -10000;
+}
+
+#scenes-diagrams-container {
+    transform: translateZ(0px) perspective(6000px);
+    transform-style: preserve-3d;
+    transition: all 0.5s ease;
+}
+
+
+.scenes-diagram{
+  position: absolute;
+  width: 100%;
+  opacity: 0.0;
+  transition: all 0.5s ease;
+}
+
+
+
+#scenes-diagram-1 {transform: translateZ(-000px);}
+#scenes-diagram-2 {transform: translateZ(-100px);}
+#scenes-diagram-3 {transform: translateZ(-200px);}
+#scenes-diagram-4 {transform: translateZ(-300px);}
+#scenes-diagram-5 {transform: translateZ(-400px);}
+#scenes-diagram-6 {transform: translateZ(-500px) translateY(1px); }
+#scenes-diagram-7 {transform: translateZ(-600px) translateY(5px); }
+#scenes-diagram-8 {transform: translateZ(-700px) translateY(10px); }
+#scenes-diagram-9 {transform: translateZ(-800px) translateY(15px);}
+
+
+
+
+.diagram-scene-select-1 #scenes-diagram-1 { opacity:1; }
+.diagram-scene-select-1 #scenes-diagrams-container {transform: translateZ(0px)    perspective(6000px);}
+
+.diagram-scene-select-2 #scenes-diagram-2 { opacity:1; }
+.diagram-scene-select-2 #scenes-diagrams-container {transform: translateZ(100px)  perspective(6000px);}
+
+.diagram-scene-select-3 #scenes-diagram-3 { opacity:1; }
+.diagram-scene-select-3 #scenes-diagrams-container {transform: translateZ(200px)  perspective(6000px);}
+
+.diagram-scene-select-4 #scenes-diagram-4 { opacity:1; }
+.diagram-scene-select-4 #scenes-diagrams-container {transform: translateZ(300px)  perspective(6000px);}
+
+.diagram-scene-select-5 #scenes-diagram-5 { opacity:1; }
+.diagram-scene-select-5 #scenes-diagrams-container {transform: translateZ(400px)  perspective(6000px);}
+
+.diagram-scene-select-6 #scenes-diagram-6 { opacity:1; }
+.diagram-scene-select-6 #scenes-diagrams-container {transform: translateZ(500px)  perspective(6000px);}
+
+.diagram-scene-select-7 #scenes-diagram-7 { opacity:1; }
+.diagram-scene-select-7 #scenes-diagrams-container {transform: translateZ(600px)  perspective(6000px);}
+
+.diagram-scene-select-8 #scenes-diagram-8 { opacity:1; }
+.diagram-scene-select-8 #scenes-diagrams-container {transform: translateZ(700px)  perspective(6000px);}
+
+.diagram-scene-select-9 #scenes-diagram-9 { opacity:1; }
+.diagram-scene-select-9 #scenes-diagrams-container {transform: translateZ(800px)  perspective(6000px);}
+
 
 
 #footer{
@@ -427,6 +462,57 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
   margin-top: 1rem;
   display: block;
 }
+
+
+
+
+
+
+/* Smartphones (portrait and landscape) ----------- */
+@media only screen and (max-width : 880px) {
+
+  #producership-options .option-middle {
+      border-top:  1px #eaeaea solid;
+      border-bottom:  1px #eaeaea solid;
+      border-left: none;
+      border-right: none;
+  }
+  #producership-options .option {
+      width: 100%;
+      max-width: 340px;
+  }
+
+  #scenes-diagrams{
+    width: 70vw;
+    height: 70vw;
+  }
+
+}
+
+/* iPads (landscape) ----------- */
+@media only screen and (min-device-width : 768px) and (max-device-width : 1024px) and (orientation : landscape) {
+}
+
+/* iPads (portrait) ----------- */
+@media only screen and (min-device-width : 768px) and (max-device-width : 1024px) and (orientation : portrait) {
+}
+
+/* Desktops and laptops ----------- */
+@media only screen and (min-width : 1224px) {
+  h1{
+    font-size: 100px;
+  }
+}
+
+/* Large screens ----------- */
+@media only screen
+and (min-width : 1824px) {
+/* Styles */
+}
+
+
+
+
 
 
 

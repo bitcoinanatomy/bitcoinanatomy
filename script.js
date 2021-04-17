@@ -51,7 +51,7 @@ $( document ).ready(function() {
 
 
   //load scenes from google docs
-  var totalScenes = 5;
+  var totalScenes = 9;
   var sceneData = [];
   var shots = [];
   var tableDeader = "<thead><tr> <th span='1' class='table-col-section'><h4>Section</h4></th>  <th span='1' class='table-col-vo'><h4>Voice</h4></th>  <th span='1' class='table-col-board'><h4>Board</h4></th>  <th span='1' class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
@@ -93,7 +93,6 @@ $( document ).ready(function() {
 
 
         $('.scene-select').click(function() {
-          console.log($(this).attr('id'));
           var t = $(this).attr('id');
 
           if($(this).hasClass('inactive')){ //this is the start of our condition
@@ -103,6 +102,12 @@ $( document ).ready(function() {
             $('.scene').hide();
             $('#'+ t + '-table').fadeIn('slow');
          }
+
+         for (i = 1; i <= totalScenes; i++) {
+            $('#scenes-diagrams').removeClass('diagram-scene-select-'+i);
+         }
+         $('#scenes-diagrams').addClass('diagram-'+t);
+
         });
 
         $('.scene').hide();
@@ -118,8 +123,43 @@ $( document ).ready(function() {
 
 
   getProducerData();
+  diagramAnimations(totalScenes);
 
 });
+
+
+
+
+
+
+
+
+
+
+function diagramAnimations(totalScenes){
+    var currentFrame = 0;
+    let iconSkipForward = document.querySelector('.bodymovinanim');
+    let animationSkipForward = bodymovin.loadAnimation({
+            container: iconSkipForward,
+            renderer: 'svg',
+            loop: false,
+            autoplay: false,
+            path: "https://raw.githubusercontent.com/thesvbd/Lottie-examples/master/assets/animations/skip-forward.json"
+    });
+
+
+    for (i = 1; i <= totalScenes; i++) {
+      $('.bodymovinanim'+i).click(function() {
+        console.log(totalScenes*i);
+        animationSkipForward.playSegments([currentFrame,totalScenes*i], true);
+        currentFrame = totalScenes*i;
+      });
+    }
+
+}
+
+
+
 
 
 
