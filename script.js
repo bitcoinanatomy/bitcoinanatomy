@@ -185,7 +185,7 @@ function getGoogleSheetData(i){
 
 
 function getProducerData(){
-    $.getJSON("http://pvxg.net/BTCpaySponsor/").then(function(data){
+    $.getJSON("https://pvxg.net/BTCpaySponsor/").then(function(data){
        $.each(data, function (key, producer) {
          //console.log(JSON.parse(producer.metadata.orderId));
          console.log(producer.metadata.itemDesc.startsWith("Contributor:"));
