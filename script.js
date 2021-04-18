@@ -30,6 +30,14 @@ $( document ).ready(function() {
     });
 
 
+    $("#back-to-scenes").click(function() {
+      $('html, body').animate({
+          scrollTop: $("#scenes").offset().top
+      }, 1000);
+    });
+
+
+
     $(".popup-toggle").click(function() {
       $("#"+$(this).attr("data-target")).fadeIn(300);
     });
@@ -76,7 +84,7 @@ $( document ).ready(function() {
                 shots.push( "<td span='1' class='table-col-vo'>" + shot.gsx$vo.$t + "</td>");
                 shots.push( "<td span='1' class='table-col-board'>");
                 if(shot.gsx$board.$t != ""){
-                  shots.push( "<img width='100%' src=" + shot.gsx$board.$t + " />");
+                  shots.push( "<div class='image-holder'><img src=" + shot.gsx$board.$t + " /></div>");
                 }
                 shots.push( "</td>");
                 shots.push( "<td span='1' class='table-col-visual grey'>" + shot.gsx$visual.$t + "</td>");
