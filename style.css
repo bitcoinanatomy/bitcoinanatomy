@@ -226,7 +226,7 @@ p {
 
 
 #producers  img{
-  width: 20% 
+  width: 20%
 }
 
 
@@ -592,6 +592,10 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
   #producership-options .option {
       width: 100%;
       max-width: 450px;
+  }
+
+  #producers  img{
+    width: 60% 
   }
 
   .scene h4{
