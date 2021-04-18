@@ -49,9 +49,23 @@ body{
   overflow: hidden;
   position: relative;
 }
+
+#landing-inner{
+  flex-grow: 1;
+}
+
 #landing h1{
   z-index: 2;
+  margin: auto;
 }
+
+#sub-hero{
+  width: 100%;
+  font-weight: 400;
+}
+
+
+
 #landing #hero-video {
     height: 100%;
     width: 177.77777778vw; /* 100 * 16 / 9 */
@@ -89,10 +103,10 @@ h1{
   /* flex-grow: 1; */
   width: 74%;
   text-align: center;
-  padding: 31px;
   box-sizing: border-box;
   font-size: 8vw;
   letter-spacing: -0.2rem;
+  padding-bottom: 0.3rem;
 }
 
 h2 {
@@ -543,11 +557,11 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
     width: 100%;
     display: block;
     letter-spacing: -0.15rem;
-    padding: 0;
+    padding: 1rem;
   }
 
   #landing .submit {
-    margin: 0.5rem auto 0 auto;
+    margin: 1.5rem auto 0 auto;
     display: inline-block;
     width: 40%;
   }
@@ -602,9 +616,8 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 
 @media only screen and (max-width : 780px) {
   #landing .submit {
-    margin: 0.5rem auto 0 auto;
     display: inline-block;
-    width: 46%;
+    width: 100%;
   }
 }
 
