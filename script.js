@@ -62,7 +62,7 @@ $( document ).ready(function() {
   var totalScenes = 9;
   var sceneData = [];
   var shots = [];
-  var tableDeader = "<thead><tr> <th span='1' class='table-col-section'><h4>Section</h4></th>  <th span='1' class='table-col-vo'><h4>Voice</h4></th>  <th span='1' class='table-col-board'><h4>Board</h4></th>  <th span='1' class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
+  var tableDeader = "<thead><tr> <th span='1' class='table-col-section'><h4>Theme</h4></th>  <th span='1' class='table-col-vo'><h4>Voice</h4></th>  <th span='1' class='table-col-board'><h4>Board</h4></th>  <th span='1' class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
   //and in your call will listen for the custom deferred's done
   for (i = 1; i <= totalScenes; i++) {
     getGoogleSheetData(i).then(function(returndata){
