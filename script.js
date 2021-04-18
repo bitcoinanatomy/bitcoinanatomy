@@ -62,7 +62,7 @@ $( document ).ready(function() {
   var totalScenes = 9;
   var sceneData = [];
   var shots = [];
-  var tableDeader = "<thead><tr> <th span='1' class='table-col-section'><h4>Theme</h4></th>  <th span='1' class='table-col-vo'><h4>Voice</h4></th>  <th span='1' class='table-col-board'><h4>Board</h4></th>  <th span='1' class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
+  var tableDeader = "<thead><tr> <th class='table-col-section'><h4>Theme</h4></th>   <th class='table-col-board'><h4>Board</h4></th>  <th class='table-col-vo'><h4>Voice</h4></th>  <th class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
   //and in your call will listen for the custom deferred's done
   for (i = 1; i <= totalScenes; i++) {
     getGoogleSheetData(i).then(function(returndata){
@@ -79,15 +79,27 @@ $( document ).ready(function() {
             shots.push("<tbody>");
             $.each( scene.shots, function( key, shot ) {
               //console.log(shot);
-              shots.push( "<tr id='sheet"+scene.sort+" row-" + key + "'> ");
-                shots.push( "<td span='1' class='table-col-section'><h4>" + shot.gsx$section.$t + "</h4></td>");
-                shots.push( "<td span='1' class='table-col-vo'>" + shot.gsx$vo.$t + "</td>");
-                shots.push( "<td span='1' class='table-col-board'>");
+              shots.push( "<tr id='sheet"+scene.sort+" row-" + key + "' class='row-content'> ");
+                var rowContent = '';
+                shot.gsx$section.$t == '' ? rowContent = ' empty' : rowContent = '';
+                shots.push( "<td class='table-col-section"+rowContent+"'><h4>" + shot.gsx$section.$t + "</h4></td>");
+
+
+
+                shot.gsx$board.$t == '' ? rowContent = ' empty' : rowContent = '';
+                shots.push( "<td class='table-col-board"+rowContent+"'>");
                 if(shot.gsx$board.$t != ""){
                   shots.push( "<div class='image-holder'><img src=" + shot.gsx$board.$t + " /></div>");
                 }
                 shots.push( "</td>");
-                shots.push( "<td span='1' class='table-col-visual grey'>" + shot.gsx$visual.$t + "</td>");
+
+
+                shot.gsx$vo.$t == '' ? rowContent = ' empty' : rowContent = '';
+                shots.push( "<td class='table-col-vo"+rowContent+"'>" + shot.gsx$vo.$t + "</td>");
+
+
+                shot.gsx$visual.$t == '' ? rowContent = ' empty' : rowContent = '';
+                shots.push( "<td class='table-col-visual grey"+rowContent+"'>" + shot.gsx$visual.$t + "</td>");
               shots.push( "</tr>");
             });
             shots.push("</tbody>");
@@ -191,29 +203,36 @@ function getProducerData(){
          console.log(producer.metadata.itemDesc.startsWith("Contributor:"));
 
          var targetContainer = "";
+         var jsonObject;
+         var amount = '<div class="amount">' + producer.amount + ' <span class="grey">' + producer.currency + '</span></div>';
+
          if(producer.metadata.itemDesc.startsWith("Contributor:")){
            targetContainer = "#contributors-inner";
-           $( "<b/>", { "class": "producer-name", html: producer.metadata.itemDesc }).appendTo(targetContainer);
+           jsonObject = JSON.parse(producer.metadata.orderId);
+           console.log(jsonObject.n);
+           $( "<div/>", { "class": "producer-name", html: '<b>' + jsonObject.n + '</b>' + amount }).appendTo(targetContainer);
+
          } else if(producer.metadata.itemDesc.startsWith("Sponsor:")){
            targetContainer = "#sponsors-inner";
-           $( "<h2/>", { "class": "producer-name", html: producer.metadata.itemDesc }).appendTo(targetContainer);
+           jsonObject = JSON.parse(producer.metadata.orderId);
+           $( "<div/>", { "class": "producer-name", html:  '<h2>' + jsonObject.n + '</h2>' + amount }).appendTo(targetContainer);
+
          } else if(producer.metadata.itemDesc.startsWith("Producer:")){
            targetContainer = "#producers-inner";
-
            //Adding logos to major contributors
            if(producer.metadata.itemDesc.startsWith("Producer:ACME")){
-             $( "<div/>", { "class": "producer-logo", html: '<img src="assets/logos/example.png">' }).appendTo(targetContainer);
+             $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="assets/logos/example.png">' + amount }).appendTo(targetContainer);
            }
 
-           //$( "<h4/>", { "class": "producer-name", html: producer.metadata.itemDesc }).appendTo(targetContainer);
+
+           if(producer.metadata.itemDesc.startsWith("Producer:Widgets")){
+             $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="https://theme4press.com/wp-content/uploads/2015/11/featured-large-adding-widgets.jpg">' + amount }).appendTo(targetContainer);
+           }
+
+
+
+
          }
-
-
-
-
-
-           //$( "<div/>", { "class": "producer-title", html: producer.metadata.orderId }).appendTo(targetContainer);
-           $( "<div/>", { "class": "producer-amount", html: producer.amount + ' <span class="grey">' + producer.currency + '</span>' }).appendTo(targetContainer);
 
           //reset target
           targetContainer = "";
