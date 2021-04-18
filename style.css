@@ -699,6 +699,8 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
     height: 30vw;
     overflow: hidden;
     background: #fff;
+    border: 1px black solid;
+    box-sizing: border-box;
   }
 
   #scenes-data h4, .row-content td {
