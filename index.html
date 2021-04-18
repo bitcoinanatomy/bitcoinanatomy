@@ -31,8 +31,6 @@
     <meta property="twitter:image:src" content="https://vigorous-kare-3a4b3d.netlify.app/assets/anatomyofbitcoin-preview.png?raw=true"/>
     <meta property="twitter:domain" content="anatimyofbitcoin.com">
     <link rel="stylesheet" href="style.css">
-    <script src="jquery-3.5.1.min.js"></script>
-    <script src="script.js"></script>
   </head>
 
   <body>
@@ -84,8 +82,8 @@
             <p>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit
             </p>
-            <button style="background: #ff9800;" type="submit" class="submit popup-toggle" data-target="producer__popup-overlay" name="submit" alt="Sponsor with BtcPay">
-              <span>
+            <button type="submit" class="submit popup-toggle producer-submit" data-target="producer__popup-overlay" name="submit" alt="Sponsor with BtcPay">
+              <span style="color:#fff">
                 Become a Producer
               </span>
             </button>
@@ -137,7 +135,7 @@
 
         <div id="producers">
           <h3>
-            <span>Producers</span>
+            <span>Producerships</span>
           </h3>
           <div id="producers-inner">
           </div>
@@ -146,17 +144,17 @@
 
         <div id="sponsors">
           <h3>
-            <span>Sponsors</span>
+            <span>Sponsorships</span>
           </h3>
-          <div id="producers-inner">
+          <div id="sponsors-inner">
           </div>
         </div>
 
         <div id="contributors">
           <h3>
-            <span>Contributors</span>
+            <span>Contributions</span>
           </h3>
-          <div id="producers-inner">
+          <div id="contributors-inner">
           </div>
         </div>
 
@@ -225,7 +223,7 @@
             <span>About the film</span>
           </h2>
           <div id="about-data">
-            <p>A documental and compreensive tour through the bitcoin protocol. Open production to allow spontanues contributions, creative, monetary, or managment.</p>
+            <p id="about-hero">A documental and compreensive tour through the bitcoin protocol. Open production to allow spontanues contributions, creative, monetary, or managment.</p>
             <p>Because bitcoiners are the main audienca, the idea is to appeal to a sense of elevation and invite any one interested to participate in the representation of the metafisical in bitcoin.</p>
             <p>To stay true to bitcoin, and deliver the best and most accurate representation, the project will aim at letting it self be guided by the protocol itself.</p>
             <p>Much like bitcoin, all visual elements should have a distinct purpose and avoid ambuguity as much as possible.</p>
@@ -337,8 +335,13 @@
         <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
         <input type="hidden" name="jsonResponse" value="true" />
         <input type="hidden" name="browserRedirect" value="https://google.com" />
-        <input class="btcpay-input" name="orderId" value="" placeholder="Twitter handle" />
-        <input class="btcpay-input" name="checkoutDesc" value="" placeholder="Your company" />
+
+
+        <input class="btcpay-input input-orderId" name="orderId" value="" placeholder="DATA" />
+        <input class="btcpay-input input-checkoutDesc" name="checkoutDesc" value="Producer" placeholder="" />
+        <input class="btcpay-input input-name" name="name" value="" placeholder="Display/Company Name" />
+        <input class="btcpay-input input-twitterHandle" name="twitter" value="" placeholder="twitter_handle" />
+        <input class="btcpay-input input-githubUsername" name="github" value="" placeholder="github_username" />
 
         <input type="hidden" name="checkoutQueryString" value="payerData" />
         <div class="btcpay-custom-container">
@@ -346,7 +349,7 @@
             class="btcpay-input"
             id="btcpay-input-price-producer"
             name="price" type="text"
-            min="0.5" max="10" step="0.1" value="2"
+            min="0.00005" max="10" step="0.1" value="2"
             oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-producer').value = 2 : event.target.value"
             onchange="document.querySelector('#btcpay-input-range-producer').value = document.querySelector('#btcpay-input-price-producer').value"
           />
@@ -360,7 +363,7 @@
             class="btcpay-input-range"
             id="btcpay-input-range-producer"
             type="range"
-            min="0.5" max="10" step="0.1" value="2"
+            min="0.00005" max="10" step="0.1" value="2"
             oninput="document.querySelector('#btcpay-input-price-producer').value = document.querySelector('#btcpay-input-range-producer').value"
           />
         </div>
@@ -385,8 +388,13 @@
      <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
      <input type="hidden" name="jsonResponse" value="true" />
      <input type="hidden" name="browserRedirect" value="https://google.com" />
-     <input class="btcpay-input" name="orderId" value="" placeholder="Twitter handle" />
-     <input class="btcpay-input" name="checkoutDesc" value="" placeholder="Your company" />
+
+          <input class="btcpay-input input-orderId" name="orderId" value="" placeholder="DATA" />
+          <input class="btcpay-input input-checkoutDesc" name="checkoutDesc" value="Sponsor" placeholder="" />
+          <input class="btcpay-input input-name" name="name" value="" placeholder="Display/Company Name" />
+          <input class="btcpay-input input-twitterHandle" name="twitter" value="" placeholder="twitter_handle" />
+          <input class="btcpay-input input-githubUsername" name="github" value="" placeholder="github_username" />
+
 
      <input type="hidden" name="checkoutQueryString" value="payerData" />
      <div class="btcpay-custom-container">
@@ -394,7 +402,7 @@
          class="btcpay-input"
          id="btcpay-input-price-sponsor"
          name="price" type="text"
-         min="0.001" max="0.5" step="0.001" value="0.01"
+         min="0.0000001" max="0.5" step="0.001" value="0.01"
          oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-sponsor').value = 0.01 : event.target.value"
          onchange="document.querySelector('#btcpay-input-range-sponsor').value = document.querySelector('#btcpay-input-price-sponsor').value"
        />
@@ -408,7 +416,7 @@
          class="btcpay-input-range"
          id="btcpay-input-range-sponsor"
          type="range"
-         min="0.001" max="0.5" step="0.001" value="0.01"
+         min="0.00000001" max="0.5" step="0.001" value="0.01"
          oninput="document.querySelector('#btcpay-input-price-sponsor').value = document.querySelector('#btcpay-input-range-sponsor').value"
        />
      </div>
@@ -428,18 +436,19 @@
 <div class="popup-overlay" id="contributor__popup-overlay">
   <div class="popup">
     <div class="popup-close">X</div>
-    <h2>contributor</h2>
+    <h2>Contributor</h2>
     <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
 
    <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
      <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
      <input type="hidden" name="jsonResponse" value="true" />
      <input type="hidden" name="browserRedirect" value="https://google.com" />
-     <input class="btcpay-input" name="orderId" value="" placeholder="Twitter handle" />
-     <input class="btcpay-input" name="checkoutDesc" value="" placeholder="Your company" />
 
-     <input class="btcpay-input" name="aaa" value="" placeholder="aaa" />
-     <input class="btcpay-input" name="bbb" value="" placeholder="bbb" />
+     <input class="btcpay-input input-orderId" name="orderId" value="" placeholder="DATA" />
+     <input class="btcpay-input input-checkoutDesc" name="checkoutDesc" value="Contributor" placeholder="" />
+     <input class="btcpay-input input-name" name="name" value="" placeholder="Display Name" />
+     <input class="btcpay-input input-twitterHandle" name="twitter" value="" placeholder="twitter_handle" />
+     <input class="btcpay-input input-githubUsername" name="github" value="" placeholder="github_username" />
 
      <input type="hidden" name="checkoutQueryString" value="payerData" />
      <div class="btcpay-custom-container">
@@ -475,6 +484,8 @@
 </div>
 
 
+  <script src="jquery-3.5.1.min.js"></script>
+  <script src="script.js"></script>
 
   </body>
 </html>

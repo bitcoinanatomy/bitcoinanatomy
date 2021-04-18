@@ -132,6 +132,27 @@ $( document ).ready(function() {
 
   getProducerData();
 
+
+
+  $(".btcpay-form").each(function( index, element ) {
+    var jsonForm = new Object();
+    var type = $(element).find('.input-checkoutDesc').val();
+    $(element).find('.btcpay-input').keyup(function() {
+
+      // limit, for validation
+      // {"p":"Contributor","n":"wdhgt735344eew","t":"rwfrw66uiolou3746467456fwwed","g":"546646665644664654"}
+      $(element).find('.input-checkoutDesc').val( type + ':' + $(element).find('.input-name').val());
+      jsonForm.p = type;
+      jsonForm.n = $(element).find('.input-name').val();
+      jsonForm.t = $(element).find('.input-twitterHandle').val();
+      jsonForm.g = $(element).find('.input-githubUsername').val();
+      console.log(JSON.stringify(jsonForm));
+      $(element).find('.input-orderId').val(JSON.stringify(jsonForm));
+    });
+
+  });
+
+
 });
 
 
@@ -166,7 +187,36 @@ function getGoogleSheetData(i){
 function getProducerData(){
     $.getJSON("http://pvxg.net/BTCpaySponsor/").then(function(data){
        $.each(data, function (key, producer) {
-         $( "<div/>", { "class": "producer", html: producer.metadata.itemDesc }).appendTo( "#producers-inner" );
+         //console.log(JSON.parse(producer.metadata.orderId));
+         console.log(producer.metadata.itemDesc.startsWith("Contributor:"));
+
+         var targetContainer = "";
+         if(producer.metadata.itemDesc.startsWith("Contributor:")){
+           targetContainer = "#contributors-inner";
+           $( "<b/>", { "class": "producer-name", html: producer.metadata.itemDesc }).appendTo(targetContainer);
+         } else if(producer.metadata.itemDesc.startsWith("Sponsor:")){
+           targetContainer = "#sponsors-inner";
+           $( "<h2/>", { "class": "producer-name", html: producer.metadata.itemDesc }).appendTo(targetContainer);
+         } else if(producer.metadata.itemDesc.startsWith("Producer:")){
+           targetContainer = "#producers-inner";
+
+           //Adding logos to major contributors
+           if(producer.metadata.itemDesc.startsWith("Producer:ACME")){
+             $( "<div/>", { "class": "producer-logo", html: '<img src="assets/logos/example.png">' }).appendTo(targetContainer);
+           }
+
+           //$( "<h4/>", { "class": "producer-name", html: producer.metadata.itemDesc }).appendTo(targetContainer);
+         }
+
+
+
+
+
+           //$( "<div/>", { "class": "producer-title", html: producer.metadata.orderId }).appendTo(targetContainer);
+           $( "<div/>", { "class": "producer-amount", html: producer.amount + ' <span class="grey">' + producer.currency + '</span>' }).appendTo(targetContainer);
+
+          //reset target
+          targetContainer = "";
        });
     });
 };

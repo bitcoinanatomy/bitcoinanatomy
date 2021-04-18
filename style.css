@@ -66,6 +66,13 @@ body{
 
 
 
+#about-hero {
+  font-weight: 200;
+  font-size: 1.2rem;
+}
+
+
+
 #landing #hero-video {
     height: 100%;
     width: 177.77777778vw; /* 100 * 16 / 9 */
@@ -210,11 +217,21 @@ p {
 
 
 
-#producers {
+#producers, #sponsors, #contributors {
     color: #000;
     width: 100%;
     padding: 6rem 0 0rem;
     text-align: center;
+}
+
+
+#producers  img{
+  width: 20% 
+}
+
+
+.producer-submit {
+  background: #f35e13;
 }
 
 
