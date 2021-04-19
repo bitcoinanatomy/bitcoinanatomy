@@ -172,7 +172,7 @@ p {
   text-align: center;
   padding: 70px;
   box-sizing: border-box;
-  max-width: 340px;
+  max-width: 450px;
 }
 
 
@@ -188,7 +188,7 @@ p {
   font-weight: 400;
 }
 .amount-currancy {
-  color: #ccc;
+  color: #676767;
   font-size: 80%;
 }
 
@@ -206,12 +206,41 @@ p {
 }
 
 
+.benefits{
+  font-weight: 300;
+  font-size: 12px;
+}
 
+
+
+.option .option-description {
+  display: table;
+  height: 100px;
+  width: 100%;
+  text-align: center;
+  min-height: 100px;
+}
+.option .option-description span {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+
+
+.donations{
+  border-top: 1px #eaeaea solid;
+  margin: 8rem 0 0;
+  color: #000;
+  width: 100%;
+  padding: 8rem 0 0rem 0;
+  text-align: center;
+  max-width: 1030px;
+}
 
 .donations h3 {
     font-size: 125%;
     letter-spacing: 0.03rem;
-    padding-bo
+    padding-bottom: 2rem;
 }
 
 .donations h2 {
@@ -219,8 +248,7 @@ p {
 }
 .amount {
   padding-top: 0.5rem;
-  font-size: 10px;
-  opacity: 0.5;
+  font-size: 14px;
 }
 
 .producer-name{
@@ -230,22 +258,14 @@ p {
 
 
 
+
+
 #back-to-scenes{
   background:#fff;
   width: 30%;
   display: block;
   margin: 7rem auto 0 auto;
 }
-
-
-
-#producers, #sponsors, #contributors {
-    color: #000;
-    width: 100%;
-    padding: 6rem 0 0rem;
-    text-align: center;
-}
-
 
 #producers  img{
   width: 100%;
