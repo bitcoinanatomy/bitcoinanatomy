@@ -55,6 +55,15 @@ $( document ).ready(function() {
     });
 
 
+    $(document).on('keyup', function(e) {
+      if (e.key == "Escape") {
+        $(".popup-overlay").fadeOut(300);
+        $('iframe').attr('src', $('iframe').attr('src'));
+      };
+    });
+
+
+
 
 
 

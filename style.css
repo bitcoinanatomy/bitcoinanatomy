@@ -306,6 +306,7 @@ p {
   width: 78vw;
   height: 36.5vw;
   vertical-align: middle;
+  background: red;
 }
 
 
@@ -317,13 +318,20 @@ p {
 .popup-close {
   display: block;
   position: absolute;
-  top: 1px;
-  right: 1px;
+  top: -9px;
+  right: -59px;
   width: 12px;
   height: 12px;
   padding: 8px;
   cursor: pointer;
   text-align: center;
+}
+
+.popup-close.full {
+    width: 100vw;
+    height: 100vh;
+    background: #00000014;
+    z-index: -1;
 }
 
 
