@@ -761,7 +761,11 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 /* Large screens ----------- */
 @media only screen
 and (min-width : 1824px) {
-/* Styles */
+
+  .donations{
+    max-width: 1330px;
+  }
+
 }
 
 
