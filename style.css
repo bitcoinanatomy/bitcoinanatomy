@@ -376,8 +376,14 @@ iframe {
 }
 
 
+
+img#Flammarion-Grid{
+  width: 70%;
+}
+
 img#Cosmic-View-Cover{
   width: 60%;
+  margin-top: 8rem;
   margin-left: auto;
   margin-bottom: 4rem;
 }
