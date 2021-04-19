@@ -91,7 +91,7 @@ $( document ).ready(function() {
               shots.push( "<tr id='sheet"+scene.sort+" row-" + key + "' class='row-content'> ");
                 var rowContent = '';
                 shot.gsx$section.$t == '' ? rowContent = ' empty' : rowContent = '';
-                shots.push( "<td class='table-col-section"+rowContent+"'><h4>" + shot.gsx$section.$t + "</h4></td>");
+                shots.push( "<td class='table-col-section"+rowContent+"'><h4>" + shot.gsx$section.$t.replace(/\n/g,"<br>") + "</h4></td>");
 
 
 
@@ -104,11 +104,11 @@ $( document ).ready(function() {
 
 
                 shot.gsx$vo.$t == '' ? rowContent = ' empty' : rowContent = '';
-                shots.push( "<td class='table-col-vo"+rowContent+"'>" + shot.gsx$vo.$t + "</td>");
+                shots.push( "<td class='table-col-vo"+rowContent+"'>" + shot.gsx$vo.$t.replace(/\n/g,"<br>") + "</td>");
 
 
                 shot.gsx$visual.$t == '' ? rowContent = ' empty' : rowContent = '';
-                shots.push( "<td class='table-col-visual grey"+rowContent+"'>" + shot.gsx$visual.$t + "</td>");
+                shots.push( "<td class='table-col-visual grey"+rowContent+"'>" + shot.gsx$visual.$t.replace(/\n/g,"<br>") + "</td>");
               shots.push( "</tr>");
             });
             shots.push("</tbody>");
