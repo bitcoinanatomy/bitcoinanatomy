@@ -225,17 +225,25 @@ p {
   vertical-align: middle;
 }
 
-
+#donation-credits {
+  background: #fbfbfb;
+  margin: auto;
+  padding: 22vh 5vw;
+}
 
 .donations{
+  margin: auto;
   border-top: 1px #eaeaea solid;
-  margin: 8rem 0 0;
   color: #000;
   width: 100%;
-  padding: 8rem 0 0rem 0;
+  padding: 8rem 0 8rem 0;
   text-align: center;
   max-width: 1030px;
 }
+
+.donations:first-child { border-top: none; padding-top: 0}
+.donations:last-child {padding-bottom: 0}
+
 
 .donations h3 {
     font-size: 125%;
@@ -270,6 +278,7 @@ p {
 #producers  img{
   width: 100%;
   max-width: 250px;
+  mix-blend-mode: darken;
 }
 
 
