@@ -310,24 +310,26 @@ function getProducerData(){
 
                      amoutTotal = (currentAmount) + amoutTotal;
 
+
                  }
          }
          //reset target
          targetContainer = "";
        });
+
+       var finalProgress = (amoutTotal / 3)*100
+       if( finalProgress < 3 ){
+         finalProgress = '30px';
+         $('.meter').addClass('short');
+       }else{
+         $('.meter').addClass('long');
+         finalProgress = finalProgress+'%';
+       }
+       $(".amount-value-progress").text(amoutTotal);
+       $( "#meter-progress-bar" ).animate({ width: finalProgress}, 200, function() { });
     });
 
 
-    var finalProgress = (amoutTotal / 3)*100
-    if( finalProgress < 3 ){
-      finalProgress = '30px';
-      $('.meter').addClass('short');
-    }else{
-      $('.meter').addClass('long');
-      finalProgress = finalProgress+'%';
-    }
-    $(".amount-value-progress").text(amoutTotal);
-    $( "#meter-progress-bar" ).animate({ width: finalProgress}, 200, function() { });
 
 
 };
