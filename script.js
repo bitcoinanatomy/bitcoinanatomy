@@ -74,7 +74,7 @@ $( document ).ready(function() {
   var tableDeader = "<thead><tr> <th class='table-col-section'><h4>Theme</h4></th>   <th class='table-col-board'><h4>Board</h4></th>  <th class='table-col-vo'><h4>Voice</h4></th>  <th class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
   //and in your call will listen for the custom deferred's done
   for (i = 1; i <= totalScenes; i++) {
-    getGoogleSheetData(i).then(function(returndata){
+    getScriptData(i).then(function(returndata){
       sceneData.push(returndata);
       //if all loaded
       if(sceneData.length == totalScenes){
@@ -92,8 +92,6 @@ $( document ).ready(function() {
                 var rowContent = '';
                 shot.gsx$section.$t == '' ? rowContent = ' empty' : rowContent = '';
                 shots.push( "<td class='table-col-section"+rowContent+"'><h4>" + shot.gsx$section.$t.replace(/\n/g,"<br>") + "</h4></td>");
-
-
 
                 shot.gsx$board.$t == '' ? rowContent = ' empty' : rowContent = '';
                 shots.push( "<td class='table-col-board"+rowContent+"'>");
@@ -152,6 +150,7 @@ $( document ).ready(function() {
 
 
   getProducerData();
+  getTeamtData(totalScenes);
 
 
 
@@ -194,7 +193,61 @@ $( document ).ready(function() {
 
 
 
-function getGoogleSheetData(i){
+function getTeamtData(totalScenes){
+    var teamData = {};
+    var markupTeam = '';
+    var department;
+    return $.getJSON("https://spreadsheets.google.com/feeds/list/1JTdEbmcEsAtAz1-FyO9LyxF-FsBwEJ-9MCthfWktfv8/"+(totalScenes+2)+"/public/values?alt=json").then(function(data){
+
+      $.each(data.feed.entry, function (key, teamMember) {
+        if(teamMember.gsx$department.$t !== ""){
+              department = teamMember.gsx$department.$t;
+              teamData[department] = {'departmentName': department, 'departmentCompensation': teamMember.gsx$departmentcompensation.$t, 'team': [] };
+        }
+        teamData[department].team.push({
+          'name': teamMember.gsx$individual.$t.replace(/\n/g,"<br>"),
+          'individualCompensation': teamMember.gsx$individualcompensation.$t,
+          'url': teamMember.gsx$url.$t
+        })
+
+      });
+      console.log(teamData);
+
+
+      $.each(teamData, function(key, item){
+
+        $.each(item.team, function(key, teamMember){
+          console.log(teamMember);
+          if(teamMember.url != ""){
+            markupTeam += '<a href="'+teamMember.url+'" target="_blank">' + teamMember.name + ' <span class="compensation">' + teamMember.individualCompensation + '%</span></a><br>';
+          }else{
+            markupTeam += teamMember.name + ' <span class="compensation">' + teamMember.individualCompensation + '%</span><br>';
+          }
+        });
+
+
+        $('#team-data').append('<tr><td class="team-position">'+item.departmentName+' <br><span class="compensation">'+item.departmentCompensation+'%</span></td><td class="team-person">'+markupTeam+'</td></tr>');
+        markupTeam = "";
+      });
+
+
+
+    });
+
+};
+
+/*
+gsx$individualcompensation
+gsx$departmentcompensation
+gsx$individual
+gsx$url
+*/
+
+
+
+
+
+function getScriptData(i){
     return $.getJSON("https://spreadsheets.google.com/feeds/list/1JTdEbmcEsAtAz1-FyO9LyxF-FsBwEJ-9MCthfWktfv8/"+(i+1)+"/public/values?alt=json").then(function(data){
       return {
         sort:i,
@@ -205,48 +258,78 @@ function getGoogleSheetData(i){
 };
 
 
+
+
+
+
 function getProducerData(){
+
+    var amoutTotal = 0;
+
     $.getJSON("https://pvxg.net/BTCpaySponsor/").then(function(data){
        $.each(data, function (key, producer) {
          //console.log(JSON.parse(producer.metadata.orderId));
-         console.log(producer.metadata.itemDesc.startsWith("Contributor:"));
+         //console.log(producer.metadata.itemDesc.startsWith("Contributor:"));
 
          var targetContainer = "";
          var jsonObject;
          var amount = '<div class="amount">' + producer.amount + ' <span class="grey">' + producer.currency + '</span></div>';
-
-         if(producer.metadata.itemDesc.startsWith("Contributor:")){
-           targetContainer = "#contributors-inner";
-           jsonObject = JSON.parse(producer.metadata.orderId);
-           console.log(jsonObject.n);
-           $( "<div/>", { "class": "producer-name", html: '<b>' + jsonObject.n + '</b>' + amount }).appendTo(targetContainer);
-
-         } else if(producer.metadata.itemDesc.startsWith("Sponsor:")){
-           targetContainer = "#sponsors-inner";
-           jsonObject = JSON.parse(producer.metadata.orderId);
-           $( "<div/>", { "class": "producer-name", html:  '<h2>' + jsonObject.n + '</h2>' + amount }).appendTo(targetContainer);
-
-         } else if(producer.metadata.itemDesc.startsWith("Producer:")){
-           targetContainer = "#producers-inner";
-           //Adding logos to major contributors
-           if(producer.metadata.itemDesc.startsWith("Producer:ACME")){
-             $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="assets/logos/example.png">' + amount }).appendTo(targetContainer);
-           }
-
-
-           if(producer.metadata.itemDesc.startsWith("Producer:Widgets")){
-             $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="https://theme4press.com/wp-content/uploads/2015/11/featured-large-adding-widgets.jpg">' + amount }).appendTo(targetContainer);
-           }
+         var currentAmount = parseFloat(producer.amount);
 
 
 
+         if(producer.metadata.itemDesc !== undefined){
 
+                 if(producer.metadata.itemDesc.startsWith("Contributor:")){
+
+                     targetContainer = "#contributors-inner";
+                     jsonObject = JSON.parse(producer.metadata.orderId);
+                     //console.log(jsonObject.n);
+                     $( "<div/>", { "class": "producer-name", html: '<b>' + jsonObject.n + '</b>' + amount }).appendTo(targetContainer);
+
+                     amoutTotal = (currentAmount) + amoutTotal;
+
+                 } else if(producer.metadata.itemDesc.startsWith("Sponsor:")){
+
+                     targetContainer = "#sponsors-inner";
+                     jsonObject = JSON.parse(producer.metadata.orderId);
+                     $( "<div/>", { "class": "producer-name", html:  '<h2>' + jsonObject.n + '</h2>' + amount }).appendTo(targetContainer);
+
+                     amoutTotal = (currentAmount) + amoutTotal;
+
+                 } else if(producer.metadata.itemDesc.startsWith("Producer:")){
+
+                     targetContainer = "#producers-inner";
+                     //Adding logos to major contributors
+                     if(producer.metadata.itemDesc.startsWith("Producer:ACME")){
+                       $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="assets/logos/example.png">' + amount }).appendTo(targetContainer);
+                     }
+                     if(producer.metadata.itemDesc.startsWith("Producer:Widgets")){
+                       $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="https://theme4press.com/wp-content/uploads/2015/11/featured-large-adding-widgets.jpg">' + amount }).appendTo(targetContainer);
+                     }
+
+                     amoutTotal = (currentAmount) + amoutTotal;
+
+                 }
          }
-
-          //reset target
-          targetContainer = "";
+         //reset target
+         targetContainer = "";
        });
     });
+
+
+    var finalProgress = (amoutTotal / 3)*100
+    if( finalProgress < 3 ){
+      finalProgress = '30px';
+      $('.meter').addClass('short');
+    }else{
+      $('.meter').addClass('long');
+      finalProgress = finalProgress+'%';
+    }
+    $(".amount-value-progress").text(amoutTotal);
+    $( "#meter-progress-bar" ).animate({ width: finalProgress}, 200, function() { });
+
+
 };
 
 

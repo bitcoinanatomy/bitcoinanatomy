@@ -225,6 +225,81 @@ p {
   vertical-align: middle;
 }
 
+
+#donation-progress{
+  padding: 2rem 0 8rem 0;
+  width: 100%;
+}
+
+.meter {
+  height: 30px;
+  position: relative;
+  background: #f7f7f7;
+  border-radius: 60px;
+  padding: 2px;
+  overflow: hidden;
+  max-width: 800px;
+  margin: auto;
+}
+
+
+.meter > span {
+  display: block;
+  height: 100%;
+  border-top-right-radius: 60px;
+  border-bottom-right-radius: 60px;
+  border-top-left-radius: 60px;
+  border-bottom-left-radius: 60px;
+  background-color: #ff5000;
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+
+.progress-total {
+    display: none;
+    position: absolute;
+    padding: 0.25rem 1rem;
+}
+
+#meter-progress-bar{
+  min-width: 30px;
+  transition: all 0.5s ease;
+}
+
+.progress-total-inside{
+  right: 0px;
+}
+
+.progress-total-inside .amount-currancy {
+    color: #fff;
+}
+
+.progress-total-outside {
+  color: #000;
+}
+
+#progress-goal {
+  right: 0px;
+  display: inline-block;
+}
+
+
+.meter.short .progress-total-outside {
+  display: inline-block;
+}
+
+.meter.long .progress-total-inside {
+  display: inline-block;
+}
+
+
+
+
+
+
+
 #donation-credits {
   background: #fbfbfb;
   margin: auto;
@@ -551,6 +626,10 @@ td.team-person {font-size: 18px;}
 td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 1.5em; vertical-align: baseline;}
 
 
+#team-data .compensation {opacity: 0.0; font-size: 12px; transition: all 0.5s ease;}
+#team-data tr:hover .compensation {opacity: 0.3;}
+
+
 
 #scenes-data h4 {
   text-align: left;
@@ -667,6 +746,12 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
     margin: 1.5rem auto 0 auto;
     display: inline-block;
     width: 40%;
+  }
+
+
+
+  #donation-progress {
+    padding: 1rem 0 2rem 0;
   }
 
   #producership-options .option-middle {
