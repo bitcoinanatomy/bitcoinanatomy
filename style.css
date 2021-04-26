@@ -539,6 +539,9 @@ a.edits{
   height: 12vw;
   overflow: hidden;
   background: #fff;
+  -webkit-box-shadow:inset 0px 0px 0px 1px #000;
+  -moz-box-shadow:inset 0px 0px 0px 1px #000;
+  box-shadow:inset 0px 0px 0px 1px #000;
 }
 
 .image-holder img{
