@@ -172,6 +172,20 @@ $( document ).ready(function() {
 
   });
 
+  // Form label animations
+  $('input').focus(function(){
+    $(this).parents('.form-group').addClass('focused');
+  });
+  $('input').blur(function(){
+    var inputValue = $(this).val();
+    if ( inputValue == "" ) {
+      $(this).removeClass('filled');
+      $(this).parents('.form-group').removeClass('focused');
+    } else {
+      $(this).addClass('filled');
+    }
+  })
+
 
 });
 
@@ -219,14 +233,14 @@ function getTeamtData(totalScenes){
         $.each(item.team, function(key, teamMember){
           console.log(teamMember);
           if(teamMember.url != ""){
-            markupTeam += '<a href="'+teamMember.url+'" target="_blank">' + teamMember.name + ' <span class="compensation">' + teamMember.individualCompensation + '%</span></a><br>';
+            markupTeam += '<a href="'+teamMember.url+'" target="_blank">' + teamMember.name + '</a> <span class="compensation">' + teamMember.individualCompensation + '%</span><br>';
           }else{
             markupTeam += teamMember.name + ' <span class="compensation">' + teamMember.individualCompensation + '%</span><br>';
           }
         });
 
 
-        $('#team-data').append('<tr><td class="team-position">'+item.departmentName+' <br><span class="compensation">'+item.departmentCompensation+'%</span></td><td class="team-person">'+markupTeam+'</td></tr>');
+        $('#team-data').append('<tr><td class="team-position"><span class="compensation">'+item.departmentCompensation+'%</span> '+item.departmentName+' </td><td class="team-person">'+markupTeam+'</td></tr>');
         markupTeam = "";
       });
 
@@ -325,7 +339,7 @@ function getProducerData(){
          $('.meter').addClass('long');
          finalProgress = finalProgress+'%';
        }
-       $(".amount-value-progress").text(amoutTotal);
+       $(".amount-value-progress").text(amoutTotal.toFixed(8));
        $( "#meter-progress-bar" ).animate({ width: finalProgress}, 200, function() { });
     });
 

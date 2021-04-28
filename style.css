@@ -388,9 +388,11 @@ p {
   display: inline-block;
   position: relative;
   width: 78vw;
-  height: 36.5vw;
   vertical-align: middle;
-  background: red;
+  background: white;
+  color: #000;
+  padding: 4rem;
+  max-width: 500px;
 }
 
 
@@ -402,13 +404,14 @@ p {
 .popup-close {
   display: block;
   position: absolute;
-  top: -9px;
-  right: -59px;
+  top: 18px;
+  right: 18px;
   width: 12px;
   height: 12px;
   padding: 8px;
   cursor: pointer;
   text-align: center;
+  color: #000;
 }
 
 .popup-close.full {
@@ -632,6 +635,12 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 #team-data .compensation {opacity: 0.0; font-size: 12px; transition: all 0.5s ease;}
 #team-data tr:hover .compensation {opacity: 0.3;}
 
+#team-data a{
+  text-decoration: none;
+  border-bottom: 1px #ffffff4d solid;
+  padding-bottom: .3rem;
+}
+
 
 
 #scenes-data h4 {
@@ -669,6 +678,9 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
   width: 100%;
   opacity: 0.0;
   transition: all 0.5s ease;
+  /* image-rendering: auto; */
+  image-rendering: crisp-edges;
+  /* image-rendering: pixelated; */
 }
 
 
@@ -867,6 +879,10 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
     display: inline-block;
     width: 100%;
   }
+
+  .popup {
+    padding: 2rem;
+  }
 }
 
 /* iPads (landscape) ----------- */
@@ -898,36 +914,242 @@ and (min-width : 1824px) {
 
 
 
-King Corn irrefutably proves the damaging effects of subsidized agriculture. Great recommenation by @saif https://www.youtube.com/watch?v=TWv29KRsQXU
+.btcpay-form {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	max-width: 370px;
+}
+
+.btcpay-form--inline {
+	flex-direction: row;
+}
+
+.btcpay-form--block {
+	flex-direction: column;
+}
+
+.btcpay-form .btcpay-custom-container {
+	text-align: center;
+	width: 100%;
+	margin: 1rem;
+}
+
+.btcpay-custom {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.btcpay-form .plus-minus {
+	cursor: pointer;
+	font-size: 25px;
+	line-height: 25px;
+	background: #DFE0E1;
+	height: 30px;
+	width: 45px;
+	border: none;
+	border-radius: 60px;
+	margin: auto 5px;
+	display: inline-flex;
+	justify-content: center;
+}
+
+.btcpay-form select {
+	-moz-appearance: none;
+	-webkit-appearance: none;
+	appearance: none;
+	color: currentColor;
+	background: transparent;
+	border: 1px solid transparent;
+	display: block;
+	padding: 1px;
+	margin-left: auto;
+	margin-right: auto;
+	font-size: 11px;
+	cursor: pointer;
+}
+
+.btcpay-form select:hover {
+	border-color: #ccc;
+}
+
+.btcpay-input {
+	width: 209px;
+	-moz-appearance: none;
+	-webkit-appearance: none;
+	border: none;
+	box-shadow: none;
+	/* text-align: center; */
+	font-size: 25px;
+	/* margin: auto; */
+	/* border-radius: 5px; */
+	line-height: 35px;
+	background: #fff;
+	border-bottom: 1px #e8e8e8 solid;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+
+.input-orderId, .input-checkoutDesc {
+  display: none
+}
+
+#btcpay-input-price {
+	text-align: center;
+}
+
+.btcpay-input-range {
+	width: 209px;
+	margin-bottom: 15px;
+}
+
+input[type=range].btcpay-input-range {
+	-webkit-appearance: none;
+	width: 100%;
+	background: transparent;
+  padding: 30px;
+  box-sizing: border-box;
+}
+
+input[type=range].btcpay-input-range:focus {
+	outline: 0;
+}
+
+input[type=range].btcpay-input-range::-webkit-slider-runnable-track {
+	width: 100%;
+	height: 3.1px;
+	cursor: pointer;
+	background: #ccc;
+	border-radius: 1px;
+	border: 0;
+}
+
+input[type=range].btcpay-input-range::-webkit-slider-thumb {
+	box-shadow: none;
+	height: 22px;
+	width: 22px;
+	border-radius: 50%;
+	background: #222;
+	cursor: pointer;
+	-webkit-appearance: none;
+	margin-top: -9.45px
+}
+
+input[type=range].btcpay-input-range:focus::-webkit-slider-runnable-track {
+  background: #999;
+}
+
+input[type=range].btcpay-input-range::-moz-range-track {
+	width: 100%;
+	height: 3.1px;
+	cursor: pointer;
+  background: #111;
+	border-radius: 1px;
+	border: 0;
+}
+
+input[type=range].btcpay-input-range::-moz-range-thumb {
+	box-shadow: none;
+	height: 22px;
+	width: 22px;
+	border-radius: 50%;
+	background: #222;
+	cursor: pointer;
+}
+
+input[type=range].btcpay-input-range::-ms-track {
+	width: 100%;
+	height: 3.1px;
+	cursor: pointer;
+	background: 0 0;
+	border-color: transparent;
+	color: transparent;
+}
+
+input[type=range].btcpay-input-range::-ms-fill-lower {
+	background: #ccc;
+	border: 0;
+	border-radius: 2px;
+}
+
+input[type=range].btcpay-input-range::-ms-fill-upper {
+	background: #ccc;
+	border: 0;
+	border-radius: 2px;
+}
+
+input[type=range].btcpay-input-range::-ms-thumb {
+	box-shadow: none;
+	height: 22px;
+	width: 22px;
+	border-radius: 50%;
+	background: #222;
+	cursor: pointer;
+	height: 3.1px;
+}
+
+input[type=range].btcpay-input-range:focus::-ms-fill-lower {
+	background: #000;
+}
+
+input[type=range].btcpay-input-range:focus::-ms-fill-upper {
+	background: #000;
+}
+
+
+input::placeholder {
+  color: #dadada;
+}
 
 
 
 
 
+.form-group {
+  position:relative;
+  margin: 5px 0 20px;
+  width: 100%;
+}
 
+.form-label {
+  position: absolute;
+  left: 0;
+  top: 12px;
+  color: #999;
+  background-color: #fff;
+  z-index: 10;
+  transition: transform 100ms ease-out, font-size 100ms ease-out;
+  text-align: center;
+  width: 100%;
+  z-index: 0;
+}
 
-.btcpay-form { display: inline-flex; align-items: center; justify-content: center; }
-.btcpay-form--inline { flex-direction: row; } .btcpay-form--block { flex-direction: column; }
-.btcpay-form .btcpay-custom-container{ text-align: center; }.btcpay-custom { display: flex; align-items: center; justify-content: center; }
-.btcpay-form .plus-minus { cursor:pointer; font-size:25px; line-height: 25px; background: #DFE0E1; height: 30px; width: 45px; border:none; border-radius: 60px; margin: auto 5px; display: inline-flex; justify-content: center; }
-.btcpay-form select { -moz-appearance: none; -webkit-appearance: none; appearance: none; color: currentColor; background: transparent; border:1px solid transparent; display: block; padding: 1px; margin-left: auto; margin-right: auto; font-size: 11px; cursor: pointer; }
-.btcpay-form select:hover { border-color: #ccc; }
+.focused .form-label {
+  transform: translateY(-125%);
+  font-size: .75em;
+  text-align: center;
+  width: 100%;
+}
 
+.form-input {
+  position: relative;
+  padding: 10px 0px 0px 0;
+  width: 100%;
+  outline: 0;
+  border: 0;
+  box-shadow: 0 1px 0 0 #e5e5e5;
+  transition: box-shadow 150ms ease-out;
+  text-align: center;
+  background: transparent;
+}
 
-.btcpay-input {width:209px;-moz-appearance: none;-webkit-appearance: none;border: none;box-shadow: none;text-align: center;font-size: 25px;margin: 0.2rem auto;border-radius: 5px;line-height: 35px;background: #fff;border: 1px #e8e8e8 solid;}
-#btcpay-input-price {text-align: center; }
-.btcpay-input-range {width:209px;margin-bottom:15px;}
+.form-input:focus {
+  box-shadow: 0 2px 0 0 #ccc;
+}
 
-
-input[type=range].btcpay-input-range { -webkit-appearance:none; width:100%; background: transparent; }
-input[type=range].btcpay-input-range:focus { outline:0; }
-input[type=range].btcpay-input-range::-webkit-slider-runnable-track { width:100%; height:3.1px; cursor:pointer; box-shadow:0 0 1.7px #020,0 0 0 #003c00; background:#f3f3f3; border-radius:1px; border:0; }
-input[type=range].btcpay-input-range::-webkit-slider-thumb { box-shadow:none; border:2.5px solid #cedc21; height:22px; width:22px; border-radius:50%; background:#0f3723; cursor:pointer; -webkit-appearance:none; margin-top:-9.45px }
-input[type=range].btcpay-input-range:focus::-webkit-slider-runnable-track { background:#fff; }
-input[type=range].btcpay-input-range::-moz-range-track { width:100%; height:3.1px; cursor:pointer; box-shadow:0 0 1.7px #020,0 0 0 #003c00; background:#f3f3f3; border-radius:1px; border:0; }
-input[type=range].btcpay-input-range::-moz-range-thumb { box-shadow:none; border:2.5px solid #cedc21; height:22px; width:22px; border-radius:50%; background:#0f3723; cursor:pointer; }
-input[type=range].btcpay-input-range::-ms-track { width:100%; height:3.1px; cursor:pointer; background:0 0; border-color:transparent; color:transparent; }
-input[type=range].btcpay-input-range::-ms-fill-lower { background:#e6e6e6; border:0; border-radius:2px; box-shadow:0 0 1.7px #020,0 0 0 #003c00; }
-input[type=range].btcpay-input-range::-ms-fill-upper { background:#f3f3f3; border:0; border-radius:2px; box-shadow:0 0 1.7px #020,0 0 0 #003c00; }
-input[type=range].btcpay-input-range::-ms-thumb { box-shadow:none; border:2.5px solid #cedc21; height:22px; width:22px; border-radius:50%; background:#0f3723; cursor:pointer; height:3.1px; }
-input[type=range].btcpay-input-range:focus::-ms-fill-lower { background:#f3f3f3; } input[type=range].btcpay-input-range:focus::-ms-fill-upper { background:#fff; }
+.form-input.filled {
+  box-shadow: 0 2px 0 0 #999;
+}

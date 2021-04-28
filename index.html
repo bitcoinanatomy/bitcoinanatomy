@@ -321,7 +321,7 @@
 
   <div id="footer">
     <div id="footer-data">
-      Follow on Twitter <a href="https://twitter.com/bitcoinanatomy" target="_blank">@anatomyofbitcoin</a>
+      Follow on Twitter <a href="https://twitter.com/bitcoinanatomy" target="_blank">@bitcoinanatomy</a>
       <br>
       <span style="color:#aaa; margin-top:1rem">Content Released under MIT license.</span>
     </div>
@@ -355,14 +355,27 @@
       <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
         <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
         <input type="hidden" name="jsonResponse" value="true" />
-        <input type="hidden" name="browserRedirect" value="https://google.com" />
+        <input type="hidden" name="browserRedirect" value="https://anatomyofbitcoin.com/#producers" />
 
 
         <input class="btcpay-input input-orderId" name="orderId" value="" placeholder="DATA" />
         <input class="btcpay-input input-checkoutDesc" name="checkoutDesc" value="Producer" placeholder="" />
-        <input class="btcpay-input input-name" name="name" value="" placeholder="Display/Company Name" />
-        <input class="btcpay-input input-twitterHandle" name="twitter" value="" placeholder="twitter_handle" />
-        <input class="btcpay-input input-githubUsername" name="github" value="" placeholder="github_username" />
+
+
+
+        <div class="form-group">
+          <label class="form-label" for="first">Display/Company Name</label>
+          <input class="btcpay-input input-name form-input" name="name" value="" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="first">Twitter Handle</label>
+          <input class="btcpay-input input-twitterHandle form-input" name="twitter" value="" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="first">Github Username</label>
+          <input class="btcpay-input input-githubUsername form-input" name="github" value="" />
+        </div>
+
 
         <input type="hidden" name="checkoutQueryString" value="payerData" />
         <div class="btcpay-custom-container">
@@ -408,13 +421,25 @@
    <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
      <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
      <input type="hidden" name="jsonResponse" value="true" />
-     <input type="hidden" name="browserRedirect" value="https://google.com" />
+     <input type="hidden" name="browserRedirect" value="https://anatomyofbitcoin.com/#sponsors" />
 
           <input class="btcpay-input input-orderId" name="orderId" value="" placeholder="DATA" />
           <input class="btcpay-input input-checkoutDesc" name="checkoutDesc" value="Sponsor" placeholder="" />
-          <input class="btcpay-input input-name" name="name" value="" placeholder="Display/Company Name" />
-          <input class="btcpay-input input-twitterHandle" name="twitter" value="" placeholder="twitter_handle" />
-          <input class="btcpay-input input-githubUsername" name="github" value="" placeholder="github_username" />
+
+
+
+          <div class="form-group">
+            <label class="form-label" for="first">Display/Company Name</label>
+            <input class="btcpay-input input-name form-input" name="name" value="" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="first">Twitter Handle</label>
+            <input class="btcpay-input input-twitterHandle form-input" name="twitter" value="" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="first">Github Username</label>
+            <input class="btcpay-input input-githubUsername form-input" name="github" value="" />
+          </div>
 
 
      <input type="hidden" name="checkoutQueryString" value="payerData" />
@@ -463,13 +488,25 @@
    <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
      <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
      <input type="hidden" name="jsonResponse" value="true" />
-     <input type="hidden" name="browserRedirect" value="https://google.com" />
+     <input type="hidden" name="browserRedirect" value="https://anatomyofbitcoin.com/#contributors" />
 
      <input class="btcpay-input input-orderId" name="orderId" value="" placeholder="DATA" />
      <input class="btcpay-input input-checkoutDesc" name="checkoutDesc" value="Contributor" placeholder="" />
-     <input class="btcpay-input input-name" name="name" value="" placeholder="Display Name" />
-     <input class="btcpay-input input-twitterHandle" name="twitter" value="" placeholder="twitter_handle" />
-     <input class="btcpay-input input-githubUsername" name="github" value="" placeholder="github_username" />
+
+
+      <div class="form-group">
+        <label class="form-label" for="first">Display Name</label>
+        <input class="btcpay-input input-name form-input" name="name" value="" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="first">Twitter Handle</label>
+        <input class="btcpay-input input-twitterHandle form-input" name="twitter" value="" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="first">Github Username</label>
+        <input class="btcpay-input input-githubUsername form-input" name="github" value="" />
+      </div>
+
 
      <input type="hidden" name="checkoutQueryString" value="payerData" />
      <div class="btcpay-custom-container">
