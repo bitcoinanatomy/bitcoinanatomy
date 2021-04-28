@@ -395,6 +395,11 @@ p {
   max-width: 500px;
 }
 
+.popup p {
+    max-width: 370px;
+    margin: auto;
+    margin-bottom: 3rem;
+}
 
 #popupVid{
   max-width: 80vw;
@@ -1004,6 +1009,7 @@ and (min-width : 1824px) {
 .btcpay-input-range {
 	width: 209px;
 	margin-bottom: 15px;
+  text-align: center;
 }
 
 input[type=range].btcpay-input-range {
