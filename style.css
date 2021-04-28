@@ -402,7 +402,10 @@ p {
 }
 
 #popupVid{
-  max-width: 80vw;
+  max-width: 84vw;
+  padding: 0;
+  background: #000;
+  height: 36.6vw;
 }
 
 
@@ -430,6 +433,7 @@ p {
 iframe {
   width: 100%;
   height: 100%;
+  display: list-item;
 }
 
 
@@ -981,20 +985,17 @@ and (min-width : 1824px) {
 }
 
 .btcpay-input {
-	width: 209px;
 	-moz-appearance: none;
 	-webkit-appearance: none;
 	border: none;
 	box-shadow: none;
-	/* text-align: center; */
 	font-size: 25px;
-	/* margin: auto; */
-	/* border-radius: 5px; */
 	line-height: 35px;
 	background: #fff;
 	border-bottom: 1px #e8e8e8 solid;
 	width: 100%;
 	box-sizing: border-box;
+  text-align: center;
 }
 
 
