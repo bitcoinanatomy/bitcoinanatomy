@@ -408,6 +408,13 @@ p {
   height: 36.6vw;
 }
 
+#popupVid .popup-close {
+  color: #fff;
+  display: block;
+  background: #000;
+  border-radius: 40px;
+  padding: 1rem;
+}
 
 .popup-close {
   display: block;
@@ -420,6 +427,7 @@ p {
   cursor: pointer;
   text-align: center;
   color: #000;
+  font-weight: bold;
 }
 
 .popup-close.full {
