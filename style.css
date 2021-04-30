@@ -148,6 +148,13 @@ a, a:visited, a:hover, a:link {
   color: #fff;
 }
 
+
+#footer a, #team-data a{
+  text-decoration: none;
+  border-bottom: 1px #ffffff4d solid;
+  padding-bottom: .3rem;
+}
+
 p {
   margin: 0 0 1.5rem;
   line-height: 1.5;
@@ -652,11 +659,7 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 #team-data .compensation {opacity: 0.0; font-size: 12px; transition: all 0.5s ease;}
 #team-data tr:hover .compensation {opacity: 0.3;}
 
-#team-data a{
-  text-decoration: none;
-  border-bottom: 1px #ffffff4d solid;
-  padding-bottom: .3rem;
-}
+
 
 
 
