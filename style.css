@@ -151,9 +151,14 @@ a, a:visited, a:hover, a:link {
 
 #footer a, #team-data a{
   text-decoration: none;
-  border-bottom: 1px #ffffff4d solid;
-  padding-bottom: .3rem;
+  border-bottom: 1px #444 solid;
+  padding-bottom: .2rem;
 }
+
+#footer a:hover, #team-data a:hover{
+  border-bottom: 1px #fff solid;
+}
+
 
 p {
   margin: 0 0 1.5rem;
@@ -753,12 +758,12 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
   padding: 4rem;
 }
 
-
 #footer span {
   color: #7b7b7b;
-  margin-top: 1rem;
-  display: block;
+  padding: 0 0.5rem
 }
+
+
 
 
 
