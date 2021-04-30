@@ -69,6 +69,64 @@ $( document ).ready(function() {
 
   //load scenes from google docs
   var totalScenes = 9;
+
+
+
+  // Hack to force reloading of content from google sheets
+  setTimeout(function(){
+    getScenesData(totalScenes);
+    getProducerData();
+    getTeamtData(totalScenes);
+  }, 500);
+
+
+
+  $(".btcpay-form").each(function( index, element ) {
+    var jsonForm = new Object();
+    var type = $(element).find('.input-checkoutDesc').val();
+    $(element).find('.btcpay-input').keyup(function() {
+
+      // limit, for validation
+      // {"p":"Contributor","n":"wdhgt735344eew","t":"rwfrw66uiolou3746467456fwwed","g":"546646665644664654"}
+      $(element).find('.input-checkoutDesc').val( type + ':' + $(element).find('.input-name').val());
+      jsonForm.p = type;
+      jsonForm.n = $(element).find('.input-name').val();
+      jsonForm.t = $(element).find('.input-twitterHandle').val();
+      jsonForm.g = $(element).find('.input-githubUsername').val();
+      console.log(JSON.stringify(jsonForm));
+      $(element).find('.input-orderId').val(JSON.stringify(jsonForm));
+    });
+
+  });
+
+  // Form label animations
+  $('input').focus(function(){
+    $(this).parents('.form-group').addClass('focused');
+  });
+  $('input').blur(function(){
+    var inputValue = $(this).val();
+    if ( inputValue == "" ) {
+      $(this).removeClass('filled');
+      $(this).parents('.form-group').removeClass('focused');
+    } else {
+      $(this).addClass('filled');
+    }
+  })
+
+
+});
+
+
+
+
+
+
+
+
+
+
+function getScenesData(totalScenes){
+
   var sceneData = [];
   var shots = [];
   var tableDeader = "<thead><tr> <th class='table-col-section'><h4>Theme</h4></th>   <th class='table-col-board'><h4>Board</h4></th>  <th class='table-col-vo'><h4>Voice</h4></th>  <th class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
@@ -145,60 +203,7 @@ $( document ).ready(function() {
       }
     });
   }
-
-
-
-
-  getProducerData();
-  getTeamtData(totalScenes);
-
-
-
-  $(".btcpay-form").each(function( index, element ) {
-    var jsonForm = new Object();
-    var type = $(element).find('.input-checkoutDesc').val();
-    $(element).find('.btcpay-input').keyup(function() {
-
-      // limit, for validation
-      // {"p":"Contributor","n":"wdhgt735344eew","t":"rwfrw66uiolou3746467456fwwed","g":"546646665644664654"}
-      $(element).find('.input-checkoutDesc').val( type + ':' + $(element).find('.input-name').val());
-      jsonForm.p = type;
-      jsonForm.n = $(element).find('.input-name').val();
-      jsonForm.t = $(element).find('.input-twitterHandle').val();
-      jsonForm.g = $(element).find('.input-githubUsername').val();
-      console.log(JSON.stringify(jsonForm));
-      $(element).find('.input-orderId').val(JSON.stringify(jsonForm));
-    });
-
-  });
-
-  // Form label animations
-  $('input').focus(function(){
-    $(this).parents('.form-group').addClass('focused');
-  });
-  $('input').blur(function(){
-    var inputValue = $(this).val();
-    if ( inputValue == "" ) {
-      $(this).removeClass('filled');
-      $(this).parents('.form-group').removeClass('focused');
-    } else {
-      $(this).addClass('filled');
-    }
-  })
-
-
-});
-
-
-
-
-
-
-
-
-
-
-
+}
 
 
 
