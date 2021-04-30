@@ -230,13 +230,12 @@ function getTeamtData(totalScenes){
         })
 
       });
-      console.log(teamData);
 
 
       $.each(teamData, function(key, item){
 
         $.each(item.team, function(key, teamMember){
-          console.log(teamMember);
+
           if(teamMember.url != ""){
             markupTeam += '<a href="'+teamMember.url+'" target="_blank">' + teamMember.name + '</a> <span class="compensation">' + teamMember.individualCompensation + '%</span><br>';
           }else{
@@ -297,7 +296,7 @@ function getProducerData(){
 
 
 
-         if(producer.metadata.itemDesc !== undefined){
+         if(producer.metadata.itemDesc !== undefined && producer.metadata.itemDesc !== null){
 
                  if(producer.metadata.itemDesc.startsWith("Contributor:")){
 
