@@ -335,7 +335,7 @@ function getProducerData(){
          targetContainer = "";
        });
 
-       var finalProgress = (amoutTotal / 3)*100
+       var finalProgress = (amoutTotal / 5)*100
        if( finalProgress < 3 ){
          finalProgress = '30px';
          $('.meter').addClass('short');
