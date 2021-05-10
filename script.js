@@ -301,7 +301,7 @@ function getProducerData(){
                  if(producer.metadata.itemDesc.startsWith("Contributor:")){
 
                      targetContainer = "#contributors-inner";
-                     jsonObject = JSON.parse(producer.metadata.orderId);
+                     jsonObject = producer.metadata.orderId;
                      //console.log(jsonObject.n);
                      $( "<div/>", { "class": "producer-name", html: '<b>' + jsonObject.n + '</b>' + amount }).appendTo(targetContainer);
 
@@ -310,7 +310,7 @@ function getProducerData(){
                  } else if(producer.metadata.itemDesc.startsWith("Sponsor:")){
 
                      targetContainer = "#sponsors-inner";
-                     jsonObject = JSON.parse(producer.metadata.orderId);
+                     jsonObject = producer.metadata.orderId;
                      $( "<div/>", { "class": "producer-name", html:  '<h2>' + jsonObject.n + '</h2>' + amount }).appendTo(targetContainer);
 
                      amoutTotal = (currentAmount) + amoutTotal;
@@ -319,11 +319,8 @@ function getProducerData(){
 
                      targetContainer = "#producers-inner";
                      //Adding logos to major contributors
-                     if(producer.metadata.itemDesc.startsWith("Producer:ACME")){
-                       $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="assets/logos/example.png">' + amount }).appendTo(targetContainer);
-                     }
-                     if(producer.metadata.itemDesc.startsWith("Producer:Widgets")){
-                       $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="https://theme4press.com/wp-content/uploads/2015/11/featured-large-adding-widgets.jpg">' + amount }).appendTo(targetContainer);
+                     if(producer.metadata.itemDesc.startsWith("Producer:PirateHash")){
+                       $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="assets/logos/piratehash.png">' + amount }).appendTo(targetContainer);
                      }
 
                      amoutTotal = (currentAmount) + amoutTotal;

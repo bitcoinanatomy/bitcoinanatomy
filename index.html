@@ -393,7 +393,7 @@
             id="btcpay-input-price-producer"
             name="price" type="text"
             min="0.5" max="10" step="0.1" value="2"
-            oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-producer').value = 2 : event.target.value"
+            oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0.1 ? document.querySelector('#btcpay-input-price-producer').value = 0.1 : event.target.value"
             onchange="document.querySelector('#btcpay-input-range-producer').value = document.querySelector('#btcpay-input-price-producer').value"
           />
           <select name="currency">
@@ -458,7 +458,7 @@
          id="btcpay-input-price-sponsor"
          name="price" type="text"
          min="0.01" max="0.5" step="0.001" value="0.01"
-         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-sponsor').value = 0.01 : event.target.value"
+         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0.01 ? document.querySelector('#btcpay-input-price-sponsor').value = 0.01 : event.target.value"
          onchange="document.querySelector('#btcpay-input-range-sponsor').value = document.querySelector('#btcpay-input-price-sponsor').value"
        />
        <select name="currency">
@@ -524,7 +524,7 @@
          id="btcpay-input-price"
          name="price" type="text"
          min="0.0005" max="0.01" step="0.001" value="0.001"
-         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0 ? document.querySelector('#btcpay-input-price-contributor').value = 0.00001 : event.target.value"
+         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0.0005 ? document.querySelector('#btcpay-input-price-contributor').value = 0.0005 : event.target.value"
          onchange="document.querySelector('#btcpay-input-range-contributor').value = document.querySelector('#btcpay-input-price-contributor').value"
        />
        <select name="currency">
