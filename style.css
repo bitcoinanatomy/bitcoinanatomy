@@ -752,6 +752,34 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 
 
 
+
+
+
+
+
+
+.swiper-container {
+  width: 100vw;
+  height: 30vw;
+  margin-bottom: 5rem;
+}
+
+.swiper-slide img {
+  max-width: 1000px;
+  width: 100%;
+  margin: auto;
+  display: block;
+}
+
+.swiper-button-next,
+.swiper-button-prev,
+.swiper-container-rtl .swiper-button-prev,
+.swiper-container-rtl .swiper-button-next{
+    fill: #fff;
+}
+
+
+
 #footer{
   border-top: #181818 solid 1px;
   text-align: center;
