@@ -771,7 +771,7 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 
 .swiper-container {
   width: 100vw;
-  height: 30vw;
+  height: auto;
   margin-bottom: 5rem;
 }
 
