@@ -503,13 +503,24 @@ iframe {
 
 img#Flammarion-Grid{
   width: 70%;
+
 }
+
+img#Fall-Giants-Grid{
+  margin-top: 8rem;
+}
+img#Fall-Giants-Grid, p#Fall-Giants-Grid{
+  width: 85%;
+  margin-left: auto;
+}
+
+
 
 img#Cosmic-View-Cover{
   width: 60%;
-  margin-top: 8rem;
-  margin-left: auto;
-  margin-bottom: 4rem;
+  margin: auto;
+  margin-top: 7rem;
+  margin-bottom: 2rem;
 }
 img#Cosmic-View-Grid{
   width: 60%;
