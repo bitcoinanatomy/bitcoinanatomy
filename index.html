@@ -416,16 +416,28 @@
 
   <div class="popup-overlay" id="video-popup-overlay">
     <div class="popup" id="popupVid">
-      <div class="popup-close">X</div>
+
+      <div class="popup-close close-x">
+        <div class="close-x1">
+          <div class="close-x2"></div>
+        </div>
+      </div>
+
       <iframe width="640" sandbox="allow-same-origin allow-scripts allow-popups" src="https://bitcointv.com/videos/embed/56cbc761-161e-4190-aeac-fb575231f90a" frameborder="0" allowfullscreen></iframe>
     </div>
   </div>
 
-  <div class="popup-overlay" id="producer__popup-overlay">
+  <div class="popup-overlay sponsor-popup-overlay" id="producer__popup-overlay">
     <div class="popup">
-      <div class="popup-close">X</div>
-       <h2>producer</h2>
-       <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
+
+      <div class="popup-close close-x">
+        <div class="close-x1">
+          <div class="close-x2"></div>
+        </div>
+      </div>
+
+       <h2>Producer</h2>
+       <p>Support the project in the long term by funding the day to day operations.</p>
 
       <form method="POST"  onsubmit="onBTCPayFormSubmit(event);return false"  action="https://btcpay989117.lndyn.com/api/v1/invoices" class="btcpay-form btcpay-form--block">
         <input type="hidden" name="storeId" value="EbZBrmfsHVvG8ALXSiWBqA2TSFeS2CmLH9J94VmQM3AU" />
@@ -487,9 +499,15 @@
 </div>
 
 
-<div class="popup-overlay" id="sponsor__popup-overlay">
+<div class="popup-overlay sponsor-popup-overlay" id="sponsor__popup-overlay">
   <div class="popup">
-    <div class="popup-close">X</div>
+
+    <div class="popup-close close-x">
+      <div class="close-x1">
+        <div class="close-x2"></div>
+      </div>
+    </div>
+
     <h2>Sponsor the Film</h2>
     <p>Sponsoring the project with extra capital to grow the team and pay for equipment or services.</p>
 
@@ -554,9 +572,17 @@
 
 
 
-<div class="popup-overlay" id="contributor__popup-overlay">
+<div class="popup-overlay sponsor-popup-overlay" id="contributor__popup-overlay">
   <div class="popup">
-    <div class="popup-close">X</div>
+
+
+    <div class="popup-close close-x">
+      <div class="close-x1">
+        <div class="close-x2"></div>
+      </div>
+    </div>
+
+
     <h2>Contribute!</h2>
     <p>Show support by donating a smaller amount or by taking on some of the work</p>
 

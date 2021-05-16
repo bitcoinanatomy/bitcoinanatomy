@@ -94,6 +94,49 @@ body{
     opacity: 0.5;
 }
 
+
+.close-x {
+  width: 25px;
+  height: 25px;
+  background-color: black;
+  border: 1px solid black;
+}
+
+.close-x1 {
+  height: 25px;
+  width: 2px;
+  margin-left: 12px;
+  background-color: white;
+  transform: rotate(45deg);
+  Z-index: 1;
+}
+
+.close-x2 {
+  height: 25px;
+  width: 2px;
+  background-color: white;
+  transform: rotate(90deg);
+  Z-index: 2;
+}
+
+
+
+
+.sponsor-popup-overlay .close-x {
+  background-color: white;
+  border: 1px solid white;
+}
+
+.sponsor-popup-overlay .close-x1 {
+  background-color: black;
+}
+
+.sponsor-popup-overlay .close-x2 {
+  background-color: black;
+}
+
+
+
 #landing .submit {
   background: #fff;
   display: inline-block;
@@ -447,8 +490,8 @@ p {
   position: absolute;
   top: 18px;
   right: 18px;
-  width: 12px;
-  height: 12px;
+  width: 25px;
+  height: 25px;
   padding: 8px;
   cursor: pointer;
   text-align: center;
