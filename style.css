@@ -835,10 +835,9 @@ h2.slider-hero span {
 .swiper-container {
   width: 100vw;
   height: auto;
-  margin-bottom: 5rem;
-  padding: 5rem 0 5rem 0;
+  padding: 5rem 0 0rem 0;
   background: #111111;
-  margin: 0;
+  padding-bottom: 3rem;
 }
 
 .swiper-slide img {
