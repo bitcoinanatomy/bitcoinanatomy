@@ -800,6 +800,11 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
   display: block;
 }
 
+.slide-caption{
+  text-align: center;
+  padding: 1rem;
+}
+
 .swiper-button-next,
 .swiper-button-prev,
 .swiper-container-rtl .swiper-button-prev,
