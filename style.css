@@ -828,12 +828,17 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 
 
 
-
+h2.slider-hero span {
+   margin-bottom: 0;
+}
 
 .swiper-container {
   width: 100vw;
   height: auto;
   margin-bottom: 5rem;
+  padding: 5rem 0 5rem 0;
+  background: #111111;
+  margin: 0;
 }
 
 .swiper-slide img {
