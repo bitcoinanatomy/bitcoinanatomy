@@ -680,7 +680,10 @@ th {
 
 
 
-
+#team-blurb {
+  text-align: center;
+  padding-bottom: 3rem
+}
 
 td.team-position {text-align: right; font-size: 14px;}
 td.team-person {font-size: 18px;}
