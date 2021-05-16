@@ -25,8 +25,15 @@ $( document ).ready(function() {
 
     $("#hero-cta").click(function() {
       $('html, body').animate({
-          scrollTop: $("#producership-options ").offset().top
+          scrollTop: $("#producership-options").offset().top
       }, 1000);
+    });
+
+
+    $("#team-cta").click(function() {
+      $('html, body').animate({
+          scrollTop: $("#team").offset().top +10
+      }, 500);
     });
 
 

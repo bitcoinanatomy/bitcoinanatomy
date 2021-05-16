@@ -59,6 +59,14 @@ body{
   margin: auto;
 }
 
+
+#team-cta{
+  width: auto;
+  display: table;
+  margin: 3rem auto;
+  padding-bottom: .5rem;
+}
+
 #sub-hero{
   width: 100%;
   font-weight: 400;
@@ -149,13 +157,19 @@ a, a:visited, a:hover, a:link {
 }
 
 
+a {
+    display: inline;
+    text-decoration: none;
+    border-bottom: 1px #ffffff82 solid;
+}
+
+
 #footer a, #team-data a{
   text-decoration: none;
-  border-bottom: 1px #444 solid;
   padding-bottom: .2rem;
 }
 
-#footer a:hover, #team-data a:hover{
+a:hover, a:hover{
   border-bottom: 1px #fff solid;
 }
 
@@ -562,13 +576,14 @@ div#scenes-nav {
 }
 
 a.edits{
-  display: block;
-  margin: 2rem 0;
+  display: table;
+  margin: 2rem auto;
   text-decoration: none;
   color: #777;
   font-size: 12px;
-  width: 100%;
+  width: auto;
   text-align: center;
+  padding-bottom: .3rem;
 }
 
 .scenes-hero{
