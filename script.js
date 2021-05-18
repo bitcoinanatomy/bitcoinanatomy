@@ -348,7 +348,7 @@ function getProducerData(){
                      targetContainer = "#producers-inner";
                      //Adding logos to major contributors
                      if(producer.metadata.itemDesc.startsWith("Producer:PirateHash")){
-                       $( "<div/>", { "class": "producer-name", html: '<img class="producer-logo" src="assets/logos/piratehash.png">' + amount }).appendTo(targetContainer);
+                       $( "<div/>", { "class": "producer-name", html: '<a href="https://piratehash.com" target="_blank"><img class="producer-logo" src="assets/logos/piratehash.png" /></a>' + amount }).appendTo(targetContainer);
                      }
 
                      amoutTotal = (currentAmount) + amoutTotal;
