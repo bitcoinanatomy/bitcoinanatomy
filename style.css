@@ -67,10 +67,9 @@ body{
   padding-bottom: .5rem;
 }
 
-#sub-hero{
-  width: 100%;
-  font-weight: 400;
-}
+
+
+
 
 
 
@@ -164,7 +163,7 @@ h1{
   box-sizing: border-box;
   font-size: 8vw;
   letter-spacing: -0.2rem;
-  padding-bottom: 0.3rem;
+  padding-bottom: 0.6rem;
 }
 
 h2 {
@@ -185,13 +184,39 @@ h2.options-hero {
     width: 100%;
     color: #000;
     text-align: center;
+    margin-bottom: 0;
+}
+
+h2.options-hero span {
+    margin-bottom: 1rem;
 }
 
 h2 span {
   margin-top: 0px;
-  max-width: 590px;
+  max-width: 620px;
   margin: 0 auto 3rem auto;
   display: block;
+}
+
+
+
+.sub-hero {
+  width: 100%;
+  font-weight: 400;
+  max-width: 700px;
+  margin: auto;
+  letter-spacing: 0.06rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.options-sub-hero {
+  color: #000;
+  margin-bottom: 3rem;
+}
+
+.scenes-sub-hero {
+  margin-bottom: 1rem;
 }
 
 
