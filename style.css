@@ -588,8 +588,9 @@ img#Flammarion-Grid{
 
 }
 
-img#Fall-Giants-Grid{
-  margin-top: 8rem;
+p#Fall-Giants-Grid{
+  margin-bottom: 8rem;
+  text-align: center;
 }
 img#Fall-Giants-Grid, p#Fall-Giants-Grid{
   width: 85%;
