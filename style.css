@@ -911,7 +911,9 @@ h2.slider-hero span {
 
 /* Smartphones (portrait and landscape) ----------- */
 @media only screen and (max-width : 880px) {
-
+  #landing{
+    max-height: 1730px;
+  }
 
   #landing h1 {
     font-size: 96px;
