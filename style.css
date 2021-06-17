@@ -928,6 +928,12 @@ h2.slider-hero span {
     max-height: 1730px;
   }
 
+  #popupVid {
+      max-width: 100vw;
+      width: 98vw;
+      height: 55.6vw;
+  }
+
   #landing h1 {
     font-size: 80px;
     width: 100%;
