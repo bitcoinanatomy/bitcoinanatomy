@@ -766,6 +766,7 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
 #team-data .compensation {opacity: 0.0; font-size: 12px; transition: all 0.5s ease;}
 #team-data tr:hover .compensation {opacity: 0.3;}
 
+.team-person a { border-bottom: 1px #ffffff26 solid; }
 
 
 
@@ -911,6 +912,13 @@ h2.slider-hero span {
 
 /* Smartphones (portrait and landscape) ----------- */
 @media only screen and (max-width : 880px) {
+
+  td.team-position {font-size: 10px;}
+  td.team-person {font-size: 12px;}
+  #team-data .compensation {font-size: 8px;}
+
+
+
   #landing{
     max-height: 1730px;
   }
