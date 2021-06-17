@@ -237,6 +237,11 @@ a {
   padding-bottom: .2rem;
 }
 
+#footer a {
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+
 a:hover, a:hover{
   border-bottom: 1px #fff solid;
 }
