@@ -433,6 +433,10 @@ p {
   display: inline-block;
 }
 
+.producer-name a {
+  color: #000;
+}
+
 
 
 

@@ -330,8 +330,13 @@ function getProducerData(){
 
                      targetContainer = "#contributors-inner";
                      jsonObject = producer.metadata.orderId;
-                     //console.log(jsonObject.n);
-                     $( "<div/>", { "class": "producer-name", html: '<b>' + jsonObject.n + '</b>' + amount }).appendTo(targetContainer);
+                     console.log(jsonObject.t);
+                     if(jsonObject.t != ''){
+                       $( "<div/>", { "class": "producer-name", html: '<b><a target="_blank" href="https://twitter.com/'+jsonObject.n+'">' + jsonObject.n + '</a></b>' + amount }).appendTo(targetContainer);
+                     }else{
+                       $( "<div/>", { "class": "producer-name", html: '<b>' + jsonObject.n + '</b>' + amount }).appendTo(targetContainer);
+                     }
+
 
                      amoutTotal = (currentAmount) + amoutTotal;
 
