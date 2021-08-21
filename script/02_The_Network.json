@@ -1,0 +1,257 @@
+[
+    {
+        "section": "Network Origin",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "A bitcoin node comes online once it joins the bitcoin node network.\n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/02.1_network_connection.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "From black, a single node pops-up. A small glowing white rectangle with some ui-like elements.\nhalfin\n@halfin\nRunning bitcoin\n10:33 PM · Jan 10, 2009·Twitter Web Client\n",
+        "technicalNotes1": "https://en.bitcoin.it/wiki/Protocol_documentation\nhttps://twitter.com/halfin/status/1110302988\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 20,
+        "timecode": "00:20",
+        "vo": "This requires a Transmission Control Protocol (TCP) connection usually established on port 8333.\n",
+        "visual": "Small icon animation on top with a wifi or internet connectivity element.\n",
+        "technicalNotes1": "nDefaultPort = 8333;\n\nhttps://github.com/bitcoin/bitcoin/blob/master/src/chainparams.cpp#L106"
+    },
+    {
+        "duration": 10,
+        "seconds": 30,
+        "timecode": "00:30",
+        "vo": "When the network first launched in 2009, IRC was used to broadcast other nodes IPs on the network.\n",
+        "visual": "Network grows as year animates, tickers in."
+    },
+    {
+        "duration": 10,
+        "seconds": 40,
+        "timecode": "00:40",
+        "vo": "Today, the node queries a DNS list that will list of IP addresses that are running a Bitcoin client.\n",
+        "visual": "List seed nodes, highlight one, and transform in list of IPs. Select 8 and highlight.",
+        "technicalNotes1": "vSeeds.emplace_back(\"seed.bitcoin.sipa.be\"); // Pieter Wuille, only supports x1, x5, x9, and xd\nvSeeds.emplace_back(\"dnsseed.bluematt.me\"); // Matt Corallo, only supports x9\nvSeeds.emplace_back(\"dnsseed.bitcoin.dashjr.org\"); // Luke Dashjr\nvSeeds.emplace_back(\"seed.bitcoinstats.com\"); // Christian Decker, supports x1 - xf\nvSeeds.emplace_back(\"seed.bitcoin.jonasschnelli.ch\"); // Jonas Schnelli, only supports x1, x5, x9, and xd\nvSeeds.emplace_back(\"seed.btc.petertodd.org\"); // Peter Todd, only supports x1, x5, x9, and xd\nvSeeds.emplace_back(\"seed.bitcoin.sprovoost.nl\"); // Sjors Provoost\nvSeeds.emplace_back(\"dnsseed.emzy.de\"); // Stephan Oeste\nvSeeds.emplace_back(\"seed.bitcoin.wiz.biz\"); // Jason Maurice\n\nhttps://github.com/bitcoin/bitcoin/blob/master/src/chainparams.cpp#L121",
+        "technicalNotes2": "dig seed.bitcoinstats.com +short\n71.19.155.244\n173.254.232.51\n45.79.97.30\n198.252.112.64\n35.128.8.141\n108.17.18.165\n98.208.76.134\n8.29.28.12\n52.62.2.124\n96.234.214.85\n47.89.24.56\n212.164.215.159\n52.62.42.229\n68.52.96.191\n115.66.205.171\n24.250.16.39\n201.43.160.155\n5.3.253.18\n100.40.179.172\n50.135.169.181\n186.149.249.18\n101.201.44.207\n96.35.97.46\n124.188.118.196\n82.8.4.79",
+        "technicalNotes3": "Back in 2009 we relied on IRC to bootstrap the network, so every node would connect to Freenode (later LFnet) and would join a channel. Their nicknames were their encoded public IP address.\n\n\n\nIn the source code you can see that the DNS seed nodes are contacted only to get a list of addresses.\n\nhttps://github.com/bitcoin/bitcoin/blob/master/src/chainparamsseeds.h#L10\n\nstatic SeedSpec6 pnSeed6_main[] = {\n    {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0xff,0x02,0x27,0xad,0x7e}, 8333},\n    {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0xff,0x03,0x0e,0xa8,0xc9}, 48333},\n    {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0xff,0x04,0x24,0x70,0x2c}, 8333},\n    {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0xff,0x05,0x08,0x12,0x1f}, 8333},\n    {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0xff,0x05,0x0e,0xc8,0xa7}, 8333},\n    {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0xff,0x05,0x38,0x14,0x02}, 8333},"
+    },
+    {
+        "section": "Connected Node",
+        "duration": 10,
+        "seconds": 50,
+        "timecode": "00:50",
+        "vo": "Once the node found other nodes, it sends out a handshake message in an attempt of establishing a connection.\n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/02.2_network_growth.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Zoom out and lines come out of the node rectangle. 8 lines connect to 8 other nodes but these are not glowing, they're greyed out. \nBehind the main glowing node a small body of text materializes.\n",
+        "technicalNotes1": "https:
+        "technicalNotes2": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 60,
+        "timecode": "01:00",
+        "vo": "The nodes share version, current time, network propagation IP addresses, and best block height among other things.\n",
+        "visual": "Data blocks are highlighted one by one and afterwards the full data block is sent to all 8 nodes.\nVersion and Varak messages go back and forth. And then share addresses.",
+        "technicalNotes2": "https://en.bitcoin.it/wiki/Protocol_documentation#verack",
+        "technicalNotes3": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 70,
+        "timecode": "01:10",
+        "vo": "If the handshake does not validate, the connection is rejected.\n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/02.7_network_inside.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show a node connection being rejected."
+    },
+    {
+        "duration": 10,
+        "seconds": 80,
+        "timecode": "01:20",
+        "vo": "This helps keep the consensus on other important rules of the protocol.\n",
+        "visual": "The nodes get the text and signal validation while turning glowing white.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 90,
+        "timecode": "01:30",
+        "vo": "Geographic location is irrelevant for node connections, and a standard bitcoin full node will typically not need to connect to more than 20 other nodes.\n",
+        "visual": "Zoom out to reviews larger network over the earth globe with emphasis on geography clusters.\n",
+        "technicalNotes1": "Shape globe particle emitter\nIncrease generation of particles based on IV mapping "
+    },
+    {
+        "section": "Role of Nodes",
+        "duration": 10,
+        "seconds": 100,
+        "timecode": "01:40",
+        "vo": "The nodes are the backbone of the network and are the main validators of the transaction data transmitted on the network.\n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/02.5_network_evol.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show connections and data flows in the connection lines, glowing stripes going from node to node across the world.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 110,
+        "timecode": "01:50",
+        "vo": "All nodes comply to the same set of rules but some nodes perform additional functions.\n",
+        "visual": "Keep the globe rotating slowly showing geographic dispersion."
+    },
+    {
+        "section": "Peer-2-Peer Network",
+        "vo": "The nodes connect directly to each other, no middle-men.\n",
+        "board": "https://mir-s3-cdn-cf.behance.net/project_modules/2800_opt_1/f7e35e104769567.5f7751022fcfd.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 120,
+        "timecode": "02:00",
+        "vo": "Full nodes maintain a complete and up-to-date copy of the blockchain.\n",
+        "visual": "Highlight the majority of the nodes in the network."
+    },
+    {
+        "duration": 10,
+        "seconds": 130,
+        "timecode": "02:10",
+        "vo": "These nodes provide the infrastructure for different applications to work.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 140,
+        "timecode": "02:20",
+        "vo": "Wallets and signing software can connect to these nodes to verify the validity of received transactions, and to broadcast their own transactions.\n",
+        "visual": "Wallet app pops-up outside the network, crafts a transaction (0.00032 BTC) and sends it to a node which propagates it through the network. Another wallet on the other side of the globe pops-up and gets the 0.00032 BTC number animation and a validation sign.\n\nTransactions are animated in other connections besides the node connections."
+    },
+    {
+        "section": "Pricing",
+        "duration": 10,
+        "seconds": 150,
+        "timecode": "02:30",
+        "vo": "Nodes connect to wallets in exchanges or banking websites where users trade bitcoin for fiat currencies which determines the price of bitcoin.",
+        "visual": "Price discovery animates along side the date/year showing the exponential value rise of bitcoin."
+    },
+    {
+        "section": "VS central banks",
+        "duration": 10,
+        "seconds": 160,
+        "timecode": "02:40",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/02.5_network_activity.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show transactions being routed by third party gatekeepers with the ability to block transactions, print currency, and manipulate interest rates."
+    },
+    {
+        "section": "Unit of account and bias",
+        "duration": 10,
+        "seconds": 170,
+        "timecode": "02:50",
+        "vo": "Bitcoin can be understood as a single unit of approximately <b>2.1 Quadrillions</b> parts called satoshis.\n\nIn the source code, the 1 bitcoin is defined as 100 million satoshis.",
+        "board": "https://pbs.twimg.com/media/E00GZpAVEAAgvWD?format=png&name=small",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "2099999997690000\n\nuint64_t COIN = 100000000;\nSubsidy = 50 * COIN;\n\nhttps://en.bitcoin.it/wiki/Satoshi_(unit) \nhttp://cpp.sh/46dz6\nhttps://www.reddit.com/r/Bitcoin/comments/1qii6x/help_me_understand_isnt_the_cap_actually_21/",
+        "technicalNotes1": "| Subsidy 64 bit binary             | Subsidy     | Halving | Coinbase Max      | Year  | Blocks   |\n| 00101010000001011111001000000000  | 5000000000  | 1       | 1050000000000000  | 2009  | 0        |\n| 10010101000000101111100100000000  | 2500000000  | 2       | 1575000000000000  | 2013  | 210000   |\n| 01001010100000010111110010000000  | 1250000000  | 3       | 1837500000000000  | 2017  | 420000   |\n| 00100101010000001011111001000000  | 625000000   | 4       | 1968750000000000  | 2021  | 630000   |\n| 00010010101000000101111100100000  | 312500000   | 5       | 2034375000000000  | 2025  | 840000   |\n| 00001001010100000010111110010000  | 156250000   | 6       | 2067187500000000  | 2029  | 1050000  |\n| 00000100101010000001011111001000  | 78125000    | 7       | 2083593750000000  | 2033  | 1260000  |\n| 00000010010101000000101111100100  | 39062500    | 8       | 2091796875000000  | 2037  | 1470000  |\n| 00000001001010100000010111110010  | 19531250    | 9       | 2095898437500000  | 2041  | 1680000  |\n| 00000000100101010000001011111001  | 9765625     | 10      | 2097949218750000  | 2045  | 1890000  |\n| 00000000010010101000000101111100  | 4882812     | 11      | 2098974609270000  | 2049  | 2100000  |\n| 00000000001001010100000010111110  | 2441406     | 12      | 2099487304530000  | 2053  | 2310000  |\n| 00000000000100101010000001011111  | 1220703     | 13      | 2099743652160000  | 2057  | 2520000  |\n| 00000000000010010101000000101111  | 610351      | 14      | 2099871825870000  | 2061  | 2730000  |\n| 00000000000001001010100000010111  | 305175      | 15      | 2099935912620000  | 2065  | 2940000  |\n| 00000000000000100101010000001011  | 152587      | 16      | 2099967955890000  | 2069  | 3150000  |\n| 00000000000000010010101000000101  | 76293       | 17      | 2099983977420000  | 2073  | 3360000  |\n| 00000000000000001001010100000010  | 38146       | 18      | 2099991988080000  | 2077  | 3570000  |\n| 00000000000000000100101010000001  | 19073       | 19      | 2099995993410000  | 2081  | 3780000  |\n| 00000000000000000010010101000000  | 9536        | 20      | 2099997995970000  | 2085  | 3990000  |\n| 00000000000000000001001010100000  | 4768        | 21      | 2099998997250000  | 2089  | 4200000  |\n| 00000000000000000000100101010000  | 2384        | 22      | 2099999497890000  | 2093  | 4410000  |\n| 00000000000000000000010010101000  | 1192        | 23      | 2099999748210000  | 2097  | 4620000  |\n| 00000000000000000000001001010100  | 596         | 24      | 2099999873370000  | 2101  | 4830000  |\n| 00000000000000000000000100101010  | 298         | 25      | 2099999935950000  | 2105  | 5040000  |\n| 00000000000000000000000010010101  | 149         | 26      | 2099999967240000  | 2109  | 5250000  |\n| 00000000000000000000000001001010  | 74          | 27      | 2099999982780000  | 2113  | 5460000  |\n| 00000000000000000000000000100101  | 37          | 28      | 2099999990550000  | 2117  | 5670000  |\n| 00000000000000000000000000010010  | 18          | 29      | 2099999994330000  | 2121  | 5880000  |\n| 00000000000000000000000000001001  | 9           | 30      | 2099999996220000  | 2125  | 6090000  |\n| 00000000000000000000000000000100  | 4           | 31      | 2099999997060000  | 2129  | 6300000  |\n| 00000000000000000000000000000010  | 2           | 32      | 2099999997480000  | 2133  | 6510000  |\n| 00000000000000000000000000000001  | 1           | 33      | 2099999997690000  | 2137  | 6720000  |\n| 00000000000000000000000000000000  | 0           | 34      | 2099999997690000  | 2141  | 6930000  |"
+    },
+    {
+        "section": "Transfer social value",
+        "duration": 10,
+        "seconds": 180,
+        "timecode": "03:00",
+        "vo": "Users around the world use the network to send these units across time and space. Locking coins into the future, or in contracts between multiple parties, or to send bitcoin from their address to someone else's.",
+        "visual": "Show transactions between wallets beyond borders, in zones of conflict, selling products and services world wide without friction."
+    },
+    {
+        "section": "Scaling",
+        "duration": 10,
+        "seconds": 320,
+        "timecode": "05:20",
+        "vo": "Because security is the biggest priority on the bitcoin network, transactions are kept simple and as memory efficient as possible to respect the block limit.\n",
+        "board": "https://mir-s3-cdn-cf.behance.net/project_modules/fs/06fb5c36023715.5734271d81ce3.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 330,
+        "timecode": "05:30",
+        "vo": "Increases in the block size would increase transaction throughput but at the cost of nodes becomes more expensive to run and maintain, centralizing the validation process and sacrificing the distribution of the blockchain.\n",
+        "visual": "Show nodes disappearing from the network as the blockchain grows in GB size on the side.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 340,
+        "timecode": "05:40",
+        "vo": "To allow a more wide use of bitcoin's security, other networks have been built on top of bitcoin to allow faster transactions.\n",
+        "visual": "Show a lot of activity"
+    },
+    {
+        "section": "Second Layer",
+        "duration": 10,
+        "seconds": 350,
+        "timecode": "05:50",
+        "vo": "Networks like lightning or liquid use especially crafted transactions on the bitcoin blockchain that serve as anchors and agreements between 2 or more parties. \n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/02.32_2nd_layer.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Fade out full bitcoin network, highlight some nodes and spin out new nodes on a network sitting on layer above it (green for liquid?). Animate complex transactions.\n\nTransactions are animated in other connections besides the node connections.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 360,
+        "timecode": "06:00",
+        "vo": "They then transact within their own protocol following their own rules which allows more complexed cryptographic contracts or faster transactions that don't depend on the 10 minute bitcoin block time.\n",
+        "board": "https://reas.com/microimage_s1/reas_microimage_s1_5.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Highlight some other nodes and build another network on top, more dense, and animate really fast transactions. \n\nTransactions are animated in other connections besides the node connections.\n"
+    },
+    {
+        "section": "Mining Nodes",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!"
+    },
+    {
+        "section": "Listening Nodes",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "board": "https://64.media.tumblr.com/a752b3c21cdc7b4cf2d5c1f782a0f241/e400cf76f74371d1-fc/s1280x1920/58128b7d79cde848cb64f3363821a62b1402e3ea.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Data Propagation",
+        "board": "https://i.pinimg.com/originals/c9/7e/73/c97e73c3efcacfae5183d5e12e44162a.gif\n",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "visual": "Zoom to the center and isolate 1 node."
+    }
+]

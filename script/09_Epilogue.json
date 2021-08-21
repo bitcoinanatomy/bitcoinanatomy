@@ -1,0 +1,73 @@
+[
+    {
+        "section": "Electricity Consumption",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Regenerative Energy Conversion",
+        "vo": "How do we address the energy concerns relative to the bitcoin protocol? We can take a technical approach, a market approach, a political approach, or a combination any of them. \n\nGiven the distribution of the protocol, the only ways of influencing the mining of bitcoin politically are by:\n• banning, moving bitcoin mining to other jurisdiction\n• tax incentives or penalizations, attracting or detracting miners\n• energy subsidies, using tax payer money and creating an imbalance in the energy usage\n\nThe market could also influence by adding a premium to bitcoin mined from miners or pools that market themselves as mining more efficiently and less destructively for the environment, but so far we've seen little interest from the market on pricing bitcoin from different origins differently. (we've seen exchanges limit access or refuse to accept bitcoin with coinjoin history)\n\nThe foundational immutability principles of bitcoin have created a consensus amongst the nodes that, in the case of a push to change the proof-of-work protocol, the change may not be accepted by a large portion of the network. This keeps the miners committed to the network as they risk having their block rejected by some nodes and delay its propagation or rejection.\n\nThe optimal solution would be to have miners invested in the long term sustainability of the area in which they operate, and the world. Potentially building small communities around miners and absorve the overflow of the cities.\n\nPreviously isolated areas now have a way to generate capital independently. If planned long term, these ventures, originally envisioned as factories, can become smaller pocket populations.",
+        "visual": "Zoom out to planet earth and show dissipation/decentralization of cities, destructive consumptions and subsidized and unsustainable energy productions moving to remote areas, creating an economic network at the individual level. \n\nIncrease the number of sovereign nodes for geographic nation state capitals to a more distributed, organic and still bound to earth's geography."
+    },
+    {
+        "section": "Energy Conservation",
+        "duration": 10,
+        "seconds": 20,
+        "timecode": "00:20",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Voluntary Collectivism",
+        "duration": 10,
+        "seconds": 30,
+        "timecode": "00:30",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Efficiency Gains"
+    },
+    {
+        "section": "Lower Time Preference",
+        "duration": 10,
+        "seconds": 40,
+        "timecode": "00:40",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Long Term Planning"
+    },
+    {
+        "section": "Optimistic Potential"
+    },
+    {
+        "section": "Absolute Truth",
+        "duration": 10,
+        "seconds": 50,
+        "timecode": "00:50",
+        "vo": "All coming down to the rules in which the bits on the blockchain are sorted, giving the world something that can be verified as absolute truth, by any node, equally, from anywhere, forever.",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/10.99.binarythruth.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE",
+        },
+        "visual": "Zoom out and show a massive amount of bits.",
+    },
+    {
+        "section": "The End",
+        "duration": 10,
+        "seconds": 60,
+        "timecode": "01:00",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    }
+]

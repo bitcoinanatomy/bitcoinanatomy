@@ -1,0 +1,162 @@
+[
+    {
+        "section": "Connection to Other Nodes",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "board": "https://mir-s3-cdn-cf.behance.net/project_modules/max_1200/57e1fe115107211.604812cc90b18.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "We zoom in back on the node while all the other nodes fade in and the second layer networks fade away.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 20,
+        "timecode": "00:20",
+        "visual": "Components of the node fade in as the zoom in speed eases out.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "board": "https://pbs.twimg.com/media/Ey9H_LPUUAAreFa?format=jpg&name=900x900",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Mempool, blockchain, messaging protocol, consensus validation, show up with labels. Still showing connections to other nodes on screen.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Center on connections and show blocks and transactions being sent and received.\n"
+    },
+    {
+        "section": "Block and message propagation",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "visual": "Stay on the connection to show unconfirmed transactions and blocks with confirm transactions.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "visual": "Pan up to consensus validation passing through the message protocol.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "visual": "Show unconfirmed transactions being added to the mempool and a block occasionally being added to the blockchain.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show mempool changing in quantity, and transactions highlight pop-out of the transactions added to a block.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Grab one transaction and center it for inspection.\n"
+    },
+    {
+        "section": "Different Implementations",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "visual": "Zoom to the center and inspect the blockchain helix."
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!"
+    },
+    {
+        "section": "Mining Node",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "vo": "Electricity is used to run algorithms that efficiently produce trillions of random guesses trying to solve for the proof-of-work problem.",
+        "board": "https://i.pinimg.com/originals/b2/be/c2/b2bec2066ed787988e1fa55125c0a95c.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Visualization of different amounts of hash per second."
+    },
+    {
+        "vo": "Specialized hardware and access to low priced energy make running this computational task affordable because being the first to find a solution to a valid block, and broadcast it, enables the node to be the one that crafts the next block and rewards itself with the coinbase transaction.",
+        "board": "https://i.pinimg.com/564x/4b/21/11/4b2111c517fa4c61ba047984efc14b0c.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "vo": "Miners are incentivized to mine valid blocks because if the block they crafted and solved is not added to all the other nodes' blockchain, their coinbase reward won't be acknowledged by the rest of the net work.\n",
+        "board": "https://feralfile.com/api/uploaded_assets?uri=thumbnails/1f060e42-3437-444c-b823-a8b8532c449c/1615464638",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show block being crafted, validated transactions, and mined."
+    },
+    {
+        "vo": "\"An ASIC(application-specific integrated circuit) machine is connected to a power source. Through the wall socket electricity powers the machine. This machine is incredibly dumb as it can do only one thing. Calculate as many SHA256 hashes as possible per unit of time. As a result of this heat is dissipated.\nThe miner runs its own node.\nGoing through the pile of unconfirmed transactions(aka the mempool) with a capitalistic desire the miners sort the transactions by who pays more and then pick the ones that are the smallest. At this point, they have a rough idea of what goes into the block.\nIn the block header, there is also other data that is added. A reference to the past block, a magic number that’s not that magic, and some non-specific data. All the data is hashed by the machine.\nAll of this is done at an incredible speed(about 110,000,000,000,000 tries per second per machine) and in a very competitive environment, as everyone wants to get the 6.25 BTC given by the network, in addition to the juicy transaction fees they get to pocket.\nThe winner is the first one to find a block that has the hash smaller than the current mining difficulty target.\"\n\n <br> — Alex Waltz <br><br>\n\n<a href=\"https://rawavocado.medium.com/bitcoin-or-how-we-became-gods-d63f7ddad52a\" target=\"_blank\">https://rawavocado.medium.com/bitcoin-or-how-we-became-gods-d63f7ddad52a</a>",
+        "board": "https://mir-s3-cdn-cf.behance.net/project_modules/disp/5083ae62684253.5a98e156c6838.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "board": "https://i.pinimg.com/originals/5e/ea/2b/5eea2b92e254e5d704e748fc5eecefaa.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Follow block as it approaches the center of the nodo to be added to the blockchain."
+    },
+    {
+        "section": "Mempool",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "board": "https://i.pinimg.com/564x/b4/ba/73/b4ba73b74029568fee0c644ba49b7b9d.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Focus on the mempool hovering around the spiral with the latest block."
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "board": "https://64.media.tumblr.com/9b6022f1d46eb1b094b745f841300e17/tumblr_nzh0c7mWYb1tf7qzao1_540.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Visualize activity of different fees and sizes of transactions competing to be added to the block."
+    },
+    {
+        "visual": "Continue and show block interlocking with the latest block to become the highest block."
+    }
+]

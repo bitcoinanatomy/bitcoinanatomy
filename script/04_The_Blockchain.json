@@ -1,0 +1,388 @@
+[
+    {
+        "section": "Time Keeping",
+        "vo": "1 block (~1MB cube, ~10 mins)\t",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/timekeeping1.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "2,016 blocks (spiral, ~2 weeks)",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/timekeeping2.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 20,
+        "timecode": "00:20",
+        "vo": "210,000 blocks (180º helix, ~4 years)",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/timekeeping3.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 30,
+        "timecode": "00:30",
+        "vo": "675,000 blocks (730º helix, present)",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/timekeeping4.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 40,
+        "timecode": "00:40",
+        "vo": "7,140,000 blocks (last sat mined, ~year 2140)",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/timekeeping5.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 50,
+        "timecode": "00:50",
+        "vo": "Without proof-of-work, one would always run into the Oracle problem because the physical realm and the infor­ma­tional realm are eternally discon­nected. The markings on your list of sheep aren’t your sheep, the map is not the terri­tory, and whatever was written in yester­day’s newspaper isn’t neces­sarily what happened in the real world. In the same manner, just because you use a real-world clock to write down a timestamp doesn’t mean that this is actually what the time was.\n\nPut bluntly, there simply is no way to trust that data repre­sents reality, except if the reality in question is inherent in the data itself. The brilliant thing about Bitcoin’s diffi­culty-adjusted proof-of-work is that it creates its own reality, along with its own space and time.\n\nProof-of-work provides a direct connec­tion between the digital realm and the physical realm. More profoundly, it is the only connec­tion that can be estab­lished in a trust­less manner. Every­thing else will always rely on external inputs.\n\nThe diffi­culty to mine a new Bitcoin block is adjusted to make sure that the thin thread between Bitcoin’s time and our time remains intact. Like clock­work, the mining diffi­culty readjusts every 2016 ticks. The goal of this readjust­ment is to keep the average time between ticks at ten minutes. It is these ten minutes that maintain a stable connec­tion between the physical and the infor­ma­tional realm. Conse­quently, a sense of human time is required to readjust the ticks of the Bitcoin clock. A purely block-based readjust­ment wouldn’t work since it would be completely discon­nected from our human world, and the whole purpose of the readjust­ment is to stop us ingenious humans from finding blocks too fast (or too slow).\n\nAs Einstein has shown us, time is not a static thing. There is no such thing as a universal time we could rely upon. Time is relative, and simul­taneity is nonex­is­tent. This fact alone makes all timestamps — especially across large distances — inher­ently unreli­able, even without adver­sarial actors. \n<br> — Der Gigi <br><br>\n\n<a href=\"https://dergigi.com/2021/01/14/bitcoin-is-time/\" target=\"_blank\">https://dergigi.com/2021/01/14/bitcoin-is-time/</a>",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/05.6_blockchain_flythrough.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Mining (growing the chain)",
+        "duration": 10,
+        "seconds": 60,
+        "timecode": "01:00",
+        "vo": "Mining nodes perform the proof-of-work algorithm to have their be the one added to the blockchain.\n",
+        "board": "https://64.media.tumblr.com/e5b4667d62409758dc788b1704ab442a/tumblr_p6e3n3BwAu1txe8seo1_500.gifv",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show some of the nodes hightlited and pop an icon of an S9 miner.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 70,
+        "timecode": "01:10",
+        "vo": "To generate a valid proof-of-work to the network, mining nodes build blocks of data consisting of the transactions in the network queued for confirmation.\n",
+        "visual": "Lines in the network show transactions by animation glowing lights along the connections.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 80,
+        "timecode": "01:20",
+        "vo": "Most nodes, besides storing the blockchain ledger data, also store the data relating to the transactions waiting to be confirmed in a place called mempool.\n",
+        "board": "https://64.media.tumblr.com/6ae946d245d76357ab2ffbefe090d2d2/tumblr_nie93uQO4R1tf7qzao1_500.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show mempool icon getting filled as unconfirmed transactions in the network are collected.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 90,
+        "timecode": "01:30",
+        "vo": "The mining node selects only valid transactions, so it doesn't risk getting them rejected by the network, and prioritizes them by fee. The higher the transaction fee, the more the miner will be Incentivized to select it. \n",
+        "visual": "Zoom in on node and show mempoll in detail on a table with 1000 100sats/byte TX, 10,000 50sats/byte, and 100,000 1 sats/byte transactions."
+    },
+    {
+        "duration": 10,
+        "seconds": 100,
+        "timecode": "01:40",
+        "vo": "The minimum fee is 1 sat per byte, but users can set they fee as high as the total of the sum of the transaction inputs.\n",
+        "visual": "Add chart of the mempol updating with the table values.\nBlock 721,324\nBlock 721,325\nBlock 721,326\n...\n"
+    },
+    {
+        "section": "Blocks Validation",
+        "duration": 10,
+        "seconds": 110,
+        "timecode": "01:50",
+        "vo": "Based on this aggregate of transactions, it then builds a block of data following precise format and cryptographic instructions to ensure the block follows the consensus rules of the chain.\n",
+        "board": "https:
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Zoom in on a mining node and show animation of blocks being built, merkle tree and merkle root sent to the header, previous block hash...\n",
+        "technicalNotes1": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 120,
+        "timecode": "02:00",
+        "vo": "The block needs to be smaller than a certain amount of bytes, needs to contain the hash of the previous block, the coinbase transaction, a valid set of transactions, and among other things, the solution to the proof-of-work algorithm.\n",
+        "visual": "Bullet point each element."
+    },
+    {
+        "duration": 10,
+        "seconds": 130,
+        "timecode": "02:10",
+        "vo": "This solution is called a nonce and its value arbitrarily adjusted by miners so that the hash of the block will be less than or equal to the current target hash value set by the network.\n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/05.3_blockchain_hero.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show block with nonce changing and hash result changing with the difficulty target."
+    },
+    {
+        "section": "Proof-of-Work",
+        "duration": 10,
+        "seconds": 140,
+        "timecode": "02:20",
+        "vo": "Because the proof-of-work is a very large random number, producing the most hashes per minute, increases the chances of mining the next block before anyone else.\n",
+        "visual": "Zoom out from inside the node to show the node solo mining.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 150,
+        "timecode": "02:30",
+        "vo": "The probability of successfully mining a block can be increased by scaling up computational power by making hardware more efficient or increasing the quantity of operating hardware.\n",
+        "visual": "Show amount of miner hardware be added to the solo miner.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 160,
+        "timecode": "02:40",
+        "vo": "Some mining operations as small, and others are very big.\n",
+        "visual": "Zoom out to show big and small operations to compare for size.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 170,
+        "timecode": "02:50",
+        "vo": "Some developed mining-pool networks where they agree to follow the same rules and share the computational work and the reward of each block the pool mines.\n",
+        "visual": "Scale down solo operations, leave a couple of smaller miners, and join them in a pool network.\n"
+    },
+    {
+        "section": "Energy",
+        "duration": 10,
+        "seconds": 180,
+        "timecode": "03:00",
+        "vo": "Doing this computation at scale requires a lot of energy, and the most successful miners are the ones that find cheap energy, sometimes due to overproduction of inaccessibility, sometimes via political agreements.\n",
+        "visual": "Show energy sources next to miners. Turning off flares in an oil field, wind farm in the middle of the ocean, next to a dam in China.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 190,
+        "timecode": "03:10",
+        "vo": "Bitcoin miners are converting real energy into bitcoin. \n",
+        "visual": "Show energy being generated and stored in the form of bitcoin coinbase.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 200,
+        "timecode": "03:20",
+        "vo": "Once the energy is stored in the form of bitcoin, it can then be moved freely around the world and be used for trade or store-of-value in places where energy is not as abundant.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 210,
+        "timecode": "03:30",
+        "vo": "This energy can be traded for goods and services or stored for future transactions.\n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/05.5_blockchain_hero.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 220,
+        "timecode": "03:40",
+        "vo": "The time to find a solution for a block is arbitrary but its targeted to take on average 10 minutes.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 230,
+        "timecode": "03:50",
+        "vo": "This target is adjusted every 2 weeks to maintain the supply of bitcoin at a steady and predictable pace.\n"
+    },
+    {
+        "section": "Difficulty adjustment",
+        "duration": 10,
+        "seconds": 240,
+        "timecode": "04:00",
+        "vo": "Adding more efficiency and computational power to finding blocks decreases the time of mining accelerating the issuance of bitcoin.\n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards//05.4_blockchain_hero.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 250,
+        "timecode": "04:10",
+        "vo": "What the difficulty adjustment algorithm does, is to enforce that blocks are not mined too fast or too slow.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 260,
+        "timecode": "04:20",
+        "vo": "So, every 2 weeks, the algorithm calculates what the difficulty target for the proof-of-work should be for miners to take on average 10 minutes to find.\n"
+    },
+    {
+        "section": "Subsidy",
+        "duration": 10,
+        "seconds": 270,
+        "timecode": "04:30",
+        "vo": "The first block, mined in 2009, was very easy and cheap to mine because the network had just started and the difficulty was very low to allow less powerful home computers to mine bitcoin.\n",
+        "visual": "Subsidy = 50 * COIN;\n\nhttp://cpp.sh/46dz6"
+    },
+    {
+        "duration": 10,
+        "seconds": 280,
+        "timecode": "04:40",
+        "vo": "Early adopters of the network were also rewarded with a higher block subsidy than current miners.\n",
+        "visual": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 290,
+        "timecode": "04:50",
+        "vo": "The coinbase transaction present in each block contains the newly minted bitcoin and the miner can choose the address to which the bitcoin gets sent.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 300,
+        "timecode": "05:00",
+        "vo": "When it launched, the reward of the mined block was 50 bitcoin, but precisely every 210,000 blocks mined, roughly 4 years, the coinbase transactions halves.\n",
+        "visual": "Shift bit.",
+        "technicalNotes1": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 310,
+        "timecode": "05:10",
+        "vo": "The coinbase, along with the transaction fees, constitutes the reward for the miner to keep the network's ledger from being attacked by a malicious node wanting to double spend the same bitcoin or change other user's balances.\n",
+        "visual": "Zoom out to show the full globe and network. ",
+        "technicalNotes1": "| Subsidy 64 bit binary             | Subsidy     | Halving | Coinbase Max      | Year  | Blocks   |\n| 00101010000001011111001000000000  | 5000000000  | 1       | 1050000000000000  | 2009  | 0        |\n| 10010101000000101111100100000000  | 2500000000  | 2       | 1575000000000000  | 2013  | 210000   |\n| 01001010100000010111110010000000  | 1250000000  | 3       | 1837500000000000  | 2017  | 420000   |\n| 00100101010000001011111001000000  | 625000000   | 4       | 1968750000000000  | 2021  | 630000   |\n| 00010010101000000101111100100000  | 312500000   | 5       | 2034375000000000  | 2025  | 840000   |\n| 00001001010100000010111110010000  | 156250000   | 6       | 2067187500000000  | 2029  | 1050000  |\n| 00000100101010000001011111001000  | 78125000    | 7       | 2083593750000000  | 2033  | 1260000  |\n| 00000010010101000000101111100100  | 39062500    | 8       | 2091796875000000  | 2037  | 1470000  |\n| 00000001001010100000010111110010  | 19531250    | 9       | 2095898437500000  | 2041  | 1680000  |\n| 00000000100101010000001011111001  | 9765625     | 10      | 2097949218750000  | 2045  | 1890000  |\n| 00000000010010101000000101111100  | 4882812     | 11      | 2098974609270000  | 2049  | 2100000  |\n| 00000000001001010100000010111110  | 2441406     | 12      | 2099487304530000  | 2053  | 2310000  |\n| 00000000000100101010000001011111  | 1220703     | 13      | 2099743652160000  | 2057  | 2520000  |\n| 00000000000010010101000000101111  | 610351      | 14      | 2099871825870000  | 2061  | 2730000  |\n| 00000000000001001010100000010111  | 305175      | 15      | 2099935912620000  | 2065  | 2940000  |\n| 00000000000000100101010000001011  | 152587      | 16      | 2099967955890000  | 2069  | 3150000  |\n| 00000000000000010010101000000101  | 76293       | 17      | 2099983977420000  | 2073  | 3360000  |\n| 00000000000000001001010100000010  | 38146       | 18      | 2099991988080000  | 2077  | 3570000  |\n| 00000000000000000100101010000001  | 19073       | 19      | 2099995993410000  | 2081  | 3780000  |\n| 00000000000000000010010101000000  | 9536        | 20      | 2099997995970000  | 2085  | 3990000  |\n| 00000000000000000001001010100000  | 4768        | 21      | 2099998997250000  | 2089  | 4200000  |\n| 00000000000000000000100101010000  | 2384        | 22      | 2099999497890000  | 2093  | 4410000  |\n| 00000000000000000000010010101000  | 1192        | 23      | 2099999748210000  | 2097  | 4620000  |\n| 00000000000000000000001001010100  | 596         | 24      | 2099999873370000  | 2101  | 4830000  |\n| 00000000000000000000000100101010  | 298         | 25      | 2099999935950000  | 2105  | 5040000  |\n| 00000000000000000000000010010101  | 149         | 26      | 2099999967240000  | 2109  | 5250000  |\n| 00000000000000000000000001001010  | 74          | 27      | 2099999982780000  | 2113  | 5460000  |\n| 00000000000000000000000000100101  | 37          | 28      | 2099999990550000  | 2117  | 5670000  |\n| 00000000000000000000000000010010  | 18          | 29      | 2099999994330000  | 2121  | 5880000  |\n| 00000000000000000000000000001001  | 9           | 30      | 2099999996220000  | 2125  | 6090000  |\n| 00000000000000000000000000000100  | 4           | 31      | 2099999997060000  | 2129  | 6300000  |\n| 00000000000000000000000000000010  | 2           | 32      | 2099999997480000  | 2133  | 6510000  |\n| 00000000000000000000000000000001  | 1           | 33      | 2099999997690000  | 2137  | 6720000  |\n| 00000000000000000000000000000000  | 0           | 34      | 2099999997690000  | 2141  | 6930000  |"
+    },
+    {
+        "section": "Syncing with the network",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "vo": "Initial data download relying on the block and message propagation protocol.",
+        "board": "https://i.pinimg.com/originals/88/51/c4/8851c47a596c4b0c5db6565b029d4b4c.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Fly through the whole blockchain showing dates and number of the block.\n",
+        "technicalNotes1": "🖼 https://vimeo.com/73604876"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/04.6_transactions.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/03.03_message_packets.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Verifying supply",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/05.5_chained_blocks.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Fly through the blockchain validation all blocks, one by one.",
+        "technicalNotes1": "https://www.pierrerochard.com/auditing-bitcoin-supply/\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes1": "CAmount GetBlockSubsidy(int Height, const Consensus::Params& consensusParams)\n{\n    int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;\n    // Force block reward to zero when right shift is undefined.\n    if (halvings >= 64)\n        return 0;\n\n    Amount nSubsidy = 50 * COIN;\n    // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.\n    nSubsidy >>= halvings;\n    return nSubsidy;\n}\n\nhttp://mynode.local/bitcoind/cli\n\n$ bitcoin-cli gettxoutsetinfo\n\nResult:\n{\n  \"height\":n,     (numeric) The current block height (index)\n  \"bestblock\": \"hex\",   (string) The hash of the block at the tip of the chain\n  \"transactions\": n,      (numeric) The number of transactions with unspent outputs\n  \"txouts\": n,            (numeric) The number of unspent transaction outputs\n  \"bogosize\": n,          (numeric) A meaningless metric for UTXO set size\n  \"hash_serialized_2\": \"hash\", (string) The serialized hash\n  \"disk_size\": n,         (numeric) The estimated size of the chainstate on disk\n  \"total_amount\": x.xxx          (numeric) The total amount\n}\n\n>>> gettxoutsetinfo\n{\n  \"height\": 663184,\n  \"bestblock\": \"000000000000000000030e4511252449d4de5517220d05f16965c6fe66c675d3\",\n  \"transactions\": 42484702,\n  \"txouts\": 68620773,\n  \"bogosize\": 5150648358,\n  \"hash_serialized_2\": \"cfe37498898b414cdc34a0899053fd8128c45f81e2dbd35391b57a1211d73645\",\n  \"disk_size\": 4214315603,\n  \"total_amount\": 18582215.19247703\n}\n\n>>> "
+    },
+    {
+        "section": "New Block",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "vo": "Because the chances of miners finding a block are probabilistic, the interval between blocks can vary in minutes. \n",
+        "visual": "Show blocks being added through time, speeding through to show growth and variation in time."
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "vo": "This can cause miners to discover a block at the same time and broadcast it simultaneous creating 2 valid blocks.\n"
+    },
+    {
+        "section": "Orphan Blocks",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "vo": "If a node receives 2 valid blocks, it might choose to consider its validity based on their own consensus rules or based of which one has propagated the fastest and has been accepted by the majority of the network.\n"
+    },
+    {
+        "section": "Forks",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "vo": "If nodes on different parts of the network start appending blocks to the chain based on 2 different previous hash, the chain splits.\n"
+    },
+    {
+        "vo": "In this case, the node will keep building on its own chain and only stops if node proves a longer and valid chain. It then switches to the longer chain. \n"
+    },
+    {
+        "vo": "The probabilities of 2 chainz tips coexisting for more than 6 blocks are extremely low.\n"
+    },
+    {
+        "vo": "Forks can also be induced by changes to the code that controls the protocol.\n"
+    },
+    {
+        "section": "Soft Forks",
+        "vo": "A soft fork enables the chain to be backward compatible so old nodes can still validate it. This prevents a chain split (is it really a fork???)\n"
+    },
+    {
+        "section": "Hard Forks",
+        "vo": "Hard forks introduce changes to the protocol that produce transactions or blocks that are unacceptable to older nodes.\n"
+    },
+    {
+        "vo": "If the chain splits due to a break in consensus, the node I'll ignore the nodes that choose the invalid chain.\n"
+    },
+    {
+        "vo": "All blockchains derive their value from the one that follows the rules enforced in the deepest blocks on the chain.\n"
+    },
+    {
+        "section": "Genesis",
+        "vo": "(The importance of having a reference of the beginning of the chain) \n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/06.8_genesis_block.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Pan to the beginning of the chain and time lapse back to block 0."
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "visual": "Focus on the block and center it for inspection.\n"
+    }
+]

@@ -1,0 +1,162 @@
+[
+    {
+        "section": "Genesis block",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Fly in to the genesis block.\n",
+        "technicalNotes1": "$ bitcoin-cli getblock 000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f 2\n\nhttps://ma.ttias.be/retrieving-the-genesis-block-in-bitcoin-with-bitcoin-cli/\n",
+        "technicalNotes3": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Genesis message ",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/06.8_genesis_block.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Decode it and focus on unspendable amount.\n",
+        "technicalNotes1": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes2": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes3": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Focus on the signature.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Decode and highlight the \"The Times 03/Jan/2009 Chancellor on brink of second bailout for banks.\nTypical 3 column view: binary, hex, and text."
+    },
+    {
+        "section": "Full Block",
+        "board": "https://i.pinimg.com/564x/cf/8b/83/cf8b83be056574defc99054dca27e0e5.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Pan to another height in the blockchain to show a full block."
+    },
+    {
+        "section": "The Block Data",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/05.2_block_insides.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Explode the raw block data.\n",
+        "technicalNotes1": "$ bitcoin-cli getblock 000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f 2\n\nhttps://ma.ttias.be/retrieving-the-genesis-block-in-bitcoin-with-bitcoin-cli/\nhttps://blockchain.info/block/000000000000000000034c202ea3598c7e45bd31fe868362efdd7c1245aa35f9?format=hex\nhttps://blockchain.info/block/000000000000000000034c202ea3598c7e45bd31fe868362efdd7c1245aa35f9?format=json\n"
+    },
+    {
+        "section": "blk#####.dat files",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "vo": "The maximum blk.dat file size is 128MiB (134,217,728 bytes)\nThis limit is set by MAX_BLOCKFILE_SIZE",
+        "board": "https://i.pinimg.com/564x/04/ae/d4/04aed40195cf5e35d4cc923226f21762.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Display line 35 of rc/node/blockstorage.h \nstatic const unsigned int MAX_BLOCKFILE_SIZE = 0x8000000; // 128 MiB",
+        "technicalNotes1": "Why are blk*.dat files ~134200000 bytes?\nThe constant is called MAX_BLOCKFILE_SIZE and is set in src/validation.h. It is currently set to 0x8000000 which is 128 MiB (134,217,728 bytes).\n\nYou can see where it is checked in FindBlockPos() in src/validation.cpp.\n\nThere isn't any indication of why this specific size was chosen and it may be arbitrary. It is desirable to have some limit because some operating systems (or specific filesystems) have limits on maximum file size, usually above 2 GB or so. So at least this limit ensures we never get anywhere close to an OS limit.\n\nhttps:
+    },
+    {
+        "section": "Block Header",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Highlight each part of the block, header, aggregate of transactions, segwit witness data ...?\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Zoom in on block header\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Zoom out showing binary on the background, hex format on the next level, json on the foreground. \nAs the camera moves back it crosses with the type.\n"
+    },
+    {
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "vo": "Previous block hash, difficulty, nonce, merkle tree, ...?",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Move all in the z-axis, and keep background out of focus.\nHighlight each section as descriptions progress.\n"
+    },
+    {
+        "section": "Merkle root",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "board": "https://blog.ploeh.dk/content/binary/symmetric-fractal-tree.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Bring Merkle root to the front and explode to see the full tree.\n"
+    },
+    {
+        "section": "Previous hash reference",
+        "duration": 10,
+        "seconds": "#REF!",
+        "timecode": "#REF!",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/05.5_two_blocks.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Nonce",
+        "technicalNotes1": "https://en.bitcoin.it/wiki/Difficulty"
+    },
+    {
+        "section": "Transactions",
+        "technicalNotes1": "https://mempool.observer/monitor/"
+    },
+    {
+        "section": "Mining Reward"
+    },
+    {
+        "section": "Fees"
+    },
+    {
+        "section": "Empty blocks",
+        "vo": "https://blog.lopp.net/empty-bitcoin-blocks-full-mempool/",
+        "visual": "Grab one transaction and center it for inspection.\n"
+    }
+]

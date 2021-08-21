@@ -1,0 +1,203 @@
+[
+    {
+        "section": "Creating address",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "In its essence, a bitcoin address is a derivation of a public key from a private key.\nThis is done by taking some random value, and use it to generate a private key. ",
+        "visual": "hierarchical deterministic",
+        "technicalNotes1": "xpriv \nxpub  ypub\n\nBase58Check encoding\nChecksum\n"
+    },
+    {
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "The seed to create the privare key is usually a random 128 bit value presented to the user as a 12 word seed phrase using common English words. The seed can require additional rounds of SHA256 to slow down attacks against weak user-chosen strings.\n",
+        "board": "https://learnmeabitcoin.com/technical/images/mnemonic/entropy.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes1": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "vo": "To create a mnemonic you first of all need to generate entropy, which is our source of randomness.\n\nYou can think of entropy is being a very large random number that nobody has ever generated before, or will ever generate in the future. It’s also best to think of this number as a series of bits (e.g. 10011010010001...), which is how computers store numbers.\n",
+        "board": "https://mir-s3-cdn-cf.behance.net/project_modules/1400_opt_1/c26f4471439751.5bc5b2944559d.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "vo": "Now that we’ve got our entropy we can encode it in to words.\n\nFirst of all, we add a checksum to our entropy to help detect errors (making the final sentence more user-friendly). This checksum is created by hashing the entropy through SHA256, which gives us a unique fingerprint for our entropy. We then take 1 bit of that hash for every 32 bits of entropy, and add it to the end of our entropy.\n\nhttps://learnmeabitcoin.com/technical/extended-keys#master-extended-keys\n",
+        "board": "https://learnmeabitcoin.com/technical/images/mnemonic/entropy-to-mnemonic.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show the process of transforming seed words into binary plus a BIP38 password, and show derivation path changing to show multiple addresses\n"
+    },
+    {
+        "section": "xpriv\n",
+        "vo": "From this single private key, we can add a number and create more public keys that we control. The derivation path can be forked and derive in many ways.\n",
+        "board": "https://camo.githubusercontent.com/44ead2983ed66129b7b15bd7e5915e4959e39cc4a8adcd7807b79139ff0e563d/687474703a2f2f692e696d6775722e636f6d2f636776676257662e6a70673f31",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Show serialization and number construction."
+    },
+    {
+        "section": "xpub  ypub",
+        "vo": "From this private key, we can ",
+        "board": "https://learnmeabitcoin.com/technical/images/extended-keys/serialized-extended-key.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Script Stack Based ",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "...",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/07.01_script.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Reverse Polish Notation",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "...",
+        "board": "https://learnmeabitcoin.com/technical/images/p2sh/p2sh.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Switch to show script stack view. P2PKH.\n",
+        "technicalNotes1": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes2": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "...",
+        "board": "https://64.media.tumblr.com/25444181301e4d56e3d6f391129efb12/tumblr_nf91l9j2iP1tf7qzao1_500.gifv",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes1": "https://medium.com/script-wizard/introducing-script-wizard-f0086807da9f"
+    },
+    {
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "...",
+        "board": "https://miro.medium.com/max/2580/1*0ITKJy8yXMh8T0J4QywvuA.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "...",
+        "board": "https://learnmeabitcoin.com/technical/images/mnemonic/mnemonic-seed.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "...",
+        "board": "https://external-preview.redd.it/DWUKIbHa7CNxk9uizLB7tuTHFqJsQNNq0Sg0pw12iNg.png?auto=webp&s=44967441232deb5cd18981c5289eed433ca60832",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Script types",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "Different types of transactions carry different data and need to be handled differently in order to be considered valid transactions.\n\nScript is a mini programming language used as a locking mechanism for outputs.\n\nA locking script is placed on every output.\nAn unlocking script must be provided to unlock an output (i.e. when you’re using it as an input).\nIf a full script (unlocking + locking) is valid, the output is “unlocked” and can be spent.\n",
+        "board": "https://learnmeabitcoin.com/technical/images/script/standard-scripts.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "P2PK",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "P2PK (Pay To Pubkey) is a script pattern that locks an output to a public key.\n\nIt is a simpler version of the more-commonly used P2PKH locking script.\n\nDespite being the simplest script for locking bitcoins to someone’s public key, P2PK is not used as much as the similar (yet more complex) P2PKH script.\n\nYou’ll most commonly find P2PK in coinbase transactions in the earlier blocks in the blockchain. This is because the original Bitcoin Core miner would use P2PK for the block reward when constructing a candidate block.\n",
+        "board": "https://learnmeabitcoin.com/technical/images/p2pk/p2pk.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "P2PKH",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "Pay To Pubkey Hash\n\nThis script pattern is used to “send” someone bitcoins. It’s the most common script used for locking an output to someone’s public key.\n\nP2PKH is the default script used by wallets when you want to “send” someone bitcoins, so you can find it in most blocks in the blockchain.\n\n",
+        "board": "https://learnmeabitcoin.com/technical/images/p2pkh/why_p2pkh_uncompressed_hash160_address.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "P2MS",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "Pay To Multisig is a script pattern that allows you to lock bitcoins to multiple public keys, and require signatures for some (or all) of those public keys to unlock it.\n\nFor example, you could create a P2MS script that includes the public keys of 3 different people, but only 2 of those people would need to provide their signatures to spend the bitcoins\n\n",
+        "board": "https://learnmeabitcoin.com/technical/images/p2ms/p2ms_example.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "P2SH",
+        "vo": "Pay To Script Hash was introduced as a standard script in April 2012. It allows you to lock bitcoins to the hash of a script, and you then provide that original script when you come unlock those bitcoins.\n\nIt basically allows you to create your own custom “redeem scripts”, but still be able to share them easily with other people.\n\n",
+        "board": "https://learnmeabitcoin.com/technical/images/p2sh/p2sh.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "NULL DATA",
+        "vo": "NULL DATA is a standard locking script that you can use to store data on the blockchain. This locking script cannot be unlocked, so I wouldn’t use it as a lock for any amount of bitcoins.\n",
+        "board": "https://learnmeabitcoin.com/technical/images/nulldata/empty_output_store_data.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "vo": "https://learnmeabitcoin.com/technical/script\n\nhttp://davidederosa.com/basic-blockchain-programming/bitcoin-script-language-part-one/\n"
+    },
+    {
+        "section": "Schnorr Signatures",
+        "vo": "BIP-340 introduces Schnorr signatures for Bitcoin and BIP-341 proposes a new SegWit version 1 output type and its spending rules based on Schnorr signatures, Taproot, and Merkle branches. Unlike ECDSA signatures, the Schnorr signatures are not DER-encoded.\n\nSchnorr signatures contain the 32 byte r-value followed by the 32 byte s-value. The most commonly used SigHash flag SIGHASH_ALL is assumed by default and does not need to be set explicitly. Other SigHash flags are placed after the s-value. Schnorr signatures with the default SIGHASH_ALL flag have a length of exactly 64 byte. Signatures with a different SigHash flag are 65 byte long.",
+        "board": "https://b10c.me/data/blog/006-signatures/header.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "https://b10c.me/blog/006-evolution-of-the-bitcoin-signature-length/"
+    },
+    {
+        "section": "Traproot",
+        "board": "https://miro.medium.com/max/1400/1*HrSHn2mC-40ofx_A3SzEOQ.png",
+        "visual": "https://murchandamus.medium.com/2-of-3-multisig-inputs-using-pay-to-taproot-d5faf2312ba3"
+    }
+]

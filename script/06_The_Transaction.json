@@ -1,0 +1,103 @@
+[
+    {
+        "section": "Transaction Header",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "The transaction is a component in bitcoin that holds the data proving that the control of one or more outputs has been moved from on address to the other.",
+        "board": "https://i.pinimg.com/564x/6d/9a/9f/6d9a9f1d2b546952593c4d84376a6d01.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Explode the raw transaction and show transaction elements.\n",
+        "technicalNotes2": "Transaction cunctruction\nhttps://medium.com/blockchain-editorial/anatomy-of-bitcoin-transactions-e5ad47f01e31",
+        "technicalNotes3": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "vo": "All transactions need to repect the same data structure which include, amongst others:\n• Transaction ID <br>\n• Inputs <br>\n   ↳ UTXO index <br>\n• Outputs <br>\n   ↳ Address <br>\n   ↳ Amount <br>"
+    },
+    {
+        "section": "   ↳ Transaction ID",
+        "duration": 10,
+        "seconds": 20,
+        "timecode": "00:20",
+        "vo": "The tansaction ID consistst of the hash the current transaction data before the signing."
+    },
+    {
+        "section": "Inputs",
+        "duration": 10,
+        "seconds": 30,
+        "timecode": "00:30",
+        "vo": "Transaction in bitcoin always spend from a previous output and anyone can analyse the blockchain and find the history of each satoshi back to the coinbase origin.",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/04.5_blockchain_tx_tracking.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes1": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "   ↳ UTXO index",
+        "duration": 10,
+        "seconds": 40,
+        "timecode": "00:40",
+        "vo": "With the transaction ID for the unspent output, we can reference the index of the output we're looking to spend.\n",
+        "board": "https://i.pinimg.com/564x/22/07/89/22078900c69351375289e00c49f271a2.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Zoom out showing binary on the background, hex format on the next level, json on the foreground. \nAs the camera moves back it crosses with the type.\n",
+        "technicalNotes1": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes2": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Outputs",
+        "duration": 10,
+        "seconds": 50,
+        "timecode": "00:50",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Move all in the z-axis, and keep background out of focus.\nHighlight each section as descriptions progress.\n"
+    },
+    {
+        "section": "   ↳ Address",
+        "duration": 10,
+        "seconds": 60,
+        "timecode": "01:00",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Bring input and signature into focus.\n"
+    },
+    {
+        "section": "   ↳ Amount",
+        "duration": 10,
+        "seconds": 70,
+        "timecode": "01:10"
+    },
+    {
+        "section": "   ↳ Fee",
+        "duration": 10,
+        "seconds": 80,
+        "timecode": "01:20"
+    },
+    {
+        "section": "   ↳ Change",
+        "duration": 10,
+        "seconds": 90,
+        "timecode": "01:30"
+    },
+    {
+        "duration": 10,
+        "seconds": 100,
+        "timecode": "01:40"
+    }
+]

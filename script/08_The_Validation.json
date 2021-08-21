@@ -1,0 +1,134 @@
+[
+    {
+        "section": "Public Key",
+        "vo": "A unique number mathematically generated from a private key.\n"
+    },
+    {
+        "section": "ECDSA",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "vo": "Elliptic Curve Digital Signature Algorithm\n\nBitcoin uses a digital signature system called ECDSA to control the ownership of bitcoins.\n\nIn short, a digital signature system allows you to generate your own private/public key pair, and use the private key to generate digital signatures that proves you are the owner of the public key without having to reveal the private key.\n\nThis system is used in Bitcoin to allow people to receive and send bitcoins. Anyone can generate their own pair of keys, and then anyone can send (or “lock”) bitcoins to your public key. Nobody can steal these bitcoins, because only the person with the correct private key for this public key is able to generate valid signatures to “unlock” the bitcoins and send them to someone else.\n\nThe ability to create digital signatures has been around since the 1970s thanks to the invention of RSA. In 1994, DSA was released as the standard for digital signature systems. ECDSA is just an implementation of DSA using elliptic curve cryptography, as the mathematics of elliptic curves allow for more efficient signature creation and verification.\n\nhttps://cryptobook.nakov.com/asymmetric-key-ciphers/elliptic-curve-cryptography-ecc\n",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/08.01_elliptic_curve.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Switch to ECDSA graph view.\n",
+        "technicalNotes1": "https://sales-sconti-descuentos.robadamatti.net/how-elliptic-curve-cryptography-works/\nOr\nhttps://www.allaboutcircuits.com/technical-articles/elliptic-curve-cryptography-in-embedded-systems/\n\nhttps://en.bitcoin.it/wiki/Secp256k1\n\nThis is a graph of secp256k1's elliptic curve y2 = x3 + 7 over the real numbers. Note that because secp256k1 is actually defined over the field Zp, its graph will in reality look like random scattered points, not anything like this.\n\n\nMap finite fields cartesian to 3D taurus\nhttps:",
+        "technicalNotes2": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes3": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "board": "http://mathonline.wdfiles.com/local--files/topological-quotients-in-euclidean-space/Screen%20Shot%202015-10-17%20at%206.08.47%20PM.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "vo": "\nhttp://mcl.math.uic.edu/wp-content/uploads/2016/05/S16-AEC-poster.pdf\n\nhttps://medium.com/@blairlmarshall/how-does-ecdsa-work-in-bitcoin-7819d201a3ec\n",
+        "board": "https://i.pinimg.com/564x/1d/fd/b1/1dfdb1a0355bfca0b31abfa485040e57.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/08.03_elliptic_curve.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "board": "https://media.wired.com/photos/5d8e7b4401e4a4000826133a/master/w_1600%2Cc_limit/Quanta_inline303_GeometryOfPrimes_560.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "SHA256",
+        "duration": 10,
+        "seconds": 20,
+        "timecode": "00:20",
+        "vo": "Performing double-and-add scalar multiplication \nR=13⋅[4,5] on elliptic curve in simple Weierstrass\n\nhttps://trustica.cz/en/2018/05/10/elliptic-curves-discrete-logarithm-problem/\n\nhttps://www.youtube.com/watch?time_continue=17&v=C5BElK96grI&feature=emb_title&ab_channel=Trustica\n",
+        "board": "https://trustica.cz/wp-content/uploads/2018/05/frame-1301.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes1": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes3": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Hash Function",
+        "duration": 10,
+        "seconds": 30,
+        "timecode": "00:30",
+        "board": "https://learnmeabitcoin.com/technical/images/ecdsa/signing-a-transaction.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Mod",
+        "duration": 10,
+        "seconds": 40,
+        "timecode": "00:40",
+        "vo": "In mathematics, modular arithmetic is a system of arithmetic for integers, where numbers \"wrap around\" when reaching a certain value, called the modulus. The modern approach to modular arithmetic was developed by Carl Friedrich Gauss in his book Disquisitiones Arithmeticae, published in 1801.\n",
+        "board": "https://i.pinimg.com/originals/79/4a/b6/794ab60745c4dfcc584a980d78262103.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "board": "https://64.media.tumblr.com/cc3f9388b72855c019065fa5c5b3b473/1f34edf044d5546b-2c/s500x750/7d4edb59b6767f52cf7892691eba2fb811862725.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "board": "https://3.bp.blogspot.com/-gHWKy6BXiCY/WPjU7Y_QXZI/AAAAAAAAAO4/sF-FjxatdtAq5vhiWYWJSPtNMokES3OLACLcB/s1600/Untitled.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Finite Fields",
+        "duration": 10,
+        "seconds": 50,
+        "timecode": "00:50",
+        "vo": "In mathematics, a finite field or Galois field (so-named in honor of Évariste Galois) is a field that contains a finite number of elements. As with any field, a finite field is a set on which the operations of multiplication, addition, subtraction and division are defined and satisfy certain basic rules. The most common examples of finite fields are given by the integers mod p when p is a prime number.\n",
+        "board": "https://www.mdpi.com/crystals/crystals-09-00482/article_deploy/html/images/crystals-09-00482-g001.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "section": "Primes",
+        "duration": 10,
+        "seconds": 60,
+        "timecode": "01:00",
+        "vo": "A prime number (or a prime) is a natural number greater than 1 that is not a product of two smaller natural numbers. A natural number greater than 1 that is not prime is called a composite number. For example, 5 is prime because the only ways of writing it as a product, 1 × 5 or 5 × 1, involve 5 itself. However, 4 is composite because it is a product (2 × 2) in which both numbers are smaller than 4. Primes are central in number theory because of the fundamental theorem of arithmetic: every natural number greater than 1 is either a prime itself or can be factorized as a product of primes that is unique up to their order.\n\nhttps://en.wikipedia.org/wiki/Ulam_spiral \n",
+        "board": "https://i.stack.imgur.com/p1Nhf.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "board": "https://i.ytimg.com/vi/EK32jo7i5LQ/sddefault.jpg#404_is_fine",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "board": "https://dmitrybrant.com/images/primespiral2.png"
+    },
+    {
+        "vo": "https://learnmeabitcoin.com/technical/ecdsa\nhttps://medium.com/@blairlmarshall/how-does-ecdsa-work-in-bitcoin-7819d201a3ec\nhttps://www.coindesk.com/math-behind-bitcoin\n\n"
+    }
+]

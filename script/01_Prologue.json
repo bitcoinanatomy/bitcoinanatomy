@@ -1,0 +1,121 @@
+[
+    {
+        "section": "Opening Credits",
+        "duration": 10,
+        "seconds": 10,
+        "timecode": "00:10",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Producer Logos/Credits"
+    },
+    {
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/01.1_quote.png",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Quote"
+    },
+    {
+        "vo": "Satoshi gave the world Bitcoin, a true “something for nothing.” His discovery of absolute scarcity for money is an unstoppable idea that is changing the world tremendously, just like its digital ancestor: the number zero.  <br> — Robert Breedlove <br><br>\n\n<a href=\"https://breedlove22.medium.com/the-number-zero-and-bitcoin-4c193336db5b\" target=\"_blank\">https://breedlove22.medium.com/the-number-zero-and-bitcoin-4c193336db5b</a>",
+        "visual": "Title fades in \n\"The Bitcoin Protocol\" \n\"The Anatomy of Bitcoin\" theanatomyofbitcoin.com\n\"Bitcoin Anatomy\" bitcoinanatomy.com\nWhite type on black background. \n"
+    },
+    {
+        "section": "Search for Money",
+        "duration": 10,
+        "seconds": 20,
+        "timecode": "00:20",
+        "vo": "For millennia, humans have been in the search of a tool that can track and conserve value through space and time.",
+        "board": "https://pbs.twimg.com/media/Cs7jzJtVMAAm7Xe.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Fade in to planet earth. Timelapse like subtle activity on the surface of the planet. ",
+        "technicalNotes": "Twitter spaces call with El Salvadorian president about legal tender \nhttps://soundcloud.com/user-78867804-972462309/btc-legal-tender\n\n12:48 AM · Jun 9, 2021\nhttps://twitter.com/pedromvpg/status/1402487855738413058"
+    },
+    {
+        "section": "Reliance on Gold",
+        "duration": 10,
+        "seconds": 30,
+        "timecode": "00:30",
+        "vo": "Humans chose gold as money in the free market, because of its scarcity and durability. Due to physical constraints, gold eventually became centralized in the hands of central banks. Effectively, taking power away from the individual.",
+        "visual": "https://hub.arcgis.com/datasets/UrbanObservatory::global-power-plants/about\nhttps://twitter.com/bennd77/status/1398006897400336388?s=12"
+    },
+    {
+        "section": "Decentralization",
+        "duration": 10,
+        "seconds": 40,
+        "timecode": "00:40",
+        "vo": "Bitcoin has gold's best properties, with none of the downsides. In fact, one of Bitcoin's most important features is high level of decentralization. Bitcoin is money for the digital age.",
+        "board": "https://bitcoinanatomy.netlify.app/assets/boards/02.3_network_centralize.gif",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "visual": "Fade out surface of earth to reveal the internet layer (massive amount of nodes, in real locations in the globe), drill further into the payment layer (still somewhat active a but smaller network), in the center show an even smaller bitcoin network at the core of all human communication/record/history/truth///"
+    },
+    {
+        "vo": "https://twitter.com/anilsaidso/status/1399039422192971781?s=21"
+    },
+    {
+        "section": "Stranded and Wasted Energy",
+        "vo": "Other monetary systems leak a lot of energy, either by the use of physical resources to extract the rare materials out of the ground, or by requiring huge amounts of infrastructure to maintain and regulate scarcity.\n",
+        "visual": "Show globe with geographic features, no borders.\nRepresente energy consumption in urban areas and gold mining areas."
+    },
+    {
+        "vo": "This disrupts the natural balance between production and consumption. By subsidizing or banning energy usage or production, the human population directs their efforts not to what it deems necessary, but to what is decided by the top technocrats in a specific jurisdiction.\n",
+        "visual": "Show the addition and construction of subsidized energry infrastructure (dams in china, oil in middle east, etc) and all energy captured and then wasted (not used)."
+    },
+    {
+        "vo": "A lot of resources go into capturing energy that would otherwise be left untouched and creates over-production of energy in deserted areas of the world, or over consumption of energy due to low cost.\n"
+    },
+    {
+        "vo": "Because of the decentralized nature of Bitcoin, these energy leaks can be captured and converted into real money, even in isolated places.\n"
+    },
+    {
+        "vo": "The infrastructure created to capture this energy can then be used to either mine bitcoin or supply complementary energy to the grid for the general population or for manufacturing allowing for the deescalation of unsustainable growth by attracting more people away from urban centers, thus creating a more decentralized self-sustained world.\n"
+    },
+    {
+        "vo": "Even with the banning or the incentive of mining by governments, the network has mechanisms to maintain the tempo new blocks by adjusting how difficult it is to find a block depending on how easy and fast previous blocks were found. \n",
+        "visual": "Show difficulty adjustment keeping the balance on the timely production of new bitcoin."
+    },
+    {
+        "section": "Multi-layered networks",
+        "vo": "As energy requires a lot of resources to store and transport, miners convert this energy into electricity and mine bitcoin with it, effectively making that energy transportable around the world. \n",
+        "board": "https://mir-s3-cdn-cf.behance.net/project_modules/fs/7f379b20147789.562e650eed4f3.jpg",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "vo": "To keep the requirements to running a node low, the data trhoughput on the blockchain is on average 1 megabyte every 10 minutes requiring a multi-layered approach to allow more data to be shared without congesting the base bitcoin layer.\n",
+        "board": "https://pbs.twimg.com/media/E38_fPXXEAA_XvO?format=jpg&name=4096x4096",
+        "imagePreview": {
+            "valueType": "IMAGE"
+        },
+        "technicalNotes": "https://lightninglayer.com/map"
+    },
+    {
+        "vo": "Side-chains or payment channel routing systems that hook into the bitcoin blockchain use it as a primary source of truth and build on it by anchoring themselfs to the unforgable truth of bitcoin with sproadic transations. This is a way to leverage Bitcoin's security without having to pay the the premium to write on the Bitcoin blockchain for every transaction.\n"
+    },
+    {
+        "section": "Responsibility",
+        "duration": 10,
+        "seconds": 50,
+        "timecode": "00:50",
+        "vo": "Keeping the network and transaction database lean is essential to the functioning of the protocol as each node is the ultimate validator. The bitcoin protocol is a set of rules that are enforced by no central authority so if running a node becomes to difficult, users will have to defer the responsibility of validation to third parties that centralized the truth finding process and can corrupt the information.\n",
+        "board": "https:
+        "imagePreview": {
+            "valueType": "IMAGE"
+        }
+    },
+    {
+        "duration": 10,
+        "seconds": 60,
+        "timecode": "01:00",
+        "vo": "Crucial to understand it as a balanced system of incentives that is validated and controlled by each member of a network of nodes and not a central commitee or organization.\n",
+        "visual": "Earth globe fades in behind the title. Zoom in camera through the tittle's typography and slow down as globe fills the screen. "
+    },
+    {
+        "visual": "Fade to black"
+    }
+]
