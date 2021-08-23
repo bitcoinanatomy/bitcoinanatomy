@@ -48,7 +48,7 @@
             "valueType": "IMAGE"
         },
         "visual": "Zoom out and lines come out of the node rectangle. 8 lines connect to 8 other nodes but these are not glowing, they're greyed out. \nBehind the main glowing node a small body of text materializes.\n",
-        "technicalNotes1": "https:
+        "technicalNotes1": "https:",
         "technicalNotes2": {
             "valueType": "IMAGE"
         }

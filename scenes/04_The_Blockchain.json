@@ -107,7 +107,7 @@
         "seconds": 110,
         "timecode": "01:50",
         "vo": "Based on this aggregate of transactions, it then builds a block of data following precise format and cryptographic instructions to ensure the block follows the consensus rules of the chain.\n",
-        "board": "https:
+        "board": "https://i.pinimg.com/originals/d7/86/ad/d786ad2cd8373d50cd6c2bb5e3c13e1d.gif",
         "imagePreview": {
             "valueType": "IMAGE"
         },
@@ -242,9 +242,7 @@
         "seconds": 280,
         "timecode": "04:40",
         "vo": "Early adopters of the network were also rewarded with a higher block subsidy than current miners.\n",
-        "visual": {
-            "valueType": "IMAGE"
-        }
+        "visual": ""
     },
     {
         "duration": 10,
@@ -308,7 +306,7 @@
             "valueType": "IMAGE"
         },
         "visual": "Fly through the blockchain validation all blocks, one by one.",
-        "technicalNotes1": "https://www.pierrerochard.com/auditing-bitcoin-supply/\n"
+        "technicalNotes1": "https://www.pierrerochard.com/auditing-bitcoin-supply/"
     },
     {
         "duration": 10,

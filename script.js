@@ -74,16 +74,11 @@ $( document ).ready(function() {
 
 
 
-  //load scenes from google docs
-  var totalScenes = 9;
-
-
-
   // Hack to force reloading of content from google sheets
   setTimeout(function(){
-    getScenesData(totalScenes);
+    getScenesData();
     getProducerData();
-    getTeamtData(totalScenes);
+    getTeamData();
   }, 500);
 
 
@@ -150,87 +145,143 @@ $( document ).ready(function() {
 
 
 
-
-
-
-function getScenesData(totalScenes){
+function getScenesData(){
 
   var sceneData = [];
   var shots = [];
-  var tableDeader = "<thead><tr> <th class='table-col-section'><h4>Theme</h4></th>   <th class='table-col-board'><h4>Board</h4></th>  <th class='table-col-vo'><h4>Voice</h4></th>  <th class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
-  //and in your call will listen for the custom deferred's done
-  for (i = 1; i <= totalScenes; i++) {
-    getScriptData(i).then(function(returndata){
-      sceneData.push(returndata);
-      //if all loaded
-      if(sceneData.length == totalScenes){
-        //sort after all loaded
-        sceneData.sort(compare);
-        //iterate all scenes
-        $.each(sceneData, function( key, scene ) {
-            //print title nav
-            $( "<h4/>", { "id": "scene-select-"+scene.sort, "class": "scene-select inactive", html: scene.title }).appendTo( "#scenes-nav" );
-            shots.push(tableDeader);
-            shots.push("<tbody>");
-            $.each( scene.shots, function( key, shot ) {
-              //console.log(shot);
-              shots.push( "<tr id='sheet"+scene.sort+" row-" + key + "' class='row-content'> ");
-                var rowContent = '';
-                shot.gsx$section.$t == '' ? rowContent = ' empty' : rowContent = '';
-                shots.push( "<td class='table-col-section"+rowContent+"'><h4>" + shot.gsx$section.$t.replace(/\n/g,"<br>") + "</h4></td>");
-
-                shot.gsx$board.$t == '' ? rowContent = ' empty' : rowContent = '';
-                shots.push( "<td class='table-col-board"+rowContent+"'>");
-                if(shot.gsx$board.$t != ""){
-                  shots.push( "<div class='image-holder'><img src=" + shot.gsx$board.$t + " /></div>");
-                }
-                shots.push( "</td>");
+  var tableHeader = "<thead><tr> <th class='table-col-section'><h4>Theme</h4></th>   <th class='table-col-board'><h4>Board</h4></th>  <th class='table-col-vo'><h4>Voice</h4></th>  <th class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
 
 
-                shot.gsx$vo.$t == '' ? rowContent = ' empty' : rowContent = '';
-                shots.push( "<td class='table-col-vo"+rowContent+"'>" + shot.gsx$vo.$t.replace(/\n/g,"<br>") + "</td>");
+  // JSON export from google docs comes w/ issues. Correct before deplyoing
+  var scenes = [
+    '01_Prologue.json',
+    '02_The_Network.json',
+    '03_The_Node.json',
+    '04_The_Blockchain.json',
+    '05_The_Block.json',
+    '06_The_Transaction.json',
+    '07_The_Signature.json',
+    '08_The_Validation.json',
+    '09_Epilogue.json',
+  ]
+
+  var scene_num = 1;
 
 
-                shot.gsx$visual.$t == '' ? rowContent = ' empty' : rowContent = '';
-                shots.push( "<td class='table-col-visual grey"+rowContent+"'>" + shot.gsx$visual.$t.replace(/\n/g,"<br>") + "</td>");
-              shots.push( "</tr>");
-            });
-            shots.push("</tbody>");
 
-            //Print shots table
-            $( "<table/>", { "id": "scene-select-"+scene.sort+"-table" , "class": "scene", html: shots.join( "" ) }).appendTo( "#scenes-data" );
+  $.each(scenes, function (key, index) {
+    setTimeout(function(){
+      return $.getJSON("scenes/"+index).then(function(data){
 
-            shots = [];
+
+        //Add scenes nav
+        $("<h4/>", { "id": "scene-select-"+key, "class": "scene-select inactive", html: index.slice(3).replace(/_/g, ' ').slice(0,-5) }).appendTo("#scenes-nav");
+
+        //Add table head
+        shots.push(tableHeader);
+
+        //Start table body
+        shots.push("<tbody>");
+
+        //Iterate for each shot/row
+        $.each( data, function( key, shot ) {
+
+            shots.push( "<tr id='sheet"+index.substring(0,3)+" row-" + key + "' class='row-content'> ");
+
+
+            var shot_section = '';
+
+            // Section title
+            if(shot.section != undefined){
+               shots.push( "<td class='table-col-section'><h4>" + shot.section.replace(/\n/g,"<br>") + "</h4></td>");
+            }else{
+              shots.push( "<td class='table-col-section empty'><h4></h4></td>");
+            }
+
+
+            // Storyboard
+            if(shot.board != undefined){
+              shots.push( "<td class='table-col-board'>");
+              if(shot.board != ""){
+                shots.push( "<div class='image-holder'><img src=" + shot.board + " /></div>");
+              }
+              shots.push( "</td>");
+            }else{
+              shots.push( "<td class='table-col-board empty'><h4></h4></td>");
+            }
+
+            // Voice Over
+            if(shot.vo != undefined){
+               shots.push( "<td class='table-col-vo'>" + shot.vo.replace(/\n/g,"<br>") + "</td>");
+            }else{
+              shots.push( "<td class='table-col-vo empty'><h4></h4></td>");
+            }
+
+            // Visual d escritpion
+            if(shot.visual != undefined){
+               shots.push( "<td class='table-col-visual'>" + shot.visual.replace(/\n/g,"<br>") + "</td>");
+            }else{
+              shots.push( "<td class='table-col-visual empty'><h4></h4></td>");
+            }
+
+          shots.push( "</tr>");
+
         });
+        shots.push("</tbody>");
+
+        // Print shots table
+        $( "<table/>", { "id": "scene-select-"+scene_num+"-table" , "class": "scene", html: shots.join( "" ) }).appendTo( "#scenes-data" );
+        scene_num = scene_num+1
+        // Empty shots for next scene
+        shots = [];
+
+
+      })
 
 
 
-        $('.scene-select').click(function() {
-          var t = $(this).attr('id');
 
-          if($(this).hasClass('inactive')){ //this is the start of our condition
-            $('.scene-select').addClass('inactive');
-            $(this).removeClass('inactive');
-
-            $('.scene').hide();
-            $('#'+ t + '-table').fadeIn('slow');
-         }
-
-         for (i = 1; i <= totalScenes; i++) {
-            $('#scenes-diagrams').removeClass('diagram-scene-select-'+i);
-         }
-         $('#scenes-diagrams').addClass('diagram-'+t);
-
-        });
-
-        $('.scene').hide();
-        $('#scene-select-1-table').fadeIn('slow');
-        $('#scene-select-1').removeClass('inactive');
+      $( ".scene-select" ).on( "click", function(){
+        console.log('3');
+      });
 
 
-      }
-    });
-  }
+      $('.scene-select').click(function() {
+        var t = $(this).attr('id');
+
+        if($(this).hasClass('inactive')){
+          $('.scene-select').addClass('inactive');
+          $(this).removeClass('inactive');
+
+          $('.scene').hide();
+          $('#'+ t + '-table').fadeIn('slow');
+       }
+
+
+
+       for (i = 1; i <= 5; i++) {
+          $('#scenes-diagrams').removeClass('diagram-scene-select-'+i);
+       }
+       $('#scenes-diagrams').addClass('diagram-'+t);
+
+      });
+
+      $('.scene').hide();
+      $('#scene-select-1-table').fadeIn('slow');
+      $('#scene-select-1').removeClass('inactive');
+
+
+
+
+    }, 100); // Pause for 100 milisends to ensure content come out in the right order
+  });
+
+
+
+
+
+
+
 }
 
 
@@ -240,34 +291,39 @@ function getScenesData(totalScenes){
 
 
 
-function getTeamtData(totalScenes){
+function getTeamData(){
     var teamData = {};
     var markupTeam = '';
-    var department;
-    return $.getJSON("https://spreadsheets.google.com/feeds/list/1JTdEbmcEsAtAz1-FyO9LyxF-FsBwEJ-9MCthfWktfv8/"+(totalScenes+2)+"/public/values?alt=json").then(function(data){
+    var department, teamMemberURL, departmentCompensation = "";
 
-      $.each(data.feed.entry, function (key, teamMember) {
-        if(teamMember.gsx$department.$t !== ""){
-              department = teamMember.gsx$department.$t;
-              teamData[department] = {'departmentName': department, 'departmentCompensation': teamMember.gsx$departmentcompensation.$t, 'team': [] };
+
+
+    return $.getJSON("team.json").then(function(data){
+
+      $.each(data, function (key, row) {
+        if(row.department !== undefined){
+              row.department !== undefined ? department = row.department : department = "";
+              row.departmentCompensation !== undefined ? departmentCompensation = row.departmentCompensation : departmentCompensation = "";
+              teamData[department] = {'departmentName': department, 'departmentCompensation': departmentCompensation, 'team': [] };
         }
+
+        row.url !== undefined ? teamMemberURL = row.url : teamMemberURL = "";
+
         teamData[department].team.push({
-          'name': teamMember.gsx$individual.$t.replace(/\n/g,"<br>"),
-          'individualCompensation': teamMember.gsx$individualcompensation.$t,
-          'url': teamMember.gsx$url.$t
+          'name': row.individual.replace(/\n/g,"<br>"),
+          'individualCompensation': row.individualCompensation,
+          'url': teamMemberURL
         })
 
       });
 
 
       $.each(teamData, function(key, item){
-
-        $.each(item.team, function(key, teamMember){
-
-          if(teamMember.url != ""){
-            markupTeam += '<a href="'+teamMember.url+'" target="_blank">' + teamMember.name + '</a> <span class="compensation">' + teamMember.individualCompensation + '%</span><br>';
+        $.each(item.team, function(key, row){
+          if(row.url != ""){
+            markupTeam += '<a href="'+row.url+'" target="_blank">' + row.name + '</a> <span class="compensation">' + row.individualCompensation + '%</span><br>';
           }else{
-            markupTeam += teamMember.name + ' <span class="compensation">' + teamMember.individualCompensation + '%</span><br>';
+            markupTeam += row.name + ' <span class="compensation">' + row.individualCompensation + '%</span><br>';
           }
         });
 
@@ -277,31 +333,19 @@ function getTeamtData(totalScenes){
       });
 
 
-
     });
 
 };
 
-/*
-gsx$individualcompensation
-gsx$departmentcompensation
-gsx$individual
-gsx$url
-*/
 
 
 
 
 
-function getScriptData(i){
-    return $.getJSON("https://spreadsheets.google.com/feeds/list/1JTdEbmcEsAtAz1-FyO9LyxF-FsBwEJ-9MCthfWktfv8/"+(i+1)+"/public/values?alt=json").then(function(data){
-      return {
-        sort:i,
-        title:data.feed.title.$t,
-        shots:data.feed.entry
-      }
-    });
-};
+
+
+
+
 
 
 
@@ -330,7 +374,7 @@ function getProducerData(){
 
                      targetContainer = "#contributors-inner";
                      jsonObject = producer.metadata.orderId;
-                     console.log(jsonObject.t);
+                     //console.log(jsonObject.t);
                      if(jsonObject.t != ''){
                        $( "<div/>", { "class": "producer-name", html: '<b><a target="_blank" href="https://twitter.com/'+jsonObject.n+'">' + jsonObject.n + '</a></b>' + amount }).appendTo(targetContainer);
                      }else{

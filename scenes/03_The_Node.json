@@ -115,7 +115,6 @@
     },
     {
         "vo": "Miners are incentivized to mine valid blocks because if the block they crafted and solved is not added to all the other nodes' blockchain, their coinbase reward won't be acknowledged by the rest of the net work.\n",
-        "board": "https://feralfile.com/api/uploaded_assets?uri=thumbnails/1f060e42-3437-444c-b823-a8b8532c449c/1615464638",
         "imagePreview": {
             "valueType": "IMAGE"
         },
