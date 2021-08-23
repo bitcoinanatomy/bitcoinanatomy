@@ -244,6 +244,7 @@ function getScenesData(){
                 $(selector).toArray().sort(function(a, b){
                     var aVal = parseInt(a.getAttribute(attrName)),
                         bVal = parseInt(b.getAttribute(attrName));
+                    console.log(aVal + ' - ' + bVal + ' = ' + (aVal - bVal))
                     return aVal - bVal;
                 })
               );
