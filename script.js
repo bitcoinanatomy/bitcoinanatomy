@@ -170,7 +170,6 @@ function getScenesData(){
 
 
   $.each(scenes, function (key, index) {
-    setTimeout(function(){
       return $.getJSON("scenes/"+index).then(function(data){
 
 
@@ -236,7 +235,18 @@ function getScenesData(){
         shots = [];
 
 
-      })
+      });
+
+
+
+      // Sort scene navigation
+      $("#scenes-nav h4").sort(function (a, b) {
+          return parseInt(a.id) > parseInt(b.id);
+      }).each(function () {
+          var elem = $(this);
+          elem.remove();
+          $(elem).appendTo("#scenes-nav");
+      });
 
 
 
@@ -245,7 +255,7 @@ function getScenesData(){
         console.log('3');
       });
 
-
+      /*
       $('.scene-select').click(function() {
         var t = $(this).attr('id');
 
@@ -269,11 +279,10 @@ function getScenesData(){
       $('.scene').hide();
       $('#scene-select-1-table').fadeIn('slow');
       $('#scene-select-1').removeClass('inactive');
+      */
 
 
 
-
-    }, 500); // Pause for 100 milisends to ensure content come out in the right order
   });
 
 
