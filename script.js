@@ -273,7 +273,7 @@ function getScenesData(){
 
 
 
-    }, 100); // Pause for 100 milisends to ensure content come out in the right order
+    }, 500); // Pause for 100 milisends to ensure content come out in the right order
   });
 
 
