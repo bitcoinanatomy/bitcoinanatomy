@@ -233,9 +233,8 @@ function getScenesData(){
         // Empty shots for next scene
         shots = [];
 
-
         // Run only after all scenes loaded
-        if(index.substring(0,2).replace(/^0+/, '') >= scenes.length){
+        if((key+1) == scenes.length){
 
           // Sort scene navigation
           var $sorted_items,
@@ -245,7 +244,6 @@ function getScenesData(){
               $(selector).toArray().sort(function(a, b){
                   var aVal = parseInt(a.getAttribute(attrName)),
                       bVal = parseInt(b.getAttribute(attrName));
-                  console.log(aVal + ' - ' + bVal + ' = ' + (aVal - bVal) + " | " + a)
                   return aVal - bVal;
               })
             );
