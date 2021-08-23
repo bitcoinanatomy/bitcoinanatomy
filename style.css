@@ -786,7 +786,9 @@ td.team-position, td.team-person {border: none; padding: 5px 15px; line-height: 
   color: #666;
 }
 
-
+.scene {
+  display: none;
+}
 
 
 #scenes-diagrams{
