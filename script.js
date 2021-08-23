@@ -174,7 +174,7 @@ function getScenesData(){
         //Add scenes nav
 
 
-        $("<h4/>", { "id": "scene-select-"+index.substring(0,2).replace(/^0+/, ''), "class": "scene-select inactive", html: index.slice(3).replace(/_/g, ' ').slice(0,-5) }).appendTo("#scenes-nav");
+        $("<h4/>", { "data-sort" :  index.substring(0,2).replace(/^0+/, ''), "id": "scene-select-"+index.substring(0,2).replace(/^0+/, ''), "class": "scene-select inactive", html: index.slice(3).replace(/_/g, ' ').slice(0,-5) }).appendTo("#scenes-nav");
 
         //Add table head
         shots.push(tableHeader);
@@ -249,7 +249,7 @@ function getScenesData(){
               );
           };
 
-          $sorted_items = getSorted('#scenes-nav .scene-select', 'id').clone();
+          $sorted_items = getSorted('#scenes-nav .scene-select', 'data-sort').clone();
           $('#scenes-nav').html( $sorted_items );
 
           // Hide and show scenes
