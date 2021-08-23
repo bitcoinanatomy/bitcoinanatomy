@@ -168,14 +168,13 @@ function getScenesData(){
     '09_Epilogue.json',
   ]
 
-  var scene_num = 0;
 
   $.each(scenes, function (key, index) {
       return $.getJSON("scenes/"+index).then(function(data){
-
-
         //Add scenes nav
-        $("<h4/>", { "id": "scene-select-"+key, "class": "scene-select inactive", html: index.slice(3).replace(/_/g, ' ').slice(0,-5) }).appendTo("#scenes-nav");
+
+
+        $("<h4/>", { "id": "scene-select-"+index.substring(0,2).replace(/^0+/, ''), "class": "scene-select inactive", html: index.slice(3).replace(/_/g, ' ').slice(0,-5) }).appendTo("#scenes-nav");
 
         //Add table head
         shots.push(tableHeader);
@@ -230,52 +229,57 @@ function getScenesData(){
         shots.push("</tbody>");
 
         // Print shots table
-        $( "<table/>", { "id": "scene-select-"+scene_num+"-table" , "class": "scene", html: shots.join( "" ) }).appendTo( "#scenes-data" );
-        scene_num = scene_num+1
+        $( "<table/>", { "id": "scene-select-"+index.substring(0,2).replace(/^0+/, '')+"-table" , "class": "scene", html: shots.join( "" ) }).appendTo( "#scenes-data" );
         // Empty shots for next scene
         shots = [];
 
 
 
-        // Sort scene navigation
-        $("#scenes-nav h4").sort(function (a, b) {
-            return parseInt(a.id) > parseInt(b.id);
-            console.log('444');
-        }).each(function () {
-          console.log('444');
-            var elem = $(this);
-            console.log(elem);
-            elem.remove();
-            $(elem).appendTo("#scenes-nav");
-        });
+        if(index.substring(0,2).replace(/^0+/, '') >= 9){
+
+          // Sort scene navigation
+          $("#scenes-nav .scene-select").sort(function (a, b) {
+              return parseInt(a.id) > parseInt(b.id);
+          }).each(function () {
+              var elem = $(this);
+              console.log(elem);
+              elem.remove();
+              $(elem).appendTo("#scenes-nav");
+          });
 
 
-        // Hide and show scenes
-        $('.scene').hide();
+          // Hide and show scenes
+          $('.scene').hide();
+          $('.scene-select').on('click', function(){
+            var t = $(this).attr('id');
+            if($(this).hasClass('inactive')){
+              $('.scene-select').addClass('inactive');
+              $(this).removeClass('inactive');
+              $('.scene').hide();
+              $('#'+ t + '-table').fadeIn('slow');
+           }
+           for (i = 1; i <= 10; i++) {
+              $('#scenes-diagrams').removeClass('diagram-scene-select-'+i);
+           }
+           $('#scenes-diagrams').addClass('diagram-'+t);
 
-        $('.scene-select').click(function() {
-          var t = $(this).attr('id');
-
-          if($(this).hasClass('inactive')){
-            $('.scene-select').addClass('inactive');
-            $(this).removeClass('inactive');
-
-            $('.scene').hide();
-            $('#'+ t + '-table').fadeIn('slow');
-         }
 
 
 
-         for (i = 1; i <= 5; i++) {
-            $('#scenes-diagrams').removeClass('diagram-scene-select-'+i);
-         }
-         $('#scenes-diagrams').addClass('diagram-'+t);
 
-        });
+          });
 
-        $('.scene').hide();
-        $('#scene-select-0-table').fadeIn('slow');
-        $('#scene-select-0').removeClass('inactive');
+          $('.scene').hide();
+          $('#scene-select-1-table').fadeIn('slow');
+          $('#scene-select-1').removeClass('inactive');
+
+
+
+        }
+
+
+
+
 
       });
 
