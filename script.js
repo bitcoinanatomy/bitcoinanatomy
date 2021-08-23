@@ -153,6 +153,7 @@ function getScenesData(){
 
   var sceneData = [];
   var shots = [];
+  var scene_num = 0;
   var tableHeader = "<thead><tr> <th class='table-col-section'><h4>Theme</h4></th>   <th class='table-col-board'><h4>Board</h4></th>  <th class='table-col-vo'><h4>Voice</h4></th>  <th class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
 
   // JSON export from google docs comes w/ issues. Correct before deplyoing
@@ -233,12 +234,14 @@ function getScenesData(){
         // Empty shots for next scene
         shots = [];
 
+
+        scene_num = scene_num + 1;
+
         // Run only after all scenes loaded
-        if((key+1) == scenes.length){
+        if(scene_num == scenes.length){
 
           // Sort scene navigation
           var $sorted_items,
-
           getSorted = function(selector, attrName) {
             return $(
               $(selector).toArray().sort(function(a, b){
