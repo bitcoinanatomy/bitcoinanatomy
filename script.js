@@ -83,7 +83,11 @@ $( document ).ready(function() {
 
 
 
+
+
+
   $(".btcpay-form").each(function( index, element ) {
+
     var jsonForm = new Object();
     var type = $(element).find('.input-checkoutDesc').val();
     $(element).find('.btcpay-input').keyup(function() {
@@ -151,7 +155,6 @@ function getScenesData(){
   var shots = [];
   var tableHeader = "<thead><tr> <th class='table-col-section'><h4>Theme</h4></th>   <th class='table-col-board'><h4>Board</h4></th>  <th class='table-col-vo'><h4>Voice</h4></th>  <th class='table-col-visual'><h4>Shot</h4></th> </tr></thead>"
 
-
   // JSON export from google docs comes w/ issues. Correct before deplyoing
   var scenes = [
     '01_Prologue.json',
@@ -165,9 +168,7 @@ function getScenesData(){
     '09_Epilogue.json',
   ]
 
-  var scene_num = 1;
-
-
+  var scene_num = 0;
 
   $.each(scenes, function (key, index) {
       return $.getJSON("scenes/"+index).then(function(data){
@@ -235,51 +236,54 @@ function getScenesData(){
         shots = [];
 
 
+
+        // Sort scene navigation
+        $("#scenes-nav h4").sort(function (a, b) {
+            return parseInt(a.id) > parseInt(b.id);
+            console.log('444');
+        }).each(function () {
+          console.log('444');
+            var elem = $(this);
+            console.log(elem);
+            elem.remove();
+            $(elem).appendTo("#scenes-nav");
+        });
+
+
+        // Hide and show scenes
+        $('.scene').hide();
+
+        $('.scene-select').click(function() {
+          var t = $(this).attr('id');
+
+          if($(this).hasClass('inactive')){
+            $('.scene-select').addClass('inactive');
+            $(this).removeClass('inactive');
+
+            $('.scene').hide();
+            $('#'+ t + '-table').fadeIn('slow');
+         }
+
+
+
+         for (i = 1; i <= 5; i++) {
+            $('#scenes-diagrams').removeClass('diagram-scene-select-'+i);
+         }
+         $('#scenes-diagrams').addClass('diagram-'+t);
+
+        });
+
+        $('.scene').hide();
+        $('#scene-select-0-table').fadeIn('slow');
+        $('#scene-select-0').removeClass('inactive');
+
       });
 
 
 
-      // Sort scene navigation
-      $("#scenes-nav h4").sort(function (a, b) {
-          return parseInt(a.id) > parseInt(b.id);
-      }).each(function () {
-          var elem = $(this);
-          elem.remove();
-          $(elem).appendTo("#scenes-nav");
-      });
 
 
 
-
-      $( ".scene-select" ).on( "click", function(){
-        console.log('3');
-      });
-
-      /*
-      $('.scene-select').click(function() {
-        var t = $(this).attr('id');
-
-        if($(this).hasClass('inactive')){
-          $('.scene-select').addClass('inactive');
-          $(this).removeClass('inactive');
-
-          $('.scene').hide();
-          $('#'+ t + '-table').fadeIn('slow');
-       }
-
-
-
-       for (i = 1; i <= 5; i++) {
-          $('#scenes-diagrams').removeClass('diagram-scene-select-'+i);
-       }
-       $('#scenes-diagrams').addClass('diagram-'+t);
-
-      });
-
-      $('.scene').hide();
-      $('#scene-select-1-table').fadeIn('slow');
-      $('#scene-select-1').removeClass('inactive');
-      */
 
 
 
