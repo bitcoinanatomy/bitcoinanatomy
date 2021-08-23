@@ -239,15 +239,16 @@ function getScenesData(){
 
           // Sort scene navigation
           var $sorted_items,
+
           getSorted = function(selector, attrName) {
-              return $(
-                $(selector).toArray().sort(function(a, b){
-                    var aVal = parseInt(a.getAttribute(attrName)),
-                        bVal = parseInt(b.getAttribute(attrName));
-                    console.log(aVal + ' - ' + bVal + ' = ' + (aVal - bVal))
-                    return aVal - bVal;
-                })
-              );
+            return $(
+              $(selector).toArray().sort(function(a, b){
+                  var aVal = parseInt(a.getAttribute(attrName)),
+                      bVal = parseInt(b.getAttribute(attrName));
+                  console.log(aVal + ' - ' + bVal + ' = ' + (aVal - bVal) + " | " + a)
+                  return aVal - bVal;
+              })
+            );
           };
 
           $sorted_items = getSorted('#scenes-nav .scene-select', 'data-sort').clone();
