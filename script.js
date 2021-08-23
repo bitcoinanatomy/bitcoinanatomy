@@ -234,19 +234,23 @@ function getScenesData(){
         shots = [];
 
 
-
-        if(index.substring(0,2).replace(/^0+/, '') >= 9){
+        // Run only after all scenes loaded
+        if(index.substring(0,2).replace(/^0+/, '') >= scenes.length){
 
           // Sort scene navigation
-          $("#scenes-nav .scene-select").sort(function (a, b) {
-              return parseInt(a.id) > parseInt(b.id);
-          }).each(function () {
-              var elem = $(this);
-              console.log(elem);
-              elem.remove();
-              $(elem).appendTo("#scenes-nav");
-          });
+          var $sorted_items,
+          getSorted = function(selector, attrName) {
+              return $(
+                $(selector).toArray().sort(function(a, b){
+                    var aVal = parseInt(a.getAttribute(attrName)),
+                        bVal = parseInt(b.getAttribute(attrName));
+                    return aVal - bVal;
+                })
+              );
+          };
 
+          $sorted_items = getSorted('#scenes-nav .scene-select', 'id').clone();
+          $('#scenes-nav').html( $sorted_items );
 
           // Hide and show scenes
           $('.scene').hide();
@@ -264,16 +268,11 @@ function getScenesData(){
            $('#scenes-diagrams').addClass('diagram-'+t);
 
 
-
-
-
           });
 
           $('.scene').hide();
           $('#scene-select-1-table').fadeIn('slow');
           $('#scene-select-1').removeClass('inactive');
-
-
 
         }
 
