@@ -350,7 +350,7 @@ def build():
                     # igonre the last block
                     block_dinstance = 0
                 else:
-                    block_dinstance = round( data[0][index_block+1][5]['time_difference'] / 60)
+                    block_dinstance = round( data[0][index_block+1][8]['time_difference'] / 60)
 
 
                 # print(str(index_block) + ' - ' + str(block_dinstance))
@@ -363,18 +363,16 @@ def build():
 
 
 
-
-
-
-
                 #copy object and rename
 
                 txN = data[0][index_block-1][2]['nTx']
+                blockSize = data[0][index_block-1][5]['size']
+                blockWeight = data[0][index_block-1][6]['weight']
 
-                new_obj = copy_dummy(new_collection, txN)
+                new_obj = copy_dummy(new_collection)
+                resize_tx_data(new_obj, txN, blockSize, blockWeight)
+
                 new_obj.name = '_S' + str(index_spiral) + '_B' + str(index_block)
-
-
 
 
 
@@ -555,8 +553,8 @@ A chart with the difficulty addjusted over time https://www.coinwarz.com/mining/
 path = os.path.dirname(__file__)
 file_path = os.path.dirname(path)
 
-data_folder = file_path+'/rcp_bitcoin_block_data_v5/'
-data_file_name = 'rcp_bitcoin_block_data_v5_'
+data_folder = file_path+'/rcp_bitcoin_block_data_v6/'
+data_file_name = 'rcp_bitcoin_block_data_v6_'
 data_files = next(walk(data_folder), (None, None, []))[2]
 
 
