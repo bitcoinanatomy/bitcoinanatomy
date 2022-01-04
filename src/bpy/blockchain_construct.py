@@ -1,5 +1,3 @@
-#to do:
-#sweep stairway
 import bpy
 import math
 import time
@@ -43,44 +41,20 @@ def print(*args, **kwargs):
 
 
 
-
-
-
-
 # ------------- CLASSES -------------- #
 
-def copy_dummy(new_collection, txN):
+def copy_dummy(new_collection):
 
+    #print(txN)
 
-    src_obj = bpy.data.objects['Block_TX_0']
-    if txN <= 1:
-        src_obj = bpy.data.objects['Block_TX_1']
-    elif txN <= 10:
-        src_obj = bpy.data.objects['Block_TX_10']
-    elif txN <= 100:
-        src_obj = bpy.data.objects['Block_TX_100']
-    elif txN <= 500:
-        src_obj = bpy.data.objects['Block_TX_500']
-    elif txN <= 1000:
-        src_obj = bpy.data.objects['Block_TX_1000']
-    elif txN <= 1500:
-        src_obj = bpy.data.objects['Block_TX_1500']
-    elif txN <= 2000:
-        src_obj = bpy.data.objects['Block_TX_2000']
-    elif txN <= 2500:
-        src_obj = bpy.data.objects['Block_TX_2500']
-    else:
-        src_obj = bpy.data.objects['Block_TX_3000']
+    src_obj = bpy.data.objects['Block_TX_1']
 
-    '''
-    src_obj = bpy.data.objects['Block_base']
-    resize_tx_data(src_obj, txN)
-    '''
 
     new_obj = src_obj.copy()
 
-    #new_obj.data = src_obj.data.copy()
+    new_obj.data = src_obj.data.copy()
     new_collection.objects.link(new_obj)
+
 
     return new_obj
 
@@ -148,11 +122,49 @@ def create_collection(input_name):
 
 
 
-def resize_tx_data(obj, txN = 1):
+def resize_tx_data(obj, txN, blockSize, blockWeight):
+
+    '''
+    print("txN ..........  " + str(txN))
+    print("blockSize ....  " + str(blockSize) + " Bytes")
+    #print("blockWeight ..  " + str(blockWeight) + " WU")
+    '''
+
+    '''
+    txN .......... 236              3
+    max .......... 1000000 Bytes    1000000 Bytes
+    blockSize .... 167340 Bytes     16842 Bytes
+    blockWeight .. 669360 WU        67368 WU
+
+    Size ......... 167.34 kB        16.84 kB
+    Weight ....... ‎669.36 kWU       ‎67.37 kWU
+    '''
 
     # Max dimension
-    cube_max = 1.85
+    cube_max = 1.80
 
+
+    if blockSize < 5000:
+        grow_height = cube_max * (blockSize / 5000)
+    else:
+        grow_height = cube_max
+
+    if blockSize >= 5000:
+        grow_depth = cube_max * (blockSize / 1000000)
+    else:
+        grow_depth = 0
+
+    if blockSize >= 1000000:
+        grow_depth = cube_max
+        grow_height = cube_max + (cube_max * ((blockSize - 1000000) / 1000000))
+
+    '''
+    print("grow_height ..  " + str(grow_height))
+    print("grow_depth ...  " + str(grow_depth))
+
+    '''
+
+    '''
     if txN < 100:
         grow_height = cube_max * (txN / 100)
     else:
@@ -162,7 +174,7 @@ def resize_tx_data(obj, txN = 1):
         grow_depth = cube_max * (txN / 3000)
     else:
         grow_depth = 0
-
+    '''
 
     #bpy.context.scene.objects.active = obj
     #bpy.context.scene.collection.active = obj
@@ -170,10 +182,10 @@ def resize_tx_data(obj, txN = 1):
     bpy.context.view_layer.objects.active = obj
 
 
-    print(bpy.context.view_layer.objects.active)
+    # print(bpy.context.view_layer.objects.active)
 
-    bpy.ops.object.mode_set(mode = 'EDIT')
-    bpy.ops.mesh.select_mode(type="FACE")
+    bpy.ops.object.mode_set(mode = "EDIT")
+    bpy.ops.mesh.select_mode(type = "FACE")
     bpy.ops.mesh.select_all(action = 'DESELECT')
 
     obj = bpy.context.edit_object
@@ -195,7 +207,7 @@ def resize_tx_data(obj, txN = 1):
         v.co.z = 0.96
         norms  = [f.normal for f in v.link_faces if f.select]
         n = sum(norms, Vector()) / len(norms)
-        v.co += grow_height * n
+        v.co -= grow_height * n
 
 
     # Depth
@@ -209,7 +221,7 @@ def resize_tx_data(obj, txN = 1):
         # Reset depth
         v.co.y = 0.94
         if grow_depth :
-            v.co += grow_depth * n
+            v.co -= grow_depth * n
 
     # Show the updates in the viewport
     # bmesh.update_edit_mesh(me, True)
@@ -222,7 +234,7 @@ def resize_tx_data(obj, txN = 1):
 
 
 def report(type="START"):
-
+    # This is to help understand the script performance
     print("-------------- " + type + " ------------------------------------------------------------------------------------------ ")
     print("- Max sprials ----------------- %s " % max_spirals)
     print("- Grid layout ----------------- %s " % grid)
@@ -253,7 +265,10 @@ def report(type="START"):
 
 
 
-
+'''
+PRIORITY 3
+Seperate class so we could run it in seperate processes using multi-process native to python. Still incomplete...
+'''
 
 
 def build():
@@ -303,11 +318,6 @@ def build():
             with open(data_folder+data_files[index_spiral-1]) as data_list:
                 data = json.load(data_list)
                 # print(data[0])
-
-
-
-
-
 
 
 
@@ -388,9 +398,6 @@ def build():
 
 
 
-
-
-
                 # New: fetching from json
                 arc_distance = factor_block_distance * ( pow( block_dinstance, 0.9) + 1)
                 #print("block " + str(index_block +(2016*(index_spiral-1))) + " - distance " + str(block_dinstance) + " - arc distance " + str(arc_distance))
@@ -418,8 +425,6 @@ def build():
 
 
 
-
-
                 # Adding drivers
                 if (not bake_after_creation) and (not bake_after_spiral_creation):
                     add_driver(new_obj, ob_driver , 'hide_viewport', 'location.z', -1 , False , '1/' +  str((-index_block - ((index_spiral - 1) * nof_blocks_per_spiral) + nof_blocks_per_spiral * nof_spirals) + 1) + '*' )
@@ -429,10 +434,6 @@ def build():
 
                 # Recalculate Indeces
                 index_block += 1
-
-
-
-
 
 
 
@@ -457,7 +458,18 @@ def build():
 
 
         # --------------- BAKING SPIRALS --------------- #
-
+        '''
+        PRIORITY 2
+        This new section bakes each spirar after it is complete
+        It would be great if we could bake each spiral after a couple
+        of spirals that remian unbaked:
+            spiral 0 to 10: no bake, keep blocks seperare
+            spiral 11 to 340: bake spirals
+            spiral 341 to 350: no bake
+        But keep in mind that for testing, I usually change the
+        number of blocks per sprial and the number of spirals
+        to calculate.
+        '''
 
         # Bake after sprial
         if bake_after_spiral_creation:
@@ -525,24 +537,6 @@ def build():
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # ---------- BLOCK DATA ----------- #
 
 '''
@@ -604,9 +598,6 @@ nof_stairway_blocks = 0
 fac_stairway_height = .03
 
 
-
-
-
 # -------------- GRID LAYOUT PARAMETERS -------------- #
 
 grid = False
@@ -616,8 +607,6 @@ gutter = 30
 index_grid_pos = 1
 
 grid_block = [0,1,10,23,    32,33,34,35,    103,212,347,348]
-
-
 
 
 
@@ -631,10 +620,6 @@ spiral_distance_deg =  1.7307
 # spiral_distance_deg =  3.4615
 
 helix_groth = .15
-
-
-
-
 
 
 
@@ -665,12 +650,6 @@ z_offset = 0
 
 
 
-
-
-
-
-
-
 report("START")
 build()
 report("END")
@@ -679,3 +658,36 @@ report("END")
 
 bpy.context.scene.frame_set(1250)
 bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
+
+
+
+
+'''
+PRIORITY 3
+I've started testing multi-process but still very early
+These are just for testing.
+'''
+
+def initializer():
+    print("In initializer pid is {} ppid is {}".format(os.getpid(),os.getppid()))
+
+def f(x):
+    start_time = time.time()
+    print("\nIn f pid is {} ppid is {} ---- {}".format(os.getpid(),os.getppid(),x))
+    print("%s seconds" % (time.time() - start_time))
+    return x*x
+
+
+#if __name__ == '__main__':
+
+    # Required for macOS
+    # multiprocessing.set_start_method('fork', force = True)
+
+    #print("In main pid (processID) is {} ppid (parent processID) is {}".format(os.getpid(), os.getppid()))
+    #with Pool(processes=6, initializer=initializer) as pool:  # Create 4 worker Pool.
+    # Start multiple tasks.
+    #   tasks = [pool.apply_async(f, (val,)) for val in range(1, 20)]
+    #    pool.close() # No more tasks.
+    #    pool.join()  # Wait for all tasks to finish.
+    #    results = [result.get() for result in tasks]  # Get the result of each.
+    #    print(results)
