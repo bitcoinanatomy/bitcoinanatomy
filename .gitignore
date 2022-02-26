@@ -1,0 +1,2 @@
+#ignore chainstate data
+/src/data/utxo/chainstate

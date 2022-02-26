@@ -1,8 +1,12 @@
 #!/usr/bin/python3
 
 # adaptation from: https://github.com/eklitzke/utxodump/blob/master/utxodump.py
-# adjusted by @bitcoingraffiti on 22-02-2022
+# written by @bitcoingraffiti on 22-02-2022
 # Dumps all fields except the script pub key
+# 
+
+# mkdir chainstate_clone
+# rsync --delete -av /Users/sjorsvanheuveln/Library/Application Support/Bitcoin/chainstate/ ~/bitcoin-chainstate-clone/
 
 import argparse
 import binascii
@@ -15,6 +19,7 @@ from collections import defaultdict
 from typing import Tuple
 
 import leveldb
+
 
 
 class RowType(enum.Enum):
@@ -39,8 +44,14 @@ COIN = 67
 OBFUSCATE_KEY = bytearray(b'\x0e\x00obfuscate_key')
 
 # set path to your local bitcoin core
-BITCOINCORE_PATH = '/Users/sjorsvanheuveln/Library/Application Support/Bitcoin'
+BITCOINCORE_PATH = '/Users/sjorsvanheuveln/Library/Application\ Support/Bitcoin/chainstate'
 
+
+def copy_chainstate():
+    #copies the chainstate if dir doesn't exist yet or is empty
+    if not os.path.isdir('chainstate') or len(os.listdir('./chainstate')) == 0:
+        print('Copying chainstate ...');
+        os.system("rsync --delete -av " + BITCOINCORE_PATH + " ./")
 
 def get_obfuscate_key(conn: leveldb.LevelDB) -> bytearray:
     """Load the obfuscation key from the database."""
@@ -113,10 +124,13 @@ def locate_db(testnet: bool, name: str) -> str:
         datadir = os.path.join(datadir, 'testnet3')
     return os.path.join(datadir, name)
 
+#utxo parser
 def dump_chainstate_csv(conn: leveldb.LevelDB):
     secret = get_obfuscate_key(conn)
+    i = 0
     with open('utxo.json', 'w', encoding='utf-8') as file:
         for k, v in conn.RangeIter(b'C', b'D', include_value=True):
+            i += 1
             txid, vout = decode_key(k)
             decrypt(v, secret)
             height, coinbase, amount, sz = decode_val(v)
@@ -129,9 +143,12 @@ def dump_chainstate_csv(conn: leveldb.LevelDB):
                 "amount": amount,
                 "scriptsize": sz,
             }
-
             json.dump(utxo, file, sort_keys=True)
             file.write('\n')
+
+            print(i)
+            if i == 5000:
+                break
 
 def summarize(conn: leveldb.LevelDB):
     counts = defaultdict(int)
@@ -147,6 +164,8 @@ def summarize(conn: leveldb.LevelDB):
 
 
 def main():
+    copy_chainstate()
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-b',
@@ -171,9 +190,7 @@ def main():
         conn = leveldb.LevelDB(args.database)
     else:
         is_blocks = args.blocks
-        db = locate_db(args.testnet, 'blocks/index'
-                       if args.blocks else 'chainstate')
-        conn = leveldb.LevelDB(db)
+        conn = leveldb.LevelDB('chainstate')
 
     try:
         if is_blocks or args.summarize:
