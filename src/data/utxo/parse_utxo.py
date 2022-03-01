@@ -169,7 +169,7 @@ def dump_chainstate_csv(conn: leveldb.LevelDB):
         print(i, end='\r')
         
         #uncomment break for smaller samples
-        if len(UTXO_HEIGHT) == 10000:
+        if len(UTXO_HEIGHT) == 100000:
             break
 
     with open('utxo_by_height.json', 'w') as fp:
