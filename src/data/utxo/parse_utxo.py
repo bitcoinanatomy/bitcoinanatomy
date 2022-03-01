@@ -2,11 +2,12 @@
 
 # adaptation from: https://github.com/eklitzke/utxodump/blob/master/utxodump.py
 # written by @bitcoingraffiti on 22-02-2022
-# Dumps all fields except the script pub key
-# 
 
-# mkdir chainstate_clone
-# rsync --delete -av /Users/sjorsvanheuveln/Library/Application Support/Bitcoin/chainstate/ ~/bitcoin-chainstate-clone/
+# README #
+# the main function copies the chainstate automatically wen bitcoin core path is set
+# this is required as parsing leveldb corrupts the database
+# current parser dumps all fields except the script pub key
+
 
 import argparse
 import binascii
@@ -14,11 +15,13 @@ import enum
 import operator
 import os
 import json
+import math
+import leveldb
 
+from numpy import digitize, array
 from collections import defaultdict
 from typing import Tuple
 
-import leveldb
 
 
 
@@ -45,6 +48,9 @@ OBFUSCATE_KEY = bytearray(b'\x0e\x00obfuscate_key')
 
 # set path to your local bitcoin core
 BITCOINCORE_PATH = '/Users/sjorsvanheuveln/Library/Application\ Support/Bitcoin/chainstate'
+
+#stores the aggregated utxos per blockheight
+UTXO_HEIGHT = {}
 
 
 def copy_chainstate():
@@ -124,31 +130,51 @@ def locate_db(testnet: bool, name: str) -> str:
         datadir = os.path.join(datadir, 'testnet3')
     return os.path.join(datadir, name)
 
+# order utxo by height and aggregate
+def aggregate_utxo(utxo):
+    if utxo['height'] in UTXO_HEIGHT:
+        UTXO_HEIGHT[utxo['height']]['amount'] += utxo['amount']
+        UTXO_HEIGHT[utxo['height']]['n'] += 1
+    else:
+        UTXO_HEIGHT[utxo['height']] = {'amount': utxo['amount'], 'n': 1, 'epoch': get_difficulty_epoch(utxo['height'])}
+
+# determine difficulty epoch per height
+def get_difficulty_epoch(height):
+    bins = list(range(0, 1000000, 2016)) 
+    epoch = digitize(height, bins)
+
+    return int(epoch)
+
 #utxo parser
 def dump_chainstate_csv(conn: leveldb.LevelDB):
     secret = get_obfuscate_key(conn)
-    i = 0
-    with open('utxo.json', 'w', encoding='utf-8') as file:
-        for k, v in conn.RangeIter(b'C', b'D', include_value=True):
-            i += 1
-            txid, vout = decode_key(k)
-            decrypt(v, secret)
-            height, coinbase, amount, sz = decode_val(v)
+    i=0
 
-            utxo = {
-                "txid": txid,
-                "vout": vout,
-                "height": height,
-                "coinbase": coinbase,
-                "amount": amount,
-                "scriptsize": sz,
-            }
-            json.dump(utxo, file, sort_keys=True)
-            file.write('\n')
+    for k, v in conn.RangeIter(b'C', b'D', include_value=True):
+        i+=1
+        #txid, vout = decode_key(k)
+        decrypt(v, secret)
+        height, coinbase, amount, sz = decode_val(v)
 
-            print(i)
-            if i == 5000:
-                break
+        utxo = {
+            #"txid": txid,
+            #"vout": vout,
+            "height": height,
+            #"coinbase": coinbase,
+            "amount": amount,
+            #"scriptsize": sz,
+        }
+
+        aggregate_utxo(utxo)
+        print(i, end='\r')
+        
+        #uncomment break for smaller samples
+        if len(UTXO_HEIGHT) == 10000:
+            break
+
+    with open('utxo_by_height.json', 'w') as fp:
+        json.dump(UTXO_HEIGHT, fp, sort_keys=True) #indent=4 for prettyprint
+                
 
 def summarize(conn: leveldb.LevelDB):
     counts = defaultdict(int)
@@ -164,42 +190,10 @@ def summarize(conn: leveldb.LevelDB):
 
 
 def main():
+    #make sure to set your bitcoin core path on top
     copy_chainstate()
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-b',
-        '--blocks',
-        action='store_true',
-        help='Scan the block index (rather than chainstate)')
-    parser.add_argument(
-        '-t',
-        '--testnet',
-        action='store_true',
-        help='Testnet mode (ignored if --datadir is used)')
-    parser.add_argument(
-        '-s',
-        '--summarize',
-        action='store_true',
-        help='Summarize information about key types')
-    parser.add_argument('-d', '--database', help='Path to database directory')
-    args = parser.parse_args()
-
-    if args.database:
-        is_blocks = 'blocks/index' in args.dadatabase
-        conn = leveldb.LevelDB(args.database)
-    else:
-        is_blocks = args.blocks
-        conn = leveldb.LevelDB('chainstate')
-
-    try:
-        if is_blocks or args.summarize:
-            summarize(conn)
-        else:
-            dump_chainstate_csv(conn)
-    except (IOError, KeyboardInterrupt):
-        pass
-
+    conn = leveldb.LevelDB('chainstate')
+    dump_chainstate_csv(conn)
 
 if __name__ == '__main__':
     main()

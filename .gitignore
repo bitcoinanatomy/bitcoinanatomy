@@ -1,2 +1,4 @@
 #ignore chainstate data
 /src/data/utxo/chainstate
+
+/src/data/utxo/utxo_by_height.json
