@@ -31,8 +31,9 @@ def plot_epoch(utxo_set):
     plt.show()
 
 def plot_height(utxo_set):
-    max_height = max(list(utxo_set.keys())
+    max_height = max(list(utxo_set.keys()))
     print('h', max_height)
+    return
 
 def main():
     f = open('./utxo_by_height.json', 'r')
