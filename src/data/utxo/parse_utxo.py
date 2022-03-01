@@ -9,13 +9,10 @@
 # current parser dumps all fields except the script pub key
 
 
-import argparse
 import binascii
 import enum
-import operator
 import os
 import json
-import math
 import leveldb
 
 from numpy import digitize, array
@@ -54,7 +51,7 @@ UTXO_HEIGHT = {}
 
 
 def copy_chainstate():
-    #copies the chainstate if dir doesn't exist yet or is empty
+    """copies the chainstate if dir doesn't exist yet or is empty"""
     if not os.path.isdir('chainstate') or len(os.listdir('./chainstate')) == 0:
         print('Copying chainstate ...');
         os.system("rsync --delete -av " + BITCOINCORE_PATH + " ./")
@@ -123,30 +120,25 @@ def decode_val(val: bytearray) -> Tuple[int, int, int, int]:
     return height, coinbase, decompress_amount(txval), len(val) - rem
 
 
-def locate_db(testnet: bool, name: str) -> str:
-    """Guess where the chainstate directory is."""
-    datadir = os.path.expanduser(BITCOINCORE_PATH)
-    if testnet:
-        datadir = os.path.join(datadir, 'testnet3')
-    return os.path.join(datadir, name)
-
-# order utxo by height and aggregate
 def aggregate_utxo(utxo):
+    """order utxo by height and aggregate"""
     if utxo['height'] in UTXO_HEIGHT:
         UTXO_HEIGHT[utxo['height']]['amount'] += utxo['amount']
         UTXO_HEIGHT[utxo['height']]['n'] += 1
     else:
         UTXO_HEIGHT[utxo['height']] = {'amount': utxo['amount'], 'n': 1, 'epoch': get_difficulty_epoch(utxo['height'])}
 
-# determine difficulty epoch per height
+
 def get_difficulty_epoch(height):
+    """determine difficulty epoch per height"""
     bins = list(range(0, 1000000, 2016)) 
     epoch = digitize(height, bins)
 
     return int(epoch)
 
-#utxo parser
+
 def dump_chainstate_csv(conn: leveldb.LevelDB):
+    """utxo parser"""
     secret = get_obfuscate_key(conn)
     i=0
 
@@ -169,28 +161,15 @@ def dump_chainstate_csv(conn: leveldb.LevelDB):
         print(i, end='\r')
         
         # uncomment break for smaller samples
-        # if len(UTXO_HEIGHT) == 100000:
+        # if len(UTXO_HEIGHT) == 10000:
         #     break
 
     with open('utxo_by_height.json', 'w') as fp:
         json.dump(UTXO_HEIGHT, fp, sort_keys=True) #indent=4 for prettyprint
-                
-
-def summarize(conn: leveldb.LevelDB):
-    counts = defaultdict(int)
-    for k, v in conn.RangeIter():
-        assert isinstance(k, bytearray)
-        kind = chr(k[0])
-        counts[kind] += 1
-
-    code_to_name = {t.value: t.name for t in RowType}
-    for k, v in sorted(
-            counts.items(), key=operator.itemgetter(1), reverse=True):
-        print('{:15s} {}'.format(code_to_name[k], v))
 
 
 def main():
-    #make sure to set your bitcoin core path on top
+    """make sure to set your bitcoin core path on top"""
     copy_chainstate()
     conn = leveldb.LevelDB('chainstate')
     dump_chainstate_csv(conn)
