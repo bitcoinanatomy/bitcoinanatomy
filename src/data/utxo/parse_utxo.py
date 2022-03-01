@@ -168,9 +168,9 @@ def dump_chainstate_csv(conn: leveldb.LevelDB):
         aggregate_utxo(utxo)
         print(i, end='\r')
         
-        #uncomment break for smaller samples
-        if len(UTXO_HEIGHT) == 100000:
-            break
+        # uncomment break for smaller samples
+        # if len(UTXO_HEIGHT) == 100000:
+        #     break
 
     with open('utxo_by_height.json', 'w') as fp:
         json.dump(UTXO_HEIGHT, fp, sort_keys=True) #indent=4 for prettyprint
