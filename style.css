@@ -6,7 +6,8 @@
   url("assets/fonts/BureauGrotesque/BureauGrotesque.woff") format("woff"),
   url("assets/fonts/BureauGrotesque/BureauGrotesque.ttf") format("truetype"),
   url("assets/fonts/BureauGrotesque/BureauGrotesque.svg#BureauGrotesque") format("svg");
-} 
+}
+
 
 @import url('assets/fonts/inter/inter.css');
 
