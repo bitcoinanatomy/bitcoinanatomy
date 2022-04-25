@@ -5,6 +5,9 @@ print (sys.version)
 ## python -m ensurepip --upgrade    OR    python3 -m ensurepip --upgrade
 ## pip install python-bitcoinrpc    OR    pip3 install python-bitcoinrpc
 ## command: "/usr/local/bin/python3",
+## chmod -R u+rwX,go+rX,go-w /Users/.../bitcoinanatomy/src/data/rcp_block_data 
+
+
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
 
