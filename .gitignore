@@ -1,4 +1,4 @@
-#ignore chainstate data
-/src/data/utxo/chainstate
-
-/src/data/utxo/utxo_by_height.json
+src/data/rcp_block_data/.DS_Store
+src/data/.DS_Store
+src/.DS_Store
+.DS_Store
