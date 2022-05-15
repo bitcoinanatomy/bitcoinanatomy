@@ -11,6 +11,7 @@ keywords = ["bitcoin", "film", "movie"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+python-bitcoinrpc = "^1.0"
 
 [tool.poetry.dev-dependencies]
 

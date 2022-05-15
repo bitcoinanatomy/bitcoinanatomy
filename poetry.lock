@@ -1,8 +1,17 @@
-package = []
+[[package]]
+name = "python-bitcoinrpc"
+version = "1.0"
+description = "Enhanced version of python-jsonrpc for use with Bitcoin"
+category = "main"
+optional = false
+python-versions = "*"
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "ce2aa767160f871dd3652615ba0a0dceb7733d62eb8cb4665b87f30a562e3adf"
+content-hash = "b33461c32e4bad5763e3e6ac428d03800dee013fc43c283fd576f672b2f41d80"
 
 [metadata.files]
+python-bitcoinrpc = [
+    {file = "python-bitcoinrpc-1.0.tar.gz", hash = "sha256:a6a6f35672635163bc491c25fe29520bdd063dedbeda3b37bf5be97aa038c6e7"},
+]
