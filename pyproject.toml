@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "bitcoinanatomy"
+version = "0.1.0"
+description = "An open-source film, community funded film, taking the viewer on a visual understanding of the mechanisms that make Bitcoin work."
+authors = ["Pedro Goncalves"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
