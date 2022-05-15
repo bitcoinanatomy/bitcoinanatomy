@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "An open-source film, community funded film, taking the viewer on a visual understanding of the mechanisms that make Bitcoin work."
 authors = ["Pedro Goncalves"]
 license = "MIT"
+readme = "README.md"
+homepage = "https://anatomyofbitcoin.com/"
+repository = "https://github.com/bitcoinanatomy/bitcoinanatomy"
+keywords = ["bitcoin", "film", "movie"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
