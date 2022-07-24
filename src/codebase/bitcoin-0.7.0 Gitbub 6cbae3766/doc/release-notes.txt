@@ -1,0 +1,26 @@
+(note: this is a temporary file, to be added-to by anybody, and deleted at
+release time)
+
+Building this from
+
+	$ git shortlog --no-merges v0.7.0..
+
+How to Upgrade
+--------------
+
+If you are running an older version, shut it down. Wait
+until it has completely shut down (which might take a few minutes for older
+versions), then run the installer (on Windows) or just copy over
+/Applications/Bitcoin-Qt (on Mac) or bitcoind/bitcoin-qt (on Linux).
+
+If you were running on Linux with a version that might have been compiled
+with a different version of Berkeley DB (for example, if you were using an
+Ubuntu PPA version), then run the old version again with the -detachdb
+argument and shut it down; if you do not, then the new version will not
+be able to read the database files and will exit with an error.
+
+Bug fixes
+---------
+* Fixed an uninitialized variable bug that could cause transactions to
+  be reported out of order.
+
