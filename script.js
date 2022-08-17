@@ -393,12 +393,19 @@ function getProducerData(){
 
                      targetContainer = "#contributors-inner";
                      jsonObject = producer.metadata.orderId;
-                     //console.log(jsonObject.t);
+
+                     // Fix for new BTCPay Server API escaped formating
+                     if(jsonObject.n === undefined){
+                       jsonObject = JSON.parse(jsonObject);
+                     }
+
                      if(jsonObject.t != ''){
                        $( "<div/>", { "class": "producer-name", html: '<b><a target="_blank" href="https://twitter.com/'+jsonObject.n+'">' + jsonObject.n + '</a></b>' + amount }).appendTo(targetContainer);
                      }else{
                        $( "<div/>", { "class": "producer-name", html: '<b>' + jsonObject.n + '</b>' + amount }).appendTo(targetContainer);
                      }
+
+
 
 
                      amoutTotal = (currentAmount) + amoutTotal;
