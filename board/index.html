@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>jQuery Tiles</title>
+
+<link href="styles.css" rel="stylesheet">
+
+<script type="text/javascript" src="jquery.min.js"></script>
+<script type="text/javascript" src="http://code.jquery.com/ui/1.9.0/jquery-ui.js"></script>
+
+<!--
+<script type="text/javascript" src="scripts/jquery-1.8.2.min.js"></script>
+<script type="text/javascript" src="scripts/jquery-ui-1.9.1.custom.min.js"></script>
+-->
+
+<script type="text/javascript" src="scripts/jquery.tiles.min.js"></script>
+<script type="text/javascript">
+window.onload = function() {
+  var zooms = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  var index = 3;
+  // The zoom factor 0 represents the original HTML content inside
+  // the viewport
+
+
+
+  var $viewport = $('.viewport');
+  $viewport.tiles({
+    original: { width: 15360, height: 8640 },
+    tileSize: 1000,
+    basePath: 'images/v02',
+    loading: 'images/load.gif',
+    zoom: zooms[index],
+    no0zoom: true
+  });
+
+  // Move the viewport to a good place
+  $viewport.tiles('move', 1890, 1070);
+
+  $('.zoomin').click(function(e) {
+    e.preventDefault();
+    if (index <= 0) return;
+
+    index -= 1;
+    $viewport.tiles('zoom', zooms[index]);
+
+    $('.zoomout').removeClass('disabled');
+    if (index <= 0) {
+      $('.zoomin').addClass('disabled');
+    }
+  });
+  $('.zoomout').click(function(e) {
+    e.preventDefault();
+    if (index >= (zooms.length-1)) return;
+
+    index += 1;
+    $viewport.tiles('zoom', zooms[index]);
+
+    $('.zoomin').removeClass('disabled');
+    if (index >= (zooms.length-1)) {
+      $('.zoomout').addClass('disabled');
+    }
+  });
+};
+</script>
+
+</head>
+<body>
+
+  <div class="container">
+
+
+    <div class="viewport-container">
+      <div class="viewport"></div>
+      <div class="zoom">
+        <a href="#" class="zoomin">&#43;</a><a href="#" class="zoomout">&ndash;</a>
+      </div>
+    </div>
+
+
+    <footer>
+      <p>Developed for <a href="http://www.anatomyofbitcon.com" target="_blank">Anatomy of Bitcoin</a></p>
+    </footer>
+
+
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>jQuery Tiles</title>
+
+<link href='http://fonts.googleapis.com/css?family=Open+Sans:300' rel='stylesheet' type='text/css'>
+<link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.1.1/css/bootstrap.min.css" rel="stylesheet">
+<style>
+html, body {
+  font-family: "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;
+  color: #888;
+}
+
+h1, h2, h3 {
+  font-family: "OpenSans", "Helvetica Neue", "Helvetica", Arial, Verdana, sans-serif;
+  font-weight: 300;
+  color: #444;
+}
+h3 {
+  color: #666;
+  font-size: 20px;
+  margin: 20px 0 0 0;
+}
+
+header {
+  background: #111;
+  color: #999;
+  padding: 70px 0 40px 0;
+  margin-bottom: 30px;
+}
+header h1 {
+  color: #ffaa32;
+  font-size: 27px;
+}
+header .lead {
+  font-size: 37px;
+  line-height: 1.1em;
+  margin: 5px 0 20px 0;
+  color: #fff;
+}
+header .btn {
+  margin-top: 20px;
+}
+header i.icon-download {
+  margin-right: 5px;
+}
+header .sublink {
+  color: #666;
+}
+header .sublink a {
+  display: inline-block;
+  color: #ccc;
+}
+header .sublink a:hover {
+  color: #fff;
+}
+
+.viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  vertical-align: center;
+  overflow: hidden;
+  z-index: 1;
+  background: #111;
+}
+.viewport-container {
+  float: right;
+  margin-top: -415px;
+  margin-bottom: 30px;
+  border: 1px solid #444;
+  padding: 2px;
+  width: 510px;
+  height: 450px;
+  background: rgba(0, 0, 0, 0.01);
+  z-index: 1;
+}
+.zoom {
+  margin: -55px 0;
+  vertical-align: center;
+  display: block;
+  z-index: 2;
+  position: absolute;
+  font-size: 45px;
+  line-height: 1em;
+  font-family: sans-serif;
+}
+.zoom a {
+  color: #111;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.4);
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+  text-align: center;
+  -webkit-transition: background 0.3s ease-out;
+}
+.zoom a:hover {
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.9);
+  -webkit-transition: background 0.3s ease-out;
+}
+.zoom a.disabled, .zoom a.disabled:hover {
+  opacity: 0.3;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+a.zoomin {
+  margin: 0 5px;
+}
+
+.feature {
+  margin: 40px 0;
+}
+
+.example {
+  margin-top: -10px;
+  width: 518px;
+  float: right;
+}
+
+.depends {
+  width: 468px;
+  margin-right: 50px;
+  float: right;
+}
+.depends li {
+  margin: 0 0 10px 0;
+}
+
+
+footer {
+  margin: 30px 0 120px 0;
+  color: #bbb;
+  font-size: 12px;
+}
+footer hr {
+  margin-bottom: 10px;
+}
+footer a, footer a:visited, footer a:link, footer a:active {
+  color: #999;
+}
+footer a:hover {
+  color: #777;
+}
+
+.clear {
+  clear: both;
+}
+</style>
+
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script type="text/javascript" src="http://code.jquery.com/ui/1.9.0/jquery-ui.js"></script>
+
+<!--
+<script type="text/javascript" src="scripts/jquery-1.8.2.min.js"></script>
+<script type="text/javascript" src="scripts/jquery-ui-1.9.1.custom.min.js"></script>
+-->
+
+<script type="text/javascript" src="scripts/jquery.tiles.min.js"></script>
+<script type="text/javascript">
+window.onload = function() {
+  var zooms = [ 1, 2, 3, 4 ];
+  var index = 1;
+  // The zoom factor 0 represents the original HTML content inside
+  // the viewport
+
+  var $viewport = $('.viewport');
+  $viewport.tiles({
+    original: {
+      width:  3264,
+      height: 2448,
+    },
+    basePath: 'images/pier',
+    loading: 'images/load.gif',
+    zoom: zooms[index],
+    no0zoom: true
+  });
+
+  // Move the viewport to a good place
+  $viewport.tiles('move', 750, 570);
+
+  $('.zoomin').click(function(e) {
+    e.preventDefault();
+    if (index <= 0) return;
+
+    index -= 1;
+    $viewport.tiles('zoom', zooms[index]);
+
+    $('.zoomout').removeClass('disabled');
+    if (index <= 0) {
+      $('.zoomin').addClass('disabled');
+    }
+  });
+  $('.zoomout').click(function(e) {
+    e.preventDefault();
+    if (index >= (zooms.length-1)) return;
+
+    index += 1;
+    $viewport.tiles('zoom', zooms[index]);
+
+    $('.zoomin').removeClass('disabled');
+    if (index >= (zooms.length-1)) {
+      $('.zoomout').addClass('disabled');
+    }
+  });
+};
+</script>
+
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="row">
+        <div class="span5">
+          <h1>jQuery-Tiles</h1>
+          <p class="lead">Really <strong>BIG</strong> images? No problem.</p>
+          <p>Don't be afraid to show off your high-res images - we will take care of the zooming and tiling for you.</p>
+          <p>
+            <a href="jQuery-Tiles-0.3.0.zip" class="btn btn-warning btn-large"><i class="icon-download icon-white"></i> Download v0.3.0</a>
+            <div class="sublink">or view the <a href="https://github.com/badassdon/jQuery-Tiles">Documentation and Source</a></div>
+          </p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="viewport-container">
+      <div class="viewport"></div>
+      <div class="zoom">
+        <a href="#" class="zoomin">&#43;</a><a href="#" class="zoomout">&ndash;</a>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="span5">
+        <section class="feature">
+          <h2>Fast'n Low</h2>
+          <p>Why spend the extra time and bandwidth to load the entire image if only parts of the image are viewed? The tiled images are only loaded when they are viewable in the viewport.</p>
+        </section>
+        <section class="feature">
+          <h2>Zoom. Zoom. Zoom.</h2>
+          <p>Big images need big zooms. We support different levels of zooming for your tiled images, from thumbnail previews to high-resolution originals.</p>
+        </section>
+        <section>
+          <h2>Community Supported.</h2>
+          <p>The source is available under the <a href="http://opensource.org/licenses/mit-license.php" target="_blank">MIT License</a>, and can be downloaded or forked from github. Bug fixes and feature implementations are welcome.</p>
+          </p>
+        </section>
+      </div>
+
+      <div class="example">
+        <h3>Getting Started</h3>
+        <script src="https://gist.github.com/3888998.js"> </script>
+      </div>
+      <div class="depends">
+        <h3>Dependencies</h3>
+        <ul class="unstyled">
+          <li>
+            <a href="http://jquery.com/" target="_blank"><strong>jQuery</strong></a> <br />Available on <a href="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js" target="_blank">Google Ajax Library API CDN</a>.
+          </li>
+          <li>
+            <a href="http://jqueryui.com/draggable/" target="_blank"><strong>jQuery UI (draggable)</strong></a> <br />Hosted on the <a href="http://code.jquery.com/ui/1.9.0/jquery-ui.js" target="_blank">jQuery CDN</a>. The file from the CDN comes with a bunch of things, but the only required component is draggable.
+          </li>
+          <li><a href="http://www.imagemagick.org/script/binary-releases.php" target="_blank"><strong>ImageMagick</strong></a><br /> This is needed to generate the tiles, installable via apt-get, MacPorts, Homebrew, etc.</li>
+        <ul>
+      </div>
+    </div>
+
+    <footer>
+      <hr />
+      <p>Developed by <a href="http://www.badassdon.com" target="_blank">badassdon</a>.</p>
+    </footer>
+  </div>
+
+</body>
+</html>

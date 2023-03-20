@@ -1,0 +1,10 @@
+{
+  "name": "jQuery-Tiles",
+  "version": "0.3.0",
+  "author": "Donald Lau <don@badassdon.com>",
+  "dependencies": {
+    "grunt": "0.3.x",
+    "grunt-contrib-copy": "*",
+    "grunt-contrib-compress": "*"
+  }
+}
