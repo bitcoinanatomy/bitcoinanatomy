@@ -1365,9 +1365,26 @@ input::placeholder {
   text-align: center;
 }
 
+
 .sub-project:hover{
   border-bottom: 0px;
 }
+
+@media only screen and (max-width : 880px) {
+  #sub-projects {
+    flex-direction: column;
+  }
+  .sub-project{
+    height: 30vh;
+    width: 100vw;
+  }
+
+  .sub-module-title h1 {
+    letter-spacing: -0.03rem;
+  }
+}
+
+
 
 #energy-information-time-value{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.2)), url("assets/sub_project_matrix.jpg");}
 #timeline-of-money{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.2)), url("assets/sub_project_timeline_vertical.png");}
