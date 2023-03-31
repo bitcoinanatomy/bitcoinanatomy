@@ -1413,4 +1413,9 @@ input::placeholder {
 }
 
 .sub-module-title h1{width: 100%;max-width: 460px;display: block;}
-.sub-module-label{}
+.sub-module-label{
+  text-transform: uppercase;
+  font-weight: 200;
+  font-size: 14px;
+  letter-spacing: 0.03rem;
+}
