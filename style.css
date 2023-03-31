@@ -1343,3 +1343,55 @@ input::placeholder {
 .form-input.filled {
   box-shadow: 0 2px 0 0 #999;
 }
+
+
+
+
+
+#sub-projects{
+  display: flex;
+  justify-content: space-evenly;
+  padding: 0;
+}
+
+.sub-project{
+  height: 85vh;
+  background-position: center;
+  background-size: cover;
+  width: 50vw;
+  border-bottom: 0px;
+  padding: 43px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.sub-project:hover{
+  border-bottom: 0px;
+}
+
+#energy-information-time-value{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.2)), url("assets/sub_project_matrix.jpg");}
+#timeline-of-money{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.2)), url("assets/sub_project_timeline_vertical.png");}
+
+
+.split-module{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.sub-module-description{}
+
+.sub-module-title{
+  transition: transform .2s; /* Animation */
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sub-project:hover .sub-module-title{
+  transform: scale(1.1);
+}
+
+.sub-module-title h1{width: 100%;max-width: 460px;display: block;}
+.sub-module-label{}
