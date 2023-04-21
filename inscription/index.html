@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="utf-8">
+
+    <title>Inscription | Anatomy of Bitcoin</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/fav/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/fav/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/fav/favicon-16x16.png">
+    <link rel="manifest" href="assets/fav/site.webmanifest">
+    <meta name="msapplication-TileColor" content="#000000">
+    <meta name="theme-color" content="#ffffff">
+
+
+    <meta name="description" content="An open-source bitcoin film on the engineering of time and truth. Support the project by becoming a contributor or a producer." />
+    <meta itemprop="name" content="The Anatomy of Bitcoin">
+    <meta itemprop="description" content="An open-source bitcoin film on the engineering of time and truth. Support the project by becoming a contributor or a producer.">
+    <meta itemprop="image" content="https://anatomyofbitcoin.com/assets/preview.png">
+    <meta name="description" content="An open-source bitcoin film on the engineering of time and truth. Support the project by becoming a contributor or a producer."/>
+    <meta property="og:image" content="https://anatomyofbitcoin.com/assets/preview.png"/>
+    <meta property="og:image:type" content="image/png"/>
+    <meta property="og:image:width" content="1000"/>
+    <meta property="og:image:height" content="500"/>
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:site" content="@bitcoinanatomy">
+    <meta property="twitter:creator" content="@bitcoinanatomy">
+    <meta property="twitter:title" content="The Anatomy of Bitcoin">
+    <meta property="twitter:description" content="An open-source bitcoin film on the engineering of time and truth. Support the project by becoming a contributor or a producer."/>
+    <meta property="twitter:image:src" content="https://anatomyofbitcoin.com/assets/preview.png"/>
+    <meta property="twitter:domain" content="anatimyofbitcoin.com">
+
+
+    <link rel="stylesheet" href="../style.css">
+  </head>
+
+  <body style="">
+
+    <style>
+
+      body{
+        background-image: url(../assets/inscription_process/process_0.png);
+        background-position: center top;
+        background-repeat: no-repeat;
+        background-size: 90%;
+      }
+      #inscription{
+        padding-top: 30vw;
+      }
+
+
+      #inscription p, #inscription ul {
+        max-width: 640px;
+        margin: auto;
+        margin-bottom: 1rem;
+      }
+
+      #inscription img{
+        display: block;
+        width: 100%;
+        max-width:1000px;
+        margin: 2rem auto 2rem auto;
+      }
+
+      #branding {
+        position: fixed;
+        width: 100vw;
+        z-index: 1000;
+      }
+      #branding #branding1 {
+        position: absolute;
+      }
+
+      #branding #branding2 {
+        height: 40px;
+        right: 0px;
+        position: absolute;
+      }
+
+      #branding #branding1 img, #branding #branding2 img{
+        height: 40px;
+      }
+
+      #branding a {
+          border: none;
+      }
+
+
+      h2.scenes-hero {
+          margin-top: 1rem;
+          margin-bottom: 0;
+      }
+
+      h1.scenes-hero {
+          margin-bottom: 2rem;
+      }
+
+      div#scenes-data {
+          margin-top: 10rem;
+      }
+
+      p#about-hero {
+          font-size: 1.5rem;
+      }
+
+      .section-title{
+        margin: 10rem 0 0 0;
+      }
+
+
+
+      img {
+          /* box-shadow: #ffffff21 0px 0px 21px; */
+          /* border: 1px #2d2d2d solid; */
+          filter: contrast(0.9);
+      }
+
+
+    </style>
+
+
+
+    <div id="branding">
+        <a id="branding1" target="_blank" href="https://anatomyofbitcoin.com">
+          <img src="../assets/aob-logo1-w.svg">
+        </a>
+        <a id="branding2" target="_blank" href="https://anatomyofbitcoin.com">
+          <img src="../assets/aob-logo2-w.svg">
+        </a>
+
+    </div>
+
+
+
+
+
+        <div id="inscription" class="module">
+
+          <h3 class="scenes-hero" style="margin:0px">
+            1111 1111, FF, True, Value, Sat
+          </h3>
+          <h1 class="scenes-hero">
+            White circle on black background
+          </h1>
+          <h3 class="scenes-hero">
+            <span>ORD Inscription Visible in the Hex Data</span>
+          </h3>
+
+          <p class="scenes-sub-hero sub-hero">
+             <a href="https://mempool.space/api/tx/e52092e700e07e44ed1709dcf40254678f65b7516e1ae789652d84c7bcb5ee44/hex" target="_blank">
+              bitcoin-cli getrawtransaction e52092e700e07e4...2d84c7bcb5ee44 1
+            </a>
+          </p>
+
+
+
+
+          <div id="scenes-data">
+
+            <p id="about-hero">
+              The following describes the process of inscribing a circle shape on the bitcoin blockchain that is legible without a parsing protocol, visible to the naked eye.
+            </p>
+
+            <p>
+              We're focusing primarly on the writing functionality that the ordinals librabry offers. This gives us the ability to easely write bigger chunks of data a transaction and sets a standard for how that data can be parsed by other readers.
+            </p>
+
+
+
+
+
+            <h3 class="section-title">
+              Base image to ASCII
+            </h3>
+            <img src="../assets/inscription_process/process_1.png" />
+
+
+
+            <p>
+              We start by testing an inscription of a small circle that would fit in the most common bitcoin data visualisation: the hexdump command.
+            </p>
+
+            <p>
+              We start by taking our base circle image and converting it to ASCII. The circle shape is intended to be visible on the hexadecimal output of the dump so we take the original image, and strech to double the height, for each ascii characeter corresponds to 2 characeters (nibbles) of the hexadecimal value.
+            </p>
+
+
+
+
+
+            <h3 class="section-title">
+              Hexadecimal format
+            </h3>
+            <img src="../assets/inscription_process/process_2.png" />
+
+
+
+            <p>
+              The canonical hexdump format for the bitcoin genesis block uses the command <b>$ hexdump -C -s 8 -n 285 blk00000.dat</b> which outputs:
+            </p>
+            <ul>
+                <li> 1 column with the line number </li>
+                <li> 1 column with the hexadecimal data (2 columens of 8 bytes) </li>
+                <li> 1 column with ascii text of the data </li>
+            </ul>
+            <p>
+              <a href="https://learnmeabitcoin.com/technical/blkdat#hexdump" target="_blank">https://learnmeabitcoin.com/technical/blkdat#hexdump</a>
+              <a href="https://linuxopsys.com/topics/linux-hexdump-command" target="_blank">https://linuxopsys.com/topics/linux-hexdump-command</a>
+            </p>
+
+            <p>x xxxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
+
+
+
+            <h3 class="section-title">
+              Inscribing on the block
+            </h3>
+            <img src="../assets/inscription_process/process_3.png" />
+
+
+
+            <p>xx xx xxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
+            <p>x x xx xxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
+
+
+
+
+            <h3 class="section-title">
+              The white circle
+            </h3>
+
+            <img src="../assets/sats_at_scale_FJbyJejXMAAXLfT.jpg" />
+            <p>From the consensus rules, we know 1 COIN = 100000000. We can then represent what is commenly known as 1 bitcoin as a group of 100 million of these smaller atomic units of bitcoin known as sats.</p>
+
+            <img src="../assets/sats_at_scale_FJb1ax0XIAEbxk_.jpg" />
+            <p>This will help us put things in prespective and give a general sense of scale and amount of sats in existance.</p>
+
+            <img src="../assets/sats_at_scale_FJeMF_rXsAgRlQS_noheader.png" />
+            <p>As we zoom in to this cluster of sats, we can give it the shape of a white, sphere. White because it holds the value we prescribe to a sat, but also as a beacon of light and varifiable truth.</p>
+
+
+
+
+            <h3 class="section-title">
+              Scaling up the resolution
+            </h3>
+
+            <img src="../assets/inscription_process/process_4.png" />
+            <p>xxxxx xxxxxxx xxxxx xx xxxx xxxxx.</p>
+
+
+            <img src="../assets/inscription_process/process_5.png" />
+
+            <p>xxx xxx xx xx xxxx xxxxxxx xxxxx xx xxxx xxxxx.</p>
+            <p>x xxxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
+
+
+
+            <h3 class="section-title">
+              Cleaning up artifacts
+            </h3>
+
+            <img src="../assets/inscription_process/process_6.png" />
+            <p>xx xx xxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
+            <p>x x xx xxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
+
+            <img src="../assets/inscription_process/process_7.png" style="max-width: 3000px;"/>
+            <p>xxxxx xxxxxxx xxxxx xx xxxx xxxxx.</p>
+
+
+
+
+
+            <h3 class="section-title" style="margin-bottom: 0">
+              Adding it to a block
+            </h3>
+
+            <img src="../assets/inscription_process/process_8.png" />
+            <p>xxxxx xxxxxxx xxxxx xx xxxx xxxxx.</p>
+
+            <pre>
+            $ '/home/user/bitcoin-24.0.1/ord/ord' --bitcoin-data-dir=/media/user/disk/bitcoin_data wallet inscribe 'sat_inscription_64_00_FF_v8.txt' --fee-rate=5
+            {
+              "commit": "60ffd26626628e4b60b8a5a6666608b850c9fc64a4c9bb773ec56a7208606b16",
+              "inscription": "e52092e700e07e44ed1709dcf40254678f65b7516e1ae789652d84c7bcb5ee44i0",
+              "reveal": "e52092e700e07e44ed1709dcf40254678f65b7516e1ae789652d84c7bcb5ee44",
+              "fees": 6690
+            }
+            </pre>
+
+
+            <img src="../assets/inscription_process/process_9.png" />
+            <p>xxxxx xxxxxxx xxxxx xx xxxx xxxxx.</p>
+            <img src="../assets/inscription_process/process_10.png" style="max-width: 3000px;"/>
+            <p>xxxxx xxxxxxxxx xx xx xxxx  xxxx xxxx xxx xxxxxxxxx x xx xxxx xxxxxxxx.</p>
+            <p>xxx xxx xx xx xxxx xxxxxxx xxxxx xx xxxx xxxxx.</p>
+            <p>x xxxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
+
+
+
+
+
+            <h3 class="section-title">
+              Formating for multi-layer: binary, hex, ascii
+            </h3>
+
+            <img src="../assets/inscription_process/process_11.png" style="max-width: 3000px;"/>
+            <p>xx xx xxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
+            <p>x x xx xxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
+
+
+            <img src="../assets/square_binary_hex_FgVteAiXkAM36Px_noheader.png" />
+            <img src="../assets/inscription_process/process_12_1.png" />
+            <img src="../assets/inscription_process/process_11_2.png" />
+            <img src="../assets/inscription_process/process_13.png" />
+            <p>xxxxx xxxxxxx xxxxx xx xxxx xxxxx.</p>
+            <img src="../assets/inscription_process/process_12.png" />
+            <p>xxxxx xxxxxxx xxxxx xx xxxx xxxxx.</p>
+
+
+
+
+            <h3 class="section-title">
+              Inscribing a jpeg of the original inscription
+            </h3>
+
+            <img src="https://ordinals.com/content/4b3b94687cb281d17c175d1aa15dd1a522b1b21f24bae4c02cfaa1df8983087ai0" />
+            <p style="text-align:center; margin-bottom:20px"><a href="https://ordinals.com/inscription/4b3b94687cb281d17c175d1aa15dd1a522b1b21f24bae4c02cfaa1df8983087ai0" target="_blank">See inscription</a></p>
+            <br>
+            <p>Xxxxxx xxxxx xxxxxx xxxx</p>
+
+
+            <h3 class="section-title">
+              Producing a physical copy
+            </h3>
+
+            <img src="TBD" />
+            <p style="text-align:center; margin-bottom:20px"><a href="https://scarce.city/TBD" target="_blank">Bid on scarce.city</a></p>
+            <br>
+            <p>text about the gallery</p>
+
+
+
+          </div>
+
+
+
+
+        </div>
+
+
+
+
+
+
+      </div>
+
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+  <div id="footer">
+    <div id="footer-data">
+      <div style="color:#aaa; margin-bottom:0.5rem">Stay up-to-date with the latest progress at</div>
+
+      <a href="https://twitter.com/bitcoinanatomy" target="_blank">twitter</a>
+      <span class="footer-divider"></span>
+      <a href="https://bitcointv.com/video-channels/bitcoinanatomy/videos" target="_blank">bitcointv.com</a>
+      <span class="footer-divider"></span>
+      <a href="https://github.com/bitcoinanatomy/bitcoinanatomy" target="_blank">github</a>
+      <span class="footer-divider"></span>
+      <a href="https://t.me/+nINFPnN_AS4yYTFh" target="_blank">telegram</a>
+      <span class="footer-divider"></span>
+      <a href="https://keybase.io/team/bitcoinanatomy" target="_blank">keybase</a>
+
+      <br>
+      <div style="color:#aaa; margin-top:2.5rem">Content Released under MIT license.</div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>
