@@ -41,9 +41,9 @@
 
       body{
         background-image: url(../assets/inscription_process/process_0.png);
-        background-position: center top;
+        background-position: center -90px;
         background-repeat: no-repeat;
-        background-size: 90%;
+        background-size: 110%;
       }
 
       #inscription{
@@ -110,7 +110,7 @@
       }
 
       .section-title{
-        margin: 10rem 0 0 0;
+        margin: 10rem 0 2rem 0;
       }
 
 
@@ -193,7 +193,7 @@
             1111 1111, FF, True, Value, Sat
           </h3>
           <h1 class="scenes-hero">
-            White circle on black background
+            White circle on black
           </h1>
           <h3 class="scenes-hero">
             <span>ORD Inscription Visible in the Hex Data</span>
@@ -248,7 +248,7 @@
 
 
             <p>
-              The canonical hexdump format for the bitcoin genesis block uses the command <b>$ hexdump -C -s 8 -n 285 blk00000.dat</b> which outputs:
+              A commonly known hexdump format for the bitcoin genesis block uses the command <b>$ hexdump -C -s 8 -n 285 blk00000.dat</b> which outputs:
             </p>
             <ul>
                 <li> 1 column with the line number </li>
@@ -256,19 +256,20 @@
                 <li> 1 column with ascii text of the data </li>
             </ul>
             <p>
+              Reference:<br>
               <a href="https://learnmeabitcoin.com/technical/blkdat#hexdump" target="_blank">learnmeabitcoin.com #hexdump</a>
+              <br>
               <a href="https://linuxopsys.com/topics/linux-hexdump-command" target="_blank">linuxopsys.com linux-hexdump-command</a>
             </p>
 
-            <p>x xxxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
 
 
 
             <h3 class="section-title">
-              Inscribing on the block
+              Inscribing in the block
             </h3>
-            <img src="../assets/inscription_process/process_3.png" />
 
+            <p>Running the ord command, from inside the bitcoin directory. Specify the directory where we store the blockchain, function "wallet inscribe" and the file we want to insribe.</p>
             <pre>
             $ '/home/user/bitcoin-24.0.1/ord/ord' --bitcoin-data-dir=/media/user/disk/bitcoin_data wallet inscribe 'sat_ordinal_16.txt'
             {
@@ -279,15 +280,25 @@
             }
             </pre>
 
+            <p>Once the transaction confirms, we get the following result on the block.</p>
+            <img src="../assets/inscription_process/process_3.png" />
+
+            <p>We can parse the data on the hex of the transaction, or query the bitcoin node to return a verbose transaction data format.</p>
+            <img src="../assets/inscription_process/process_3_2.png" />
+
+            <p>In a bitcoin explorer we can more clearly what can be defered from the raw transaction data.</p>
+            <img src="../assets/inscription_process/process_3_3.png" />
             <p>
-              <a href="https://ordinals.com/inscription/c21b7c6cdd4758d486a55a37947dc4340bbb6eee6fb93d345d66226e4e7c3026i0" target="_blank">See on ordinals.com</a>
-              <a href="https://mempool.space/api/tx/c21b7c6cdd4758d486a55a37947dc4340bbb6eee6fb93d345d66226e4e7c3026/hex" target="_blank">See on mempool.space</a>
+              <a href="https://mempool.space/tx/c21b7c6cdd4758d486a55a37947dc4340bbb6eee6fb93d345d66226e4e7c3026" target="_blank">See on mempool.space</a>
+              <br>
+              <a href="https://mempool.space/api/tx/c21b7c6cdd4758d486a55a37947dc4340bbb6eee6fb93d345d66226e4e7c3026/hex" target="_blank">See on data mempool.space/api</a>
             </p>
 
+            <p>Within the ordinal space, the figure is not as easy, specially later when 00 and FF are introduced. Because these don't have ascii table match, they produce a none chareater.
+            <br>
+            <a href="https://ordinals.com/inscription/c21b7c6cdd4758d486a55a37947dc4340bbb6eee6fb93d345d66226e4e7c3026i0" target="_blank">See on ordinals.com</a>
+            </p>
 
-
-            <p>xx xx xxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
-            <p>x x xx xxxxx xx xx xxxxxxxx xxxx xxx xxxxxxx xx xxxx xxxxxxxx.</p>
 
 
 
@@ -300,7 +311,7 @@
             </h3>
 
             <img src="../assets/inscription_process/process_4.png" />
-            <p>xxxxx xxxxxxx xxxxx xx xxxx xxxxx.</p>
+            <p>By increasing the number of btres per line, and removing the other 2 columns.</p>
 
 
             <img src="../assets/inscription_process/process_5.png" />
