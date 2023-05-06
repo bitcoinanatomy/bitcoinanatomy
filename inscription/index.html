@@ -243,7 +243,7 @@
 
           <p class="scenes-sub-hero sub-hero">
              <a href="https://mempool.space/api/tx/e52092e700e07e44ed1709dcf40254678f65b7516e1ae789652d84c7bcb5ee44/hex" target="_blank">
-              bitcoin-cli getrawtransaction e52092e700e07e4 ... 2d84c7bcb5ee44 1
+              bitcoin-cli getrawtransaction e52092e700e07e ... 2d84c7bcb5ee44 1
             </a>
           </p>
 
@@ -428,7 +428,7 @@
             <p>Taproot witness data is split into <a href="https://github.com/casey/ord/blob/938b5cc97d48d026fd9250eae661d1e87286b377/src/inscription.rs#L69" target="_blank">520 byte chunks</a>. Each chunk is tagged with 3 bytes of data which need to be accounted for when creating the image, other wise it will offset the bytes and interfere with the circle.</p>
 
             <img src="../assets/inscription_process/process_7.png" style="max-width: 3000px;"/>
-            <p>A 520 byte line length could be used to produce an image that fits better in the taproot/ord protocol but that would require too much data</p>
+            <p>A 520 byte line length could be used to produce an image that fits better in the taproot/ord protocol but that would require too much data.</p>
 
 
 
@@ -455,11 +455,11 @@
 
 
             <img src="../assets/inscription_process/process_9.png" />
-            <p>Ran multiple tests and studies to understand how the data would translate to the image. Optimising for a good placement in the block assuming the 64 byte line length.</p>
+            <p>Ran multiple tests and studies to understand how the data would translate to the image. Optimizing for a good placement in the block assuming the 64 byte line length.</p>
             <img src="../assets/inscription_process/process_10.png" style="max-width: 3000px;"/>
 
 
-            <p>In the end, the circle was centred on the witness data and the alignment on the block context was dropped given that the preceding data is arbitrary and would shift the start of the inscription.</p>
+            <p>In the end, the circle was centered on the witness data and the alignment on the block context was dropped given that the preceding data is arbitrary and would shift the start of the inscription.</p>
 
             <pre>
             $ '/home/user/bitcoin-24.0.1/ord/ord' --bitcoin-data-dir=/media/user/disk/bitcoin_data wallet inscribe 'sat_inscription_64_00_FF_v8.txt' --fee-rate=5
@@ -492,7 +492,7 @@
               Historical References
             </h3>
 
-            <p>Thought history we can find many examples of artists drawing inspiration from both natural and spiritual laws in search of ways to represent abstract realities. Many of which are informed by the social, economical, relegious, and political context of their time.</p>
+            <p>Thought history we can find many examples of artists drawing inspiration from both natural and spiritual laws in search of ways to represent abstract realities. Many of which are informed by the social, economical, religious, and political context of their time.</p>
             <img src="../assets/inscription_process/reference_0.png" />
             <p>Light is used to represent the divine and metaphysical. Visualisation of the artist's interpretation of scripture.</p>
             <img src="../assets/inscription_process/reference_1.png" />
