@@ -1354,6 +1354,9 @@ input::placeholder {
   display: flex;
   justify-content: space-evenly;
   padding: 0;
+  flex-wrap: wrap;
+  background: #fff;
+  color: #000;
 }
 
 .sub-project{
@@ -1390,6 +1393,7 @@ input::placeholder {
 
 #energy-information-time-value{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3)), url("assets/sub_project_matrix.jpg");}
 #timeline-of-money{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3)), url("assets/sub_project_timeline_vertical.png");}
+#white-circle{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.03)), url("assets/inscription_process/process_0.png");height: 40vh;width: 100%;}
 
 
 .split-module{
@@ -1412,7 +1416,7 @@ input::placeholder {
   transform: scale(1.1);
 }
 
-.sub-module-title h1{width: 100%;max-width: 460px;display: block;}
+.sub-module-title h1{width: 100%;max-width: 460px;display: block;padding-bottom: 0;margin-bottom: 0;}
 .sub-module-label{
   text-transform: uppercase;
   font-weight: 300;
