@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 12.7 12.7"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="flip_pressed.svg"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview14"
+     pagecolor="#ffffff"
+     bordercolor="#111111"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     showgrid="false"
+     inkscape:zoom="18.1875"
+     inkscape:cx="24"
+     inkscape:cy="24.027491"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5" />
+  <defs
+     id="defs2" />
+  <rect
+     style="opacity:1;fill:#ff0000;fill-opacity:1;stroke-width:0.264583;stop-color:#000000"
+     id="rect1442"
+     width="12.7"
+     height="12.7"
+     x="9.5367433e-08"
+     y="9.5367433e-08" />
+  <g
+     id="g5465"
+     transform="matrix(0.80177071,0,0,0.80177071,1.3190102,1.258756)">
+    <g
+       id="g5375"
+       style="stroke:#ffffff;stroke-opacity:1"
+       transform="translate(-0.30891892,-0.71913471)">
+      <rect
+         x="1.1149843"
+         y="3.8232539"
+         width="4.6792765"
+         height="6.4917617"
+         rx="0.51991963"
+         ry="0.72130686"
+         id="rect5253"
+         style="fill:none;stroke:#ffffff;stroke-width:0.61239;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1" />
+      <ellipse
+         cx="2.5100868"
+         cy="5.6211309"
+         id="circle5255"
+         style="fill:none;stroke:#ffffff;stroke-width:0.529167;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+         rx="0.39687499"
+         ry="0.39687505" />
+      <polyline
+         points="21 15 16 10 5 21"
+         id="polyline5257"
+         transform="matrix(0.25995981,0,0,0.35603387,0.33510489,2.7874892)"
+         style="fill:none;stroke:#ffffff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1" />
+    </g>
+    <g
+       id="g5455"
+       style="stroke:#ffffff;stroke-opacity:1"
+       transform="matrix(-1,0,0,1,12.858616,-0.71913471)">
+      <rect
+         x="1.1149843"
+         y="3.8232539"
+         width="4.6792765"
+         height="6.4917617"
+         rx="0.51991963"
+         ry="0.72130686"
+         id="rect5449"
+         style="fill:none;stroke:#ffffff;stroke-width:0.61239;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1" />
+      <ellipse
+         cx="2.5100868"
+         cy="5.6211309"
+         id="ellipse5451"
+         style="fill:none;stroke:#ffffff;stroke-width:0.529167;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+         rx="0.39687499"
+         ry="0.39687505" />
+      <polyline
+         points="21 15 16 10 5 21"
+         id="polyline5453"
+         transform="matrix(0.25995981,0,0,0.35603387,0.33510489,2.7874892)"
+         style="fill:none;stroke:#ffffff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1" />
+    </g>
+  </g>
+</svg>

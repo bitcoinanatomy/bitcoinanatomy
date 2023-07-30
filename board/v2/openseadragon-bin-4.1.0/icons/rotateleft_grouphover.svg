@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 12.7 12.7"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="rotateleft_grouphover.svg"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview8"
+     pagecolor="#ffffff"
+     bordercolor="#111111"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     showgrid="false"
+     inkscape:zoom="18.1875"
+     inkscape:cx="24"
+     inkscape:cy="24.027491"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5" />
+  <defs
+     id="defs2" />
+  <rect
+     style="opacity:0.33337645;fill:#000000;fill-opacity:1;stroke-width:0.264583;stop-color:#000000"
+     id="rect1442"
+     width="12.7"
+     height="12.7"
+     x="9.5367433e-08"
+     y="9.5367433e-08" />
+  <g
+     style="fill:none;stroke:#ffffff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+     id="g5616"
+     transform="matrix(0.3004745,0,0,0.3004745,3.0427083,2.7452834)">
+    <polyline
+       points="1 4 1 10 7 10"
+       id="polyline5604"
+       style="stroke:#ffffff;stroke-opacity:1" />
+    <path
+       d="M 3.51,15 A 9,9 0 1 0 5.64,5.64 L 1,10"
+       id="path5606"
+       style="stroke:#ffffff;stroke-opacity:1" />
+  </g>
+</svg>

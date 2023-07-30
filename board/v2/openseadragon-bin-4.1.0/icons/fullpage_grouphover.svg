@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 12.7 12.7"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="fullpage_grouphover.svg"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview14"
+     pagecolor="#ffffff"
+     bordercolor="#111111"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     showgrid="false"
+     inkscape:zoom="18.1875"
+     inkscape:cx="24"
+     inkscape:cy="23.945017"
+     inkscape:window-width="1458"
+     inkscape:window-height="1088"
+     inkscape:window-x="26"
+     inkscape:window-y="23"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg5" />
+  <defs
+     id="defs2" />
+  <rect
+     style="fill:#000000;stroke:none;stroke-width:0.264583;stop-color:#000000;fill-opacity:1;opacity:0.333"
+     id="rect847"
+     width="12.7"
+     height="12.7"
+     x="9.5367433e-08"
+     y="9.5367433e-08" />
+  <g
+     style="fill:none;stroke:#ffffff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+     id="g4680"
+     transform="matrix(0.33072917,0,0,0.33072917,2.38125,2.38125)">
+    <polyline
+       points="15 3 21 3 21 9"
+       id="polyline4662"
+       style="stroke:#ffffff;stroke-opacity:1" />
+    <polyline
+       points="9 21 3 21 3 15"
+       id="polyline4664"
+       style="stroke:#ffffff;stroke-opacity:1" />
+    <line
+       x1="21"
+       y1="3"
+       x2="14"
+       y2="10"
+       id="line4666"
+       style="stroke:#ffffff;stroke-opacity:1" />
+    <line
+       x1="3"
+       y1="21"
+       x2="10"
+       y2="14"
+       id="line4668"
+       style="stroke:#ffffff;stroke-opacity:1" />
+  </g>
+</svg>
