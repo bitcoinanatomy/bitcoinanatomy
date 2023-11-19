@@ -375,10 +375,20 @@ function getProducerData(){
 
     var amoutTotal = 0;
 
-    $.getJSON("https://pvxg.net/BTCpaySponsor/").then(function(data){
+    $.getJSON("https://pvxg.net/BTCpaySponsor/?v=1").then(function(data){
+
+       /*
+       console.log("DATA ------");
+       console.log(data);
+       $.each(data, function (producer) {
+         console.log("PRODUCER ------");
+         console.log(JSON.parse(producer));
+       });
+       */
+       
        $.each(data, function (key, producer) {
-         console.log(JSON.parse(producer.metadata.orderId));
-         //console.log(producer.metadata.itemDesc.startsWith("Contributor:"));
+         //console.log(JSON.parse(producer.metadata.orderId));
+         console.log(producer.metadata.itemDesc.startsWith("Contributor:"));
 
          var targetContainer = "";
          var jsonObject;
@@ -445,6 +455,9 @@ function getProducerData(){
        }
        $(".amount-value-progress").text(amoutTotal.toFixed(8));
        $( "#meter-progress-bar" ).animate({ width: finalProgress}, 200, function() { });
+
+
+
     });
 
 
