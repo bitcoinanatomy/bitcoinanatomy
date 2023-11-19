@@ -1353,10 +1353,10 @@ input::placeholder {
 #sub-projects{
   display: flex;
   justify-content: space-evenly;
-  padding: 0;
+  padding: 40px 0 0 0;
   flex-wrap: wrap;
-  background: #fff;
-  color: #000;
+  background: #000000;
+  color: #fff;
 }
 
 .sub-project{
@@ -1368,7 +1368,10 @@ input::placeholder {
   padding: 43px;
   box-sizing: border-box;
   text-align: center;
+  border-top: 1px solid #ffffff29;
 }
+
+
 
 
 .sub-project:hover{
@@ -1391,9 +1394,10 @@ input::placeholder {
 
 
 
-#energy-information-time-value{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3)), url("assets/sub_project_matrix.jpg");}
+#energy-information-time-value{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3)), url("assets/sub_project_matrix.jpg"); border-right: 1px solid #ffffff29;}
 #timeline-of-money{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3)), url("assets/sub_project_timeline_vertical.png");}
 #white-circle{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.03)), url("assets/inscription_process/process_0.png");height: 40vh;width: 100%;}
+#chain-duel{background-image: linear-gradient(to top, rgb(0 0 0 / 0.80), rgba(0, 0, 0, 0.33)), url("assets/chainduel.png");height: 40vh;width: 100%;}
 
 
 .split-module{
