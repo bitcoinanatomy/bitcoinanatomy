@@ -189,16 +189,17 @@
 
 
 
-
-
-
-
-
-
-
-
+        <div id="geyser">
+          <a class="button geyser" alt="Sponsor on Geyser" href="https://geyser.fund/project/anatomyofbitcoin/" target="_blank">
+            <span style="color:#000">
+              Support on Geyser
+            </span>
+          </a>
+        </div>
 
       </div>
+
+
 
 
 
@@ -365,6 +366,20 @@
 
 
       <div id="donation-credits" class="module">
+
+          <div id="supporters" class="donations">
+            <h3>
+              <span class="grey">With the Support of</span>
+            </h3>
+            <div id="supporters-inner">
+              <a href="https://bitcoinmagazine.com/" target="_blank" class="supporter"><img class="supporter-logo" src="assets/logos/bitcoin_magazine.png" /></a>
+              <a href="https://b.tc/conference" target="_blank" class="supporter"><img class="supporter-logo" src="assets/logos/bitcoin_conference.png" /></a>
+              <a href="https://adoptingbitcoin.org/2023/" target="_blank" class="supporter"><img class="supporter-logo" src="assets/logos/adopting_bitcoin_2023.svg" /></a>
+              <br/>
+              <a href="https://bitcoinfilmfest.com/" target="_blank" class="supporter"><img class="supporter-logo" src="assets/logos/bitcoin_film_fest.png" /></a>
+              <a href="https://geyser.fund/project/anatomyofbitcoin" target="_blank" class="supporter"><img class="supporter-logo" src="assets/logos/geyser.png" /></a>
+            </div>
+          </div>
 
           <div id="producers" class="donations">
             <h3>
@@ -719,8 +734,8 @@
          class="btcpay-input"
          id="btcpay-input-price"
          name="price" type="text"
-         min="0.0005" max="0.01" step="0.001" value="0.001"
-         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0.0005 ? document.querySelector('#btcpay-input-price-contributor').value = 0.0005 : event.target.value"
+         min="0.0001" max="0.01" step="0.001" value="0.001"
+         oninput="event.preventDefault();isNaN(event.target.value) || event.target.value <= 0.0001 ? document.querySelector('#btcpay-input-price-contributor').value = 0.0001 : event.target.value"
          onchange="document.querySelector('#btcpay-input-range-contributor').value = document.querySelector('#btcpay-input-price-contributor').value"
        />
        <select name="currency">
@@ -733,7 +748,7 @@
          class="btcpay-input-range"
          id="btcpay-input-range-contributor"
          type="range"
-         min="0.0005" max="0.01" step="0.001" value="0.001"
+         min="0.0001" max="0.01" step="0.001" value="0.001"
          oninput="document.querySelector('#btcpay-input-price').value = document.querySelector('#btcpay-input-range-contributor').value"
        />
      </div>

@@ -377,7 +377,7 @@ function getProducerData(){
 
     $.getJSON("https://pvxg.net/BTCpaySponsor/").then(function(data){
        $.each(data, function (key, producer) {
-         //console.log(JSON.parse(producer.metadata.orderId));
+         console.log(JSON.parse(producer.metadata.orderId));
          //console.log(producer.metadata.itemDesc.startsWith("Contributor:"));
 
          var targetContainer = "";
