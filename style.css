@@ -73,7 +73,7 @@ body{
 
 
 
-.m-1 {margin: 1rem}
+.m-1 {margin: 1rem;}
 .mt-2 { margin-top: 2rem}
 
 
@@ -177,6 +177,12 @@ h2 {
   font-size: 2.8em;
 }
 
+@media only screen and (max-width : 880px) {
+  h2{
+    font-size:2em;
+  }
+}
+
 h3 {
   font-size: 1.8em;
   letter-spacing: 0rem;
@@ -224,6 +230,20 @@ h2 span {
 
 .scenes-sub-hero {
   margin-bottom: 1rem;
+}
+
+
+
+@media only screen and (max-width : 880px) {
+  #hero-links{
+    display: flex;
+    flex-direction: column;
+    line-height:1em;
+  }
+  #hero-links a{
+    border:none;
+    text-decoration: !important
+  }
 }
 
 
@@ -444,6 +464,9 @@ p {
   margin: 1rem 2rem;
   display: inline-block;
 }
+
+
+
 
 .producer-name a {
   color: #000;
@@ -1443,6 +1466,16 @@ a.supporter {
 img.supporter-logo {
     height: 80px;
     margin: 0px 20px;
+}
+
+@media only screen and (max-width : 880px) {
+  img.supporter-logo {
+    height:40px;
+  }
+  a.supporter {
+    display: block;
+  }
+  #supporters-inner br{ display:none}
 }
 
 
