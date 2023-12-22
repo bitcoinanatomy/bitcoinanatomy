@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="utf-8">
+
+    <title>What Does Bitcoin Look Like? - Adopting Bitcoin 2023</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/fav/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/fav/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/fav/favicon-16x16.png">
+    <link rel="manifest" href="../assets/fav/site.webmanifest">
+    <meta name="msapplication-TileColor" content="#000000">
+    <meta name="theme-color" content="#ffffff">
+
+
+    <meta name="description" content="Presentation on the current state of the project." />
+    <meta itemprop="name" content="What Does Bitcoin Look Like? - Adopting Bitcoin 2023">
+    <meta itemprop="description" content="Presentation on the current state of the project.">
+    <meta itemprop="image" content="https://anatomyofbitcoin.com/assets/inscription_process/preview.png">
+    <meta name="description" content="Presentation on the current state of the project."/>
+    <meta property="og:image" content="https://anatomyofbitcoin.com/assets/inscription_process/preview.png"/>
+    <meta property="og:image:type" content="image/png"/>
+    <meta property="og:image:width" content="1000"/>
+    <meta property="og:image:height" content="500"/>
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:site" content="@bitcoinanatomy">
+    <meta property="twitter:creator" content="@bitcoinanatomy">
+    <meta property="twitter:title" content="What Does Bitcoin Look Like? - Adopting Bitcoin 2023">
+    <meta property="twitter:description" content="LPresentation on the current state of the project."/>
+    <meta property="twitter:image:src" content="https://anatomyofbitcoin.com/assets/adopting_bitcoin_2023/preview.png"/>
+    <meta property="twitter:domain" content="anatimyofbitcoin.com">
+
+
+    <link rel="stylesheet" href="../style.css">
+  </head>
+
+  <body style="">
+
+    <style>
+
+    body{
+      background-image: url(../assets/adopting_bitcoin_2023/presenting.jpg);
+      background-position: center -90px;
+      background-repeat: no-repeat;
+      background-size: 110%;
+    }
+
+    #adopting p#about-small{
+      margin-bottom: 100px;
+    }
+
+    #adopting{
+      padding-top: 22vw;
+    }
+
+    h1.scenes-hero {
+      letter-spacing: -0.05vw;
+      font-size: 13vw;
+      line-height: 0.85;
+    }
+
+    #adopting p, #adopting ul {
+      max-width: 640px;
+      margin: auto;
+      margin-bottom: 1rem;
+    }
+
+    #adopting img{
+      display: block;
+      width: 100%;
+      max-width:1000px;
+      margin: 2rem auto 2rem auto;
+    }
+
+    #branding {
+      position: fixed;
+      width: 100vw;
+      z-index: 1000;
+    }
+    #branding #branding1 {
+      position: absolute;
+    }
+
+    #branding #branding2 {
+      height: 40px;
+      right: 0px;
+      position: absolute;
+    }
+
+    #branding #branding1 img, #branding #branding2 img{
+      height: 40px;
+    }
+
+    #branding a {
+        border: none;
+    }
+
+
+    h2.scenes-hero {
+        margin-top: 1rem;
+        margin-bottom: 0;
+    }
+
+    h1.scenes-hero {
+        margin-bottom: 0rem;
+    }
+
+    div#scenes-data {
+        margin-top: 10rem;
+    }
+
+    p#about-hero {
+        font-size: 1.5rem;
+    }
+
+    .section-title{
+      margin: 10rem 0 2rem 0;
+    }
+
+
+
+    img {
+        /* box-shadow: #ffffff21 0px 0px 21px; */
+        /* border: 1px #2d2d2d solid; */
+        filter: contrast(0.9);
+    }
+
+
+    pre {
+        word-break: break-word;
+        width: 100%;
+        max-width: 1109px;
+        margin: auto;
+        white-space: pre-line;
+        padding: 20px;
+        border: 1px #222 solid;
+        box-sizing: border-box;
+        color: #ccc;
+    }
+
+
+    @media only screen and (max-width: 1000px) {
+      pre.hex{
+        font-size: 1.01vw;
+      }
+    }
+
+    @media only screen and (max-width: 600px) {
+      pre.hex{
+        font-size: 0.7vw;
+      }
+
+
+      h1 {
+          font-size: 40px
+      }
+
+      h3 {
+          font-size: 21px;
+          letter-spacing: 0rem;
+      }
+
+      p#about-hero {
+          font-size: 1.3rem;
+      }
+
+      #branding #branding1 img, #branding #branding2 img {
+          height: 20px;
+      }
+    }
+
+
+
+
+    #adopting p.scarcecity {
+        margin-top: 30px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    #adopting .scarcecity img {
+        height: 110px;
+        margin: 0px;
+        width: auto;
+        margin: auto;
+    }
+
+    #adopting p.bitcoin2023 {
+        margin-top: 60px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    #adopting p.bitcoin2023 a {
+        border-bottom: none;
+    }
+
+    #adopting .bitcoin2023 img {
+        height: 23px;
+        margin: 5px 8px -8px 0;
+        width: auto;
+        display: inline-block;
+    }
+
+    .bitcoin2023 span {
+        font-style: italic;
+        text-transform: uppercase;
+        font-weight: 900;
+        font-size: 23px;
+        display: BLOCK;
+    }
+
+
+    .bitcoinTV {
+        margin: 2rem auto 2rem auto;
+        width: 70%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        box-shadow: #ffffff5c 1px 1px 40px;
+        max-width: 1000px;
+    }
+
+
+    </style>
+
+
+
+    <div id="branding">
+        <a id="branding1" target="_blank" href="https://anatomyofbitcoin.com">
+          <img src="../assets/aob-logo1-w.svg">
+        </a>
+        <a id="branding2" target="_blank" href="https://anatomyofbitcoin.com">
+          <img src="../assets/aob-logo2-w.svg">
+        </a>
+
+    </div>
+
+
+
+
+
+        <div id="adopting" class="module">
+
+          <h3 class="scenes-hero" style="margin:0px">
+            Adopting Bitcoin 2023
+          </h3>
+          <h1 class="scenes-hero">
+            What Does Bitcoin Look Like?
+          </h1>
+          <h3 class="scenes-hero">
+            <span>Presentation on the current state of the project.</span>
+          </h3>
+
+          <p class="scenes-sub-hero sub-hero">
+            <a href="https://bitlyrics.co/" target="_blank">Transcription by bitlyrics.co</a>
+            <br><br>
+            <a href="https://www.youtube.com/watch?v=Jlvee-QOrog" target="_blank">Watch on youtube</a>
+
+          </p>
+
+
+
+<!--
+<p class="bitcoin2023">On view at <br><a href="https://b.tc/conference/art-gallery" target="_blank"><img src="../assets/inscription_process/bitcoin2023.svg" /><span>ART GALLERY</span></a></p>
+-->
+
+          <div id="scenes-data">
+
+
+
+            <h2 class="process">
+              Introduction
+            </h2>
+
+            <p id="about-hero">
+              I'm here to talk about what I think Bitcoin looks like. We all know that Bitcoin can mean different things for different people and look different ways to different people.
+            </p>
+            <img src="../assets/adopting_bitcoin_2023/original_tweet.png" />
+
+            <p>
+              A lot of people see memes, a lot of people see logos, a lot of people see personalities but I was trying to find a way to visualize it in a more anatomic way and break down all the elements and bring them into the 3D space.
+            </p>
+            <img src="../assets/adopting_bitcoin_2023/mainstream.png" />
+            <p>
+              Kind of do away with all the metaphoric illustrations that we tend to see in the mainstream media, the too complex technical explanations, and the too reductive diagrammatic to really go into the spatial understanding of Bitcoin.
+            </p>
+
+
+
+
+            <h3 class="section-title">
+              My Background
+            </h3>
+            <img src="../assets/adopting_bitcoin_2023/personal_work.png" />
+            <p>
+              I've been working on a lot of different Bitcoin projects—UI, design, some development—trying to develop games and trying to elevate the basic building blocks of Bitcoin, like the source code, into something that people can use and explore not just through other people's content but by themselves.
+            </p>
+
+            <h3 class="section-title">
+              Moving into Film
+            </h3>
+            <p>
+              After doing all these projects, why not also try to do a motion picture? The idea is to build an open-source film that people can watch with their families. It's something that can circulate the world but will explain Bitcoin in a very direct and precise manner.
+            </p>
+
+            <iframe class="bitcoinTV" title="Bitcoin Film - March Animatic w/ Hans Zimmer - Mountains (Interstellar Soundtrack)" width="560" height="315" src="https://bitcointv.com/videos/embed/3bc2b754-9679-4bae-af9b-b8873e1812f3" frameborder="0" allowfullscreen="" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+
+            <p>
+              Here's a test of when we started working on this. We see the different layers of the network. We have the nodes all connected to their peers.
+            </p>
+
+            <p>
+              We can zoom into the node, see what's happening inside the node, the different components that enable the node to process the information that comes from the network—like the validation, the mempool, the connection with other nodes. We can look inside and see how the messages are transported from node to node and then ultimately added to the blockchain that enables us to have the ledger of all the transactions.
+            </p>
+
+            <p>
+              The idea is to set it to some beautiful soundtrack that other bitcoiners are already working on that we can really entertain but also surprise and delight the viewer of any walks of life. It can be old people, young people. Hopefully, this film can touch everybody equally. Here we go to the chip of the chain, and we see what's inside the block. We see all the transactions, the Merkle route. This is 2020, a very fast test.
+            </p>
+
+            <p>
+              We're trying to create images that can represent Bitcoin but in a very precise way. How do we do that? We go through the whole protocol and try to break it down into different chunks and explore one at a time. We can let that be the driver of the film's narrative. Obviously, each component has other components that we need to explore. Ultimately, it would be ideally a 2-hour film, but this can be released in a series of films or it can be released as a longer or shorter film.
+            </p>
+
+
+
+
+
+            <h3 class="section-title">
+              Who pays for the bitcoin film?
+            </h3>
+
+            <p>
+              Right now, the model is everything is funded by you, the bitcoiners. We have a lot of organic donations that came through our websites. We also use Geyser. People have donated 21 sats to millions of sats. We also have contributions from other bitcoiners and other non-bitcoiners that contribute to code that's essential to build the movie. Then we have collaborations with other bitcoiners that are more interested in the editing and the music composition that just take whatever this project creates and they're free to engage with the images however they want. It's all under MIT license.
+            </p>
+
+
+            <p>
+              Obviously, counting on the support of the other initiatives that help happen in Bitcoin. Also like to take the support of Bitcoin Magazine that's been very helpful in broadcasting and distributing whatever is already done from the film. We would like to credit as a simple producer for a film and we're especially thankful to Bitcoin Magazine because we've also been able to inject elements of the film in a lot of the conferences that they've been throwing.
+            </p>
+            <img src="../assets/adopting_bitcoin_2023/conference_integration.png" />
+
+
+
+
+            <h3 class="section-title">
+              Is it reproducible?
+            </h3>
+
+            <p>
+              The idea is to take data from Bitcoin and put it into three dimensions. We connect to our nodes, we parse the information from the blockchain, we then put it in the Blender software, which is a 3D open source software that runs Python scripts. Then, with the data that we collect from the chain, we can then build geometry. [image]In this case, you're seeing how the blocks are distributed in the beginning of the chain, and the separation between each block is based on the time it took for them to be found by the miners.
+            </p>
+
+            <h3 class="section-title">
+              Time in Bitcoin
+            </h3>
+            <p>
+              This causes an interesting problem because we're trying to represent time but we're not so interested in the human time but more in the Bitcoin time. We have 10 minutes, we have two weeks for the 2016 blocks for the difficulty adjustment, we create a spiral. Then we stack that spiral into a helix, and that's how we represent Bitcoin or the blockchain, at least.
+            </p>
+
+            <h3 class="section-title">
+              The Genesis block
+            </h3>
+            <p>
+              [image]Here we see the Genesis block with nine days of no mining that happened between the Genesis block and the other blocks that you see in the bottom.
+            </p>
+
+            <h3 class="section-title">
+              Recent Bitcoin blocks
+            </h3>
+            <p>
+              In a more recent moment, blockchain has blocks that exceed the 1 Megabyte limit, which is this gray cube [image], and those are most likely SegWit blocks. We can see that if we take one of these helix, we can see a very standard distribution of the blocks because obviously, it averages on 10 minutes, but there's no block that actually is mined in precise 10 minutes.
+            </p>
+
+            <h3 class="section-title">
+              History of Bitcoin blocks
+            </h3>
+            <p>
+              We can take all the other difficulty adjustments throughout the history of Bitcoin, and we can see that in the beginning, the blocks were empty. [image] So we see more dim, very unstable moments in the mining because sometimes, you see moments where there's no blocks, probably computers left the network, and sometimes, you see high concentration of blocks, that's probably better hardware or more computers joining the network.
+            </p>
+            <p>
+              [visual] This is a close-up of those spirals just to see how the blocks are distributed and the distanced from each other, but also how they're packed with data as we move closer to our present time.
+            </p>
+            <p>
+              This is an animation of all the stack [visual]. In the beginning, big fluctuation, but these discs are trying to aim at that two-week target, and we can see them getting fuller and fuller as time goes by. This is the chain tip at the time this was made, which was 2022.
+            </p>
+
+            <h3 class="section-title">
+              How do ordinals look?
+            </h3>
+            <p>
+              For those following the more recent events on the chain, this is when ordinals started [image]. We see the dimension of the blocks increasing dramatically.
+            </p>
+
+
+
+
+            <h3 class="section-title">
+              How does a mempool look?
+            </h3>
+            <p>
+              We can also map the mempool by taking data or just visually matching it to the charts that already exist from other projects. And we place the mempool by the tip of the chain because those are the transactions most likely to be added to the tip of the chain.
+            </p>
+            <p>
+              This, I hope, will help people understand that there are moments where it's very hard to get into the chain with your transaction, but there's moments where the mempool is empty, and it's very cheap to be added to a block.
+            </p>
+
+            <h3 class="section-title">
+              How does an UTXO look?
+            </h3>
+            <p>
+              We can also look at the UTXOs and along with the mempool, which is one of the most volatile elements of Bitcoin because it's always changing—people add transactions and replace transactions. But also, the UTXO set updates with every single block that's added because transactions are always consuming output from the past.
+            </p>
+            <p>
+              If we have, imagine a sat being the smallest unit in Bitcoin all the way to 100 million sats, we got a rough representation of Bitcoin. Here we have 50 Bitcoin, the original block reward. [image] This is what it looks like with this model inside of Bitcoin. It's just an explosion of particles of sats. We can map those into a block. So, every single block has a set amount of Bitcoin that can be spent in the coinbase, but also people have moved bitcoin to transactions that are sitting in those blocks unspent. For each block, we can create a sphere that represents the amount of Bitcoin that exists there. Once we input real data, we see the confusion that exists on chain.
+            </p>
+            <p>
+              Here's another test. We have the layer of blocks that never changes once it's set; it's set. But then there's a layer of UTXOs associated with each block that will always be changing. [video] You can see that there are blocks that have no bitcoin and blocks that have a lot of bitcoin.
+            </p>
+
+            <h3 class="section-title">
+              Raw data
+            </h3>
+            <p>
+              We can also look at the data in a more raw way. Here we have the binary version of the data, the hex version of the data, a tagged version that calls out all the important script op_codes of Bitcoin and tags them. Then we have a more parsed-out version of the blockchain that just calls out everything that's in the data. We can also look at the data that sits on everybody's blocks and have a hex dump of the first block that file where basically your node stores all the data. And that line up top that represents roughly the size of the Genesis block, so it's one line of roughly 200 kilobytes. Here we see around a thousand blocks. The disturbance that you see here, is actually when on block 170 when Hal Finney got the first block, the first transaction. There's a special block that has one extra transaction than all the preceding ones, and that's why it creates this break in the pattern.
+            </p>
+            <p>
+              More recent blocks with the same view. We can look at how miners like to organize their transactions in their blocks one way. Here is like a slice of a more recent dat file. Here we see maybe five blocks, and you see the different patterns that the way miners organize their transactions create. Another visualization where it's a little bit more broken down, the bit-by-bit visualization of a private key. These are 256 bits; this is an actual private key. So, you can visualize what a private key looks like in three-dimensional space, not just with words but with bits. Obviously, these are also all laid out with code. We input a binary, and then geometry comes out. Hopefully, this is the goal for me, but hopefully for other people too, it will create a sensibility towards how much space data occupies and how much effort there is to validate and parse that data.
+            </p>
+
+            <h3 class="section-title">
+              Genesis block animation
+            </h3>
+            <p>
+              Here's a more recent animation of the Genesis block. We go bit by bit. First, we have eight bits mostly zeros and one. That one is signaling the version of the block, and afterward comes the previous block hash, which in this case is a set of zeros because the Genesis block doesn't have a preceding block. We build up all the zeros, and then at the distance, we can start seeing the rest of the elements of the block header, which includes the Merkle root hash, the nonce that was used to mine that block, and the number of transactions existing in this block, which in this case is just the one Coinbase transaction. So we break a line and we keep building. Now we're building the Coinbase transaction for the first block, which also consumes an empty output that doesn't exist. Then we go on to signal that we're going to sign that transaction. It's obviously in the signature of the Coinbase that Satoshi embedded the message that we all know.
+            </p>
+            <p>
+              At the same time that we're building with just the bits, we're also putting the layer of the hex and the ASCII in Latin-1. So we have the three different ways of visualizing the data.
+            </p>
+
+
+
+            <h3 class="section-title">
+              Transaction history
+            </h3>
+            <p>
+              From here, you get an idea of what can be accomplished. We can talk about sizes of blocks, how many transactions fit in a block, how the transactions connect to each other, what is the history of each transaction, to also create some awareness of where your UTXOs come from, so you're not to doxx yourself or hurt yourself.
+            </p>
+            <p>
+              We can also look at the amount of satoshis being moved in each transaction. We can also talk about the cryptography that Bitcoin uses. In this case, we're mapping the elliptic curve that Bitcoin uses under real numbers next to all the adjacent curves. Then we can also plot it in three-dimensional space because it uses modular arithmetic. Instead of going to infinite, it actually rotates on both axes. The mathematical space that we're dealing with is actually this Taurus-like figure. And then that line goes pretty much all the way, and points on that line just the prime point is where your bitcoin is hidden; the secret is somewhere in that line.
+            </p>
+            <p>
+              You can also look at the network. We can map the network by asking our node how many nodes it sees. We can also go to other services like Bitnodes; they have been collecting more reliable data on visible nodes in the network. We can also derive their location in the world by their IP address. Obviously, not all of them have IP addresses because we're also dealing with the Tor Network. [video]Here we see a visualisation of the Tor Network maybe 10,000 blocks ago. That are the blocks that are more from the geography and the confines of the physical space are the Tor nodes that are untraceable, at least to a certain extent. The ones that are close to the geography are the nodes that we know where they are.
+            </p>
+
+
+
+            <h3 class="section-title">
+              How does a node look?
+            </h3>
+            <p>
+              We represent a node as a sphere that has connections. Information moves through those connections; once it hits the node, the data explodes. It gets processed by the node as if it was inputs in a factory; they need to be processed before they are added to the chain. [video] Here's the a node handshake; it sends a message out, it gets a message in, and then it starts exchanging information with the other nodes.
+            </p>
+
+
+
+            <h3 class="section-title">
+              How does Lightning network look?
+            </h3>
+            <p>
+              We can also look at Lightning. So, in this case, this is a rough representation of a Lightning node that has transactions that open the channels connected to the chain. Imagine that we have a payment coming through our node, and it immediately rebalances the channels according to the amount of sats that move through the node.
+            </p>
+            <p>
+              We also look at the multiple versions of the code. Right now, more interested just in the Alpha version of January 3rd. We can also look very extensively at whoever got any code merged on the main repository of Bitcoin Core. Something that's really interesting is to demystify the complexity of the code and actually explore and explain code line by line because even though it's C++ the functions, the classes, there's a lot of English language here that can be understood by most people.
+            </p>
+
+
+
+            <h3 class="section-title">
+              How does mining look?
+            </h3>
+            <p>
+              We can also look at mining. The idea of a miner is that it has an array of chips that produce hashes. Until it finds a valid hash, those hashes are wasted and kind of flow into the air. This would be kind of a mapping of the mining pools on top of the network.
+            </p>
+
+
+
+            <h3 class="section-title">
+              Invitation to collaborate
+            </h3>
+            <p>
+              I'm going to skip towards the end and invite you to collaborate in any way you want by either donating your time, your money, helping produce, write, edit code, distribute, or anything else that needs to be done to bring a film to the masses if the masses are interested. It's an open source for and by bitcoiners, hopefully.
+            </p>
+
+
+
+
+
+
+
+
+          </div>
+
+
+
+
+        </div>
+
+
+
+
+
+
+      </div>
+
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+  <div id="footer">
+    <div id="footer-data">
+      <div style="color:#aaa; margin-bottom:0.5rem">Stay up-to-date with the latest progress at</div>
+
+      <a href="https://twitter.com/bitcoinanatomy" target="_blank">twitter</a>
+      <span class="footer-divider"></span>
+      <a href="https://bitcointv.com/video-channels/bitcoinanatomy/videos" target="_blank">bitcointv.com</a>
+      <span class="footer-divider"></span>
+      <a href="https://github.com/bitcoinanatomy/bitcoinanatomy" target="_blank">github</a>
+      <span class="footer-divider"></span>
+      <a href="https://t.me/+nINFPnN_AS4yYTFh" target="_blank">telegram</a>
+      <span class="footer-divider"></span>
+      <a href="https://keybase.io/team/bitcoinanatomy" target="_blank">keybase</a>
+
+      <br>
+      <div style="color:#aaa; margin-top:2.5rem">Content Released under MIT license.</div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>
