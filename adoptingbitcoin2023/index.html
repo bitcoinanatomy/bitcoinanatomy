@@ -115,7 +115,7 @@
     }
 
     .section-title{
-      margin: 10rem 0 2rem 0;
+      margin: 10rem auto 2rem auto
     }
 
 
@@ -326,9 +326,9 @@
 
 
 
-            <h3 class="section-title">
+            <h1 class="section-title">
               Who pays for the bitcoin film?
-            </h3>
+            </h1>
 
             <p>
               Right now, the model is everything is funded by you, the bitcoiners. We have a lot of organic donations that came through our websites. We also use Geyser. People have donated 21 sats to millions of sats. We also have contributions from other bitcoiners and other non-bitcoiners that contribute to code that's essential to build the movie. Then we have collaborations with other bitcoiners that are more interested in the editing and the music composition that just take whatever this project creates and they're free to engage with the images however they want. It's all under MIT license.
@@ -343,9 +343,9 @@
 
 
 
-            <h3 class="section-title">
+            <h1 class="section-title">
               Is it reproducible?
-            </h3>
+            </h1>
             <img src="../assets/adopting_bitcoin_2023/wip.jpg" />
             <p>
               The idea is to take data from Bitcoin and put it into three dimensions. We connect to our nodes, we parse the information from the blockchain, we then put it in the Blender software, which is a 3D open source software that runs Python scripts. Then, with the data that we collect from the chain, we can then build geometry. [image]In this case, you're seeing how the blocks are distributed in the beginning of the chain, and the separation between each block is based on the time it took for them to be found by the miners.
@@ -362,7 +362,7 @@
             <h3 class="section-title">
               The Genesis block
             </h3>
-            <iframe class="bitcoinTV" title="The genesis block, bit by bit." width="560" height="315" src="https://bitcointv.com/videos/embed/cd473255-4fb2-4aab-bd30-59758d03be94" frameborder="0" allowfullscreen="" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+            <img src="../assets/adopting_bitcoin_2023/genesis.jpg" />
             <p>
               Here we see the Genesis block with nine days of no mining that happened between the Genesis block and the other blocks that you see in the bottom.
             </p>
@@ -392,8 +392,9 @@
             <h3 class="section-title">
               How do ordinals look?
             </h3>
+            <img src="../assets/adopting_bitcoin_2023/ordinals.jpg" />
             <p>
-              For those following the more recent events on the chain, this is when ordinals started [image]. We see the dimension of the blocks increasing dramatically.
+              For those following the more recent events on the chain, this is when ordinals started. We see the dimension of the blocks increasing dramatically.
             </p>
 
 
@@ -413,12 +414,14 @@
             <h3 class="section-title">
               How does an UTXO look?
             </h3>
+            <img src="../assets/adopting_bitcoin_2023/utxo.jpg" />
             <p>
               We can also look at the UTXOs and along with the mempool, which is one of the most volatile elements of Bitcoin because it's always changing—people add transactions and replace transactions. But also, the UTXO set updates with every single block that's added because transactions are always consuming output from the past.
             </p>
             <p>
-              If we have, imagine a sat being the smallest unit in Bitcoin all the way to 100 million sats, we got a rough representation of Bitcoin. Here we have 50 Bitcoin, the original block reward. [image] This is what it looks like with this model inside of Bitcoin. It's just an explosion of particles of sats. We can map those into a block. So, every single block has a set amount of Bitcoin that can be spent in the coinbase, but also people have moved bitcoin to transactions that are sitting in those blocks unspent. For each block, we can create a sphere that represents the amount of Bitcoin that exists there. Once we input real data, we see the confusion that exists on chain.
+              If we have, imagine a sat being the smallest unit in Bitcoin all the way to 100 million sats, we got a rough representation of Bitcoin. Here we have 50 Bitcoin, the original block reward. This is what it looks like with this model inside of Bitcoin. It's just an explosion of particles of sats. We can map those into a block. So, every single block has a set amount of Bitcoin that can be spent in the coinbase, but also people have moved bitcoin to transactions that are sitting in those blocks unspent. For each block, we can create a sphere that represents the amount of Bitcoin that exists there. Once we input real data, we see the confusion that exists on chain.
             </p>
+            <img src="../assets/adopting_bitcoin_2023/utxo_animation.gif" />
             <p>
               Here's another test. We have the layer of blocks that never changes once it's set; it's set. But then there's a layer of UTXOs associated with each block that will always be changing. [video] You can see that there are blocks that have no bitcoin and blocks that have a lot of bitcoin.
             </p>
@@ -436,6 +439,7 @@
             <h3 class="section-title">
               Genesis block animation
             </h3>
+            <iframe class="bitcoinTV" title="The genesis block, bit by bit." width="560" height="315" src="https://bitcointv.com/videos/embed/cd473255-4fb2-4aab-bd30-59758d03be94" frameborder="0" allowfullscreen="" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
             <p>
               Here's a more recent animation of the Genesis block. We go bit by bit. First, we have eight bits mostly zeros and one. That one is signaling the version of the block, and afterward comes the previous block hash, which in this case is a set of zeros because the Genesis block doesn't have a preceding block. We build up all the zeros, and then at the distance, we can start seeing the rest of the elements of the block header, which includes the Merkle root hash, the nonce that was used to mine that block, and the number of transactions existing in this block, which in this case is just the one Coinbase transaction. So we break a line and we keep building. Now we're building the Coinbase transaction for the first block, which also consumes an empty output that doesn't exist. Then we go on to signal that we're going to sign that transaction. It's obviously in the signature of the Coinbase that Satoshi embedded the message that we all know.
             </p>
@@ -463,6 +467,7 @@
             <h3 class="section-title">
               How does a node look?
             </h3>
+            <img src="../assets/adopting_bitcoin_2023/node.jpg" />
             <p>
               We represent a node as a sphere that has connections. Information moves through those connections; once it hits the node, the data explodes. It gets processed by the node as if it was inputs in a factory; they need to be processed before they are added to the chain. [video] Here's the a node handshake; it sends a message out, it gets a message in, and then it starts exchanging information with the other nodes.
             </p>
