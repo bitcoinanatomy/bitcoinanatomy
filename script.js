@@ -377,59 +377,70 @@ function getProducerData(){
 
     $.getJSON("https://pvxg.net/BTCpaySponsor/?v=1").then(function(data){
 
-       /*
-       console.log("DATA ------");
+
+       console.log("DATA");
        console.log(data);
        $.each(data, function (producer) {
-         console.log("PRODUCER ------");
+        //console.log("PRODUCER");
          console.log(JSON.parse(producer));
        });
-       */
+
 
        $.each(data, function (key, producer) {
          //console.log(JSON.parse(producer.metadata.orderId));
-         console.log(producer.metadata.itemDesc.startsWith("Contributor:"));
+         console.log(producer.metadata.itemDesc);
 
          var targetContainer = "";
          var jsonObject;
          var amount = '<div class="amount">' + producer.amount + ' <span class="grey">' + producer.currency + '</span></div>';
          var currentAmount = parseFloat(producer.amount);
-
+         let name;
 
 
          if(producer.metadata.itemDesc !== undefined && producer.metadata.itemDesc !== null){
 
                  if(producer.metadata.itemDesc.startsWith("Contributor:")){
-
                      targetContainer = "#contributors-inner";
-                     jsonObject = producer.metadata.orderId;
 
-                     // Fix for new BTCPay Server API escaped formating
-                     if(jsonObject.n === undefined){
+                     jsonObject = producer.metadata.orderId;
+                     if(isJsonString(jsonObject) == true){
                        jsonObject = JSON.parse(jsonObject);
+                     }
+
+                     if(jsonObject.n == ''){
+                       name = jsonObject.t;
+                     }else{
+                       name = jsonObject.n;
                      }
 
                      if(jsonObject.t != ''){
                        $( "<div/>", { "class": "producer-name", html: '<b><a target="_blank" href="https://twitter.com/'+jsonObject.n+'">' + jsonObject.n + '</a></b>' + amount }).appendTo(targetContainer);
                      }else{
-                       $( "<div/>", { "class": "producer-name", html: '<b>' + jsonObject.n + '</b>' + amount }).appendTo(targetContainer);
+                       $( "<div/>", { "class": "producer-name", html: '<b>' + name + '</b>' + amount }).appendTo(targetContainer);
                      }
-
-
-
 
                      amoutTotal = (currentAmount) + amoutTotal;
 
                  } else if(producer.metadata.itemDesc.startsWith("Sponsor:")){
-
                      targetContainer = "#sponsors-inner";
+
+
                      jsonObject = producer.metadata.orderId;
-                     $( "<div/>", { "class": "producer-name", html:  '<h2>' + jsonObject.n + '</h2>' + amount }).appendTo(targetContainer);
+                     if(isJsonString(jsonObject) == true){
+                       jsonObject = JSON.parse(jsonObject);
+                     }
+
+                     if(jsonObject.n == ''){
+                       name = jsonObject.t;
+                     }else{
+                       name = jsonObject.n;
+                     }
+
+                     $( "<div/>", { "class": "producer-name", html:  '<h2>' + name + '</h2>' + amount }).appendTo(targetContainer);
 
                      amoutTotal = (currentAmount) + amoutTotal;
 
                  } else if(producer.metadata.itemDesc.startsWith("Producer:")){
-
                      targetContainer = "#producers-inner";
                      //Adding logos to major contributors
                      if(producer.metadata.itemDesc.startsWith("Producer:PirateHash")){
@@ -476,4 +487,15 @@ function compare( a, b ) {
     return 1;
   }
   return 0;
+}
+
+
+
+function isJsonString(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
 }
