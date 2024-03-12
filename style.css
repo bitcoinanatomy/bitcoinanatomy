@@ -1452,19 +1452,24 @@ input::placeholder {
   letter-spacing: 0.3rem;
 }
 
-
-
-
 #supporters-inner {
     line-height: 5rem;
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    max-width: 950px;
+    margin: auto;
+    flex-wrap: wrap;
 }
 
 a.supporter {
-  display: inline-block;
+  display: flex;
 }
 
 img.supporter-logo {
-    height: 80px;
+    max-height: 80px;
+    max-width: 200px;
     margin: 0px 20px;
 }
 
