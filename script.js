@@ -412,16 +412,21 @@ function getProducerData(){
 
                      //Adding Geyser donations
                      if(producer.metadata.itemDesc.startsWith("Contributor:Stackfy")){
-                       $( "<div/>", { "class": "producer-name extra geyser", html: '<b>softsimon</b>' + '<div class="amount">0.00550046 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
+                       $( "<div/>", { "class": "producer-name extra geyser", html: '<b><a href="https://twitter.com/softsimon_" target="_blank">softsimon</a></b>' + '<div class="amount">0.00550046 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
                        amountGeyser = 0.00550046;
                      }
                      if(producer.metadata.itemDesc.startsWith("Contributor:Stackfy")){
-                       $( "<div/>", { "class": "producer-name extra geyser", html: '<b>reelrichard</b>' + '<div class="amount">0.00372551 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
+                       $( "<div/>", { "class": "producer-name extra geyser", html: '<b><a href="https://twitter.com/reelrichard" target="_blank">reelrichard</a></b>' + '<div class="amount">0.00372551 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
                        amountGeyser = 0.00372551;
                      }
                      if(producer.metadata.itemDesc.startsWith("Contributor:Stackfy")){
                        $( "<div/>", { "class": "producer-name extra geyser", html: '<b>lassdas</b>' + '<div class="amount">0.0021 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
                        amountGeyser = 0.0021;
+                     }
+
+                     if(producer.metadata.itemDesc.startsWith("Contributor:Santochi")){
+                       $( "<div/>", { "class": "producer-name extra geyser", html: '<b><a href="https://twitter.com/pixelrouter" target="_blank">James Andrew</a></b>' + '<div class="amount">0.001 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
+                       amountGeyser = 0.001;
                      }
 
                      if(producer.metadata.itemDesc.startsWith("Contributor:Santochi")){
