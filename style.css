@@ -467,6 +467,20 @@ p {
 
 
 
+.producer-name.extra.geyser a{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.producer-name.extra.geyser h1{
+  margin-bottom: 0;
+  font-size: 4em;
+  letter-spacing: -0.1vw;
+}
+
+
+
 
 .producer-name a {
   color: #000;
@@ -1461,6 +1475,7 @@ input::placeholder {
     max-width: 950px;
     margin: auto;
     flex-wrap: wrap;
+    gap: 41px;
 }
 
 a.supporter {
@@ -1468,9 +1483,10 @@ a.supporter {
 }
 
 img.supporter-logo {
-    max-height: 80px;
-    max-width: 200px;
+    /* max-height: 80px; */
+    /* max-width: 200px; */
     margin: 0px 20px;
+    height: 55px;
 }
 
 @media only screen and (max-width : 880px) {

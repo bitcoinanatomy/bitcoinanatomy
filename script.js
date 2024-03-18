@@ -396,6 +396,8 @@ function getProducerData(){
          var currentAmount = parseFloat(producer.amount);
          let name;
 
+         var amountGeyser = 0;
+
 
          if(producer.metadata.itemDesc !== undefined && producer.metadata.itemDesc !== null){
 
@@ -407,19 +409,44 @@ function getProducerData(){
                        jsonObject = JSON.parse(jsonObject);
                      }
 
-                     if(jsonObject.n == ''){
-                       name = jsonObject.t;
-                     }else{
-                       name = jsonObject.n;
+
+                     //Adding Geyser donations
+                     if(producer.metadata.itemDesc.startsWith("Contributor:Stackfy")){
+                       $( "<div/>", { "class": "producer-name extra geyser", html: '<b>softsimon</b>' + '<div class="amount">0.00550046 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
+                       amountGeyser = 0.00550046;
+                     }
+                     if(producer.metadata.itemDesc.startsWith("Contributor:Stackfy")){
+                       $( "<div/>", { "class": "producer-name extra geyser", html: '<b>reelrichard</b>' + '<div class="amount">0.00372551 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
+                       amountGeyser = 0.00372551;
+                     }
+                     if(producer.metadata.itemDesc.startsWith("Contributor:Stackfy")){
+                       $( "<div/>", { "class": "producer-name extra geyser", html: '<b>lassdas</b>' + '<div class="amount">0.0021 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
+                       amountGeyser = 0.0021;
                      }
 
-                     if(jsonObject.t != ''){
-                       $( "<div/>", { "class": "producer-name", html: '<b><a target="_blank" href="https://twitter.com/'+jsonObject.n+'">' + jsonObject.n + '</a></b>' + amount }).appendTo(targetContainer);
-                     }else{
-                       $( "<div/>", { "class": "producer-name", html: '<b>' + name + '</b>' + amount }).appendTo(targetContainer);
+                     if(producer.metadata.itemDesc.startsWith("Contributor:Santochi")){
+                       $( "<div/>", { "class": "producer-name extra geyser", html: '<b>marc-b.sandblast129</b>' + '<div class="amount">0.00062342 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
+                       amountGeyser = 0.00062342;
                      }
 
-                     amoutTotal = (currentAmount) + amoutTotal;
+
+
+                      if(jsonObject.n == ''){
+                        name = jsonObject.t;
+                      }else{
+                        name = jsonObject.n;
+                      }
+
+                      if(jsonObject.t != ''){
+                        $( "<div/>", { "class": "producer-name", html: '<b><a target="_blank" href="https://twitter.com/'+jsonObject.n+'">' + jsonObject.n + '</a></b>' + amount }).appendTo(targetContainer);
+                      }else{
+                        $( "<div/>", { "class": "producer-name", html: '<b>' + name + '</b>' + amount }).appendTo(targetContainer);
+                      }
+
+
+
+
+                     amoutTotal = (currentAmount) + amoutTotal + amountGeyser;
 
                  } else if(producer.metadata.itemDesc.startsWith("Sponsor:")){
                      targetContainer = "#sponsors-inner";
@@ -442,12 +469,15 @@ function getProducerData(){
 
                  } else if(producer.metadata.itemDesc.startsWith("Producer:")){
                      targetContainer = "#producers-inner";
-                     //Adding logos to major contributors
+                     //Adding logos to major contributors and Geyser donations
                      if(producer.metadata.itemDesc.startsWith("Producer:PirateHash")){
                        $( "<div/>", { "class": "producer-name", html: '<a href="https://piratehash.com" target="_blank"><img class="producer-logo" src="assets/logos/piratehash_v2.png" /></a>' + amount }).appendTo(targetContainer);
+
+                       $( "<div/>", { "class": "producer-name extra geyser", html: '<a href="https://twitter.com/bradmillscan" target="_blank"><h1>Brad Mills</h1></a>' + '<div class="amount">0.03131691 <span class="grey">BTC</span></div>' }).appendTo(targetContainer);
+                       amountGeyser = 0.03131691;
                      }
 
-                     amoutTotal = (currentAmount) + amoutTotal;
+                     amoutTotal = (currentAmount) + amoutTotal + amountGeyser;
 
 
                  }
@@ -457,8 +487,9 @@ function getProducerData(){
        });
 
        var finalProgress = (amoutTotal / 5)*100
-       if( finalProgress < 3 ){
-         finalProgress = '30px';
+       if( finalProgress < 11 ){
+         //finalProgress = '30px';
+         finalProgress = finalProgress+'%';
          $('.meter').addClass('short');
        }else{
          $('.meter').addClass('long');
