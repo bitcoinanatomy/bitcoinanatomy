@@ -922,13 +922,19 @@ h2.slider-hero span {
   padding-bottom: 3rem;
 }
 
-.swiper-slide img {
+.swiper-slide img, .swiper-slide .video-container{
   max-width: 1000px;
   width: 100%;
   margin: auto;
   display: block;
 }
 
+
+.swiper-slide .video-container video{
+  width: 100%;
+  margin: auto;
+  display: block;
+}
 .slide-caption{
   text-align: center;
   padding: 1rem;
@@ -940,7 +946,6 @@ h2.slider-hero span {
 .swiper-container-rtl .swiper-button-next{
     fill: #fff;
 }
-
 
 
 #footer{

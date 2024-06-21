@@ -137,8 +137,13 @@ $( document ).ready(function() {
     }
   });
 
-
-
+  var sliderVideos = $(".swiper-slide .video-slide");
+  swiper[0].on('slideChange', function () {
+     sliderVideos.each(function( index ) {
+      this.currentTime = 0;
+      this.pause();
+     });
+  });
 
 
 });
