@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="utf-8">
+
+    <title>3D Print | Anatomy of Bitcoin</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/fav/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/fav/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/fav/favicon-16x16.png">
+    <link rel="manifest" href="../assets/fav/site.webmanifest">
+    <meta name="msapplication-TileColor" content="#000000">
+    <meta name="theme-color" content="#ffffff">
+
+
+    <meta name="description" content="Learn about process of inscribing a circle shape on the bitcoin blockchain that is legible without a parsing protocol." />
+    <meta itemprop="name" content="White Circle Inscription - The Anatomy of Bitcoin">
+    <meta itemprop="description" content="Learn about process of inscribing a circle shape on the bitcoin blockchain that is legible without a parsing protocol.">
+    <meta itemprop="image" content="https://anatomyofbitcoin.com/assets/inscription_process/preview.png">
+    <meta name="description" content="Learn about process of inscribing a circle shape on the bitcoin blockchain that is legible without a parsing protocol."/>
+    <meta property="og:image" content="https://anatomyofbitcoin.com/assets/inscription_process/preview.png"/>
+    <meta property="og:image:type" content="image/png"/>
+    <meta property="og:image:width" content="1000"/>
+    <meta property="og:image:height" content="500"/>
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:site" content="@bitcoinanatomy">
+    <meta property="twitter:creator" content="@bitcoinanatomy">
+    <meta property="twitter:title" content="White Circle Inscription - The Anatomy of Bitcoin">
+    <meta property="twitter:description" content="Learn about process of inscribing a circle shape on the bitcoin blockchain that is legible without a parsing protocol."/>
+    <meta property="twitter:image:src" content="https://anatomyofbitcoin.com/assets/inscription_process/preview.png"/>
+    <meta property="twitter:domain" content="anatimyofbitcoin.com">
+
+
+    <link rel="stylesheet" href="../style.css">
+  </head>
+
+  <body style="">
+
+    <style>
+
+      body{
+        background-image: url(https://cdn.satellite.earth/ae33f610fd74f05d7bbaa0a06a90dee2e288b20bc8dc1ba91d2539921523f78b.jpg);
+        background-position: center -90px;
+        background-repeat: no-repeat;
+        background-size: 110%;
+      }
+
+      #inscription p#about-small{
+        margin-bottom: 100px;
+      }
+
+      #inscription{
+        padding-top: 30vw;
+      }
+
+      h1.scenes-hero {
+        letter-spacing: -0.05vw;
+        font-size: 14vw;
+      }
+
+      #inscription p, #inscription ul {
+        max-width: 640px;
+        margin: auto;
+        margin-bottom: 1rem;
+      }
+
+      #inscription img{
+        display: block;
+        width: 100%;
+        max-width:1000px;
+        margin: 2rem auto 2rem auto;
+      }
+
+      #branding {
+        position: fixed;
+        width: 100vw;
+        z-index: 1000;
+      }
+      #branding #branding1 {
+        position: absolute;
+      }
+
+      #branding #branding2 {
+        height: 40px;
+        right: 0px;
+        position: absolute;
+      }
+
+      #branding #branding1 img, #branding #branding2 img{
+        height: 40px;
+      }
+
+      #branding a {
+          border: none;
+      }
+
+
+      h2.scenes-hero {
+          margin-top: 1rem;
+          margin-bottom: 0;
+      }
+
+      h1.scenes-hero {
+          margin-bottom: 2rem;
+      }
+
+      div#scenes-data {
+          margin-top: 10rem;
+      }
+
+      p#about-hero {
+          font-size: 1.5rem;
+      }
+
+      .section-title{
+        margin: 10rem 0 2rem 0;
+      }
+
+
+
+      img {
+          /* box-shadow: #ffffff21 0px 0px 21px; */
+          /* border: 1px #2d2d2d solid; */
+          filter: contrast(0.9);
+      }
+
+
+      pre {
+          word-break: break-word;
+          width: 100%;
+          max-width: 1109px;
+          margin: auto;
+          white-space: pre-line;
+          padding: 20px;
+          border: 1px #222 solid;
+          box-sizing: border-box;
+          color: #ccc;
+      }
+
+
+      @media only screen and (max-width: 1000px) {
+        pre.hex{
+          font-size: 1.01vw;
+        }
+      }
+
+      @media only screen and (max-width: 600px) {
+        pre.hex{
+          font-size: 0.7vw;
+        }
+
+
+        h1 {
+            font-size: 40px
+        }
+
+        h3 {
+            font-size: 21px;
+            letter-spacing: 0rem;
+        }
+
+        p#about-hero {
+            font-size: 1.3rem;
+        }
+
+        #branding #branding1 img, #branding #branding2 img {
+            height: 20px;
+        }
+      }
+
+
+
+
+      #inscription p.scarcecity {
+          margin-top: 30px;
+          margin-bottom: 30px;
+          text-align: center;
+      }
+
+      #inscription .scarcecity img {
+          height: 110px;
+          margin: 0px;
+          width: auto;
+          margin: auto;
+      }
+
+      #inscription p.bitcoin2023 {
+          margin-top: 60px;
+          margin-bottom: 30px;
+          text-align: center;
+      }
+
+      #inscription p.bitcoin2023 a {
+          border-bottom: none;
+      }
+
+      #inscription .bitcoin2023 img {
+          height: 23px;
+          margin: 5px 8px -8px 0;
+          width: auto;
+          display: inline-block;
+      }
+
+      .bitcoin2023 span {
+          font-style: italic;
+          text-transform: uppercase;
+          font-weight: 900;
+          font-size: 23px;
+          display: BLOCK;
+      }
+
+
+    </style>
+
+
+
+    <div id="branding">
+        <a id="branding1" target="_blank" href="https://anatomyofbitcoin.com">
+          <img src="../assets/aob-logo1-w.svg">
+        </a>
+        <a id="branding2" target="_blank" href="https://anatomyofbitcoin.com">
+          <img src="../assets/aob-logo2-w.svg">
+        </a>
+
+    </div>
+
+
+
+
+
+        <div id="inscription" class="module">
+
+          <h3 class="scenes-hero" style="margin:0px">
+            White and translucent UV photo cured resin mix
+          </h3>
+          <h1 class="scenes-hero">
+            Block 0 to 836639
+          </h1>
+          <h3 class="scenes-hero">
+            <span>Bitcoin data into the physical space</span>
+          </h3>
+
+
+          <div id="scenes-data">
+
+            <p id="about-hero">
+              This resin 3D print is a model of the Bitcoin blockchain, designed based on actual Bitcoin data.
+            </p>
+
+
+
+            <!--
+            <p class="scarcecity"><a href="#" target="_blank"><img src="../assets/inscription_process/scracecity.png" />Bid on scarce.city (coming soon)</a></p>
+            <br>
+            <br>
+            <br>
+            -->
+
+            <br>
+            <br>
+
+
+            <h2 class="process">
+              The Process
+            </h2>
+            <p>
+              The structure features a helix, with each turn representing a complete halving cycle. The spiral discs along the helix correspond to sets of 2016 blocks, which represent each difficulty adjustment period. This model effectively illustrates the key components of Bitcoin’s supply mechanism and network adjustments.
+            </p>
+            <img src="https://cdn.satellite.earth/34a4670da357299af5b402d2ffad007f41702765df4c1dd3f5e859695183823b.jpg" />
+            <img src="https://cdn.satellite.earth/91c40445744711e8bcddb75987eb6ab4e8aded77f91c44afb48db90d4b643af0.jpg" />
+            <img src="https://cdn.satellite.earth/4eb8086250ac684fb7332866595ac4f18b535ea1b790646a9c0038fe210e55f1.jpg" />
+
+            <h2 class="process">
+              More soon
+            </h2>
+
+          </div>
+
+
+
+
+        </div>
+
+
+
+
+
+
+      </div>
+
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+  <div id="footer">
+    <div id="footer-data">
+      <div style="color:#aaa; margin-bottom:0.5rem">Stay up-to-date with the latest progress at</div>
+
+      <a href="https://twitter.com/bitcoinanatomy" target="_blank">twitter</a>
+      <span class="footer-divider"></span>
+      <a href="https://bitcointv.com/video-channels/bitcoinanatomy/videos" target="_blank">bitcointv.com</a>
+      <span class="footer-divider"></span>
+      <a href="https://github.com/bitcoinanatomy/bitcoinanatomy" target="_blank">github</a>
+      <span class="footer-divider"></span>
+      <a href="https://t.me/+nINFPnN_AS4yYTFh" target="_blank">telegram</a>
+      <span class="footer-divider"></span>
+      <a href="https://keybase.io/team/bitcoinanatomy" target="_blank">keybase</a>
+
+      <br>
+      <div style="color:#aaa; margin-top:2.5rem">Content Released under MIT license.</div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>
