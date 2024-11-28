@@ -461,6 +461,12 @@ p {
   font-size: 14px;
 }
 
+#producers-inner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .producer-name{
   margin: 1rem 2rem;
   display: inline-block;
