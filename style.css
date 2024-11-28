@@ -312,6 +312,7 @@ p {
   padding: 0.5rem;
   font-size: 90%;
   font-weight: 400;
+  display: none;
 }
 .amount-currancy {
   color: #676767;
