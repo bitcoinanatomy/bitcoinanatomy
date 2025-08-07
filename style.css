@@ -242,7 +242,7 @@ h2 span {
   }
   #hero-links a{
     border:none;
-    text-decoration: !important
+    text-decoration: none !important;
   }
 }
 
@@ -745,7 +745,7 @@ h4.scene-select {
     padding: 1rem;
     background: #fff;
     cursor: pointer;
-    color: #000;:;
+    color: #000;
 }
 
 .scene-select.inactive{
@@ -929,18 +929,29 @@ h2.slider-hero span {
   padding-bottom: 3rem;
 }
 
+.swiper-slide {
+  max-height: 740px;
+}
+
 .swiper-slide img, .swiper-slide .video-container{
   max-width: 1000px;
   width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  position: relative;
   margin: auto;
   display: block;
 }
 
-
-.swiper-slide .video-container video{
+.swiper-slide .video-container video,
+.swiper-slide .video-container iframe{
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  margin: auto;
-  display: block;
+  height: 100%;
+  margin: 0;
+  max-height: 650px;
 }
 .slide-caption{
   text-align: center;
@@ -1400,12 +1411,14 @@ input::placeholder {
 
 
 #sub-projects{
+  background: #fff;
+  color: #000;
   display: flex;
   justify-content: space-evenly;
   padding: 40px 0 0 0;
   flex-wrap: wrap;
-  background: #000000;
-  color: #fff;
+  align-items: center;
+  justify-content: center;
 }
 
 .sub-project{
@@ -1446,6 +1459,7 @@ input::placeholder {
 #energy-information-time-value{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3)), url("assets/sub_project_matrix.jpg"); border-right: 1px solid #ffffff29;}
 #timeline-of-money{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3)), url("assets/sub_project_timeline_vertical.png");}
 #white-circle{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.03)), url("assets/inscription_process/process_0.png");height: 40vh;width: 100%;}
+#explorer{background-image: linear-gradient(to right, rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.03)), url("assets/explorer.jpg");height: 40vh;width: 100%;}
 #chain-duel{background-image: linear-gradient(to top, rgb(0 0 0 / 0.80), rgba(0, 0, 0, 0.33)), url("assets/chainduel.png");height: 40vh;width: 100%;}
 #adopting-bitcoin-2023{background-image: linear-gradient(to top, rgb(0 0 0 / 0.10), rgba(0, 0, 0, 0.03)), url("assets/adopting_bitcoin_2023/presenting.jpg");height: 40vh;width: 100%;}
 
