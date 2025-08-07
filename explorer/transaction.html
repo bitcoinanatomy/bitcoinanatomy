@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Explorer - Transaction</title>
+    <meta name="description" content="Bitcoin transaction 3D visualization">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="index.html">Anatomy of Bitcoin Explorer</a>
+            </div>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="network.html" class="nav-link">Network</a></li>
+                <li><a href="node.html" class="nav-link">Node</a></li>
+                <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
+                <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
+                <li><a href="block.html" class="nav-link">Block</a></li>
+                <li><a href="transaction.html" class="nav-link active">Transaction</a></li>
+                <li><a href="mempool.html" class="nav-link">Mempool</a></li>
+            </ul>
+        </nav>
+
+        <!-- 3D Scene -->
+        <div id="scene"></div>
+        
+        <!-- UI Overlay -->
+        <div id="ui">
+            <div class="header">
+                <h1>Transaction Flow</h1>
+                <div class="status">
+                    <span class="dot"></span>
+                    <span>Live</span>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="panel">
+                    <h3>Transaction Info</h3>
+                    <div id="tx-info">
+                        <div>Tx Hash: <span id="tx-hash">Loading...</span></div>
+                        <div>Amount: <span id="tx-amount">Loading...</span></div>
+                        <div>Fee: <span id="tx-fee">Loading...</span></div>
+                        <div>Status: <span id="tx-status">Loading...</span></div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3>Transaction Details</h3>
+                    <div id="tx-details">
+                        <div>Inputs: <span id="tx-inputs">Loading...</span></div>
+                        <div>Outputs: <span id="tx-outputs">Loading...</span></div>
+                        <div>Size: <span id="tx-size">Loading...</span></div>
+                        <div>Confirmations: <span id="tx-confirmations">Loading...</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="toggle-rotation">Pause Rotation</button>
+                <button id="reset-camera">Reset Camera</button>
+                <button id="toggle-flow">Show Flow</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="disclaimer">
+        Data sources: Mempool.space
+    </div>
+
+    <!-- Three.js from CDN (ES Modules) -->
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
+        window.THREE = THREE;
+    </script>
+    <script src="js/transaction.js"></script>
+    <script>
+        // Hamburger menu functionality
+        const hamburger = document.querySelector('.hamburger');
+        const navMenu = document.querySelector('.nav-menu');
+        
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navMenu.classList.toggle('active');
+        });
+        
+        // Close menu when clicking on a link
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('active');
+                navMenu.classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Explorer - Home</title>
+    <meta name="description" content="Interactive 3D Bitcoin blockchain explorer">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="index.html">Anatomy of Bitcoin Explorer</a>
+            </div>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="network.html" class="nav-link">Network</a></li>
+                <li><a href="node.html" class="nav-link">Node</a></li>
+                <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
+                <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
+                <li><a href="block.html" class="nav-link">Block</a></li>
+                <li><a href="transaction.html" class="nav-link">Transaction</a></li>
+                <li><a href="mempool.html" class="nav-link">Mempool</a></li>
+            </ul>
+        </nav>
+
+        <!-- 3D Scene -->
+        <div id="scene"></div>
+        
+        <!-- UI Overlay -->
+        <div id="ui">
+            <div class="header">
+                <h1>Bitcoin Explorer</h1>
+                <div class="status">
+                    <span class="dot"></span>
+                    <span>Live</span>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="panel">
+                    <h3>Overview</h3>
+                    <div id="overview-info">
+                        <div>Latest Block: <span id="block-height">Loading...</span></div>
+                        <div>Network Hash Rate: <span id="hash-rate">Loading...</span></div>
+                        <div>Total Transactions: <span id="total-tx">Loading...</span></div>
+                        <div>Price: <span id="price">Loading...</span></div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3>Quick Stats</h3>
+                    <div id="stats-info">
+                        <div>Difficulty: <span id="difficulty">Loading...</span></div>
+                        <div>Mempool Size: <span id="mempool">Loading...</span></div>
+                        <div>24h Change: <span id="change">Loading...</span></div>
+                        <div>Market Cap: <span id="market-cap">Loading...</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="toggle-rotation">Pause Rotation</button>
+                <button id="reset-camera">Reset Camera</button>
+            </div>
+        </div>
+        
+    </div>
+    
+    <div class="disclaimer">
+        Data sources: Mempool.space, CoinGecko API
+    </div>
+
+    <!-- Three.js from CDN (ES Modules) -->
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
+        window.THREE = THREE;
+    </script>
+    <script src="js/home.js"></script>
+    <script>
+        // Hamburger menu functionality
+        const hamburger = document.querySelector('.hamburger');
+        const navMenu = document.querySelector('.nav-menu');
+        
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navMenu.classList.toggle('active');
+        });
+        
+        // Close menu when clicking on a link
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('active');
+                navMenu.classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html> 
