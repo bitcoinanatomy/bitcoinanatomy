@@ -1,6 +1,6 @@
 # Anatomy of Bitcoin Explorer
 
-A 3D interactive Bitcoin blockchain explorer built with vanilla HTML, CSS, and JavaScript using Three.js.
+A 3D interactive Bitcoin protocol explorer built with vanilla HTML, CSS, and JavaScript using Three.js.
 
 ## Features
 

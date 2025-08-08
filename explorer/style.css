@@ -91,7 +91,7 @@ body {
     width: 100%;
     height: calc(100% - 60px);
     pointer-events: none;
-    z-index: 10;
+    z-index: 1500; /* Above tooltips */
 }
 
 .header {

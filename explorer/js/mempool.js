@@ -9,6 +9,7 @@ class BitcoinMempoolExplorer {
         this.isRotating = true;
         this.isPerspective = true;
         this.mempoolData = null;
+        this.feeBandLabelsVisible = true;
         
         this.init();
     }
@@ -137,10 +138,21 @@ class BitcoinMempoolExplorer {
                 button.textContent = 'Start Rotation';
             }
             
-            // Zoom in/out with inverted scroll direction
-            controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
-            controls.distance = Math.max(20, Math.min(200, controls.distance));
-            controls.update();
+            if (this.isPerspective) {
+                // Perspective zoom: adjust distance
+                controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
+                controls.distance = Math.max(20, Math.min(200, controls.distance));
+                controls.update();
+            } else {
+                // Orthographic zoom: adjust camera zoom level
+                const zoomSpeed = 0.1;
+                this.orthographicZoom = this.orthographicZoom || 1;
+                this.orthographicZoom += e.deltaY * zoomSpeed * 0.01; // Inverted and scaled
+                this.orthographicZoom = Math.max(0.1, Math.min(5, this.orthographicZoom));
+                
+                this.camera.zoom = this.orthographicZoom;
+                this.camera.updateProjectionMatrix();
+            }
         });
     }
 
@@ -163,6 +175,10 @@ class BitcoinMempoolExplorer {
         
         document.getElementById('toggle-view').addEventListener('click', () => {
             this.toggleCameraView();
+        });
+        
+        document.getElementById('toggle-fee-labels').addEventListener('click', () => {
+            this.toggleFeeBandLabels();
         });
     }
     
@@ -187,13 +203,31 @@ class BitcoinMempoolExplorer {
                 0.1,
                 1000
             );
+            
+            // Apply saved orthographic zoom
+            this.orthographicZoom = this.orthographicZoom || 1;
+            this.camera.zoom = this.orthographicZoom;
+            this.camera.updateProjectionMatrix();
         }
         
         this.camera.position.copy(this.controls.target.clone().add(new THREE.Vector3(0, 50, 100)));
         this.camera.lookAt(this.controls.target);
         
         const button = document.getElementById('toggle-view');
-        button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
+        button.textContent = this.isPerspective ? 'Switch to Orthographic' : 'Switch to Perspective';
+    }
+    
+    toggleFeeBandLabels() {
+        if (!this.feeBandLabels) return;
+        
+        this.feeBandLabelsVisible = !this.feeBandLabelsVisible;
+        
+        this.feeBandLabels.forEach(label => {
+            label.element.style.display = this.feeBandLabelsVisible ? 'block' : 'none';
+        });
+        
+        const button = document.getElementById('toggle-fee-labels');
+        button.textContent = this.feeBandLabelsVisible ? 'Hide Fee Labels' : 'Show Fee Labels';
     }
     
     setupHoverTooltip() {
@@ -234,8 +268,7 @@ class BitcoinMempoolExplorer {
                 const tooltipContent = `
                     <strong>Transaction ${txData.index}</strong><br>
                     Fee Rate: ${txData.feeRate} sat/vB<br>
-                    Size: ${txData.size} vB<br>
-                    Position: ${txData.position}
+                    Size: ${txData.size} vB (dummy)
                 `;
                 
                 tooltip.innerHTML = tooltipContent;
@@ -621,12 +654,10 @@ class BitcoinMempoolExplorer {
             this.remainingTextElement = null;
         }
         
-        // Remove existing fee band tooltips
-        if (this.feeBandTooltips) {
-            this.feeBandTooltips.forEach(tooltip => tooltip.remove());
-            this.feeBandTooltips = [];
-        } else {
-            this.feeBandTooltips = [];
+        // Remove existing fee band labels
+        if (this.feeBandLabels) {
+            this.feeBandLabels.forEach(label => label.element.remove());
+            this.feeBandLabels = [];
         }
         
         const feeHistogram = data.fee_histogram;
@@ -716,10 +747,14 @@ class BitcoinMempoolExplorer {
             // Calculate position
             const x = radius_spiral * Math.sin(phi_spiral);
             const z = radius_spiral * Math.cos(phi_spiral);
-            const y = 0; // Flat layout
+            const y = 0; // Keep at ground level
             
-            // Create cuboid geometry (longer and less tall)
-            const geometry = new THREE.BoxGeometry(CUBOID_LENGTH, CUBOID_HEIGHT, CUBOID_WIDTH);
+            // Create cuboid geometry with height based on transaction size
+            const minHeight = CUBOID_HEIGHT * 0.3;
+            const maxHeight = CUBOID_HEIGHT * 3;
+            const normalizedSize = Math.min(tx.size, 2000) / 2000; // Normalize size (cap at 2000 vB)
+            const sizeBasedHeight = minHeight + (maxHeight - minHeight) * normalizedSize;
+            const geometry = new THREE.BoxGeometry(CUBOID_LENGTH, sizeBasedHeight, CUBOID_WIDTH);
             
             // Calculate opacity for fade-out effect on last 40 transactions
             const fadeStartIndex = selectedTransactions.length - 40;
@@ -737,7 +772,8 @@ class BitcoinMempoolExplorer {
             });
             
             const cuboid = new THREE.Mesh(geometry, material);
-            cuboid.position.set(x, y, z);
+            // Position cuboid so it grows downward from ground level
+            cuboid.position.set(x, y - sizeBasedHeight / 2, z);
             cuboid.rotation.y = phi_spiral + Math.PI / 2;
             
             cuboid.userData = {
@@ -762,84 +798,61 @@ class BitcoinMempoolExplorer {
         console.log(`Created ${this.transactions.length} transaction cuboids`);
         console.log(`Fee bands:`, feeBands);
         
-        // Add fee band tooltips at strategic positions
-        this.addFeeBandTooltips(feeBands, selectedTransactions);
+        // Add fee band labels at strategic positions
+        this.addFeeBandLabels(feeBands, selectedTransactions);
         
         // Add text showing remaining transactions
         this.addRemainingTransactionsText(selectedTransactions.length, cumulativeCount);
     }
     
-    addFeeBandTooltips(feeBands, transactions) {
-        const tooltipContainer = document.createElement('div');
-        tooltipContainer.style.position = 'absolute';
-        tooltipContainer.style.zIndex = '1000';
-        tooltipContainer.style.pointerEvents = 'none';
-        tooltipContainer.style.display = 'none';
-        document.body.appendChild(tooltipContainer);
-
-        const tooltip = document.createElement('div');
-        tooltip.style.position = 'absolute';
-        tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        tooltip.style.color = 'white';
-        tooltip.style.padding = '8px 12px';
-        tooltip.style.borderRadius = '4px';
-        tooltip.style.fontSize = '12px';
-        tooltip.style.fontFamily = 'monospace';
-        tooltip.style.pointerEvents = 'none';
-        tooltip.style.zIndex = '1000';
-        tooltip.style.display = 'none';
-        tooltip.style.whiteSpace = 'nowrap';
-        tooltipContainer.appendChild(tooltip);
-
-        this.renderer.domElement.addEventListener('mousemove', (event) => {
-            // Calculate mouse position in normalized device coordinates
-            const mouse = new THREE.Vector2();
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            // Update the picking ray with the camera and mouse position
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(mouse, this.camera);
-
-            // Calculate objects intersecting the picking ray
-            const intersects = raycaster.intersectObjects(this.transactions);
-
-            if (intersects.length > 0) {
-                const intersectedObject = intersects[0].object;
-                const txData = intersectedObject.userData;
-                
-                // Find the fee band for the transaction
-                let currentBand = null;
-                for (const band of feeBands) {
-                    if (txData.index >= band.startIndex && txData.index <= band.endIndex) {
-                        currentBand = band;
-                        break;
-                    }
-                }
-
-                                 if (currentBand) {
-                     // Get original count from the transaction data
-                     const originalCount = txData.originalCount || currentBand.count;
-                     const tooltipContent = `
-                         <strong>Fee Band</strong><br>
-                         Fee Rate: ${currentBand.feeRate} sat/vB<br>
-                         Transactions: ${originalCount.toLocaleString()}
-                     `;
-                     tooltip.innerHTML = tooltipContent;
-                     tooltip.style.display = 'block';
-                     tooltip.style.left = event.clientX + 10 + 'px';
-                     tooltip.style.top = event.clientY - 10 + 'px';
-                 } else {
-                     tooltip.style.display = 'none';
-                 }
-            } else {
-                tooltip.style.display = 'none';
+    addFeeBandLabels(feeBands, transactions) {
+        // Create labels for major fee bands (show fewer bands - every ~10th band or very significant ones)
+        const majorBands = feeBands.filter((band, index) => {
+            return index % 10 === 0 || band.count > 200 || index === 0 || index === feeBands.length - 1;
+        });
+        
+        majorBands.forEach((band, labelIndex) => {
+            // Get the position of a transaction in the middle of this band
+            const middleIndex = Math.floor((band.startIndex + band.endIndex) / 2);
+            if (middleIndex >= transactions.length) return;
+            
+            const middleTx = transactions[middleIndex];
+            
+            // Create fee band label similar to remaining transactions text
+            const labelContainer = document.createElement('div');
+            labelContainer.style.position = 'absolute';
+            labelContainer.style.color = 'white';
+            labelContainer.style.fontSize = '12px';
+            labelContainer.style.fontWeight = 'bold';
+            labelContainer.style.fontFamily = 'monospace';
+            labelContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            labelContainer.style.padding = '4px 8px';
+            labelContainer.style.borderRadius = '4px';
+            labelContainer.style.border = '1px solid rgba(255, 255, 255, 0.3)';
+            labelContainer.style.zIndex = '1000';
+            labelContainer.style.pointerEvents = 'none';
+            labelContainer.style.display = 'block';
+            labelContainer.style.whiteSpace = 'nowrap';
+            
+            // Get original count from the transaction data
+            const originalCount = middleTx.originalCount || band.count;
+            labelContainer.textContent = `${band.feeRate} sat/vB (${originalCount.toLocaleString()})`;
+            labelContainer.title = `Fee Band: ${band.feeRate} sat/vB with ${originalCount.toLocaleString()} transactions`;
+            
+            document.body.appendChild(labelContainer);
+            
+            // Store reference for cleanup and position updates
+            if (!this.feeBandLabels) {
+                this.feeBandLabels = [];
             }
+            this.feeBandLabels.push({
+                element: labelContainer,
+                transactionIndex: middleIndex,
+                band: band
+            });
         });
-
-        this.renderer.domElement.addEventListener('mouseleave', () => {
-            tooltip.style.display = 'none';
-        });
+        
+        console.log(`Added ${majorBands.length} fee band labels`);
     }
     
     addRemainingTransactionsText(shownCount, totalCount) {
@@ -888,7 +901,7 @@ class BitcoinMempoolExplorer {
         if (txData) {
             document.getElementById('selected-tx').textContent = txData.index;
             document.getElementById('tx-fee-rate').textContent = `${txData.feeRate.toFixed(2)} sat/vB`;
-            document.getElementById('tx-size').textContent = `${txData.size} vB`;
+            document.getElementById('tx-size').textContent = `${txData.size} vB (dummy)`;
             document.getElementById('tx-position').textContent = txData.position;
         } else {
             document.getElementById('selected-tx').textContent = 'None';
@@ -946,6 +959,9 @@ class BitcoinMempoolExplorer {
         // Update remaining text position
         this.updateRemainingTextPosition();
         
+        // Update fee band label positions
+        this.updateFeeBandLabelPositions();
+        
         this.renderer.render(this.scene, this.camera);
     }
     
@@ -983,6 +999,45 @@ class BitcoinMempoolExplorer {
             // Hide text when tracking point is off screen
             this.remainingTextElement.style.display = 'none';
         }
+    }
+    
+    updateFeeBandLabelPositions() {
+        if (!this.feeBandLabels || this.transactions.length === 0 || !this.feeBandLabelsVisible) return;
+        
+        this.feeBandLabels.forEach(label => {
+            if (label.transactionIndex >= this.transactions.length) return;
+            
+            const transaction = this.transactions[label.transactionIndex];
+            const worldPosition = new THREE.Vector3();
+            transaction.getWorldPosition(worldPosition);
+            
+            // Convert 3D position to screen coordinates
+            const vector = worldPosition.clone();
+            vector.project(this.camera);
+            
+            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+            
+            // Check if the tracking point is on screen
+            const isOnScreen = vector.z < 1 && x >= 0 && x <= window.innerWidth && y >= 0 && y <= window.innerHeight;
+            
+            if (isOnScreen) {
+                // Ensure position is within viewport bounds
+                const maxX = window.innerWidth - 150; // Account for label width
+                const maxY = window.innerHeight - 30; // Account for label height
+                
+                const clampedX = Math.max(10, Math.min(maxX, x + 15));
+                const clampedY = Math.max(10, Math.min(maxY, y - 15));
+                
+                // Update label position and show
+                label.element.style.left = `${clampedX}px`;
+                label.element.style.top = `${clampedY}px`;
+                label.element.style.display = 'block';
+            } else {
+                // Hide label when tracking point is off screen
+                label.element.style.display = 'none';
+            }
+        });
     }
 
     onWindowResize() {
