@@ -296,6 +296,7 @@ class BitcoinMempoolExplorer {
             
             this.updateLoadingProgress('Processing transactions...', 60);
             const data = await response.json();
+            this.mempoolData = data;
             
             this.updateLoadingProgress('Creating visualization...', 80);
             this.createMempoolVisualization(data);
@@ -607,8 +608,8 @@ class BitcoinMempoolExplorer {
         document.body.appendChild(popup);
     }
 
-    createMempoolVisualization() {
-        if (!this.mempoolData || !this.mempoolData.fee_histogram) return;
+    createMempoolVisualization(data) {
+        if (!data || !data.fee_histogram) return;
         
         // Clear existing transactions
         this.transactions.forEach(tx => this.scene.remove(tx));
@@ -620,7 +621,15 @@ class BitcoinMempoolExplorer {
             this.remainingTextElement = null;
         }
         
-        const feeHistogram = this.mempoolData.fee_histogram;
+        // Remove existing fee band tooltips
+        if (this.feeBandTooltips) {
+            this.feeBandTooltips.forEach(tooltip => tooltip.remove());
+            this.feeBandTooltips = [];
+        } else {
+            this.feeBandTooltips = [];
+        }
+        
+        const feeHistogram = data.fee_histogram;
         let totalTransactions = 0;
         let currentIndex = 0;
         
@@ -657,7 +666,27 @@ class BitcoinMempoolExplorer {
         const MIN_BRIGHTNESS = 20;
         const MAX_BRIGHTNESS_SIZE = 5000;
         
+        // Track fee bands for tooltips
+        const feeBands = [];
+        let currentFeeBand = null;
+        let bandStartIndex = 0;
+        
         selectedTransactions.forEach((tx, index) => {
+            // Track fee bands
+            if (!currentFeeBand || currentFeeBand.feeRate !== tx.feeRate) {
+                if (currentFeeBand) {
+                    currentFeeBand.endIndex = index - 1;
+                    feeBands.push(currentFeeBand);
+                }
+                currentFeeBand = {
+                    feeRate: tx.feeRate,
+                    startIndex: index,
+                    count: 0
+                };
+                bandStartIndex = index;
+            }
+            currentFeeBand.count++;
+            
             // Calculate spiral position with absolutely constant distance
             const targetDistance = 0.3; // Target distance between transactions
             
@@ -714,10 +743,91 @@ class BitcoinMempoolExplorer {
             this.transactions.push(cuboid);
         });
         
+        // Add the last fee band
+        if (currentFeeBand) {
+            currentFeeBand.endIndex = selectedTransactions.length - 1;
+            feeBands.push(currentFeeBand);
+        }
+        
         console.log(`Created ${this.transactions.length} transaction cuboids`);
+        console.log(`Fee bands:`, feeBands);
+        
+        // Add fee band tooltips at strategic positions
+        this.addFeeBandTooltips(feeBands, selectedTransactions);
         
         // Add text showing remaining transactions
         this.addRemainingTransactionsText(selectedTransactions.length, transactionObjects.length);
+    }
+    
+    addFeeBandTooltips(feeBands, transactions) {
+        const tooltipContainer = document.createElement('div');
+        tooltipContainer.style.position = 'absolute';
+        tooltipContainer.style.zIndex = '1000';
+        tooltipContainer.style.pointerEvents = 'none';
+        tooltipContainer.style.display = 'none';
+        document.body.appendChild(tooltipContainer);
+
+        const tooltip = document.createElement('div');
+        tooltip.style.position = 'absolute';
+        tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        tooltip.style.color = 'white';
+        tooltip.style.padding = '8px 12px';
+        tooltip.style.borderRadius = '4px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.fontFamily = 'monospace';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.zIndex = '1000';
+        tooltip.style.display = 'none';
+        tooltip.style.whiteSpace = 'nowrap';
+        tooltipContainer.appendChild(tooltip);
+
+        this.renderer.domElement.addEventListener('mousemove', (event) => {
+            // Calculate mouse position in normalized device coordinates
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update the picking ray with the camera and mouse position
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, this.camera);
+
+            // Calculate objects intersecting the picking ray
+            const intersects = raycaster.intersectObjects(this.transactions);
+
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                const txData = intersectedObject.userData;
+                
+                // Find the fee band for the transaction
+                let currentBand = null;
+                for (const band of feeBands) {
+                    if (txData.index >= band.startIndex && txData.index <= band.endIndex) {
+                        currentBand = band;
+                        break;
+                    }
+                }
+
+                if (currentBand) {
+                    const tooltipContent = `
+                        <strong>Fee Band</strong><br>
+                        Fee Rate: ${currentBand.feeRate} sat/vB<br>
+                        Transactions: ${currentBand.count}
+                    `;
+                    tooltip.innerHTML = tooltipContent;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = event.clientX + 10 + 'px';
+                    tooltip.style.top = event.clientY - 10 + 'px';
+                } else {
+                    tooltip.style.display = 'none';
+                }
+            } else {
+                tooltip.style.display = 'none';
+            }
+        });
+
+        this.renderer.domElement.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+        });
     }
     
     addRemainingTransactionsText(shownCount, totalCount) {
