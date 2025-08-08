@@ -140,9 +140,9 @@ class BitcoinMempoolExplorer {
             
             if (this.isPerspective) {
                 // Perspective zoom: adjust distance
-                controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
-                controls.distance = Math.max(20, Math.min(200, controls.distance));
-                controls.update();
+            controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
+            controls.distance = Math.max(20, Math.min(200, controls.distance));
+            controls.update();
             } else {
                 // Orthographic zoom: adjust camera zoom level
                 const zoomSpeed = 0.1;

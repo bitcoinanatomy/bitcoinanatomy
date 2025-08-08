@@ -9,6 +9,10 @@ class BitcoinBlockExplorer {
         this.showTransactions = true;
         this.blockHeight = null;
         this.blockData = null;
+        this.transactionIds = [];
+        this.isExploded = false;
+        this.originalPositions = [];
+        this.transactionCache = new Map(); // Cache for transaction details
         
         // Get block height from URL parameter
         const urlParams = new URLSearchParams(window.location.search);
@@ -20,6 +24,8 @@ class BitcoinBlockExplorer {
     init() {
         this.setupThreeJS();
         this.setupControls();
+        this.setupButtonControls();
+        this.setupHoverTooltip();
         this.createScene();
         this.animate();
         this.fetchData();
@@ -32,7 +38,7 @@ class BitcoinBlockExplorer {
         this.scene.background = new THREE.Color(0x000000);
         
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 8, 12);
+        this.camera.position.set(0, 10, 20);
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -44,37 +50,99 @@ class BitcoinBlockExplorer {
     }
 
     setupControls() {
-        let isMouseDown = false;
-        let mouseX = 0;
-        let mouseY = 0;
+        // Create custom orbit controls (matching other pages)
+        this.controls = {
+            target: new THREE.Vector3(0, 0, 0),
+            distance: 20,
+            phi: Math.PI / 3,
+            theta: 0,
+            isMouseDown: false,
+            lastMouseX: 0,
+            lastMouseY: 0,
+            
+            update: () => {
+                // Update camera position based on spherical coordinates
+                this.camera.position.x = this.controls.target.x + this.controls.distance * Math.sin(this.controls.phi) * Math.cos(this.controls.theta);
+                this.camera.position.y = this.controls.target.y + this.controls.distance * Math.cos(this.controls.phi);
+                this.camera.position.z = this.controls.target.z + this.controls.distance * Math.sin(this.controls.phi) * Math.sin(this.controls.theta);
+                this.camera.lookAt(this.controls.target);
+            }
+        };
+        
+        // Set up mouse controls
+        this.setupMouseControls();
+        this.controls.update();
+    }
+    
+    setupMouseControls() {
+        const controls = this.controls;
         
         this.renderer.domElement.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            mouseX = e.clientX;
-            mouseY = e.clientY;
+            controls.isMouseDown = true;
+            controls.lastMouseX = e.clientX;
+            controls.lastMouseY = e.clientY;
+            
+            // Stop automatic rotation when user starts interacting
+            this.isRotating = false;
+            const button = document.getElementById('toggle-rotation');
+            if (button) {
+                button.textContent = 'Start Rotation';
+            }
         });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
-            isMouseDown = false;
+            controls.isMouseDown = false;
         });
         
         this.renderer.domElement.addEventListener('mousemove', (e) => {
-            if (isMouseDown) {
-                const deltaX = e.clientX - mouseX;
-                const deltaY = e.clientY - mouseY;
-                this.camera.position.x += deltaX * 0.01;
-                this.camera.position.y -= deltaY * 0.01;
-                mouseX = e.clientX;
-                mouseY = e.clientY;
+            if (controls.isMouseDown) {
+                const deltaX = e.clientX - controls.lastMouseX;
+                const deltaY = e.clientY - controls.lastMouseY;
+                
+                if (e.shiftKey) {
+                    // Panning with inverted axes and reduced intensity
+                    const panSpeed = 0.001;
+                    const right = new THREE.Vector3();
+                    const up = new THREE.Vector3();
+                    
+                    this.camera.getWorldDirection(new THREE.Vector3());
+                    right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+                    up.setFromMatrixColumn(this.camera.matrix, 1);
+                    
+                    const panX = deltaX * panSpeed * controls.distance;
+                    const panY = deltaY * panSpeed * controls.distance;
+                    
+                    controls.target.add(right.multiplyScalar(panX));
+                    controls.target.add(up.multiplyScalar(panY));
+                } else {
+                    // Rotation with inverted axes and reduced intensity
+                    controls.theta += deltaX * 0.005;
+                    controls.phi -= deltaY * 0.005;
+                    controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, controls.phi));
+                }
+                
+                controls.update();
+                controls.lastMouseX = e.clientX;
+                controls.lastMouseY = e.clientY;
             }
         });
         
         this.renderer.domElement.addEventListener('wheel', (e) => {
-            const zoomSpeed = 0.1;
-            this.camera.position.z -= e.deltaY * zoomSpeed; // Inverted: was +=, now -=
-            this.camera.position.z = Math.max(5, Math.min(50, this.camera.position.z));
+            // Stop automatic rotation when user starts zooming
+            this.isRotating = false;
+            const button = document.getElementById('toggle-rotation');
+            if (button) {
+                button.textContent = 'Start Rotation';
+            }
+            
+            // Zoom in/out with inverted scroll direction
+            controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
+            controls.distance = Math.max(5, Math.min(50, controls.distance));
+            controls.update();
         });
-        
+    }
+    
+    setupButtonControls() {
         document.getElementById('toggle-rotation').addEventListener('click', () => {
             this.isRotating = !this.isRotating;
             const button = document.getElementById('toggle-rotation');
@@ -82,8 +150,11 @@ class BitcoinBlockExplorer {
         });
         
         document.getElementById('reset-camera').addEventListener('click', () => {
-            this.camera.position.set(0, 8, 12);
-            this.camera.lookAt(0, 0, 0);
+            this.controls.target.set(0, 0, 0);
+            this.controls.distance = 20;
+            this.controls.phi = Math.PI / 3;
+            this.controls.theta = 0;
+            this.controls.update();
         });
         
         document.getElementById('toggle-transactions').addEventListener('click', () => {
@@ -95,6 +166,278 @@ class BitcoinBlockExplorer {
                 tx.visible = this.showTransactions;
             });
         });
+        
+        document.getElementById('explode-transactions').addEventListener('click', () => {
+            this.toggleExplodeTransactions();
+        });
+    }
+    
+    setupHoverTooltip() {
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Create tooltip element
+        const tooltip = document.createElement('div');
+        tooltip.style.position = 'absolute';
+        tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        tooltip.style.color = 'white';
+        tooltip.style.padding = '8px 12px';
+        tooltip.style.borderRadius = '4px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.fontFamily = 'monospace';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.zIndex = '1000';
+        tooltip.style.display = 'none';
+        tooltip.style.whiteSpace = 'nowrap';
+        document.body.appendChild(tooltip);
+
+        this.renderer.domElement.addEventListener('mousemove', (event) => {
+            // Calculate mouse position in normalized device coordinates
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, this.camera);
+
+            // Calculate objects intersecting the picking ray
+            const intersects = raycaster.intersectObjects(this.transactions);
+
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                const txData = intersectedObject.userData;
+                
+                // Format the tooltip content
+                const tooltipContent = `
+                    <strong>Transaction ${txData.index + 1}</strong><br>
+                    TXID: ${txData.txid.substring(0, 16)}...
+                `;
+                
+                tooltip.innerHTML = tooltipContent;
+                tooltip.style.display = 'block';
+                tooltip.style.left = event.clientX + 10 + 'px';
+                tooltip.style.top = event.clientY - 10 + 'px';
+            } else {
+                tooltip.style.display = 'none';
+                tooltip.style.pointerEvents = 'none'; // Reset pointer events for hover mode
+            }
+        });
+
+        this.renderer.domElement.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+            tooltip.style.pointerEvents = 'none'; // Reset pointer events for hover mode
+        });
+        
+        // Add single-click functionality to fetch detailed transaction data
+        this.renderer.domElement.addEventListener('click', (event) => {
+            // Calculate mouse position in normalized device coordinates
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, this.camera);
+
+            // Calculate objects intersecting the picking ray
+            const intersects = raycaster.intersectObjects(this.transactions);
+
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                const txData = intersectedObject.userData;
+                
+                // Show detailed transaction data (cached or fetch new)
+                if (txData.txid && !txData.txid.startsWith('dummy_tx_')) {
+                    this.showTransactionDetails(txData.txid, tooltip, event);
+                }
+            }
+        });
+        
+        // Add double-click functionality to navigate to transaction page
+        this.renderer.domElement.addEventListener('dblclick', (event) => {
+            // Calculate mouse position in normalized device coordinates
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, this.camera);
+
+            // Calculate objects intersecting the picking ray
+            const intersects = raycaster.intersectObjects(this.transactions);
+
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                const txData = intersectedObject.userData;
+                
+                // Navigate to transaction page with TXID parameter
+                if (txData.txid && !txData.txid.startsWith('dummy_tx_')) {
+                    window.location.href = `transaction.html?txid=${txData.txid}`;
+                }
+            }
+        });
+    }
+    
+    toggleExplodeTransactions() {
+        if (this.transactions.length === 0) return;
+        
+        this.isExploded = !this.isExploded;
+        const button = document.getElementById('explode-transactions');
+        button.textContent = this.isExploded ? 'Implode Transactions' : 'Explode Transactions';
+        
+        this.transactions.forEach((cuboid, index) => {
+            if (this.isExploded) {
+                // Move transactions outside the block in a spread pattern
+                const originalPos = cuboid.userData.originalPosition;
+                const explosionFactor = 3.5; // How far to spread
+                
+                // Calculate exploded position (spread outward from center)
+                const targetX = originalPos.x * explosionFactor;
+                const targetY = originalPos.y + (Math.random() - 0.5) * 4; // Add some vertical spread
+                const targetZ = originalPos.z * explosionFactor;
+                
+                // Animate to exploded position
+                this.animatePosition(cuboid, targetX, targetY, targetZ, 1000);
+            } else {
+                // Return to original position
+                const originalPos = cuboid.userData.originalPosition;
+                this.animatePosition(cuboid, originalPos.x, originalPos.y, originalPos.z, 1000);
+            }
+        });
+    }
+    
+    animatePosition(object, targetX, targetY, targetZ, duration) {
+        const startX = object.position.x;
+        const startY = object.position.y;
+        const startZ = object.position.z;
+        const startTime = Date.now();
+        
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Easing function (ease-out)
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            
+            object.position.x = startX + (targetX - startX) * easeOut;
+            object.position.y = startY + (targetY - startY) * easeOut;
+            object.position.z = startZ + (targetZ - startZ) * easeOut;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    }
+    
+    async showTransactionDetails(txid, tooltip, event) {
+        // Check if transaction data is already cached
+        if (this.transactionCache.has(txid)) {
+            const cachedTooltipContent = this.transactionCache.get(txid);
+            tooltip.innerHTML = cachedTooltipContent;
+            tooltip.style.display = 'block';
+            tooltip.style.left = event.clientX + 10 + 'px';
+            tooltip.style.top = event.clientY - 10 + 'px';
+            tooltip.style.pointerEvents = 'auto'; // Enable pointer events for close button
+            return;
+        }
+        
+        try {
+            // Show loading state in tooltip
+            tooltip.innerHTML = `
+                <strong>Loading Transaction Details...</strong><br>
+                TXID: ${txid.substring(0, 16)}...
+            `;
+            tooltip.style.display = 'block';
+            tooltip.style.left = event.clientX + 10 + 'px';
+            tooltip.style.top = event.clientY - 10 + 'px';
+            
+            // Fetch transaction data from mempool.space API
+            const response = await fetch(`https://mempool.space/api/tx/${txid}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const txData = await response.json();
+            
+            // Format inputs
+            const inputsHtml = txData.vin.slice(0, 3).map((input, index) => {
+                const amount = input.prevout ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown';
+                const address = input.prevout ? (input.prevout.scriptpubkey_address || 'Unknown') : 'Unknown';
+                return `Input ${index + 1}: ${amount} BTC (${address.substring(0, 12)}...)`;
+            }).join('<br>');
+            
+            const moreInputs = txData.vin.length > 3 ? `<br>+${txData.vin.length - 3} more inputs` : '';
+            
+            // Format outputs
+            const outputsHtml = txData.vout.slice(0, 3).map((output, index) => {
+                const amount = (output.value / 100000000).toFixed(8);
+                const address = output.scriptpubkey_address || 'Unknown';
+                return `Output ${index + 1}: ${amount} BTC (${address.substring(0, 12)}...)`;
+            }).join('<br>');
+            
+            const moreOutputs = txData.vout.length > 3 ? `<br>+${txData.vout.length - 3} more outputs` : '';
+            
+            // Calculate total input and output amounts
+            const totalInput = txData.vin.reduce((sum, input) => {
+                return sum + (input.prevout ? input.prevout.value : 0);
+            }, 0) / 100000000;
+            
+            const totalOutput = txData.vout.reduce((sum, output) => {
+                return sum + output.value;
+            }, 0) / 100000000;
+            
+            const fee = (txData.fee / 100000000).toFixed(8);
+            
+            // Update tooltip with detailed transaction information
+            const tooltipContent = `
+                <div style="position: relative;">
+                    <button onclick="this.parentElement.parentElement.style.display='none'" 
+                            style="position: absolute; top: -5px; right: -5px; background: #333; border: none; color: white; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 12px; line-height: 1;">&times;</button>
+                    <strong>Transaction Details</strong><br>
+                    <strong>TXID:</strong> ${txid.substring(0, 16)}...<br>
+                    <strong>Size:</strong> ${txData.size} bytes<br>
+                    <strong>Fee:</strong> ${fee} BTC<br>
+                    <br>
+                    <strong>Inputs (${txData.vin.length}):</strong><br>
+                    ${inputsHtml}${moreInputs}<br>
+                    <strong>Total Input:</strong> ${totalInput.toFixed(8)} BTC<br>
+                    <br>
+                    <strong>Outputs (${txData.vout.length}):</strong><br>
+                    ${outputsHtml}${moreOutputs}<br>
+                    <strong>Total Output:</strong> ${totalOutput.toFixed(8)} BTC<br>
+                    <br>
+                    <em>Double-click to view full transaction</em>
+                </div>
+            `;
+            
+            // Cache the tooltip content for future use
+            this.transactionCache.set(txid, tooltipContent);
+            
+            tooltip.innerHTML = tooltipContent;
+            tooltip.style.display = 'block';
+            tooltip.style.left = event.clientX + 10 + 'px';
+            tooltip.style.top = event.clientY - 10 + 'px';
+            tooltip.style.pointerEvents = 'auto'; // Enable pointer events for close button
+            
+            // Keep tooltip visible until manually dismissed (no auto-hide for cached content)
+            
+        } catch (error) {
+            console.error('Error fetching transaction details:', error);
+            tooltip.innerHTML = `
+                <strong>Error Loading Transaction</strong><br>
+                TXID: ${txid.substring(0, 16)}...<br>
+                <em>Failed to fetch transaction data</em>
+            `;
+            tooltip.style.display = 'block';
+            tooltip.style.left = event.clientX + 10 + 'px';
+            tooltip.style.top = event.clientY - 10 + 'px';
+            
+            // Auto-hide error after 5 seconds
+            setTimeout(() => {
+                if (tooltip.style.display === 'block') {
+                    tooltip.style.display = 'none';
+                }
+            }, 5000);
+        }
     }
 
     createScene() {
@@ -106,6 +449,11 @@ class BitcoinBlockExplorer {
         directionalLight.castShadow = true;
         this.scene.add(directionalLight);
         
+        // Add fill light on opposite side
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        fillLight.position.set(-10, -10, -5);
+        this.scene.add(fillLight);
+        
         const gridHelper = new THREE.GridHelper(50, 50, 0x333333, 0x222222);
         this.scene.add(gridHelper);
         
@@ -113,46 +461,24 @@ class BitcoinBlockExplorer {
     }
 
     createBlockVisualization() {
-        // Create main block
-        const blockGeometry = new THREE.BoxGeometry(3, 2, 3);
+        // Create main block as perfect cube with lower opacity
+        const blockGeometry = new THREE.BoxGeometry(3, 3, 3);
         const blockMaterial = new THREE.MeshLambertMaterial({
             color: 0xffffff,
             transparent: true,
-            opacity: 0.9
+            opacity: 0.15,
+            depthWrite: false,  // Prevent depth writing issues with transparency
+            alphaTest: 0.01     // Helps with transparency sorting
         });
         
         const block = new THREE.Mesh(blockGeometry, blockMaterial);
         block.position.set(0, 0, 0);
         block.castShadow = true;
+        block.renderOrder = 1;  // Render after transactions (higher number = later)
         this.scene.add(block);
         
-        // Create transaction particles inside the block
-        for (let i = 0; i < 100; i++) {
-            const geometry = new THREE.SphereGeometry(0.05, 8, 8);
-            const material = new THREE.MeshBasicMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.7
-            });
-            
-            const particle = new THREE.Mesh(geometry, material);
-            particle.position.set(
-                (Math.random() - 0.5) * 2.5,
-                (Math.random() - 0.5) * 1.5,
-                (Math.random() - 0.5) * 2.5
-            );
-            
-            particle.userData = {
-                velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.01,
-                    (Math.random() - 0.5) * 0.01,
-                    (Math.random() - 0.5) * 0.01
-                )
-            };
-            
-            this.scene.add(particle);
-            this.transactions.push(particle);
-        }
+        // Store block reference for later use
+        this.blockMesh = block;
     }
 
     async fetchData() {
@@ -181,6 +507,17 @@ class BitcoinBlockExplorer {
             }
             
             this.blockData = await blockResponse.json();
+            
+            // Fetch transaction IDs for this block
+            const txidsResponse = await fetch(`https://mempool.space/api/block/${blockHash}/txids`);
+            
+            if (txidsResponse.ok) {
+                this.transactionIds = await txidsResponse.json();
+                console.log(`Fetched ${this.transactionIds.length} transaction IDs for block ${this.blockHeight}`);
+            } else {
+                console.warn('Could not fetch transaction IDs, using fallback visualization');
+                this.transactionIds = [];
+            }
             
             this.updateUI(this.blockData);
             this.updateBlockVisualization();
@@ -222,38 +559,66 @@ class BitcoinBlockExplorer {
         // Clear existing transactions
         this.transactions.forEach(tx => this.scene.remove(tx));
         this.transactions = [];
+        this.originalPositions = [];
+        this.isExploded = false;
         
-        // Create transaction particles based on real data
-        const txCount = Math.min(this.blockData.tx_count || 100, 100); // Limit to 100 for performance
+        // Use actual transaction IDs if available, otherwise fallback to count-based visualization
+        const transactionsToVisualize = this.transactionIds.length > 0 ? this.transactionIds : [];
+        const txCount = transactionsToVisualize.length > 0 ? 
+            Math.min(transactionsToVisualize.length, 500) : // Limit to 500 for performance
+            Math.min(this.blockData.tx_count || 100, 100);
+        
+        console.log(`Creating ${txCount} transaction cuboids`);
+        
+        // Create transaction cuboids in a 2D grid layout within the block
+        const gridSize = Math.ceil(Math.sqrt(txCount)); // 2D grid
+        const spacing = 2.4 / gridSize; // Fit within block bounds
+        const offset = -(gridSize - 1) * spacing / 2;
         
         for (let i = 0; i < txCount; i++) {
-            const geometry = new THREE.SphereGeometry(0.05, 8, 8);
+            // Calculate 2D grid position (flat grid at y=0)
+            const x = (i % gridSize) * spacing + offset;
+            const z = Math.floor(i / gridSize) * spacing + offset;
+            const y = 0; // Keep all transactions at the same height level
+            
+            // Create cuboid geometry (matching mempool.js size)
+            const CUBOID_WIDTH = 0.07;   // Width
+            const CUBOID_HEIGHT = 0.14;  // Height  
+            const CUBOID_LENGTH = 0.56;  // Length
+            const geometry = new THREE.BoxGeometry(CUBOID_LENGTH, CUBOID_HEIGHT, CUBOID_WIDTH);
             const material = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
                 transparent: true,
-                opacity: 0.7
+                opacity: 0.8
             });
             
-            const particle = new THREE.Mesh(geometry, material);
-            particle.position.set(
-                (Math.random() - 0.5) * 2.5,
-                (Math.random() - 0.5) * 1.5,
-                (Math.random() - 0.5) * 2.5
-            );
+                        const cuboid = new THREE.Mesh(geometry, material);
+            cuboid.position.set(x, y, z);
+            cuboid.renderOrder = 0;  // Render before block (lower number = earlier)
             
-            particle.userData = {
-                velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.01,
-                    (Math.random() - 0.5) * 0.01,
-                    (Math.random() - 0.5) * 0.01
-                )
-            };
+            // Store original position for explosion animation
+            this.originalPositions.push({x: x, y: y, z: z});
             
-            this.scene.add(particle);
-            this.transactions.push(particle);
+            // Store transaction data (no velocity/animation)
+            if (transactionsToVisualize.length > 0) {
+                cuboid.userData = {
+                    txid: transactionsToVisualize[i],
+                    index: i,
+                    originalPosition: {x: x, y: y, z: z}
+                };
+            } else {
+                cuboid.userData = {
+                    txid: `dummy_tx_${i}`,
+                    index: i,
+                    originalPosition: {x: x, y: y, z: z}
+                };
+            }
+            
+            this.scene.add(cuboid);
+            this.transactions.push(cuboid);
         }
         
-
+        console.log(`Created ${this.transactions.length} transaction cuboids`);
     }
 
     animate() {
@@ -263,21 +628,7 @@ class BitcoinBlockExplorer {
             this.scene.rotation.y += 0.001;
         }
         
-        // Animate transaction particles
-        this.transactions.forEach((particle) => {
-            particle.position.add(particle.userData.velocity);
-            
-            // Bounce off block boundaries
-            if (Math.abs(particle.position.x) > 1.25) {
-                particle.userData.velocity.x *= -1;
-            }
-            if (Math.abs(particle.position.y) > 0.75) {
-                particle.userData.velocity.y *= -1;
-            }
-            if (Math.abs(particle.position.z) > 1.25) {
-                particle.userData.velocity.z *= -1;
-            }
-        });
+        // Transaction cuboids are static (no animation)
         
         this.renderer.render(this.scene, this.camera);
     }
