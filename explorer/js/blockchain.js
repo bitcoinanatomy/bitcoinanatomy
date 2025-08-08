@@ -297,9 +297,6 @@ class BitcoinBlockchainExplorer {
         // Update the button text
         const button = document.getElementById('toggle-view');
         button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
-        
-                // Update controls to use new camera
-        this.setupMouseControls();
     }
     
     createUTXOs() {

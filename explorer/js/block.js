@@ -206,11 +206,22 @@ class BitcoinBlockExplorer {
                 const intersectedObject = intersects[0].object;
                 const txData = intersectedObject.userData;
                 
-                // Format the tooltip content
-                const tooltipContent = `
-                    <strong>Transaction ${txData.index + 1}</strong><br>
-                    TXID: ${txData.txid.substring(0, 16)}...
-                `;
+                // Check if we have detailed data cached for this transaction
+                const txid = txData.txid;
+                let tooltipContent;
+                
+                if (txid && this.transactionCache.has(txid)) {
+                    // Use cached detailed content
+                    tooltipContent = this.transactionCache.get(txid);
+                    tooltip.style.pointerEvents = 'auto'; // Enable close button
+                } else {
+                    // Use basic content
+                    tooltipContent = `
+                        <strong>Transaction ${txData.index + 1}</strong><br>
+                        TXID: ${txid ? txid.substring(0, 16) + '...' : 'Loading...'}
+                    `;
+                    tooltip.style.pointerEvents = 'none'; // No interaction needed
+                }
                 
                 tooltip.innerHTML = tooltipContent;
                 tooltip.style.display = 'block';
@@ -332,22 +343,18 @@ class BitcoinBlockExplorer {
         if (this.transactionCache.has(txid)) {
             const cachedTooltipContent = this.transactionCache.get(txid);
             tooltip.innerHTML = cachedTooltipContent;
-            tooltip.style.display = 'block';
-            tooltip.style.left = event.clientX + 10 + 'px';
-            tooltip.style.top = event.clientY - 10 + 'px';
             tooltip.style.pointerEvents = 'auto'; // Enable pointer events for close button
+            // Don't change position or visibility - keep current state
             return;
         }
         
         try {
-            // Show loading state in tooltip
+            // Show loading state in existing tooltip
             tooltip.innerHTML = `
                 <strong>Loading Transaction Details...</strong><br>
                 TXID: ${txid.substring(0, 16)}...
             `;
-            tooltip.style.display = 'block';
-            tooltip.style.left = event.clientX + 10 + 'px';
-            tooltip.style.top = event.clientY - 10 + 'px';
+            // Keep current position and visibility
             
             // Fetch transaction data from mempool.space API
             const response = await fetch(`https://mempool.space/api/tx/${txid}`);
@@ -389,34 +396,28 @@ class BitcoinBlockExplorer {
             
             // Update tooltip with detailed transaction information
             const tooltipContent = `
-                <div style="position: relative;">
-                    <button onclick="this.parentElement.parentElement.style.display='none'" 
-                            style="position: absolute; top: -5px; right: -5px; background: #333; border: none; color: white; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 12px; line-height: 1;">&times;</button>
-                    <strong>Transaction Details</strong><br>
-                    <strong>TXID:</strong> ${txid.substring(0, 16)}...<br>
-                    <strong>Size:</strong> ${txData.size} bytes<br>
-                    <strong>Fee:</strong> ${fee} BTC<br>
-                    <br>
-                    <strong>Inputs (${txData.vin.length}):</strong><br>
-                    ${inputsHtml}${moreInputs}<br>
-                    <strong>Total Input:</strong> ${totalInput.toFixed(8)} BTC<br>
-                    <br>
-                    <strong>Outputs (${txData.vout.length}):</strong><br>
-                    ${outputsHtml}${moreOutputs}<br>
-                    <strong>Total Output:</strong> ${totalOutput.toFixed(8)} BTC<br>
-                    <br>
-                    <em>Double-click to view full transaction</em>
-                </div>
+                <strong>Transaction Details</strong><br>
+                <strong>TXID:</strong> ${txid.substring(0, 16)}...<br>
+                <strong>Size:</strong> ${txData.size} bytes<br>
+                <strong>Fee:</strong> ${fee} BTC<br>
+                <br>
+                <strong>Inputs (${txData.vin.length}):</strong><br>
+                ${inputsHtml}${moreInputs}<br>
+                <strong>Total Input:</strong> ${totalInput.toFixed(8)} BTC<br>
+                <br>
+                <strong>Outputs (${txData.vout.length}):</strong><br>
+                ${outputsHtml}${moreOutputs}<br>
+                <strong>Total Output:</strong> ${totalOutput.toFixed(8)} BTC<br>
+                <br>
+                <em>Double-click to view full transaction</em>
             `;
             
             // Cache the tooltip content for future use
             this.transactionCache.set(txid, tooltipContent);
             
             tooltip.innerHTML = tooltipContent;
-            tooltip.style.display = 'block';
-            tooltip.style.left = event.clientX + 10 + 'px';
-            tooltip.style.top = event.clientY - 10 + 'px';
             tooltip.style.pointerEvents = 'auto'; // Enable pointer events for close button
+            // Keep current position and visibility
             
             // Keep tooltip visible until manually dismissed (no auto-hide for cached content)
             

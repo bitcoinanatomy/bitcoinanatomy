@@ -10,6 +10,8 @@ class BitcoinDifficultyExplorer {
         this.clock = new THREE.Clock();
         this.selectedAdjustment = null;
         this.blockData = null;
+        this.isPerspective = true;
+        this.orthographicZoom = 20;
         
         // Get adjustment index from URL parameter, default to epoch 0
         const urlParams = new URLSearchParams(window.location.search);
@@ -188,9 +190,24 @@ class BitcoinDifficultyExplorer {
         
         this.renderer.domElement.addEventListener('wheel', (e) => {
             this.isRotating = false;
-            controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
-            controls.distance = Math.max(10, Math.min(600, controls.distance));
-            controls.update();
+            
+            if (this.isPerspective) {
+                // Perspective camera zoom
+                controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
+                controls.distance = Math.max(10, Math.min(600, controls.distance));
+                controls.update();
+            } else {
+                // Orthographic camera zoom
+                this.orthographicZoom -= e.deltaY * 0.1;
+                this.orthographicZoom = Math.max(5, Math.min(50, this.orthographicZoom));
+                
+                const aspect = window.innerWidth / window.innerHeight;
+                this.camera.left = -this.orthographicZoom * aspect / 2;
+                this.camera.right = this.orthographicZoom * aspect / 2;
+                this.camera.top = this.orthographicZoom / 2;
+                this.camera.bottom = -this.orthographicZoom / 2;
+                this.camera.updateProjectionMatrix();
+            }
         });
     }
 
@@ -210,7 +227,42 @@ class BitcoinDifficultyExplorer {
             this.controls.update();
         });
         
-
+        // Add orthographic view toggle
+        document.getElementById('toggle-view').addEventListener('click', () => {
+            this.toggleCameraView();
+        });
+    }
+    
+    toggleCameraView() {
+        const currentPosition = this.camera.position.clone();
+        const currentTarget = this.controls.target.clone();
+        
+        if (this.isPerspective) {
+            // Switch to orthographic
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera = new THREE.OrthographicCamera(
+                this.orthographicZoom * aspect / -2,
+                this.orthographicZoom * aspect / 2,
+                this.orthographicZoom / 2,
+                this.orthographicZoom / -2,
+                0.1,
+                1000
+            );
+            this.isPerspective = false;
+        } else {
+            // Switch to perspective
+            this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            this.isPerspective = true;
+        }
+        
+        // Restore position and target
+        this.camera.position.copy(currentPosition);
+        this.controls.target.copy(currentTarget);
+        this.camera.lookAt(this.controls.target);
+        
+        // Update the button text
+        const button = document.getElementById('toggle-view');
+        button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
     }
 
     createScene() {
@@ -366,7 +418,11 @@ class BitcoinDifficultyExplorer {
         
         try {
             this.updateLoadingProgress('Fetching epoch data...', 30);
-            const response = await fetch(`https://pvxg.net/bitcoin_data/difficulty_epochs/rcp_bitcoin_block_data_${this.selectedAdjustment.toString().padStart(7, '0')}.json`);
+            // Calculate the first block of the difficulty epoch
+            const BLOCKS_PER_EPOCH = 2016;
+            const firstBlock = parseInt(this.selectedAdjustment) * BLOCKS_PER_EPOCH;
+            const fileName = `rcp_bitcoin_block_data_${firstBlock.toString().padStart(7, '0')}.json`;
+            const response = await fetch(`https://pvxg.net/bitcoin_data/difficulty_epochs/${fileName}`);
             
             if (response.status === 429) {
                 this.hideLoadingModal();
