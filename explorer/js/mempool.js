@@ -633,26 +633,36 @@ class BitcoinMempoolExplorer {
         let totalTransactions = 0;
         let currentIndex = 0;
         
-        // Calculate total transactions and create transaction objects
+        // Calculate total transactions and create a representative sample
         const transactionObjects = [];
+        const maxTransactions = 21000;
+        
+        // Calculate scaling factor to represent the entire mempool proportionally
+        let cumulativeCount = 0;
         feeHistogram.forEach(([feeRate, count]) => {
-            for (let i = 0; i < count; i++) {
+            cumulativeCount += count;
+        });
+        
+        const scaleFactor = Math.min(1, maxTransactions / cumulativeCount);
+        
+        // Create proportional representation of each fee band
+        totalTransactions = 0;
+        feeHistogram.forEach(([feeRate, count]) => {
+            const scaledCount = Math.max(1, Math.floor(count * scaleFactor));
+            for (let i = 0; i < scaledCount; i++) {
                 transactionObjects.push({
                     feeRate: feeRate,
                     size: Math.floor(Math.random() * 1000) + 100, // Random size between 100-1100 vB
                     index: totalTransactions + i,
-                    position: totalTransactions + i
+                    position: totalTransactions + i,
+                    originalCount: count // Store original count for tooltip
                 });
             }
-            totalTransactions += count;
+            totalTransactions += scaledCount;
         });
         
-        // Sort by fee rate (highest first)
-        transactionObjects.sort((a, b) => b.feeRate - a.feeRate);
-        
-        // Limit to reasonable number for visualization (max 21000)
-        const maxTransactions = Math.min(transactionObjects.length, 21000);
-        const selectedTransactions = transactionObjects.slice(0, maxTransactions);
+        // No need to sort since fee_histogram is already ordered by fee rate (highest first)
+        const selectedTransactions = transactionObjects;
         
         console.log(`Creating ${selectedTransactions.length} transaction cuboids`);
         
@@ -756,7 +766,7 @@ class BitcoinMempoolExplorer {
         this.addFeeBandTooltips(feeBands, selectedTransactions);
         
         // Add text showing remaining transactions
-        this.addRemainingTransactionsText(selectedTransactions.length, transactionObjects.length);
+        this.addRemainingTransactionsText(selectedTransactions.length, cumulativeCount);
     }
     
     addFeeBandTooltips(feeBands, transactions) {
@@ -807,19 +817,21 @@ class BitcoinMempoolExplorer {
                     }
                 }
 
-                if (currentBand) {
-                    const tooltipContent = `
-                        <strong>Fee Band</strong><br>
-                        Fee Rate: ${currentBand.feeRate} sat/vB<br>
-                        Transactions: ${currentBand.count}
-                    `;
-                    tooltip.innerHTML = tooltipContent;
-                    tooltip.style.display = 'block';
-                    tooltip.style.left = event.clientX + 10 + 'px';
-                    tooltip.style.top = event.clientY - 10 + 'px';
-                } else {
-                    tooltip.style.display = 'none';
-                }
+                                 if (currentBand) {
+                     // Get original count from the transaction data
+                     const originalCount = txData.originalCount || currentBand.count;
+                     const tooltipContent = `
+                         <strong>Fee Band</strong><br>
+                         Fee Rate: ${currentBand.feeRate} sat/vB<br>
+                         Transactions: ${originalCount.toLocaleString()}
+                     `;
+                     tooltip.innerHTML = tooltipContent;
+                     tooltip.style.display = 'block';
+                     tooltip.style.left = event.clientX + 10 + 'px';
+                     tooltip.style.top = event.clientY - 10 + 'px';
+                 } else {
+                     tooltip.style.display = 'none';
+                 }
             } else {
                 tooltip.style.display = 'none';
             }
