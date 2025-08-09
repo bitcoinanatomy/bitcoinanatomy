@@ -375,14 +375,16 @@ class BitcoinNodeExplorer {
             // Update the picking ray with the camera and mouse position
             raycaster.setFromCamera(mouse, this.camera);
 
-            // Get all feature cuboids
-            const featureCuboids = this.scene.children.filter(child => 
-                child.geometry && child.geometry.type === 'BoxGeometry' && 
-                child !== this.scene.children.find(child => child.geometry && child.geometry.parameters && child.geometry.parameters.radius === 2)
+            // Get all interactive objects (feature cuboids, helix, and spiral)
+            const interactiveObjects = this.scene.children.filter(child => 
+                (child.geometry && child.geometry.type === 'BoxGeometry' && 
+                 child !== this.scene.children.find(child => child.geometry && child.geometry.parameters && child.geometry.parameters.radius === 2)) ||
+                (child.geometry && child.geometry.type === 'BufferGeometry' && child.userData && child.userData.name) ||
+                (child.geometry && child.geometry.type === 'TubeGeometry' && child.userData && child.userData.name)
             );
 
             // Calculate objects intersecting the picking ray
-            const intersects = raycaster.intersectObjects(featureCuboids);
+            const intersects = raycaster.intersectObjects(interactiveObjects);
 
             if (intersects.length > 0) {
                 const intersectedObject = intersects[0].object;
@@ -390,13 +392,19 @@ class BitcoinNodeExplorer {
                 
                 if (featureData.name) {
                     // Format the tooltip content
-                    const tooltipContent = `
+                    let tooltipContent = `
                         <strong>${featureData.name}</strong><br>
                         ${featureData.description}<br>
                         Type: ${featureData.type}<br>
-                        Year: ${featureData.year}<br>
-                        <a href="${featureData.url}" target="_blank" style="color: #4CAF50; text-decoration: none;">View Details →</a>
+                        Year: ${featureData.year}
                     `;
+                    
+                    // Only add "View Details" link for non-navigation objects (feature cuboids)
+                    if (featureData.type === 'Bitcoin Protocol') {
+                        tooltipContent += `<br><a href="${featureData.url}" target="_blank" style="color: #4CAF50; text-decoration: none;">View Details →</a>`;
+                    } else {
+                        tooltipContent += `<br><em>Double-click to navigate</em>`;
+                    }
                     
                     tooltip.innerHTML = tooltipContent;
                     tooltip.style.display = 'block';
@@ -422,7 +430,7 @@ class BitcoinNodeExplorer {
             }
         });
 
-        // Add click handler for cuboids
+        // Add click handler for interactive objects
         this.renderer.domElement.addEventListener('click', (event) => {
             // Calculate mouse position in normalized device coordinates
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -431,14 +439,16 @@ class BitcoinNodeExplorer {
             // Update the picking ray with the camera and mouse position
             raycaster.setFromCamera(mouse, this.camera);
 
-            // Get all feature cuboids
-            const featureCuboids = this.scene.children.filter(child => 
-                child.geometry && child.geometry.type === 'BoxGeometry' && 
-                child !== this.scene.children.find(child => child.geometry && child.geometry.parameters && child.geometry.parameters.radius === 2)
+            // Get all interactive objects (feature cuboids, helix, and spiral)
+            const interactiveObjects = this.scene.children.filter(child => 
+                (child.geometry && child.geometry.type === 'BoxGeometry' && 
+                 child !== this.scene.children.find(child => child.geometry && child.geometry.parameters && child.geometry.parameters.radius === 2)) ||
+                (child.geometry && child.geometry.type === 'BufferGeometry' && child.userData && child.userData.name) ||
+                (child.geometry && child.geometry.type === 'TubeGeometry' && child.userData && child.userData.name)
             );
 
             // Calculate objects intersecting the picking ray
-            const intersects = raycaster.intersectObjects(featureCuboids);
+            const intersects = raycaster.intersectObjects(interactiveObjects);
 
             if (intersects.length > 0) {
                 const intersectedObject = intersects[0].object;
@@ -448,21 +458,35 @@ class BitcoinNodeExplorer {
                     clickedSphere = intersectedObject;
                     
                     // Format the tooltip content
-                    const tooltipContent = `
+                    let tooltipContent = `
                         <strong>${featureData.name}</strong><br>
                         ${featureData.description}<br>
                         Type: ${featureData.type}<br>
-                        Year: ${featureData.year}<br>
-                        <a href="${featureData.url}" target="_blank" style="color: #4CAF50; text-decoration: none;">View Details →</a>
+                        Year: ${featureData.year}
                     `;
+                    
+                    // Only add "View Details" link for non-navigation objects (feature cuboids)
+                    if (featureData.type === 'Bitcoin Protocol') {
+                        tooltipContent += `<br><a href="${featureData.url}" target="_blank" style="color: #4CAF50; text-decoration: none;">View Details →</a>`;
+                    } else {
+                        tooltipContent += `<br><em>Double-click to navigate</em>`;
+                    }
                     
                     tooltip.innerHTML = tooltipContent;
                     tooltip.style.display = 'block';
                     
-                    // Position tooltip in center of screen
+                    // Position tooltip near mouse cursor (same as hover)
                     const tooltipRect = tooltip.getBoundingClientRect();
-                    const left = (window.innerWidth - tooltipRect.width) / 2;
-                    const top = (window.innerHeight - tooltipRect.height) / 2;
+                    let left = event.clientX + 10;
+                    let top = event.clientY - tooltipRect.height - 10;
+                    
+                    // Ensure tooltip stays within viewport
+                    if (top < 10) {
+                        top = event.clientY + 10;
+                    }
+                    if (left + tooltipRect.width > window.innerWidth - 10) {
+                        left = event.clientX - tooltipRect.width - 10;
+                    }
                     
                     tooltip.style.left = left + 'px';
                     tooltip.style.top = top + 'px';
@@ -477,6 +501,37 @@ class BitcoinNodeExplorer {
         this.renderer.domElement.addEventListener('mouseleave', () => {
             if (!clickedSphere) {
                 tooltip.style.display = 'none';
+            }
+        });
+        
+        // Add double-click handler for navigation
+        this.renderer.domElement.addEventListener('dblclick', (event) => {
+            // Calculate mouse position in normalized device coordinates
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, this.camera);
+
+            // Get all interactive objects (feature cuboids, helix, and spiral)
+            const interactiveObjects = this.scene.children.filter(child => 
+                (child.geometry && child.geometry.type === 'BoxGeometry' && 
+                 child !== this.scene.children.find(child => child.geometry && child.geometry.parameters && child.geometry.parameters.radius === 2)) ||
+                (child.geometry && child.geometry.type === 'BufferGeometry' && child.userData && child.userData.name) ||
+                (child.geometry && child.geometry.type === 'TubeGeometry' && child.userData && child.userData.name)
+            );
+
+            // Calculate objects intersecting the picking ray
+            const intersects = raycaster.intersectObjects(interactiveObjects);
+
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                const featureData = intersectedObject.userData;
+                
+                if (featureData.name && featureData.url) {
+                    // Navigate to the specified URL
+                    window.location.href = featureData.url;
+                }
             }
         });
     }
@@ -518,15 +573,26 @@ class BitcoinNodeExplorer {
 
     createNodeVisualization() {
         // Create main node as white sphere
-        const nodeGeometry = new THREE.SphereGeometry(2, 32, 32);
+        const nodeGeometry = new THREE.SphereGeometry(6, 32, 32); // Increased radius from 4 to 6
         const nodeMaterial = new THREE.MeshBasicMaterial({ 
             color: 0xffffff,
             transparent: true,
-            opacity: 0.9
+            opacity: 0.15, // Reduced opacity from 0.3 to 0.15
+            depthWrite: false,  // Prevent depth writing issues with transparency
+            alphaTest: 0.1      // Help with transparency sorting
         });
         const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
         node.position.set(0, 0, 0);
         this.scene.add(node);
+        
+        // Create network connection lines radiating from the center
+        this.createNetworkConnections();
+        
+        // Create blockchain helix inside the sphere
+        this.createBlockchainHelix();
+        
+        // Create mempool spiral next to the sphere
+        this.createMempoolSpiral();
         
         // Create Bitcoin node version features visualization
         this.createVersionFeatures();
@@ -616,7 +682,7 @@ class BitcoinNodeExplorer {
         
         allFeatures.forEach((feature, index) => {
             const angle = (index / allFeatures.length) * Math.PI * 2;
-            const radius = 8;
+            const radius = 5; // Reduced from 8 to 5 to bring features closer
             const height = (index % 3) * 2 - 2; // Distribute in 3 layers
             
             // Calculate position on the sphere
@@ -664,33 +730,126 @@ class BitcoinNodeExplorer {
             // Create HTML text label
             this.createTextLabel(featureCuboid, feature.name);
         });
+    }
+    
+    createBlockchainHelix() {
+        // Create a helix inside the sphere representing the blockchain
+        const points = [];
+        const segments = 250; // More segments for longer helix
+        const radius = 0.5; // Even smaller radius for more compression
+        const height = 5; // Taller for longer helix
         
-        // Create connection lines to show relationships
-        const lineMaterial = new THREE.LineBasicMaterial({ 
-            color: 0x444444,
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const angle = t * Math.PI * 10; // 5 full rotations for more compression
+            const x = Math.cos(angle) * radius;
+            const y = (t - 0.5) * height;
+            const z = Math.sin(angle) * radius;
+            points.push(new THREE.Vector3(x, y, z));
+        }
+        
+        // Create a path from the points
+        const path = new THREE.CatmullRomCurve3(points);
+        
+        // Create a tube geometry for thickness
+        const tubeGeometry = new THREE.TubeGeometry(path, segments, 0.15, 8, false);
+        
+        const helixMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
             transparent: true,
-            opacity: 0.3
+            opacity: 0.9
         });
         
-        // Connect features to main node
-        allFeatures.forEach((feature, index) => {
-            const angle = (index / allFeatures.length) * Math.PI * 2;
-            const radius = 8;
-            const height = (index % 3) * 2 - 2;
+        const helix = new THREE.Mesh(tubeGeometry, helixMaterial);
+        helix.position.set(0, 0, 0);
+        
+        // Store data for tooltip and navigation
+        helix.userData = {
+            name: "Blockchain",
+            description: "The complete chain of blocks",
+            type: "Blockchain",
+            year: "Ongoing",
+            url: "blockchain.html"
+        };
+        
+        this.scene.add(helix);
+    }
+    
+    createMempoolSpiral() {
+        // Create a flat white spiral next to the sphere representing the mempool
+        const spiralGeometry = new THREE.BufferGeometry();
+        const points = [];
+        const segments = 120; // More segments for longer spiral
+        const radius = 0.8;
+        
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const angle = t * Math.PI * 4; // 2 full rotations for longer spiral
+            const currentRadius = radius * (1 - t * 0.6); // Slower radius decrease
+            const x = Math.cos(angle) * currentRadius + 3; // Offset to the right
+            const y = 0; // Keep it flat (no height variation)
+            const z = Math.sin(angle) * currentRadius;
+            points.push(new THREE.Vector3(x, y, z));
+        }
+        
+        spiralGeometry.setFromPoints(points);
+        
+        const spiralMaterial = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        const spiral = new THREE.Line(spiralGeometry, spiralMaterial);
+        spiral.position.set(0, 0, 0);
+        
+        // Store data for tooltip and navigation
+        spiral.userData = {
+            name: "Mempool",
+            description: "Pending transactions waiting to be mined",
+            type: "Mempool",
+            year: "Dynamic",
+            url: "mempool.html"
+        };
+        
+        this.scene.add(spiral);
+    }
+    
+    createNetworkConnections() {
+        // Create 9 network connection lines radiating from the sphere surface
+        const lineMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x666666,
+            transparent: true,
+            opacity: 0.4
+        });
+        
+        for (let i = 0; i < 9; i++) {
+            const angle = (i / 9) * Math.PI * 2;
+            const sphereRadius = 6; // Updated radius of the sphere
+            const distance = 80; // 4 times longer connections (from 20 to 80)
             
             const points = [
-                new THREE.Vector3(0, 0, 0),
                 new THREE.Vector3(
-                    Math.cos(angle) * radius,
-                    height,
-                    Math.sin(angle) * radius
+                    Math.cos(angle) * sphereRadius, // Start from sphere surface
+                    0, // Keep lines horizontal
+                    Math.sin(angle) * sphereRadius
+                ),
+                new THREE.Vector3(
+                    Math.cos(angle) * distance,
+                    0, // Keep lines horizontal
+                    Math.sin(angle) * distance
                 )
             ];
             
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const line = new THREE.Line(geometry, lineMaterial);
+            // Create a path from the points
+            const path = new THREE.CatmullRomCurve3(points);
+            
+            // Create a tube geometry for thickness
+            const tubeGeometry = new THREE.TubeGeometry(path, 8, 0.08, 6, false);
+            
+            const line = new THREE.Mesh(tubeGeometry, lineMaterial);
             this.scene.add(line);
-        });
+        }
     }
 
     async fetchData() {

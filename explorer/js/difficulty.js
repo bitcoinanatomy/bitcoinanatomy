@@ -6,6 +6,7 @@ class BitcoinDifficultyExplorer {
         this.renderer = null;
         this.controls = null;
         this.blocks = [];
+        this.discs = [];
         this.isRotating = true;
         this.clock = new THREE.Clock();
         this.selectedAdjustment = null;
@@ -109,29 +110,57 @@ class BitcoinDifficultyExplorer {
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             
             raycaster.setFromCamera(mouse, this.camera);
-            const intersects = raycaster.intersectObjects(this.blocks);
+            const intersects = raycaster.intersectObjects([...this.blocks, ...this.discs]);
             
             if (intersects.length > 0) {
-                const block = intersects[0].object;
-                const blockInfo = block.userData.blockInfo;
+                const object = intersects[0].object;
                 
-                // Format date from timestamp
-                const date = new Date(blockInfo.time * 1000);
-                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-                
-                // Create tooltip content
-                const tooltipContent = `
-                    <strong>Block ${blockInfo.height}</strong><br>
-                    Size: ${blockInfo.size.toLocaleString()} bytes<br>
-                    Date: ${dateStr}<br>
-                    Transactions: ${blockInfo.nTx}<br>
-                    Time Difference: ${blockInfo.timeDifference}s
-                `;
-                
-                tooltip.innerHTML = tooltipContent;
-                tooltip.style.display = 'block';
-                tooltip.style.left = e.clientX + 10 + 'px';
-                tooltip.style.top = e.clientY - 10 + 'px';
+                if (object.userData && object.userData.isDisc) {
+                    // Create tooltip for disc
+                    const adjustmentIndex = object.userData.adjustmentIndex;
+                    const isFuture = object.userData.isFuture;
+                    const isPast = object.userData.isPast;
+                    
+                    let periodText = '';
+                    if (isFuture) {
+                        periodText = 'Future Period';
+                    } else if (isPast) {
+                        periodText = 'Previous Period';
+                    }
+                    
+                    const tooltipContent = `
+                        <strong>Difficulty Adjustment ${adjustmentIndex}</strong><br>
+                        ${periodText}<br>
+                        Click to navigate to epoch ${adjustmentIndex}<br>
+                        Blocks: ${(adjustmentIndex * 2016).toLocaleString()} - ${((adjustmentIndex + 1) * 2016 - 1).toLocaleString()}
+                    `;
+                    
+                    tooltip.innerHTML = tooltipContent;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = e.clientX + 10 + 'px';
+                    tooltip.style.top = e.clientY - 10 + 'px';
+                } else if (object.userData && object.userData.blockInfo) {
+                    // Create tooltip for block
+                    const blockInfo = object.userData.blockInfo;
+                    
+                    // Format date from timestamp
+                    const date = new Date(blockInfo.time * 1000);
+                    const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                    
+                    // Create tooltip content
+                    const tooltipContent = `
+                        <strong>Block ${blockInfo.height}</strong><br>
+                        Size: ${blockInfo.size.toLocaleString()} bytes<br>
+                        Date: ${dateStr}<br>
+                        Transactions: ${blockInfo.nTx}<br>
+                        Time Difference: ${blockInfo.timeDifference}s
+                    `;
+                    
+                    tooltip.innerHTML = tooltipContent;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = e.clientX + 10 + 'px';
+                    tooltip.style.top = e.clientY - 10 + 'px';
+                }
             } else {
                 tooltip.style.display = 'none';
             }
@@ -177,14 +206,20 @@ class BitcoinDifficultyExplorer {
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             
             raycaster.setFromCamera(mouse, this.camera);
-            const intersects = raycaster.intersectObjects(this.blocks);
+            const intersects = raycaster.intersectObjects([...this.blocks, ...this.discs]);
             
             if (intersects.length > 0) {
-                const block = intersects[0].object;
-                const blockInfo = block.userData.blockInfo;
+                const object = intersects[0].object;
                 
-                // Navigate to block page with block height
-                window.location.href = `block.html?height=${blockInfo.height}`;
+                if (object.userData && object.userData.isDisc) {
+                    // Navigate to next difficulty adjustment page
+                    const adjustmentIndex = object.userData.adjustmentIndex;
+                    window.location.href = `difficulty.html?adjustment=${adjustmentIndex}`;
+                } else if (object.userData && object.userData.blockInfo) {
+                    // Navigate to block page with block height
+                    const blockInfo = object.userData.blockInfo;
+                    window.location.href = `block.html?height=${blockInfo.height}`;
+                }
             }
         });
         
@@ -193,9 +228,9 @@ class BitcoinDifficultyExplorer {
             
             if (this.isPerspective) {
                 // Perspective camera zoom
-                controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
-                controls.distance = Math.max(10, Math.min(600, controls.distance));
-                controls.update();
+            controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
+            controls.distance = Math.max(10, Math.min(600, controls.distance));
+            controls.update();
             } else {
                 // Orthographic camera zoom
                 this.orthographicZoom -= e.deltaY * 0.1;
@@ -273,9 +308,6 @@ class BitcoinDifficultyExplorer {
         directionalLight.position.set(10, 10, 5);
         directionalLight.castShadow = true;
         this.scene.add(directionalLight);
-        
-        const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
-        this.scene.add(gridHelper);
         
         if (this.selectedAdjustment !== null) {
             this.createBlockSpiral();
@@ -411,6 +443,85 @@ class BitcoinDifficultyExplorer {
         this.camera.position.set(0, 50, 80);
         this.controls.distance = 80;
         this.controls.update();
+        
+        // Add 5 discs above the spiral
+        this.createDiscs();
+    }
+    
+    createDiscs() {
+        const discRadius = 21; // Bigger discs
+        const discThickness = 0.5; // Very thin for flat appearance
+        const discSpacing = 21; // More spacing between discs
+        
+        // Create 5 discs above (future periods)
+        const startYAbove = 21; // Start higher above the spiral
+        for (let i = 0; i < 5; i++) {
+            const geometry = new THREE.CylinderGeometry(discRadius, discRadius, discThickness, 32);
+            
+            // Gradient transparency from top (0.5) to bottom (0)
+            const opacity = 0.1 - (i * 0.02); // 0.5, 0.4, 0.3, 0.2, 0.1
+            
+            const material = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(1, 1, 1), // White color
+                transparent: true,
+                opacity: opacity,
+                depthWrite: false, // Fix transparency issues
+                depthTest: true
+            });
+            
+            const disc = new THREE.Mesh(geometry, material);
+            disc.position.set(0, startYAbove + (i * discSpacing), 0);
+            disc.rotation.x = Math.PI; // Rotate 90 degrees on x-axis
+            
+            // Add click data to disc (future periods)
+            disc.userData = {
+                isDisc: true,
+                adjustmentIndex: parseInt(this.selectedAdjustment) + i + 1,
+                discIndex: i,
+                isFuture: true
+            };
+            
+            // Add to scene and array
+            this.scene.add(disc);
+            this.discs.push(disc);
+        }
+        
+        // Create past discs below - only show the appropriate number based on current adjustment
+        if (parseInt(this.selectedAdjustment) > 0) {
+            const startYBelow = -21; // Start below the spiral
+            const numPastDiscs = Math.min(5, parseInt(this.selectedAdjustment)); // Show up to 5 past discs, or current adjustment number if less
+            
+            for (let i = 0; i < numPastDiscs; i++) {
+                const geometry = new THREE.CylinderGeometry(discRadius, discRadius, discThickness, 32);
+                
+                // Gradient transparency from bottom (0.1) to top (0.02)
+                const opacity = 0.1 - (i * 0.02); // 0.1, 0.08, 0.06, 0.04, 0.02
+                
+                const material = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color(0.8, 0.8, 0.8), // Light gray color for past periods
+                    transparent: true,
+                    opacity: opacity,
+                    depthWrite: false, // Fix transparency issues
+                    depthTest: true
+                });
+                
+                const disc = new THREE.Mesh(geometry, material);
+                disc.position.set(0, startYBelow - (i * discSpacing), 0);
+                disc.rotation.x = Math.PI; // Rotate 90 degrees on x-axis
+                
+                // Add click data to disc (previous periods)
+                disc.userData = {
+                    isDisc: true,
+                    adjustmentIndex: parseInt(this.selectedAdjustment) - i - 1,
+                    discIndex: i + 5,
+                    isPast: true
+                };
+                
+                // Add to scene and array
+                this.scene.add(disc);
+                this.discs.push(disc);
+            }
+        }
     }
 
     async fetchData() {
@@ -750,10 +861,24 @@ class BitcoinDifficultyExplorer {
     updateUI(data) {
         if (this.selectedAdjustment !== null) {
             const header = document.querySelector('.header h1');
-            header.textContent = `Difficulty Adjustment ${this.selectedAdjustment}`;
+            if (header) {
+                header.textContent = `Difficulty Adjustment ${this.selectedAdjustment}`;
+            }
             
-            document.getElementById('adjustment-period').textContent = this.selectedAdjustment;
-            document.getElementById('adjustment-blocks').textContent = `${(parseInt(this.selectedAdjustment) * 2016).toLocaleString()}`;
+            // Update elements in the consolidated panel
+            const adjustmentPeriod = document.getElementById('adjustment-period');
+            const adjustmentBlocks = document.getElementById('adjustment-blocks');
+            const totalAdjustments = document.getElementById('total-adjustments');
+            const avgChange = document.getElementById('avg-change');
+            const lastChange = document.getElementById('last-change');
+            const nextExpected = document.getElementById('next-expected');
+            
+            if (adjustmentPeriod) {
+                adjustmentPeriod.textContent = this.selectedAdjustment;
+            }
+            if (adjustmentBlocks) {
+                adjustmentBlocks.textContent = `${(parseInt(this.selectedAdjustment) * 2016).toLocaleString()}`;
+            }
             
             if (this.blockData && this.blockData[0]) {
                 const blocks = this.blockData[0];
@@ -762,11 +887,18 @@ class BitcoinDifficultyExplorer {
                 const minTimeDiff = Math.min(...blocks.map(block => block[8]?.time_difference || 600));
                 const maxTimeDiff = Math.max(...blocks.map(block => block[8]?.time_difference || 600));
                 
-                document.getElementById('history-title').textContent = 'Block Statistics';
-                document.getElementById('total-adjustments').textContent = `${totalBlocks} blocks`;
-                document.getElementById('avg-change').textContent = `${avgTimeDiff.toFixed(0)}s avg`;
-                document.getElementById('last-change').textContent = `${minTimeDiff}s fastest`;
-                document.getElementById('next-expected').textContent = `${maxTimeDiff}s slowest`;
+                if (totalAdjustments) {
+                    totalAdjustments.textContent = `${totalBlocks} blocks`;
+                }
+                if (avgChange) {
+                    avgChange.textContent = `${avgTimeDiff.toFixed(0)}s avg`;
+                }
+                if (lastChange) {
+                    lastChange.textContent = `${minTimeDiff}s fastest`;
+                }
+                if (nextExpected) {
+                    nextExpected.textContent = `${maxTimeDiff}s slowest`;
+                }
             }
         }
     }

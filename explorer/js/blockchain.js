@@ -190,7 +190,14 @@ class BitcoinBlockchainExplorer {
                 const intersectedObject = intersects[0].object;
                 if (!intersectedObject.userData.special) { // Only show tooltip for discs, not UTXOs
                     const index = intersectedObject.userData.index;
-                    tooltip.textContent = `Disc ${index} (Double-click to view details)`;
+                    
+                    // Check if it's the mempool disc
+                    if (intersectedObject.userData.isMempool) {
+                        tooltip.textContent = `Mempool (Double-click to view mempool)`;
+                    } else {
+                        tooltip.textContent = `Disc ${index} (Double-click to view details)`;
+                    }
+                    
                     tooltip.style.display = 'block';
                     tooltip.style.left = event.clientX + 10 + 'px';
                     tooltip.style.top = event.clientY - 10 + 'px';
@@ -222,10 +229,17 @@ class BitcoinBlockchainExplorer {
                 const intersectedObject = intersects[0].object;
                 if (!intersectedObject.userData.special) { // Only handle clicks on discs, not UTXOs
                     const index = intersectedObject.userData.index;
-                    console.log(`Double-clicked on disc ${index}, redirecting to difficulty page...`);
                     
-                    // Redirect to difficulty page with the disc index as URL parameter
-                    window.location.href = `difficulty.html?adjustment=${index}`;
+                    // Check if it's the mempool disc
+                    if (intersectedObject.userData.isMempool) {
+                        console.log(`Double-clicked on mempool disc, redirecting to mempool page...`);
+                        window.location.href = `mempool.html`;
+                    } else {
+                        console.log(`Double-clicked on disc ${index}, redirecting to difficulty page...`);
+                        
+                        // Redirect to difficulty page with the disc index as URL parameter
+                        window.location.href = `difficulty.html?adjustment=${index}`;
+                    }
                 }
             }
         });
@@ -461,6 +475,45 @@ class BitcoinBlockchainExplorer {
             this.scene.add(disc);
             this.blocks.push(disc);
         }
+        
+        // Add mempool disc at the end of the helix
+        const mempoolT = numDiscs * 0.06057;
+        const mempoolX = radius * Math.cos(mempoolT);
+        const mempoolY = height * mempoolT - 21;
+        const mempoolZ = radius * Math.sin(mempoolT);
+        
+        // Create mempool disc with distinct appearance
+        const mempoolRadius = 1.8; // Slightly larger than regular discs
+        const mempoolGeometry = new THREE.CylinderGeometry(mempoolRadius, mempoolRadius, discThickness, 32);
+        const mempoolMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff, // White color to emit light
+            roughness: 0.0, // Completely smooth for maximum reflectivity
+            metalness: 0.8, // High metallic for bright appearance
+            emissive: 0x888888 // Much higher emissive for self-illumination
+        });
+        
+        const mempoolDisc = new THREE.Mesh(mempoolGeometry, mempoolMaterial);
+        mempoolDisc.position.set(mempoolX, mempoolY, mempoolZ);
+        mempoolDisc.rotation.set(Math.PI / 2, 0, mempoolT);
+        
+        mempoolDisc.castShadow = false;
+        mempoolDisc.receiveShadow = true;
+        mempoolDisc.userData = { 
+            index: numDiscs,
+            t: mempoolT,
+            isMempool: true // Special flag to identify mempool disc
+        };
+        
+        this.scene.add(mempoolDisc);
+        this.blocks.push(mempoolDisc);
+        
+        // Add a point light at the mempool disc position to make it emit light
+        const mempoolLight = new THREE.PointLight(0xffffff, 3.0, 25); // White light, much higher intensity 3.0, distance 25
+        mempoolLight.position.set(mempoolX, mempoolY, mempoolZ);
+        mempoolLight.castShadow = true;
+        mempoolLight.shadow.mapSize.width = 512;
+        mempoolLight.shadow.mapSize.height = 512;
+        this.scene.add(mempoolLight);
         
         // Rotate the entire helix 90 degrees around X-axis
         this.blocks.forEach(block => {

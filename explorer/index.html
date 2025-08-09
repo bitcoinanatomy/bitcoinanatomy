@@ -3,86 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitcoin Explorer - Home</title>
-    <meta name="description" content="Interactive 3D Bitcoin blockchain explorer">
+    <title>Anatomy of Bitcoin Explorer</title>
+    <meta name="description" content="Interactive 3D visualization of Bitcoin's blockchain, transactions, and network architecture">
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+       
+    </style>
 </head>
 <body>
-    <div id="container">
-        <!-- Navigation -->
-        <nav class="navbar">
-            <div class="nav-brand">
-                <a href="index.html">Anatomy of Bitcoin Explorer</a>
-            </div>
-            <div class="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-            <ul class="nav-menu">
-                <li><a href="network.html" class="nav-link">Network</a></li>
-                <li><a href="node.html" class="nav-link">Node</a></li>
-                <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
-                <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
-                <li><a href="block.html" class="nav-link">Block</a></li>
-                <li><a href="transaction.html" class="nav-link">Transaction</a></li>
-                <li><a href="mempool.html" class="nav-link">Mempool</a></li>
-            </ul>
-        </nav>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="index.html">Anatomy of Bitcoin Explorer</a>
+        </div>
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="network.html" class="nav-link">Network</a></li>
+            <li><a href="node.html" class="nav-link">Node</a></li>
+            <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
+            <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
+            <li><a href="block.html" class="nav-link">Block</a></li>
+            <li><a href="transaction.html" class="nav-link">Transaction</a></li>
+            <li><a href="address.html" class="nav-link">Address</a></li>
+            <li><a href="mempool.html" class="nav-link">Mempool</a></li>
+        </ul>
+    </nav>
 
-        <!-- 3D Scene -->
-        <div id="scene"></div>
-        
-        <!-- UI Overlay -->
-        <div id="ui">
-            <div class="header">
-                <h1>Bitcoin Explorer</h1>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span>Live</span>
-                </div>
-            </div>
-            
-            <div class="sidebar">
-                <div class="panel">
-                    <h3>Overview</h3>
-                    <div id="overview-info">
-                        <div>Latest Block: <span id="block-height">Loading...</span></div>
-                        <div>Network Hash Rate: <span id="hash-rate">Loading...</span></div>
-                        <div>Total Transactions: <span id="total-tx">Loading...</span></div>
-                        <div>Price: <span id="price">Loading...</span></div>
-                    </div>
-                </div>
-                
-                <div class="panel">
-                    <h3>Quick Stats</h3>
-                    <div id="stats-info">
-                        <div>Difficulty: <span id="difficulty">Loading...</span></div>
-                        <div>Mempool Size: <span id="mempool">Loading...</span></div>
-                        <div>24h Change: <span id="change">Loading...</span></div>
-                        <div>Market Cap: <span id="market-cap">Loading...</span></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="controls">
-                <button id="toggle-rotation">Pause Rotation</button>
-                <button id="reset-camera">Reset Camera</button>
-            </div>
+    <div class="container">
+        <div class="header">
+            <h1>Anatomy of Bitcoin Explorer</h1>
+            <p>Interactive 3D visualization of Bitcoin's blockchain, transactions, and network architecture. Explore the inner workings of the world's first decentralized digital currency through immersive visualizations.</p>
         </div>
         
-    </div>
-    
-    <div class="disclaimer">
-        Data sources: Mempool.space, CoinGecko API
+        <div class="sections">
+            <a href="block.html" class="section-card">
+                <h3>Block Explorer</h3>
+                <p>Explore individual Bitcoin blocks in 3D, with detailed transaction data and visual representations of block structure.</p>
+                <ul class="features">
+                    <li>3D block visualization with transaction cuboids</li>
+                    <li>Real-time data from mempool.space</li>
+                    <li>Interactive transaction loading</li>
+                    <li>Blockchain timeline</li>
+                </ul>
+            </a>
+            
+            <a href="transaction.html" class="section-card">
+                <h3>Transaction Explorer</h3>
+                <p>Visualize Bitcoin transactions in 3D, showing input/output relationships and spending patterns.</p>
+                <ul class="features">
+                    <li>3D transaction flow</li>
+                    <li>Input/output spheres</li>
+                    <li>Spending status</li>
+                    <li>Address navigation</li>
+                </ul>
+            </a>
+            
+            <a href="address.html" class="section-card">
+                <h3>Address Explorer</h3>
+                <p>Explore Bitcoin addresses with 3D visualizations of UTXOs and transaction history.</p>
+                <ul class="features">
+                    <li>Central balance sphere</li>
+                    <li>UTXO distribution</li>
+                    <li>Transaction history</li>
+                    <li>Real-time data</li>
+                </ul>
+            </a>
+            
+            <a href="blockchain.html" class="section-card">
+                <h3>Blockchain Explorer</h3>
+                <p>Visualize the complete Bitcoin blockchain as a 3D helix structure with historical data.</p>
+                <ul class="features">
+                    <li>3D helix structure</li>
+                    <li>Historical data</li>
+                    <li>Mempool integration</li>
+                    <li>Timeline exploration</li>
+                </ul>
+            </a>
+            
+            <a href="network.html" class="section-card">
+                <h3>Network Explorer</h3>
+                <p>Explore the Bitcoin network topology and node distribution in 3D space.</p>
+                <ul class="features">
+                    <li>3D node visualization</li>
+                    <li>Real-time data</li>
+                    <li>Geographic mapping</li>
+                    <li>Topology analysis</li>
+                </ul>
+            </a>
+            
+            <a href="node.html" class="section-card">
+                <h3>Node Explorer</h3>
+                <p>Explore individual Bitcoin nodes and their features in 3D visualization.</p>
+                <ul class="features">
+                    <li>3D node representation</li>
+                    <li>BIP features</li>
+                    <li>Network connections</li>
+                    <li>Blockchain integration</li>
+                </ul>
+            </a>
+            
+            <a href="mempool.html" class="section-card">
+                <h3>Mempool Explorer</h3>
+                <p>Visualize the Bitcoin mempool - pending transactions waiting to be included in blocks.</p>
+                <ul class="features">
+                    <li>3D transaction visualization</li>
+                    <li>Fee rate analysis</li>
+                    <li>Transaction prioritization</li>
+                    <li>Real-time data</li>
+                </ul>
+            </a>
+            
+            <a href="difficulty.html" class="section-card">
+                <h3>Difficulty Explorer</h3>
+                <p>Explore Bitcoin's difficulty adjustment mechanism through 3D spiral visualization.</p>
+                <ul class="features">
+                    <li>3D spiral epochs</li>
+                    <li>Block time analysis</li>
+                    <li>Difficulty adjustment</li>
+                    <li>Historical data</li>
+                </ul>
+            </a>
+        </div>
+        
+        <div class="about">
+            <h2>About This Project</h2>
+            <p>This Bitcoin Explorer is part of the <a href="https://anatomyofbitcoin.com" target="_blank">Anatomy of Bitcoin</a> project, an open-source initiative to create comprehensive visual representations of Bitcoin's technical architecture.</p>
+            <p>The explorer uses Three.js for 3D visualization and integrates with multiple Bitcoin APIs to provide real-time data about blocks, transactions, addresses, and network topology. Each section offers unique insights into different aspects of Bitcoin's operation.</p>
+            <p>This project aims to make Bitcoin's complex technical concepts more accessible through interactive visualizations, helping users understand the mechanisms that make Bitcoin work.</p>
+        </div>
+        
+        <div class="data-sources">
+            <h2>Data Sources</h2>
+            <ul>
+                <li><a href="https://mempool.space" target="_blank">mempool.space</a> - Block, transaction, and address data</li>
+                <li><a href="https://bitnodes.io" target="_blank">bitnodes.io</a> - Bitcoin network node data</li>
+                <li><a href="https://bitcoincore.org" target="_blank">Bitcoin Core</a> - Protocol reference implementation</li>
+                <li><a href="https://pvxg.net" target="_blank">pvxg.net</a> - Historical difficulty data</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>Part of the <a href="https://anatomyofbitcoin.com" target="_blank">Anatomy of Bitcoin</a> project</p>
+            <p>Content released under MIT license</p>
+        </div>
     </div>
 
-    <!-- Three.js from CDN (ES Modules) -->
-    <script type="module">
-        import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
-        window.THREE = THREE;
-    </script>
-    <script src="js/home.js"></script>
     <script>
         // Hamburger menu functionality
         const hamburger = document.querySelector('.hamburger');

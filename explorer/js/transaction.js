@@ -55,6 +55,21 @@ class BitcoinTransactionExplorer {
         let lastMouseX = 0;
         let lastMouseY = 0;
         
+        // Create tooltip element
+        const tooltip = document.createElement('div');
+        tooltip.style.position = 'absolute';
+        tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        tooltip.style.color = 'white';
+        tooltip.style.padding = '8px 12px';
+        tooltip.style.borderRadius = '4px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.fontFamily = 'monospace';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.zIndex = '1000';
+        tooltip.style.display = 'none';
+        tooltip.style.whiteSpace = 'nowrap';
+        document.body.appendChild(tooltip);
+        
         this.renderer.domElement.addEventListener('mousedown', (e) => {
             isMouseDown = true;
             lastMouseX = e.clientX;
@@ -67,6 +82,100 @@ class BitcoinTransactionExplorer {
         });
         
         this.renderer.domElement.addEventListener('mousemove', (e) => {
+            // Handle tooltip
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            const mouse = new THREE.Vector2();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            // Update the picking ray with the camera and mouse position
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, this.camera);
+
+            // Calculate objects intersecting the picking ray
+            const intersects = raycaster.intersectObjects(this.scene.children);
+
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                const userData = intersectedObject.userData;
+                
+                let tooltipContent = '';
+                
+                if (userData.type === 'input') {
+                    const input = userData.data;
+                    const amount = input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown';
+                    const scriptType = input.prevout?.scriptpubkey_type || 'Unknown';
+                    
+                    tooltipContent = `
+                        <strong>Input ${userData.index + 1}</strong><br>
+                        Amount: ${amount} BTC<br>
+                        Script Type: ${scriptType}<br>
+                        ${input.prevout?.scriptpubkey_address ? `Address: ${input.prevout.scriptpubkey_address.substring(0, 16)}...` : ''}
+                    `;
+                } else if (userData.type === 'output') {
+                    const output = userData.data;
+                    const amount = (output.value / 100000000).toFixed(8);
+                    const scriptType = output.scriptpubkey_type || 'Unknown';
+                    
+                    // Check if this output is spent and show spending transaction data
+                    if (userData.spendingData) {
+                        tooltipContent = `
+                            <strong>Output ${userData.index + 1} (SPENT)</strong><br>
+                            Amount: ${amount} BTC<br>
+                            Script Type: ${scriptType}<br>
+                            ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                            <br>
+                            <strong>Spent by:</strong><br>
+                            TXID: ${userData.spendingData.txid.substring(0, 16)}...<br>
+                            Block: ${userData.spendingData.block_height || 'Unconfirmed'}<br>
+                            <em>Double-click to view spending transaction</em>
+                        `;
+                    } else {
+                        tooltipContent = `
+                            <strong>Output ${userData.index + 1}</strong><br>
+                            Amount: ${amount} BTC<br>
+                            Script Type: ${scriptType}<br>
+                            ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}
+                        `;
+                    }
+                } else if (userData.type === 'output-tube') {
+                    const output = userData.data;
+                    const address = output.scriptpubkey_address;
+                    
+                    if (address) {
+                        tooltipContent = `
+                            <strong>Connection to Address</strong><br>
+                            Address: ${address.substring(0, 16)}...<br>
+                            Amount: ${(output.value / 100000000).toFixed(8)} BTC<br>
+                            <em>Double-click to view address details</em>
+                        `;
+                    }
+                } else if (userData.type === 'transaction') {
+                    const tx = userData.data;
+                    const totalInput = tx.vin ? tx.vin.reduce((sum, input) => sum + (input.prevout?.value || 0), 0) : 0;
+                    const totalOutput = tx.vout ? tx.vout.reduce((sum, output) => sum + output.value, 0) : 0;
+                    const fee = totalInput - totalOutput;
+                    
+                    tooltipContent = `
+                        <strong>Transaction</strong><br>
+                        Size: ${tx.size} bytes<br>
+                        Fee: ${(fee / 100000000).toFixed(8)} BTC<br>
+                        Inputs: ${tx.vin?.length || 0}<br>
+                        Outputs: ${tx.vout?.length || 0}
+                    `;
+                }
+                
+                if (tooltipContent) {
+                    tooltip.innerHTML = tooltipContent;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = e.clientX + 10 + 'px';
+                    tooltip.style.top = e.clientY - 10 + 'px';
+                }
+            } else {
+                tooltip.style.display = 'none';
+            }
+            
+            // Handle camera controls
             if (!isMouseDown) return;
 
             const deltaX = e.clientX - lastMouseX;
@@ -86,6 +195,10 @@ class BitcoinTransactionExplorer {
             this.updateCameraPosition();
             lastMouseX = e.clientX;
             lastMouseY = e.clientY;
+        });
+        
+        this.renderer.domElement.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
         });
         
         this.renderer.domElement.addEventListener('wheel', (e) => {
@@ -118,6 +231,35 @@ class BitcoinTransactionExplorer {
         if (toggleFlowButton) {
             toggleFlowButton.style.display = 'none';
         }
+        
+        // Add double-click functionality
+        this.renderer.domElement.addEventListener('dblclick', (event) => {
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            const mouse = new THREE.Vector2();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, this.camera);
+
+            const intersects = raycaster.intersectObjects(this.scene.children);
+
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                const userData = intersectedObject.userData;
+                
+                if (userData.type === 'output' && userData.spendingData) {
+                    // Navigate to spending transaction
+                    window.location.href = `transaction.html?txid=${userData.spendingData.txid}`;
+                } else if (userData.type === 'output-tube') {
+                    // Navigate to address page
+                    const address = userData.data.scriptpubkey_address;
+                    if (address) {
+                        window.location.href = `address.html?address=${address}`;
+                    }
+                }
+            }
+        });
     }
 
     updateCameraPosition() {
@@ -171,8 +313,66 @@ class BitcoinTransactionExplorer {
             }
             
             this.transactionData = await response.json();
+            
+            // Log all available transaction data
+            console.log('=== TRANSACTION DATA ===');
+            console.log('Full transaction object:', this.transactionData);
+            console.log('Transaction ID:', this.transactionData.txid);
+            console.log('Version:', this.transactionData.version);
+            console.log('Locktime:', this.transactionData.locktime);
+            console.log('Size:', this.transactionData.size, 'bytes');
+            console.log('Weight:', this.transactionData.weight);
+            console.log('Fee:', this.transactionData.fee, 'sats');
+            console.log('Status:', this.transactionData.status);
+            
+            console.log('\n=== INPUTS ===');
+            console.log('Number of inputs:', this.transactionData.vin?.length || 0);
+            this.transactionData.vin?.forEach((input, index) => {
+                console.log(`Input ${index + 1}:`, {
+                    txid: input.txid,
+                    vout: input.vout,
+                    prevout: input.prevout,
+                    scriptsig: input.scriptsig,
+                    scriptsig_asm: input.scriptsig_asm,
+                    inner_witnessscript_asm: input.inner_witnessscript_asm,
+                    sequence: input.sequence,
+                    witness: input.witness
+                });
+            });
+            
+            console.log('\n=== OUTPUTS ===');
+            console.log('Number of outputs:', this.transactionData.vout?.length || 0);
+            this.transactionData.vout?.forEach((output, index) => {
+                console.log(`Output ${index + 1}:`, {
+                    scriptpubkey: output.scriptpubkey,
+                    scriptpubkey_asm: output.scriptpubkey_asm,
+                    scriptpubkey_type: output.scriptpubkey_type,
+                    scriptpubkey_address: output.scriptpubkey_address,
+                    value: output.value,
+                    value_hex: output.value_hex
+                });
+            });
+            
+            console.log('\n=== CALCULATED VALUES ===');
+            const totalInput = this.transactionData.vin ? 
+                this.transactionData.vin.reduce((sum, input) => sum + (input.prevout?.value || 0), 0) : 0;
+            const totalOutput = this.transactionData.vout ? 
+                this.transactionData.vout.reduce((sum, output) => sum + output.value, 0) : 0;
+            const calculatedFee = totalInput - totalOutput;
+            
+            console.log('Total input value:', totalInput, 'sats');
+            console.log('Total output value:', totalOutput, 'sats');
+            console.log('Calculated fee:', calculatedFee, 'sats');
+            console.log('API fee:', this.transactionData.fee, 'sats');
+            console.log('Fee difference:', calculatedFee - this.transactionData.fee, 'sats');
+            
+            console.log('=== END TRANSACTION DATA ===\n');
+            
             this.updateUI(this.transactionData);
             this.createTransactionVisualization();
+            
+            // Check spending status of outputs
+            this.checkOutputSpendingStatus();
             
         } catch (error) {
             console.error('Error fetching transaction data:', error);
@@ -238,22 +438,40 @@ class BitcoinTransactionExplorer {
 
         // Create input spheres on the left
         inputs.forEach((input, index) => {
-            const geometry = new THREE.SphereGeometry(0.5, 16, 16);
-            const material = new THREE.MeshLambertMaterial({ color: 0xff6b6b });
+            // Calculate sphere size based on amount
+            const amount = input.prevout?.value || 0;
+            const sizeScale = Math.min(2.0, Math.max(0.2, amount / 100000000)); // Scale based on BTC
+            const sphereRadius = 1 * sizeScale;
+            
+            const geometry = new THREE.SphereGeometry(sphereRadius, 16, 16);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0xff6b6b,
+                depthWrite: true,
+                alphaTest: 0.01
+            });
             const sphere = new THREE.Mesh(geometry, material);
             
-            sphere.position.set(-8, index * 2 - (inputs.length - 1), 0);
+            sphere.position.set(-12, (inputs.length - 1) - index * 2, 0); // First inputs at top
             sphere.userData = { type: 'input', index, data: input };
             this.scene.add(sphere);
         });
 
         // Create output spheres on the right
         outputs.forEach((output, index) => {
-            const geometry = new THREE.SphereGeometry(0.5, 16, 16);
-            const material = new THREE.MeshLambertMaterial({ color: 0x4ecdc4 });
+            // Calculate sphere size based on amount
+            const amount = output.value || 0;
+            const sizeScale = Math.min(2.0, Math.max(0.2, amount / 100000000)); // Scale based on BTC
+            const sphereRadius = 1 * sizeScale;
+            
+            const geometry = new THREE.SphereGeometry(sphereRadius, 16, 16);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0xffffff, // Changed to white
+                depthWrite: true,
+                alphaTest: 0.01
+            });
             const sphere = new THREE.Mesh(geometry, material);
             
-            sphere.position.set(8, index * 2 - (outputs.length - 1), 0);
+            sphere.position.set(12, (outputs.length - 1) - index * 2, 0); // First outputs at top
             sphere.userData = { type: 'output', index, data: output };
             this.scene.add(sphere);
         });
@@ -264,7 +482,11 @@ class BitcoinTransactionExplorer {
         const height = Math.max(0.5, (this.transactionData.size || 250) / 1000); // Based on transaction size
         
         const txGeometry = new THREE.BoxGeometry(width, height, depth);
-        const txMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
+        const txMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0xffffff,
+            depthWrite: true,
+            alphaTest: 0.01
+        });
         const txCuboid = new THREE.Mesh(txGeometry, txMaterial);
         txCuboid.position.set(0, 0, 0);
         txCuboid.userData = { type: 'transaction', data: this.transactionData };
@@ -289,11 +511,14 @@ class BitcoinTransactionExplorer {
             color: 0xffffff, 
             side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.5
+            opacity: 0.5,
+            depthWrite: false,
+            alphaTest: 0.01
         });
         const leftCircle = new THREE.Mesh(leftCircleGeometry, leftCircleMaterial);
         leftCircle.position.set(-width/2 - 0.1, 0, 0);
         leftCircle.rotation.y = Math.PI / 2; // Rotate to be perpendicular to X-axis
+        leftCircle.renderOrder = 1; // Render after other objects
         this.scene.add(leftCircle);
 
         // Right side circle (perpendicular to X-axis)
@@ -302,34 +527,73 @@ class BitcoinTransactionExplorer {
             color: 0xffffff, 
             side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.5
+            opacity: 0.5,
+            depthWrite: false,
+            alphaTest: 0.01
         });
         const rightCircle = new THREE.Mesh(rightCircleGeometry, rightCircleMaterial);
         rightCircle.position.set(width/2 + 0.1, 0, 0);
         rightCircle.rotation.y = -Math.PI / 2; // Rotate to be perpendicular to X-axis
+        rightCircle.renderOrder = 1; // Render after other objects
         this.scene.add(rightCircle);
 
-        // Create connection lines
+        // Create connection curves
         inputs.forEach((input, index) => {
-            const points = [
-                new THREE.Vector3(-8, index * 2 - (inputs.length - 1), 0),
-                new THREE.Vector3(0, 0, 0)
-            ];
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({ color: 0xff6b6b, opacity: 0.6, transparent: true });
-            const line = new THREE.Line(geometry, material);
-            this.scene.add(line);
+            const startPoint = new THREE.Vector3(-12, (inputs.length - 1) - index * 2, 0);
+            const endPoint = new THREE.Vector3(-width/2, 0, 0); // End at left side of cuboid
+            
+            // Create control points for smooth curve
+            const controlPoint1 = new THREE.Vector3(-1, (inputs.length - 1) - index * 2 + 1, 0);
+            const controlPoint2 = new THREE.Vector3(-4, 0.5, 0);
+            
+            const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
+            
+            // Calculate tube radius based on input sphere size
+            const amount = input.prevout?.value || 0;
+            const sizeScale = Math.min(2.0, Math.max(0.2, amount / 100000000));
+            const tubeRadius = 1 * sizeScale;
+            
+            const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 8, false);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0xff6b6b, 
+                opacity: 0.6, 
+                transparent: true,
+                depthWrite: false,
+                alphaTest: 0.01
+            });
+            const tube = new THREE.Mesh(tubeGeometry, material);
+            tube.renderOrder = 0; // Render before circles
+            tube.userData = { type: 'input-tube', index: index };
+            this.scene.add(tube);
         });
 
         outputs.forEach((output, index) => {
-            const points = [
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(8, index * 2 - (outputs.length - 1), 0)
-            ];
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({ color: 0x4ecdc4, opacity: 0.6, transparent: true });
-            const line = new THREE.Line(geometry, material);
-            this.scene.add(line);
+            const startPoint = new THREE.Vector3(width/2, 0, 0); // Start from right side of cuboid
+            const endPoint = new THREE.Vector3(12, (outputs.length - 1) - index * 2, 0);
+            
+            // Create control points for smooth curve
+            const controlPoint1 = new THREE.Vector3(8, 0.5, 0); // Adjusted for new start point
+            const controlPoint2 = new THREE.Vector3(2, (outputs.length - 1) - index * 2 + 1, 0);
+            
+            const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
+            
+            // Calculate tube radius based on output sphere size
+            const amount = output.value || 0;
+            const sizeScale = Math.min(2.0, Math.max(0.2, amount / 100000000));
+            const tubeRadius = 1 * sizeScale;
+            
+            const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 8, false);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0xffffff, // Changed to white
+                opacity: 0.6, 
+                transparent: true,
+                depthWrite: false,
+                alphaTest: 0.01
+            });
+            const tube = new THREE.Mesh(tubeGeometry, material);
+            tube.renderOrder = 0; // Render before circles
+            tube.userData = { type: 'output-tube', index: index, data: output };
+            this.scene.add(tube);
         });
     }
 
@@ -342,6 +606,62 @@ class BitcoinTransactionExplorer {
         }
         
         this.renderer.render(this.scene, this.camera);
+    }
+
+    async checkOutputSpendingStatus() {
+        if (!this.transactionData || !this.transactionData.vout) return;
+        
+        console.log('\n=== CHECKING OUTPUT SPENDING STATUS ===');
+        
+        // Get all output spheres and tubes from the scene
+        const outputSpheres = [];
+        const outputTubes = [];
+        this.scene.children.forEach(child => {
+            if (child.userData.type === 'output') {
+                outputSpheres.push(child);
+            } else if (child.userData.type === 'output-tube') {
+                outputTubes.push(child);
+            }
+        });
+        
+        // Check each output's spending status
+        for (let i = 0; i < this.transactionData.vout.length; i++) {
+            try {
+                const response = await fetch(`https://mempool.space/api/tx/${this.txid}/outspend/${i}`);
+                
+                if (response.ok) {
+                    const spendingData = await response.json();
+                    console.log(`Output ${i} spending status:`, spendingData);
+                    
+                    // Find the corresponding sphere and tube
+                    const sphere = outputSpheres.find(s => s.userData.index === i);
+                    const tube = outputTubes.find(t => t.userData.index === i);
+                    
+                    if (sphere) {
+                        if (spendingData.spent) {
+                            // Grey out spent outputs
+                            sphere.material.color.setHex(0x666666);
+                            if (tube) tube.material.color.setHex(0x666666);
+                            // Store spending data for tooltip and navigation
+                            sphere.userData.spendingData = spendingData;
+                            if (tube) tube.userData.spendingData = spendingData;
+                            console.log(`Output ${i} is SPENT - greyed out`);
+                        } else {
+                            // Keep unspent outputs white
+                            sphere.material.color.setHex(0xffffff);
+                            if (tube) tube.material.color.setHex(0xffffff);
+                            console.log(`Output ${i} is UNSPENT - kept white`);
+                        }
+                    }
+                } else {
+                    console.log(`Failed to get spending status for output ${i}:`, response.status);
+                }
+            } catch (error) {
+                console.error(`Error checking spending status for output ${i}:`, error);
+            }
+        }
+        
+        console.log('=== END SPENDING STATUS CHECK ===\n');
     }
 
     onWindowResize() {

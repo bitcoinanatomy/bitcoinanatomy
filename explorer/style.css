@@ -1,32 +1,71 @@
+/* ================================
+   FONT IMPORTS
+   ================================ */
+@font-face {
+    font-family: "BureauGrotesque";
+    src: url("../assets/fonts/BureauGrotesque/BureauGrotesque.eot");
+    src: url("../assets/fonts/BureauGrotesque/BureauGrotesque.eot?#iefix") format("embedded-opentype"),
+    url("../assets/fonts/BureauGrotesque/BureauGrotesque.woff2") format("woff2"),
+    url("../assets/fonts/BureauGrotesque/BureauGrotesque.woff") format("woff"),
+    url("../assets/fonts/BureauGrotesque/BureauGrotesque.ttf") format("truetype"),
+    url("../assets/fonts/BureauGrotesque/BureauGrotesque.svg#BureauGrotesque") format("svg");
+}
+
+/* ================================
+   GLOBAL RESET & BASE STYLES
+   ================================ */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+html, body {
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: #000000;
     color: #ffffff;
+    min-height: 100vh;
+}
+
+/* Explorer pages - no scroll */
+body:not(.homepage) {
     overflow: hidden;
 }
 
+/* ================================
+   CONTAINER LAYOUTS
+   ================================ */
 #container {
     width: 100vw;
     height: 100vh;
     position: relative;
 }
 
-/* Navigation */
+/* Homepage container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    padding-top: 120px;
+}
+
+/* ================================
+   NAVIGATION
+   ================================ */
 .navbar {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.95);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 100;
+    z-index: 1000;
     padding: 0 20px;
     height: 60px;
     display: flex;
@@ -34,9 +73,14 @@ body {
     justify-content: space-between;
 }
 
+/* Explorer pages navbar positioning */
+#container .navbar {
+    position: absolute;
+    z-index: 100;
+}
+
 .nav-brand {
     font-size: 1.5rem;
-    font-weight: bold;
     color: #ffffff;
 }
 
@@ -44,6 +88,10 @@ body {
     color: #ffffff;
     text-decoration: none;
     transition: opacity 0.2s;
+    font-family: "BureauGrotesque", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: -0.05rem;
+    font-weight: 500;
 }
 
 .nav-brand a:hover {
@@ -76,6 +124,39 @@ body {
     background: rgba(255, 255, 255, 0.2);
 }
 
+/* Hamburger Menu */
+.hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    padding: 8px;
+    z-index: 1001;
+}
+
+.hamburger span {
+    width: 22px;
+    height: 2px;
+    background: white;
+    margin: 2px 0;
+    transition: 0.2s;
+    border-radius: 1px;
+}
+
+.hamburger.active span:nth-child(1) {
+    transform: rotate(-45deg) translate(-4px, 5px);
+}
+
+.hamburger.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+    transform: rotate(45deg) translate(-4px, -5px);
+}
+
+/* ================================
+   3D SCENE
+   ================================ */
 #scene {
     width: 100%;
     height: 100%;
@@ -84,32 +165,57 @@ body {
     left: 0;
 }
 
+/* ================================
+   UI OVERLAY & COMPONENTS
+   ================================ */
 #ui {
     position: absolute;
-    top: 60px; /* Below navigation */
+    top: 60px;
     left: 0;
     width: 100%;
     height: calc(100% - 60px);
     pointer-events: none;
-    z-index: 1500; /* Above tooltips */
+    z-index: 1500;
 }
 
+/* Headers */
 .header {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    display: flex;
     align-items: center;
     gap: 20px;
     pointer-events: auto;
+    padding: 20px 20px;
 }
 
 .header h1 {
     font-size: 2rem;
-    font-weight: bold;
+    font-weight: 500;
     color: #ffffff;
+    font-family: "BureauGrotesque", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: -0.05rem;
 }
 
+/* Homepage header */
+.container .header {
+    text-align: center;
+    margin-bottom: 4rem;
+    padding-top: 2rem;
+}
+
+.container .header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.container .header p {
+    font-size: 1.1rem;
+    color: #ccc;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Status Indicator */
 .status {
     display: flex;
     align-items: center;
@@ -126,11 +232,9 @@ body {
     animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
+/* ================================
+   SIDEBAR & PANELS
+   ================================ */
 .sidebar {
     position: absolute;
     top: 20px;
@@ -166,15 +270,9 @@ body {
     font-weight: 500;
 }
 
-.controls {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    display: flex;
-    gap: 10px;
-    pointer-events: auto;
-}
-
+/* ================================
+   BUTTONS & CONTROLS
+   ================================ */
 button {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -195,6 +293,16 @@ button:active {
     transform: translateY(1px);
 }
 
+.controls {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+/* Filter Controls */
 .filter-controls {
     position: absolute;
     bottom: 80px;
@@ -223,11 +331,7 @@ button:active {
     font-size: 0.8rem;
     padding: 6px 10px;
     background: #333333;
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
 }
 
 .filter-controls button:hover {
@@ -239,7 +343,143 @@ button:active {
     background: #555555;
 }
 
-/* Loading animation */
+/* ================================
+   HOMEPAGE SECTIONS
+   ================================ */
+.sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 4rem;
+}
+
+.section-card {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: #fff;
+    display: block;
+}
+
+.section-card:hover {
+    border-color: #f7931a;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(247, 147, 26, 0.2);
+}
+
+.section-card h3 {
+    color: #fff;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.section-card p {
+    color: #fff;
+    margin-bottom: 1rem;
+}
+
+.section-card .features {
+    list-style: none;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.section-card .features li {
+    margin-bottom: 0.5rem;
+    padding-left: 1rem;
+    position: relative;
+    color: #fff;
+}
+
+.section-card .features li:before {
+    content: "•";
+    color: #fff;
+    position: absolute;
+    left: 0;
+}
+
+/* About & Data Sources */
+.about, .data-sources {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.about {
+    margin-bottom: 3rem;
+}
+
+.about h2, .data-sources h2 {
+    color: #fff;
+    margin-bottom: 1rem;
+}
+
+.about p {
+    color: #fff;
+    margin-bottom: 1rem;
+}
+
+.about a, .data-sources a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.about a:hover, .data-sources a:hover {
+    text-decoration: underline;
+}
+
+.data-sources ul {
+    list-style: none;
+    color: #fff;
+}
+
+.data-sources li {
+    margin-bottom: 0.5rem;
+    padding-left: 1rem;
+    position: relative;
+    color: #fff;
+}
+
+.data-sources li:before {
+    content: "→";
+    color: #fff;
+    position: absolute;
+    left: 0;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #333;
+    color: #fff;
+}
+
+.footer a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
+
+/* ================================
+   STATUS & ANIMATIONS
+   ================================ */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .loading {
     opacity: 0.6;
 }
@@ -256,11 +496,6 @@ button:active {
     margin-left: 8px;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Status indicators */
 .status-up {
     color: #4CAF50;
 }
@@ -269,6 +504,33 @@ button:active {
     color: #f44336;
 }
 
+/* ================================
+   IMPLEMENTATION ITEMS
+   ================================ */
+.implementation-item {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+    margin: 2px 0;
+}
+
+.implementation-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.implementation-item.active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.implementation-name {
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+/* ================================
+   DISCLAIMER
+   ================================ */
 .disclaimer {
     position: fixed;
     bottom: 10px;
@@ -285,40 +547,16 @@ button:active {
     pointer-events: none;
 }
 
-/* Mobile hamburger menu */
-.hamburger {
-    display: none;
-    flex-direction: column;
-    cursor: pointer;
-    padding: 8px;
-    z-index: 1001;
-}
-
-.hamburger span {
-    width: 22px;
-    height: 2px;
-    background: white;
-    margin: 2px 0;
-    transition: 0.2s;
-    border-radius: 1px;
-}
-
-.hamburger.active span:nth-child(1) {
-    transform: rotate(-45deg) translate(-4px, 5px);
-}
-
-.hamburger.active span:nth-child(2) {
-    opacity: 0;
-}
-
-.hamburger.active span:nth-child(3) {
-    transform: rotate(45deg) translate(-4px, -5px);
-}
-
-/* Responsive */
+/* ================================
+   RESPONSIVE DESIGN
+   ================================ */
 @media (max-width: 768px) {
+    /* Navigation */
     .navbar {
         padding: 0 10px;
+    }
+    
+    #container .navbar {
         position: relative;
     }
     
@@ -358,10 +596,25 @@ button:active {
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     
+    /* Layout */
+    .container {
+        padding: 1rem;
+        padding-top: 100px;
+    }
+    
     .header h1 {
         font-size: 1.2rem;
     }
     
+    .container .header h1 {
+        font-size: 2rem;
+    }
+    
+    .sections {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Sidebar */
     .sidebar {
         width: 100%;
         right: 0;
@@ -376,6 +629,7 @@ button:active {
         margin-bottom: 10px;
     }
     
+    /* Controls */
     .controls {
         bottom: 10px;
         left: 10px;
@@ -404,26 +658,4 @@ button:active {
         margin-right: 4px;
         margin-bottom: 4px;
     }
-} 
-
-/* Implementation items styling */
-.implementation-item {
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 3px;
-    transition: background-color 0.2s;
-    margin: 2px 0;
 }
-
-.implementation-item:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.implementation-item.active {
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
-.implementation-name {
-    font-weight: bold;
-    color: #4CAF50;
-} 

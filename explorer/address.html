@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitcoin Explorer - Node</title>
-    <meta name="description" content="Bitcoin node 3D visualization">
+    <title>Bitcoin Explorer - Address</title>
+    <meta name="description" content="Bitcoin address 3D visualization">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,12 +21,12 @@
             </div>
             <ul class="nav-menu">
                 <li><a href="network.html" class="nav-link">Network</a></li>
-                <li><a href="node.html" class="nav-link active">Node</a></li>
+                <li><a href="node.html" class="nav-link">Node</a></li>
                 <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
                 <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
                 <li><a href="block.html" class="nav-link">Block</a></li>
                 <li><a href="transaction.html" class="nav-link">Transaction</a></li>
-                <li><a href="address.html" class="nav-link">Address</a></li>
+                <li><a href="address.html" class="nav-link active">Address</a></li>
                 <li><a href="mempool.html" class="nav-link">Mempool</a></li>
             </ul>
         </nav>
@@ -37,32 +37,24 @@
         <!-- UI Overlay -->
         <div id="ui">
             <div class="header">
-                <h1>Node Details</h1>
+                <h1>Address Details</h1>
                 <div class="status">
                     <span class="dot"></span>
-                    <span id="node-status">Loading...</span>
+                    <span>Active</span>
                 </div>
             </div>
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Node Info</h3>
-                    <div id="node-info">
-                        <div>Address: <span id="node-address">Loading...</span></div>
-                        <div>Status: <span id="node-status-display">Loading...</span></div>
-                        <div>Version: <span id="node-version">Loading...</span></div>
-                        <div>User Agent: <span id="node-user-agent">Loading...</span></div>
-                        <div>Height: <span id="node-height">Loading...</span></div>
-                        <div>Latest Height: <span id="node-latest-height">Loading...</span></div>
-                        <div>Hostname: <span id="node-hostname">Loading...</span></div>
-                        <div>City: <span id="node-city">Loading...</span></div>
-                        <div>Country: <span id="node-country">Loading...</span></div>
-                        <div>Coordinates: <span id="node-coordinates">Loading...</span></div>
-                        <div>Timezone: <span id="node-timezone">Loading...</span></div>
-                        <div>ASN: <span id="node-asn">Loading...</span></div>
-                        <div>Organization: <span id="node-org">Loading...</span></div>
-                        <div>Uptime: <span id="node-uptime">Loading...</span></div>
-                        <div>Bandwidth: <span id="bandwidth">Loading...</span></div>
+                    <h3>Address Information</h3>
+                    <div id="address-info">
+                        <div>Address: <span id="address-hash">Loading...</span></div>
+                        <div>Balance: <span id="address-balance">Loading...</span></div>
+                        <div>Transactions: <span id="address-tx-count">Loading...</span></div>
+                        <div>Type: <span id="address-type">Loading...</span></div>
+                        <div>Received: <span id="address-received">Loading...</span></div>
+                        <div>Sent: <span id="address-sent">Loading...</span></div>
+                        <div>Unconfirmed: <span id="address-unconfirmed">Loading...</span></div>
                     </div>
                 </div>
             </div>
@@ -70,14 +62,13 @@
             <div class="controls">
                 <button id="toggle-rotation">Pause Rotation</button>
                 <button id="reset-camera">Reset Camera</button>
-                <button id="toggle-details">Show Details</button>
+                <button id="toggle-transactions">Show Transactions</button>
             </div>
         </div>
-        
     </div>
     
     <div class="disclaimer">
-        Data sources: Bitnodes.io
+        Data sources: Mempool.space
     </div>
 
     <!-- Three.js from CDN (ES Modules) -->
@@ -85,7 +76,7 @@
         import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
         window.THREE = THREE;
     </script>
-    <script src="js/node.js"></script>
+    <script src="js/address.js"></script>
     <script>
         // Hamburger menu functionality
         const hamburger = document.querySelector('.hamburger');

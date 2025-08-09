@@ -26,6 +26,7 @@
                 <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
                 <li><a href="block.html" class="nav-link active">Block</a></li>
                 <li><a href="transaction.html" class="nav-link">Transaction</a></li>
+                <li><a href="address.html" class="nav-link">Address</a></li>
                 <li><a href="mempool.html" class="nav-link">Mempool</a></li>
             </ul>
         </nav>
@@ -45,18 +46,12 @@
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Block Info</h3>
+                    <h3>Block Information</h3>
                     <div id="block-info">
                         <div>Height: <span id="block-height">Loading...</span></div>
                         <div>Hash: <span id="block-hash">Loading...</span></div>
                         <div>Size: <span id="block-size">Loading...</span></div>
                         <div>Transactions: <span id="block-tx-count">Loading...</span></div>
-                    </div>
-                </div>
-                
-                <div class="panel">
-                    <h3>Block Details</h3>
-                    <div id="block-details">
                         <div>Timestamp: <span id="block-time">Loading...</span></div>
                         <div>Merkle Root: <span id="merkle-root">Loading...</span></div>
                         <div>Nonce: <span id="block-nonce">Loading...</span></div>
@@ -69,7 +64,9 @@
                 <button id="toggle-rotation">Pause Rotation</button>
                 <button id="reset-camera">Reset Camera</button>
                 <button id="toggle-transactions">Show Transactions</button>
-                <button id="explode-transactions">Explode Transactions</button>
+                <button id="load-transactions">Load Transactions</button>
+                <button id="load-all-transactions">Load All</button>
+                <button id="toggle-view">Orthographic</button>
             </div>
         </div>
     </div>
