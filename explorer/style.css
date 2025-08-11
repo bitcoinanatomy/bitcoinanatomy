@@ -659,3 +659,342 @@ button:active {
         margin-bottom: 4px;
     }
 }
+
+/* ================================
+   MODAL STYLES
+   ================================ */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: #1a1a1a;
+    margin: 15% auto;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.modal-close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.modal-close:hover,
+.modal-close:focus {
+    color: #ffffff;
+}
+
+.modal-body {
+    padding: 25px;
+}
+
+.modal-body label {
+    display: block;
+    margin-bottom: 8px;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.modal-body input[type="text"] {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    font-size: 14px;
+    font-family: monospace;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.modal-body input[type="text"]:focus {
+    outline: none;
+    border-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.modal-body input[type="text"]::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.input-group input[type="text"] {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+#paste-button {
+    padding: 12px 16px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+    min-width: 50px;
+}
+
+#paste-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+#paste-button:active {
+    transform: translateY(1px);
+}
+
+.famous-addresses {
+    margin-bottom: 20px;
+}
+
+.famous-addresses h4 {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    opacity: 0.9;
+}
+
+.address-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.famous-address {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+}
+
+.famous-address:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.famous-address:active {
+    transform: translateY(1px);
+}
+
+.address-name {
+    font-weight: 500;
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: #ffffff;
+}
+
+    .address-hash {
+        font-family: monospace;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.7);
+        word-break: break-all;
+    }
+
+    /* Transaction modal specific styles */
+    .famous-transactions {
+        margin-bottom: 20px;
+    }
+
+    .famous-transactions h4 {
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 12px;
+        opacity: 0.9;
+    }
+
+    .transaction-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .famous-transaction {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+        width: 100%;
+    }
+
+    .famous-transaction:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .famous-transaction:active {
+        transform: translateY(1px);
+    }
+
+    .transaction-name {
+        font-weight: 500;
+        font-size: 13px;
+        margin-bottom: 4px;
+        color: #ffffff;
+    }
+
+    .transaction-hash {
+        font-family: monospace;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.7);
+        word-break: break-all;
+    }
+
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.modal-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#modal-cancel {
+    background-color: transparent;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#modal-cancel:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+#modal-submit {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+#modal-submit:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Mobile responsive modal */
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 10% auto;
+        width: 95%;
+    }
+    
+    .modal-header {
+        padding: 15px 20px;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .modal-buttons {
+        flex-direction: column;
+    }
+    
+    .modal-buttons button {
+        width: 100%;
+    }
+    
+    .input-group {
+        flex-direction: column;
+    }
+    
+    #paste-button {
+        width: 100%;
+        margin-top: 8px;
+    }
+    
+    .famous-address {
+        padding: 10px;
+    }
+    
+    .address-name {
+        font-size: 12px;
+    }
+    
+    .address-hash {
+        font-size: 10px;
+    }
+    
+    .famous-transaction {
+        padding: 10px;
+    }
+    
+    .transaction-name {
+        font-size: 12px;
+    }
+    
+    .transaction-hash {
+        font-size: 10px;
+    }
+}

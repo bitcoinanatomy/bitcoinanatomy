@@ -37,11 +37,7 @@
         <!-- UI Overlay -->
         <div id="ui">
             <div class="header">
-                <h1>Transaction Flow</h1>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span>Live</span>
-                </div>
+                <h1>Transaction Flow <span id="tx-title-hash">Loading...</span></h1>
             </div>
             
             <div class="sidebar">
@@ -49,12 +45,18 @@
                     <h3>Transaction Information</h3>
                     <div id="tx-info">
                         <div>Tx Hash: <span id="tx-hash">Loading...</span></div>
+                        <div>Version: <span id="tx-version">Loading...</span></div>
+                        <div>Locktime: <span id="tx-locktime">Loading...</span></div>
                         <div>Amount: <span id="tx-amount">Loading...</span></div>
                         <div>Fee: <span id="tx-fee">Loading...</span></div>
                         <div>Status: <span id="tx-status">Loading...</span></div>
+                        <div>Block Height: <span id="tx-block-height">Loading...</span></div>
+                        <div>Block Hash: <span id="tx-block-hash">Loading...</span></div>
                         <div>Inputs: <span id="tx-inputs">Loading...</span></div>
                         <div>Outputs: <span id="tx-outputs">Loading...</span></div>
                         <div>Size: <span id="tx-size">Loading...</span></div>
+                        <div>Weight: <span id="tx-weight">Loading...</span></div>
+                        <div>Sigops: <span id="tx-sigops">Loading...</span></div>
                         <div>Confirmations: <span id="tx-confirmations">Loading...</span></div>
                     </div>
                 </div>
@@ -64,12 +66,60 @@
                 <button id="toggle-rotation">Pause Rotation</button>
                 <button id="reset-camera">Reset Camera</button>
                 <button id="toggle-flow">Show Flow</button>
+                <button id="change-transaction">Change Transaction</button>
+                <button id="back-to-block" style="display: none;">Back to Block</button>
             </div>
         </div>
     </div>
     
     <div class="disclaimer">
         Data sources: Mempool.space
+    </div>
+
+    <!-- Transaction Change Modal -->
+    <div id="transaction-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Change Bitcoin Transaction</h3>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="transaction-form">
+                    <label for="new-txid">Enter Transaction ID:</label>
+                    <div class="input-group">
+                        <input type="text" id="new-txid" name="txid" placeholder="e.g., 23c80e5a8c8a17f31f4c2839982d07e347a5974ee4372a6264c61f0f2471d02f" required>
+                        <button type="button" id="paste-button" title="Paste from clipboard">📋</button>
+                    </div>
+                    
+                    <div class="famous-transactions">
+                        <h4>Famous Bitcoin Transactions:</h4>
+                        <div class="transaction-list">
+                            <button type="button" class="famous-transaction" data-txid="4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b">
+                                <span class="transaction-name">Genesis Block Coinbase</span>
+                                <span class="transaction-hash">4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b</span>
+                            </button>
+                            <button type="button" class="famous-transaction" data-txid="a1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d">
+                                <span class="transaction-name">Bitcoin Pizza Transaction</span>
+                                <span class="transaction-hash">a1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d</span>
+                            </button>
+                            <button type="button" class="famous-transaction" data-txid="f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16">
+                                <span class="transaction-name">First Bitcoin Transfer</span>
+                                <span class="transaction-hash">f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16</span>
+                            </button>
+                            <button type="button" class="famous-transaction" data-txid="23c80e5a8c8a17f31f4c2839982d07e347a5974ee4372a6264c61f0f2471d02f">
+                                <span class="transaction-name">Large Transaction (1000 outputs)</span>
+                                <span class="transaction-hash">23c80e5a8c8a17f31f4c2839982d07e347a5974ee4372a6264c61f0f2471d02f</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-buttons">
+                        <button type="button" id="modal-cancel">Cancel</button>
+                        <button type="submit" id="modal-submit">Load Transaction</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Three.js from CDN (ES Modules) -->

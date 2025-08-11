@@ -103,11 +103,17 @@ class BitcoinAddressExplorer {
                 
                 if (userData.type === 'transaction') {
                     const tx = userData.data;
+                    let dateStr = 'Unknown';
+                    if (tx.status && tx.status.block_time) {
+                        const date = new Date(tx.status.block_time * 1000);
+                        dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                    }
                     tooltipContent = `
                         <strong>Transaction</strong><br>
                         TXID: ${tx.txid.substring(0, 16)}...<br>
                         Amount: ${(tx.value / 100000000).toFixed(8)} BTC<br>
                         Size: ${tx.size} bytes<br>
+                        Date: ${dateStr}<br>
                         <em>Double-click to view transaction</em>
                     `;
                 } else if (userData.type === 'address') {
@@ -171,7 +177,7 @@ class BitcoinAddressExplorer {
         this.renderer.domElement.addEventListener('wheel', (e) => {
             // Inverted zoom direction
             this.controls.distance += e.deltaY * 0.1;
-            this.controls.distance = Math.max(5, Math.min(200, this.controls.distance));
+            this.controls.distance = Math.max(1, Math.min(200, this.controls.distance)); // Allow much closer zoom
             this.updateCameraPosition();
         });
         
@@ -230,6 +236,9 @@ class BitcoinAddressExplorer {
             const button = document.getElementById('toggle-transactions');
             button.textContent = button.textContent === 'Show Transactions' ? 'Hide Transactions' : 'Show Transactions';
         });
+        
+        // Modal functionality
+        this.setupModal();
     }
 
     updateCameraPosition() {
@@ -359,6 +368,7 @@ class BitcoinAddressExplorer {
             document.getElementById('address-hash').textContent = 'Loading...';
             document.getElementById('address-balance').textContent = 'Loading...';
             document.getElementById('address-tx-count').textContent = 'Loading...';
+            document.getElementById('address-utxo-count').textContent = 'Loading...';
             document.getElementById('address-type').textContent = 'Loading...';
             document.getElementById('address-received').textContent = 'Loading...';
             document.getElementById('address-sent').textContent = 'Loading...';
@@ -369,6 +379,7 @@ class BitcoinAddressExplorer {
         document.getElementById('address-hash').textContent = data.address ? data.address.substring(0, 16) + '...' : 'N/A';
         document.getElementById('address-balance').textContent = data.chain_stats ? `${(data.chain_stats.funded_txo_sum / 100000000).toFixed(8)} BTC` : 'N/A';
         document.getElementById('address-tx-count').textContent = data.chain_stats ? data.chain_stats.tx_count.toString() : 'N/A';
+        document.getElementById('address-utxo-count').textContent = this.utxoData ? this.utxoData.length.toString() : 'N/A';
         document.getElementById('address-type').textContent = data.chain_stats ? 'Confirmed' : 'N/A';
         document.getElementById('address-received').textContent = data.chain_stats ? `${(data.chain_stats.funded_txo_sum / 100000000).toFixed(8)} BTC` : 'N/A';
         document.getElementById('address-sent').textContent = data.chain_stats ? `${(data.chain_stats.spent_txo_sum / 100000000).toFixed(8)} BTC` : 'N/A';
@@ -403,22 +414,41 @@ class BitcoinAddressExplorer {
     createAddressRepresentation() {
         // Calculate total UTXO value for sphere sizing
         const totalUtxoValue = this.utxoData ? this.utxoData.reduce((sum, utxo) => sum + utxo.value, 0) : 0;
-        const baseRadius = 2;
-        const valueScale = Math.max(0.5, Math.min(5.0, totalUtxoValue / 100000000)); // Scale based on BTC
+        const totalUtxoValueBTC = totalUtxoValue / 100000000;
+        
+        console.log('=== OUTER SPHERE SCALING DEBUG ===');
+        console.log('Total UTXO value:', totalUtxoValue);
+        console.log('Total UTXO value in BTC:', totalUtxoValueBTC);
+        console.log('Raw value scale:', totalUtxoValue / 100000000);
+        
+        const baseRadius = 1.5; // Reduced base radius
+        const valueScale = Math.max(0.3, Math.min(2.0, Math.log10(totalUtxoValueBTC + 1) * 0.3)); // Reduced scaling
         const sphereRadius = baseRadius * valueScale;
+        
+        console.log('Final value scale:', valueScale);
+        console.log('Final sphere radius:', sphereRadius);
         
         // Create a central sphere representing the address
         const addressGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
         const addressMaterial = new THREE.MeshLambertMaterial({ 
-            color: 0xffffff, // Changed to white
+            color: 0xffffff, // White color
             transparent: true,
-            opacity: 0.5 // Changed to 0.5 opacity
+            opacity: 0.3, // Lower opacity to reduce interference
+            side: THREE.FrontSide, // Only render front side
+            depthWrite: false, // Don't write to depth buffer
+            depthTest: true // Still test depth
         });
         const addressSphere = new THREE.Mesh(addressGeometry, addressMaterial);
         addressSphere.position.set(0, 0, 0);
+        addressSphere.renderOrder = -1; // Render first (behind other objects)
         addressSphere.userData = { type: 'address', data: this.addressData };
         this.scene.add(addressSphere);
 
+        // Add inner lighting to illuminate UTXOs
+        const innerLight = new THREE.PointLight(0xffffff, 0.8, sphereRadius * 2);
+        innerLight.position.set(0, 0, 0);
+        this.scene.add(innerLight);
+        
         // Add UTXO spheres inside the address sphere
         if (this.utxoData && this.utxoData.length > 0) {
             this.createUtxoSpheres(sphereRadius);
@@ -426,29 +456,36 @@ class BitcoinAddressExplorer {
 
         // Add transaction history visualization
         if (this.transactionHistory && this.transactionHistory.length > 0) {
-            this.createTransactionHistory();
+            this.createTransactionHistory(sphereRadius);
         }
     }
 
-    createTransactionHistory() {
+    createTransactionHistory(sphereRadius) {
         // Create transaction history visualization
         const txCount = Math.min(this.transactionHistory.length, 50); // Limit to 50 for performance
+        
+        // Calculate line parameters
+        const lineLength = 20; // Total length of the line
+        const spacing = lineLength / txCount; // Space between transactions
+        
+        // Calculate offset based on sphere radius and transaction count
+        const lineWidth = (txCount - 1) * spacing; // Total width of the transaction line
+        const offset = sphereRadius + Math.max(2, lineWidth / 2); // Start at sphere radius + line width consideration
         
         for (let i = 0; i < txCount; i++) {
             const tx = this.transactionHistory[i];
             
             // Calculate transaction size for cuboid dimensions
             const txSize = tx.size || 250;
-            const width = 0.5;
+            const width = 1.5;
             const height = Math.max(0.1, txSize / 1000); // Scale height based on transaction size
-            const depth = 0.3;
-            
-            // Create transaction cuboids around the address
-            const angle = (i / txCount) * Math.PI * 2;
-            const radius = 8 + Math.random() * 4; // Random distance from center
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
-            const y = (Math.random() - 0.5) * 4; // Random height
+            const depth = 0.1;
+
+            // Position transactions in a straight line
+            const linePosition = (i - txCount / 2) * spacing; // Center the line around origin
+            const x = 0; // X-axis position
+            const y = 0; // Align all transactions to the top
+            const z = 0.5 + offset + linePosition; // Fixed distance from center
             
             const txGeometry = new THREE.BoxGeometry(width, height, depth);
             const txMaterial = new THREE.MeshLambertMaterial({ 
@@ -467,7 +504,8 @@ class BitcoinAddressExplorer {
                 data: {
                     txid: tx.txid,
                     value: totalOutput,
-                    size: txSize
+                    size: txSize,
+                    status: tx.status // Include status for timestamp
                 }
             };
             this.scene.add(txCuboid);
@@ -475,12 +513,35 @@ class BitcoinAddressExplorer {
     }
 
     createUtxoSpheres(sphereRadius) {
+        console.log('=== UTXO SPHERE CREATION DEBUG ===');
+        console.log('Total UTXOs:', this.utxoData.length);
+        console.log('Sphere radius:', sphereRadius);
+        console.log('UTXO values range:', {
+            min: Math.min(...this.utxoData.map(u => u.value)),
+            max: Math.max(...this.utxoData.map(u => u.value)),
+            total: this.utxoData.reduce((sum, u) => sum + u.value, 0)
+        });
+        console.log('UTXO values in BTC:', this.utxoData.map(u => ({
+            value: u.value,
+            btc: (u.value / 100000000).toFixed(8)
+        })));
+        
+        // Seeded random number generator for predictable positions
+        const seededRandom = (seed) => {
+            let x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        };
+        
         // Create a sphere for each UTXO inside the address sphere
         this.utxoData.forEach((utxo, index) => {
-            // Random position inside the sphere
-            const radius = Math.random() * (sphereRadius * 0.8); // 80% of sphere radius
-            const theta = Math.random() * Math.PI * 2; // Random angle around Y axis
-            const phi = Math.acos(2 * Math.random() - 1); // Random angle from Y axis
+            // Use address + UTXO index as seed for deterministic positioning
+            const baseSeed = this.hashCode(this.address);
+            const seed = baseSeed + index; // Add index for variation between UTXOs
+            
+            // Deterministic position inside the sphere
+            const radius = seededRandom(seed) * (sphereRadius * 0.8); // 80% of sphere radius
+            const theta = seededRandom(seed + 1) * Math.PI * 2; // Angle around Y axis
+            const phi = Math.acos(2 * seededRandom(seed + 2) - 1); // Angle from Y axis
             
             const x = radius * Math.sin(phi) * Math.cos(theta);
             const y = radius * Math.cos(phi);
@@ -488,17 +549,35 @@ class BitcoinAddressExplorer {
             
             // Size sphere based on UTXO value
             const utxoValue = utxo.value;
-            const sizeScale = Math.max(0.1, Math.min(1.0, utxoValue / 100000000)); // Scale based on BTC
-            const utxoRadius = 0.2 * sizeScale;
+            
+            // Improved scaling: use logarithmic scaling for better visual representation
+            const valueInBTC = utxoValue / 100000000;
+            const logValue = Math.log10(valueInBTC + 1); // +1 to handle 0 values
+            const sizeScale = Math.max(0.05, Math.min(4.0, logValue * 0.8)); // Adjusted scaling for better visibility
+            const utxoRadius = 0.12 * sizeScale;
+            
+            console.log(`UTXO ${index + 1}:`, {
+                txid: utxo.txid.substring(0, 16) + '...',
+                vout: utxo.vout,
+                value: utxoValue,
+                valueInBTC: valueInBTC.toFixed(8),
+                logValue: logValue.toFixed(3),
+                sizeScale: sizeScale.toFixed(3),
+                finalRadius: utxoRadius.toFixed(3)
+            });
             
             const utxoGeometry = new THREE.SphereGeometry(utxoRadius, 16, 16);
             const utxoMaterial = new THREE.MeshLambertMaterial({ 
-                color: 0xff6b6b, // Red color for UTXOs
+                color: 0xffffff, // White color for UTXOs
                 transparent: true,
-                opacity: 0.8
+                opacity: 1.0, // Full opacity for maximum brightness
+                depthWrite: true, // Write to depth buffer
+                depthTest: true,
+                emissive: 0x222222 // Add slight glow effect
             });
             const utxoSphere = new THREE.Mesh(utxoGeometry, utxoMaterial);
             utxoSphere.position.set(x, y, z);
+            utxoSphere.renderOrder = 1; // Render after the main sphere
             utxoSphere.userData = { 
                 type: 'utxo', 
                 data: utxo,
@@ -523,6 +602,127 @@ class BitcoinAddressExplorer {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Simple hash function to convert string to number
+    hashCode(str) {
+        let hash = 0;
+        if (str.length === 0) return hash;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash);
+    }
+
+    setupModal() {
+        const modal = document.getElementById('address-modal');
+        const changeAddressBtn = document.getElementById('change-address');
+        const closeBtn = document.querySelector('.modal-close');
+        const cancelBtn = document.getElementById('modal-cancel');
+        const addressForm = document.getElementById('address-form');
+        const addressInput = document.getElementById('new-address');
+        const pasteBtn = document.getElementById('paste-button');
+        const famousAddresses = document.querySelectorAll('.famous-address');
+
+        // Show modal
+        changeAddressBtn.addEventListener('click', () => {
+            modal.style.display = 'block';
+            addressInput.focus();
+            // Pre-fill with current address
+            addressInput.value = this.address;
+        });
+
+        // Close modal functions
+        const closeModal = () => {
+            modal.style.display = 'none';
+            addressInput.value = '';
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'block') {
+                closeModal();
+            }
+        });
+
+        // Paste from clipboard functionality
+        pasteBtn.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    addressInput.value = text.trim();
+                    addressInput.focus();
+                }
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+                // Fallback for older browsers or when clipboard access is denied
+                alert('Please paste manually (Ctrl+V) or copy the address to clipboard first');
+            }
+        });
+
+        // Famous addresses functionality
+        famousAddresses.forEach(button => {
+            button.addEventListener('click', () => {
+                const address = button.getAttribute('data-address');
+                addressInput.value = address;
+                addressInput.focus();
+            });
+        });
+
+        // Handle form submission
+        addressForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const newAddress = addressInput.value.trim();
+            
+            if (!newAddress) {
+                alert('Please enter a valid Bitcoin address');
+                return;
+            }
+
+            // Basic Bitcoin address validation for different formats
+            const isValidBitcoinAddress = (address) => {
+                // Legacy addresses (P2PKH): 1 + 25-34 characters
+                if (address.startsWith('1') && address.length >= 26 && address.length <= 35) {
+                    return true;
+                }
+                // SegWit addresses (P2SH): 3 + 25-34 characters
+                if (address.startsWith('3') && address.length >= 26 && address.length <= 35) {
+                    return true;
+                }
+                // Native SegWit addresses (P2WPKH/P2WSH): bc1 + variable length
+                if (address.startsWith('bc1') && address.length >= 42 && address.length <= 62) {
+                    return true;
+                }
+                // Taproot addresses (P2TR): bc1p + variable length
+                if (address.startsWith('bc1p') && address.length >= 62 && address.length <= 90) {
+                    return true;
+                }
+                return false;
+            };
+
+            if (!isValidBitcoinAddress(newAddress)) {
+                alert('Please enter a valid Bitcoin address format:\n• Legacy: 1... (26-35 chars)\n• SegWit: 3... (26-35 chars)\n• Native SegWit: bc1... (42-62 chars)\n• Taproot: bc1p... (62-90 chars)');
+                return;
+            }
+
+            // Redirect to the same page with new address parameter
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('address', newAddress);
+            window.location.href = currentUrl.toString();
+        });
     }
 }
 

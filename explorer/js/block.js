@@ -687,13 +687,13 @@ class BitcoinBlockExplorer {
             
             const txData = await response.json();
             
-            // Calculate new height based on transaction size (similar to transaction.js)
+            // Calculate new height based on transaction size (matching address.js calculation)
             const txSize = txData.size || 250; // Default size if not available
-            // Scale based on transaction size: 250 bytes = 1.0x, larger transactions scale up
-            const sizeScale = Math.max(1.0, Math.min(3.0, txSize / 250)); // Scale between 1.0x and 3.0x
+            // Scale height based on transaction size: Math.max(0.1, txSize / 1000)
+            const height = Math.max(0.1, txSize / 1000); // Scale height based on transaction size
             
             // Animate the height change (scale.y starts at 1.0) and adjust position to keep top-aligned
-            this.animateCuboidHeightTopAligned(cuboid, sizeScale, 1000);
+            this.animateCuboidHeightTopAligned(cuboid, height, 1000);
             
             // Move loaded transactions maintaining their layer spacing
             const baseAlignedY = 2; // Base Y position for layer 0 loaded transactions
@@ -1153,6 +1153,16 @@ class BitcoinBlockExplorer {
             document.getElementById('block-difficulty').textContent = 'Loading...';
             return;
         }
+        
+        // Update title with block height
+        const titleHeight = data.height ? `#${data.height.toLocaleString()}` : 'Not Found';
+        document.getElementById('block-title-height').textContent = titleHeight;
+        
+        // Update status with block hash (first 6 + last 6 characters)
+        const statusHash = data.id ? 
+            data.id.substring(0, 6) + '...' + data.id.substring(data.id.length - 6) : 
+            'Not Found';
+        document.getElementById('block-status-hash').textContent = statusHash;
         
         document.getElementById('block-height').textContent = data.height?.toLocaleString() || 'N/A';
         document.getElementById('block-hash').textContent = data.id?.substring(0, 16) + '...' || 'N/A';

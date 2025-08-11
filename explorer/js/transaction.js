@@ -189,7 +189,7 @@ class BitcoinTransactionExplorer {
                 // Rotation - inverted for natural feel
                 this.controls.theta -= deltaX * 0.01;
                 this.controls.phi += deltaY * 0.01;
-                this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+                this.controls.phi = Math.max(0.01, Math.min(Math.PI - 0.1, this.controls.phi));
             }
 
             this.updateCameraPosition();
@@ -231,6 +231,9 @@ class BitcoinTransactionExplorer {
         if (toggleFlowButton) {
             toggleFlowButton.style.display = 'none';
         }
+        
+        // Modal functionality
+        this.setupModal();
         
         // Add double-click functionality
         this.renderer.domElement.addEventListener('dblclick', (event) => {
@@ -383,12 +386,18 @@ class BitcoinTransactionExplorer {
     updateUI(data) {
         if (!data || Object.keys(data).length === 0) {
             document.getElementById('tx-hash').textContent = 'Loading...';
+            document.getElementById('tx-version').textContent = 'Loading...';
+            document.getElementById('tx-locktime').textContent = 'Loading...';
             document.getElementById('tx-amount').textContent = 'Loading...';
             document.getElementById('tx-fee').textContent = 'Loading...';
             document.getElementById('tx-status').textContent = 'Loading...';
+            document.getElementById('tx-block-height').textContent = 'Loading...';
+            document.getElementById('tx-block-hash').textContent = 'Loading...';
             document.getElementById('tx-inputs').textContent = 'Loading...';
             document.getElementById('tx-outputs').textContent = 'Loading...';
             document.getElementById('tx-size').textContent = 'Loading...';
+            document.getElementById('tx-weight').textContent = 'Loading...';
+            document.getElementById('tx-sigops').textContent = 'Loading...';
             document.getElementById('tx-confirmations').textContent = 'Loading...';
             return;
         }
@@ -397,14 +406,37 @@ class BitcoinTransactionExplorer {
         const totalOutput = data.vout ? data.vout.reduce((sum, output) => sum + output.value, 0) : 0;
         const fee = data.fee || 0;
 
+        // Update title hash in format: 4a5e14...89f3ad
+        const titleHash = data.txid ? 
+            data.txid.substring(0, 6) + '...' + data.txid.substring(data.txid.length - 6) : 
+            'Not Found';
+        document.getElementById('tx-title-hash').textContent = titleHash;
+        
         document.getElementById('tx-hash').textContent = data.txid ? data.txid.substring(0, 16) + '...' : 'N/A';
+        document.getElementById('tx-version').textContent = data.version !== undefined ? data.version.toString() : 'N/A';
+        document.getElementById('tx-locktime').textContent = data.locktime !== undefined ? data.locktime.toString() : 'N/A';
         document.getElementById('tx-amount').textContent = totalOutput ? `${(totalOutput / 100000000).toFixed(8)} BTC` : 'N/A';
         document.getElementById('tx-fee').textContent = fee ? `${(fee / 100000000).toFixed(8)} BTC` : 'N/A';
         document.getElementById('tx-status').textContent = data.status?.confirmed ? 'Confirmed' : 'Unconfirmed';
+        document.getElementById('tx-block-height').textContent = data.status?.block_height ? data.status.block_height.toString() : 'Unconfirmed';
+        document.getElementById('tx-block-hash').textContent = data.status?.block_hash ? data.status.block_hash.substring(0, 16) + '...' : 'N/A';
         document.getElementById('tx-inputs').textContent = data.vin ? data.vin.length.toString() : 'N/A';
         document.getElementById('tx-outputs').textContent = data.vout ? data.vout.length.toString() : 'N/A';
         document.getElementById('tx-size').textContent = data.size ? `${data.size} bytes` : 'N/A';
+        document.getElementById('tx-weight').textContent = data.weight ? `${data.weight} WU` : 'N/A';
+        document.getElementById('tx-sigops').textContent = data.sigops ? data.sigops.toString() : 'N/A';
         document.getElementById('tx-confirmations').textContent = data.status?.block_height ? 'Confirmed' : '0';
+
+        // Show/hide "Back to Block" button based on confirmation status
+        const backToBlockButton = document.getElementById('back-to-block');
+        if (data.status?.block_height) {
+            backToBlockButton.style.display = 'inline-block';
+            backToBlockButton.onclick = () => {
+                window.location.href = `block.html?height=${data.status.block_height}`;
+            };
+        } else {
+            backToBlockButton.style.display = 'none';
+        }
     }
 
     createTransactionVisualization() {
@@ -438,40 +470,50 @@ class BitcoinTransactionExplorer {
 
         // Create input spheres on the left
         inputs.forEach((input, index) => {
-            // Calculate sphere size based on amount
+            // Calculate sphere size based on amount (logarithmic scaling)
             const amount = input.prevout?.value || 0;
-            const sizeScale = Math.min(2.0, Math.max(0.2, amount / 100000000)); // Scale based on BTC
+            const amountBTC = amount / 100000000;
+            const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
+            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
             const sphereRadius = 1 * sizeScale;
             
             const geometry = new THREE.SphereGeometry(sphereRadius, 16, 16);
             const material = new THREE.MeshLambertMaterial({ 
                 color: 0xff6b6b,
+                transparent: true,
+                opacity: 0.9, // High opacity but not fully opaque
                 depthWrite: true,
-                alphaTest: 0.01
+                depthTest: true
             });
             const sphere = new THREE.Mesh(geometry, material);
+            sphere.renderOrder = 1; // Render after other objects
             
-            sphere.position.set(-12, (inputs.length - 1) - index * 2, 0); // First inputs at top
+            sphere.position.set(-35, (inputs.length - 1) - index * 2, 0); // First inputs at top, moved much further away
             sphere.userData = { type: 'input', index, data: input };
             this.scene.add(sphere);
         });
 
         // Create output spheres on the right
         outputs.forEach((output, index) => {
-            // Calculate sphere size based on amount
+            // Calculate sphere size based on amount (logarithmic scaling)
             const amount = output.value || 0;
-            const sizeScale = Math.min(2.0, Math.max(0.2, amount / 100000000)); // Scale based on BTC
-            const sphereRadius = 1 * sizeScale;
+            const amountBTC = amount / 100000000;
+            const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
+            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
+            const sphereRadius = 1 * sizeScale; // Increased base radius
             
             const geometry = new THREE.SphereGeometry(sphereRadius, 16, 16);
             const material = new THREE.MeshLambertMaterial({ 
-                color: 0xffffff, // Changed to white
+                color: 0xffffff, // White color
+                transparent: true,
+                opacity: 0.9, // High opacity but not fully opaque
                 depthWrite: true,
-                alphaTest: 0.01
+                depthTest: true
             });
             const sphere = new THREE.Mesh(geometry, material);
+            sphere.renderOrder = 1; // Render after other objects
             
-            sphere.position.set(12, (outputs.length - 1) - index * 2, 0); // First outputs at top
+            sphere.position.set(35, (outputs.length - 1) - index * 2, 0); // First outputs at top, moved much further away
             sphere.userData = { type: 'output', index, data: output };
             this.scene.add(sphere);
         });
@@ -479,15 +521,18 @@ class BitcoinTransactionExplorer {
         // Create central transaction cuboid
         const width = 2; // Fixed width
         const depth = width / 10; // 1/10th of width
-        const height = Math.max(0.5, (this.transactionData.size || 250) / 1000); // Based on transaction size
+        const height = Math.max(0.01, (this.transactionData.size || 250) / 1000); // Based on transaction size
         
         const txGeometry = new THREE.BoxGeometry(width, height, depth);
         const txMaterial = new THREE.MeshLambertMaterial({ 
             color: 0xffffff,
+            transparent: true,
+            opacity: 0.8, // Slightly transparent for better visibility
             depthWrite: true,
-            alphaTest: 0.01
+            depthTest: true
         });
         const txCuboid = new THREE.Mesh(txGeometry, txMaterial);
+        txCuboid.renderOrder = 0; // Render before spheres
         txCuboid.position.set(0, 0, 0);
         txCuboid.userData = { type: 'transaction', data: this.transactionData };
         this.scene.add(txCuboid);
@@ -498,14 +543,17 @@ class BitcoinTransactionExplorer {
             this.transactionData.vin.reduce((sum, input) => sum + (input.prevout?.value || 0), 0) : 0;
         const totalOutputSats = this.transactionData.vout ? 
             this.transactionData.vout.reduce((sum, output) => sum + output.value, 0) : 0;
-        const totalSats = Math.max(totalInputSats, totalOutputSats);
         
-        // Scale radius based on total satoshis (normalize to reasonable range)
+        // Scale radius based on output value (what's actually being transferred)
         const baseRadius = Math.max(width, height) * 0.6;
-        const satsScale = Math.min(2.0, Math.max(0.3, totalSats / 100000000)); // Scale factor based on BTC
-        const circleRadius = baseRadius * satsScale;
         
-        // Left side circle (perpendicular to X-axis)
+        // Both discs use output value since that's what's being transferred
+        const totalOutputBTC = totalOutputSats / 100000000;
+        const logValue = Math.log10(totalOutputBTC + 1); // +1 to handle 0 values
+        const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
+        const circleRadius = 1 * sizeScale;
+        
+        // Left side circle (input disc - perpendicular to X-axis)
         const leftCircleGeometry = new THREE.CircleGeometry(circleRadius, 32);
         const leftCircleMaterial = new THREE.MeshLambertMaterial({ 
             color: 0xffffff, 
@@ -513,7 +561,7 @@ class BitcoinTransactionExplorer {
             transparent: true,
             opacity: 0.5,
             depthWrite: false,
-            alphaTest: 0.01
+            depthTest: true
         });
         const leftCircle = new THREE.Mesh(leftCircleGeometry, leftCircleMaterial);
         leftCircle.position.set(-width/2 - 0.1, 0, 0);
@@ -521,7 +569,7 @@ class BitcoinTransactionExplorer {
         leftCircle.renderOrder = 1; // Render after other objects
         this.scene.add(leftCircle);
 
-        // Right side circle (perpendicular to X-axis)
+        // Right side circle (output disc - perpendicular to X-axis)
         const rightCircleGeometry = new THREE.CircleGeometry(circleRadius, 32);
         const rightCircleMaterial = new THREE.MeshLambertMaterial({ 
             color: 0xffffff, 
@@ -529,7 +577,7 @@ class BitcoinTransactionExplorer {
             transparent: true,
             opacity: 0.5,
             depthWrite: false,
-            alphaTest: 0.01
+            depthTest: true
         });
         const rightCircle = new THREE.Mesh(rightCircleGeometry, rightCircleMaterial);
         rightCircle.position.set(width/2 + 0.1, 0, 0);
@@ -539,18 +587,20 @@ class BitcoinTransactionExplorer {
 
         // Create connection curves
         inputs.forEach((input, index) => {
-            const startPoint = new THREE.Vector3(-12, (inputs.length - 1) - index * 2, 0);
+            const startPoint = new THREE.Vector3(-35, (inputs.length - 1) - index * 2, 0);
             const endPoint = new THREE.Vector3(-width/2, 0, 0); // End at left side of cuboid
             
             // Create control points for smooth curve
-            const controlPoint1 = new THREE.Vector3(-1, (inputs.length - 1) - index * 2 + 1, 0);
-            const controlPoint2 = new THREE.Vector3(-4, 0.5, 0);
+            const controlPoint1 = new THREE.Vector3(-15, (inputs.length - 1) - index * 2 + 1, 0);
+            const controlPoint2 = new THREE.Vector3(-8, 0.5, 0);
             
             const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
             
-            // Calculate tube radius based on input sphere size
+            // Calculate tube radius based on input sphere size (logarithmic scaling)
             const amount = input.prevout?.value || 0;
-            const sizeScale = Math.min(2.0, Math.max(0.2, amount / 100000000));
+            const amountBTC = amount / 100000000;
+            const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
+            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
             const tubeRadius = 1 * sizeScale;
             
             const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 8, false);
@@ -559,7 +609,7 @@ class BitcoinTransactionExplorer {
                 opacity: 0.6, 
                 transparent: true,
                 depthWrite: false,
-                alphaTest: 0.01
+                depthTest: true
             });
             const tube = new THREE.Mesh(tubeGeometry, material);
             tube.renderOrder = 0; // Render before circles
@@ -569,26 +619,28 @@ class BitcoinTransactionExplorer {
 
         outputs.forEach((output, index) => {
             const startPoint = new THREE.Vector3(width/2, 0, 0); // Start from right side of cuboid
-            const endPoint = new THREE.Vector3(12, (outputs.length - 1) - index * 2, 0);
+            const endPoint = new THREE.Vector3(35, (outputs.length - 1) - index * 2, 0);
             
             // Create control points for smooth curve
-            const controlPoint1 = new THREE.Vector3(8, 0.5, 0); // Adjusted for new start point
-            const controlPoint2 = new THREE.Vector3(2, (outputs.length - 1) - index * 2 + 1, 0);
+            const controlPoint1 = new THREE.Vector3(15, 0.5, 0); // Adjusted for new start point
+            const controlPoint2 = new THREE.Vector3(8, (outputs.length - 1) - index * 2 + 1, 0);
             
             const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
             
-            // Calculate tube radius based on output sphere size
+            // Calculate tube radius based on output sphere size (logarithmic scaling)
             const amount = output.value || 0;
-            const sizeScale = Math.min(2.0, Math.max(0.2, amount / 100000000));
+            const amountBTC = amount / 100000000;
+            const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
+            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
             const tubeRadius = 1 * sizeScale;
             
             const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 8, false);
             const material = new THREE.MeshLambertMaterial({ 
-                color: 0xffffff, // Changed to white
+                color: 0xffffff, // White color
                 opacity: 0.6, 
                 transparent: true,
                 depthWrite: false,
-                alphaTest: 0.01
+                depthTest: true
             });
             const tube = new THREE.Mesh(tubeGeometry, material);
             tube.renderOrder = 0; // Render before circles
@@ -668,6 +720,99 @@ class BitcoinTransactionExplorer {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    setupModal() {
+        const modal = document.getElementById('transaction-modal');
+        const changeTransactionBtn = document.getElementById('change-transaction');
+        const closeBtn = document.querySelector('.modal-close');
+        const cancelBtn = document.getElementById('modal-cancel');
+        const transactionForm = document.getElementById('transaction-form');
+        const txidInput = document.getElementById('new-txid');
+        const pasteBtn = document.getElementById('paste-button');
+        const famousTransactions = document.querySelectorAll('.famous-transaction');
+
+        // Show modal
+        changeTransactionBtn.addEventListener('click', () => {
+            modal.style.display = 'block';
+            txidInput.focus();
+            // Pre-fill with current transaction ID
+            txidInput.value = this.txid || '';
+        });
+
+        // Close modal functions
+        const closeModal = () => {
+            modal.style.display = 'none';
+            txidInput.value = '';
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'block') {
+                closeModal();
+            }
+        });
+
+        // Paste from clipboard functionality
+        pasteBtn.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    txidInput.value = text.trim();
+                    txidInput.focus();
+                }
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+                // Fallback for older browsers or when clipboard access is denied
+                alert('Please paste manually (Ctrl+V) or copy the transaction ID to clipboard first');
+            }
+        });
+
+        // Famous transactions functionality
+        famousTransactions.forEach(button => {
+            button.addEventListener('click', () => {
+                const txid = button.getAttribute('data-txid');
+                txidInput.value = txid;
+                txidInput.focus();
+            });
+        });
+
+        // Handle form submission
+        transactionForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const newTxid = txidInput.value.trim();
+            
+            if (!newTxid) {
+                alert('Please enter a valid transaction ID');
+                return;
+            }
+
+            // Basic transaction ID validation (64 character hex string)
+            const isValidTransactionId = (txid) => {
+                return /^[a-fA-F0-9]{64}$/.test(txid);
+            };
+
+            if (!isValidTransactionId(newTxid)) {
+                alert('Please enter a valid transaction ID (64 character hexadecimal string)');
+                return;
+            }
+
+            // Redirect to the same page with new transaction ID parameter
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('txid', newTxid);
+            window.location.href = currentUrl.toString();
+        });
     }
 }
 

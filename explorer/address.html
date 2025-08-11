@@ -51,6 +51,7 @@
                         <div>Address: <span id="address-hash">Loading...</span></div>
                         <div>Balance: <span id="address-balance">Loading...</span></div>
                         <div>Transactions: <span id="address-tx-count">Loading...</span></div>
+                        <div>UTXOs: <span id="address-utxo-count">Loading...</span></div>
                         <div>Type: <span id="address-type">Loading...</span></div>
                         <div>Received: <span id="address-received">Loading...</span></div>
                         <div>Sent: <span id="address-sent">Loading...</span></div>
@@ -63,12 +64,63 @@
                 <button id="toggle-rotation">Pause Rotation</button>
                 <button id="reset-camera">Reset Camera</button>
                 <button id="toggle-transactions">Show Transactions</button>
+                <button id="change-address">Change Address</button>
             </div>
         </div>
     </div>
     
     <div class="disclaimer">
         Data sources: Mempool.space
+    </div>
+
+    <!-- Address Change Modal -->
+    <div id="address-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Change Bitcoin Address</h3>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="address-form">
+                    <label for="new-address">Enter Bitcoin Address:</label>
+                    <div class="input-group">
+                        <input type="text" id="new-address" name="address" placeholder="e.g., 1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv" required>
+                        <button type="button" id="paste-button" title="Paste from clipboard">📋</button>
+                    </div>
+                    
+                    <div class="famous-addresses">
+                        <h4>Famous Bitcoin Addresses:</h4>
+                        <div class="address-list">
+                            <button type="button" class="famous-address" data-address="1FeexV6bAHb8ybZjqQMjJrcCrHGW9sb6uF">
+                                <span class="address-name">Mt. Gox Hack</span>
+                                <span class="address-hash">1FeexV6bAHb8ybZjqQMjJrcCrHGW9sb6uF</span>
+                            </button>
+                            <button type="button" class="famous-address" data-address="32ixEdVJWo3kmvJGMTZq5jAQVZZeuwnqzo">
+                                <span class="address-name">El Salvador Treasury</span>
+                                <span class="address-hash">32ixEdVJWo3kmvJGMTZq5jAQVZZeuwnqzo</span>
+                            </button>
+                            <button type="button" class="famous-address" data-address="34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo">
+                                <span class="address-name">Binance Cold Wallet</span>
+                                <span class="address-hash">34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo</span>
+                            </button>
+                            <button type="button" class="famous-address" data-address="bc1qjasf9z3h7w3jspkhtgatgpyvvzgpa2wwd2lr0eh5tx44reyn2k7sfc27a4">
+                                <span class="address-name">Tether Treasury</span>
+                                <span class="address-hash">bc1qjasf9z3h7w3jspkhtgatgpyvvzgpa2wwd2lr0eh5tx44reyn2k7sfc27a4</span>
+                            </button>
+                            <button type="button" class="famous-address" data-address="bc1q7ydrtdn8z62xhslqyqtyt38mm4e2c4h3mxjkug">
+                                <span class="address-name">UK Government Confiscated</span>
+                                <span class="address-hash">bc1q7ydrtdn8z62xhslqyqtyt38mm4e2c4h3mxjkug</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-buttons">
+                        <button type="button" id="modal-cancel">Cancel</button>
+                        <button type="submit" id="modal-submit">Load Address</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Three.js from CDN (ES Modules) -->
