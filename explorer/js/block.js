@@ -286,9 +286,10 @@ class BitcoinBlockExplorer {
                             intersectedObject.geometry.parameters.width === 3) {
                             
                             // Calculate which block this is based on its Z position
+                            // Past blocks are at positive Z, future blocks are at negative Z
                             const blockIndex = Math.round(intersectedObject.position.z / 4);
                             const currentHeight = parseInt(this.blockHeight) || 0;
-                            const targetHeight = currentHeight + blockIndex;
+                            const targetHeight = currentHeight - blockIndex; // Negative for past, positive for future
                             
                             let tooltipContent;
                             if (blockIndex === 0) {
@@ -399,6 +400,7 @@ class BitcoinBlockExplorer {
                         intersectedObject.geometry.parameters.width === 3) {
                         
                         // Calculate which block was clicked based on its Z position
+                        // Past blocks are at positive Z, future blocks are at negative Z
                         const blockIndex = Math.round(intersectedObject.position.z / 4);
                         
                         if (blockIndex === 0) {
@@ -407,7 +409,7 @@ class BitcoinBlockExplorer {
                         } else {
                             // Past or future block - navigate to that block's height
                             const currentHeight = parseInt(this.blockHeight) || 0;
-                            const targetHeight = currentHeight + blockIndex;
+                            const targetHeight = currentHeight - blockIndex; // Negative for past, positive for future
                             
                             console.log(`Navigating to block height: ${targetHeight}`);
                             window.location.href = `block.html?height=${targetHeight}`;
@@ -1027,32 +1029,12 @@ class BitcoinBlockExplorer {
         // Store block reference for later use
         this.blockMesh = block;
         
-        // Create future blocks in front of the current block (limited by chain tip)
-        const maxFutureBlocks = this.chainTipHeight ? Math.max(0, this.chainTipHeight - currentHeight) : 5;
-        const futureBlocksToShow = Math.min(5, maxFutureBlocks); // Cap at 5 blocks maximum
-        
-        console.log(`Current height: ${currentHeight}, Chain tip: ${this.chainTipHeight}, Future blocks to show: ${futureBlocksToShow}`);
-        console.log(`Example behavior: ?height=${currentHeight} with chain tip ${this.chainTipHeight}: Shows ${futureBlocksToShow} future blocks`);
-        
-        for (let i = 1; i <= futureBlocksToShow; i++) {
-            const nextBlock = new THREE.Mesh(blockGeometry, blockMaterial.clone());
-            nextBlock.position.set(0, 0, i * 4); // Position each block 4 units in front of the previous
-            nextBlock.castShadow = true;
-            nextBlock.renderOrder = 1;
-            
-            // Incrementally decrease opacity (increase transparency) as blocks get further away
-            const opacity = 0.1 - (i * 0.02); // Start at 0.1, decrease by 0.02 for each block
-            nextBlock.material.opacity = Math.max(opacity, 0.01); // Cap at 0.05 to maintain some visibility
-            
-            this.scene.add(nextBlock);
-        }
-        
-        // Create previous blocks behind the current block (only if current height allows)
+        // Create past blocks in front of the current block (only if current height allows)
         const maxPastBlocks = Math.min(5, currentHeight); // Don't show more past blocks than available
         
         for (let i = 1; i <= maxPastBlocks; i++) {
             const prevBlock = new THREE.Mesh(blockGeometry, blockMaterial.clone());
-            prevBlock.position.set(0, 0, -i * 4); // Position each block 4 units behind the previous
+            prevBlock.position.set(0, 0, i * 4); // Position each block 4 units in front of the previous
             prevBlock.castShadow = true;
             prevBlock.renderOrder = 1;
             
@@ -1061,6 +1043,26 @@ class BitcoinBlockExplorer {
             prevBlock.material.opacity = Math.max(opacity, 0.01); // Cap at 0.05 to maintain some visibility
             
             this.scene.add(prevBlock);
+        }
+        
+        // Create future blocks behind the current block (limited by chain tip)
+        const maxFutureBlocks = this.chainTipHeight ? Math.max(0, this.chainTipHeight - currentHeight) : 5;
+        const futureBlocksToShow = Math.min(5, maxFutureBlocks); // Cap at 5 blocks maximum
+        
+        console.log(`Current height: ${currentHeight}, Chain tip: ${this.chainTipHeight}, Future blocks to show: ${futureBlocksToShow}`);
+        console.log(`Example behavior: ?height=${currentHeight} with chain tip ${this.chainTipHeight}: Shows ${futureBlocksToShow} future blocks`);
+        
+        for (let i = 1; i <= futureBlocksToShow; i++) {
+            const nextBlock = new THREE.Mesh(blockGeometry, blockMaterial.clone());
+            nextBlock.position.set(0, 0, -i * 4); // Position each block 4 units behind the previous
+            nextBlock.castShadow = true;
+            nextBlock.renderOrder = 1;
+            
+            // Incrementally decrease opacity (increase transparency) as blocks get further away
+            const opacity = 0.1 - (i * 0.02); // Start at 0.1, decrease by 0.02 for each block
+            nextBlock.material.opacity = Math.max(opacity, 0.01); // Cap at 0.05 to maintain some visibility
+            
+            this.scene.add(nextBlock);
         }
     }
 
