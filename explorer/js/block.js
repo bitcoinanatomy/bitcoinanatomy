@@ -17,19 +17,26 @@ class BitcoinBlockExplorer {
         this.orthographicZoom = 20; // Store orthographic zoom level
         this.isLoadingAll = false; // Track if load all is in progress
         this.shouldStopLoadingAll = false; // Flag to stop load all process
+        this.chainTipHeight = null; // Store chain tip height
         
         // Get block height from URL parameter, will fetch chain tip if none provided
         const urlParams = new URLSearchParams(window.location.search);
         this.blockHeight = urlParams.get('height');
         
-        this.init();
+        this.init().catch(error => {
+            console.error('Error during initialization:', error);
+        });
     }
 
-    init() {
+    async init() {
         this.setupThreeJS();
         this.setupControls();
         this.setupButtonControls();
         this.setupHoverTooltip();
+        
+        // Fetch chain tip height before creating scene
+        await this.fetchChainTipHeight();
+        
         this.createScene();
         this.animate();
         this.fetchData();
@@ -997,6 +1004,9 @@ class BitcoinBlockExplorer {
     }
 
     createBlockVisualization() {
+        // Get current height for both future and past block calculations
+        const currentHeight = parseInt(this.blockHeight) || 0;
+        
         // Create main block as perfect cube with lower opacity
         const blockGeometry = new THREE.BoxGeometry(3, 3, 3);
         const blockMaterial = new THREE.MeshLambertMaterial({
@@ -1017,8 +1027,14 @@ class BitcoinBlockExplorer {
         // Store block reference for later use
         this.blockMesh = block;
         
-        // Create next 5 blocks in front of the current block
-        for (let i = 1; i <= 5; i++) {
+        // Create future blocks in front of the current block (limited by chain tip)
+        const maxFutureBlocks = this.chainTipHeight ? Math.max(0, this.chainTipHeight - currentHeight) : 5;
+        const futureBlocksToShow = Math.min(5, maxFutureBlocks); // Cap at 5 blocks maximum
+        
+        console.log(`Current height: ${currentHeight}, Chain tip: ${this.chainTipHeight}, Future blocks to show: ${futureBlocksToShow}`);
+        console.log(`Example behavior: ?height=${currentHeight} with chain tip ${this.chainTipHeight}: Shows ${futureBlocksToShow} future blocks`);
+        
+        for (let i = 1; i <= futureBlocksToShow; i++) {
             const nextBlock = new THREE.Mesh(blockGeometry, blockMaterial.clone());
             nextBlock.position.set(0, 0, i * 4); // Position each block 4 units in front of the previous
             nextBlock.castShadow = true;
@@ -1032,7 +1048,6 @@ class BitcoinBlockExplorer {
         }
         
         // Create previous blocks behind the current block (only if current height allows)
-        const currentHeight = parseInt(this.blockHeight) || 0;
         const maxPastBlocks = Math.min(5, currentHeight); // Don't show more past blocks than available
         
         for (let i = 1; i <= maxPastBlocks; i++) {
@@ -1049,29 +1064,41 @@ class BitcoinBlockExplorer {
         }
     }
 
+    async fetchChainTipHeight() {
+        try {
+            console.log('Fetching chain tip height...');
+            const tipResponse = await fetch('https://mempool.space/api/blocks/tip/height');
+            
+            if (tipResponse.status === 429) {
+                console.warn('Rate limit exceeded when fetching chain tip, using fallback');
+                this.chainTipHeight = null;
+                return;
+            }
+            
+            if (!tipResponse.ok) {
+                console.warn(`Failed to fetch chain tip: HTTP ${tipResponse.status}`);
+                this.chainTipHeight = null;
+                return;
+            }
+            
+            this.chainTipHeight = parseInt(await tipResponse.text());
+            console.log(`Fetched chain tip height: ${this.chainTipHeight}`);
+            
+            // If no block height provided, use chain tip
+            if (!this.blockHeight) {
+                this.blockHeight = this.chainTipHeight.toString();
+                console.log(`Using chain tip as block height: ${this.blockHeight}`);
+            }
+        } catch (error) {
+            console.warn('Error fetching chain tip height:', error);
+            this.chainTipHeight = null;
+        }
+    }
+
     async fetchData() {
         this.showLoadingModal('Loading block data...');
         
         try {
-            // If no block height provided, fetch the chain tip height
-            if (!this.blockHeight) {
-                this.updateLoadingProgress('Fetching chain tip height...', 10);
-                console.log('No block height provided, fetching chain tip...');
-                const tipResponse = await fetch('https://mempool.space/api/blocks/tip/height');
-                
-                if (tipResponse.status === 429) {
-                    this.hideLoadingModal();
-                    this.showRateLimitError('Mempool.space API');
-                    return;
-                }
-                
-                if (!tipResponse.ok) {
-                    throw new Error(`HTTP error! status: ${tipResponse.status}`);
-                }
-                
-                this.blockHeight = await tipResponse.text();
-                console.log(`Fetched chain tip height: ${this.blockHeight}`);
-            }
             
             this.updateLoadingProgress('Fetching block hash...', 30);
             // Fetch block data from Mempool.space using height
