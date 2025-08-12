@@ -1241,7 +1241,7 @@ class BitcoinBlockExplorer {
             const y = 1.21 - layer * spacingY; // Move all transactions up 10 units, then stack layers downward
             
             // Create cuboid geometry (reduced to half scale)
-            const CUBOID_WIDTH = 0.035;   // Width (was 0.07)
+            const CUBOID_WIDTH = 0.01;   // Width (was 0.07)
             const CUBOID_HEIGHT = 0.07;   // Height (was 0.14)
             const CUBOID_LENGTH = 0.21;   // Length (was 0.56)
             const geometry = new THREE.BoxGeometry(CUBOID_LENGTH, CUBOID_HEIGHT, CUBOID_WIDTH);
