@@ -37,7 +37,8 @@
         <!-- UI Overlay -->
         <div id="ui">
             <div class="header">
-                <h1>Transaction Flow <span id="tx-title-hash">Loading...</span></h1>
+                <h1>Transaction</h1>
+                <div class="subtitle" id="tx-title-hash">Loading...</div>
             </div>
             
             <div class="sidebar">
@@ -65,8 +66,9 @@
             <div class="controls">
                 <button id="toggle-rotation">Pause Rotation</button>
                 <button id="reset-camera">Reset Camera</button>
+                <button id="toggle-view">Orthographic</button>
                 <button id="toggle-flow">Show Flow</button>
-                <button id="change-transaction">Change Transaction</button>
+                <button id="change-transaction">Load Transaction</button>
                 <button id="back-to-block" style="display: none;">Back to Block</button>
             </div>
         </div>
@@ -80,7 +82,7 @@
     <div id="transaction-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Change Bitcoin Transaction</h3>
+                <h3>Load Bitcoin Transaction</h3>
                 <span class="modal-close">&times;</span>
             </div>
             <div class="modal-body">

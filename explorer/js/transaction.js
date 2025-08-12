@@ -6,25 +6,35 @@ class BitcoinTransactionExplorer {
         this.renderer = null;
         this.isRotating = true;
         this.controls = {
-            distance: 30,
-            phi: Math.PI / 4,
-            theta: 0,
+            distance: 130,
+            phi: Math.PI /2,
+            theta: 1,
             target: new THREE.Vector3(0, 0, 0),
             panX: 0,
             panY: 0,
             panZ: 0
         };
+        this.isPerspective = true; // Track camera type
+        this.orthographicZoom = 20; // Store orthographic zoom level
         this.transactionData = null;
         this.txid = null;
         
-        // Get transaction ID from URL parameter
+        // Gradient texture cache for cylinders
+        this.cylinderGradientTexture = null;
+        this.outputCylinderGradientTexture = null;
+        
+        // Get transaction ID from URL parameter, or use default
         const urlParams = new URLSearchParams(window.location.search);
-        this.txid = urlParams.get('txid');
+        this.txid = urlParams.get('txid') || 'ce6b90e54ee8bc231f694e2abfac140e8c7a0900e4726088f0ed3ea54a0f3d10';
         
         this.init();
     }
 
     init() {
+        // Prepare gradient texture for cylinders
+        this.cylinderGradientTexture = this.createVerticalGradientTexture('#000000', '#cccccccc');
+        // Prepare mirrored gradient for output cylinders
+        this.outputCylinderGradientTexture = this.createVerticalGradientTexture('#cccccc33', '#ffffff00');
         this.setupThreeJS();
         this.setupMouseControls();
         this.createScene();
@@ -38,7 +48,7 @@ class BitcoinTransactionExplorer {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);
         
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
         this.updateCameraPosition();
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -92,6 +102,27 @@ class BitcoinTransactionExplorer {
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, this.camera);
 
+            // Reset hover states: colors and opacities for inputs/outputs and tubes
+            this.scene.children.forEach(child => {
+                if (child.userData.type === 'input' || child.userData.type === 'input-tube') {
+                    if (child.userData.originalColor) {
+                        child.material.color.setHex(child.userData.originalColor);
+                    }
+                }
+                if (child.userData.type === 'output' || child.userData.type === 'output-tube') {
+                    if (typeof child.userData.originalOpacity === 'number') {
+                        child.material.opacity = child.userData.originalOpacity;
+                    }
+                    if (typeof child.userData.originalEmissive === 'number' && child.material.emissive) {
+                        child.material.emissive.setHex(child.userData.originalEmissive);
+                        child.material.emissiveIntensity = 0;
+                    }
+                    if (typeof child.userData.originalColor === 'number' && child.material.color) {
+                        child.material.color.setHex(child.userData.originalColor);
+                    }
+                }
+            });
+
             // Calculate objects intersecting the picking ray
             const intersects = raycaster.intersectObjects(this.scene.children);
 
@@ -110,7 +141,12 @@ class BitcoinTransactionExplorer {
                         <strong>Input ${userData.index + 1}</strong><br>
                         Amount: ${amount} BTC<br>
                         Script Type: ${scriptType}<br>
-                        ${input.prevout?.scriptpubkey_address ? `Address: ${input.prevout.scriptpubkey_address.substring(0, 16)}...` : ''}
+                        ${input.prevout?.scriptpubkey_address ? `Address: ${input.prevout.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                        <br>
+                        <strong>From Transaction:</strong><br>
+                        TXID: ${input.txid ? input.txid.substring(0, 16) + '...' : 'Unknown'}<br>
+                        Output Index: ${input.vout !== undefined ? input.vout : 'Unknown'}<br>
+                        <em>Double-click to view source transaction</em>
                     `;
                 } else if (userData.type === 'output') {
                     const output = userData.data;
@@ -136,6 +172,18 @@ class BitcoinTransactionExplorer {
                             Amount: ${amount} BTC<br>
                             Script Type: ${scriptType}<br>
                             ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}
+                        `;
+                    }
+                } else if (userData.type === 'input-tube') {
+                    const input = userData.data;
+                    const address = input.prevout?.scriptpubkey_address;
+                    
+                    if (address) {
+                        tooltipContent = `
+                            <strong>Connection from Address</strong><br>
+                            Address: ${address.substring(0, 16)}...<br>
+                            Amount: ${input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown'} BTC<br>
+                            <em>Double-click to view address details</em>
                         `;
                     }
                 } else if (userData.type === 'output-tube') {
@@ -170,9 +218,79 @@ class BitcoinTransactionExplorer {
                     tooltip.style.display = 'block';
                     tooltip.style.left = e.clientX + 10 + 'px';
                     tooltip.style.top = e.clientY - 10 + 'px';
+                    
+                    // Softer highlight for inputs: medium gray
+                    if (userData.type === 'input' || userData.type === 'input-tube') {
+                        const highlightColor = 0x999999;
+                        intersectedObject.material.color.setHex(highlightColor);
+                        
+                        // Apply to both the input cylinder and its connection tube
+                        const index = userData.index;
+                        this.scene.children.forEach(child => {
+                            if ((child.userData.type === 'input' || child.userData.type === 'input-tube') && 
+                                child.userData.index === index) {
+                                child.material.color.setHex(highlightColor);
+                            }
+                        });
+                    }
+
+                    // Stronger highlight for outputs: increase opacity more and tint brighter
+                    if (userData.type === 'output' || userData.type === 'output-tube') {
+                        const index = userData.index;
+                        this.scene.children.forEach(child => {
+                            if ((child.userData.type === 'output' || child.userData.type === 'output-tube') &&
+                                child.userData.index === index) {
+                                // Bump opacity more aggressively (cap at 1.0)
+                                const newOpacity = Math.min(1.0, (child.userData.originalOpacity ?? child.material.opacity) + 1.0);
+                                child.material.opacity = newOpacity;
+                                // Brighten via emissive to ensure visible highlight even on textured materials
+                                if (child.material.emissive) {
+                                    child.material.emissive.setHex(0xffffff);
+                                    child.material.emissiveIntensity = 0.6;
+                                }
+                                // Fallback: brighten color if no emissive
+                                else if (child.material.color) {
+                                    child.material.color.setHex(0xffffff);
+                                }
+                                // Change gradient texture to a brighter version for cylinders
+                                if (child.material.map && child.userData.type === 'output') {
+                                    // Create a bright hover gradient for output cylinders
+                                    const hoverGradient = this.createVerticalGradientTexture('#ffffff', '#00000000');
+                                    child.material.map = hoverGradient;
+                                    child.material.color.setHex(0x000000);
+                                    child.material.needsUpdate = true;
+                                }
+                            }
+                        });
+                    }
                 }
             } else {
                 tooltip.style.display = 'none';
+                // Reset all hover effects when not hovering over anything
+                this.scene.children.forEach(child => {
+                    if (child.userData) {
+                        if ((child.userData.type === 'input' || child.userData.type === 'input-tube') && typeof child.userData.originalColor === 'number' && child.material?.color) {
+                            child.material.color.setHex(child.userData.originalColor);
+                        }
+                        if (child.userData.type === 'output' || child.userData.type === 'output-tube') {
+                            if (typeof child.userData.originalOpacity === 'number') {
+                                child.material.opacity = child.userData.originalOpacity;
+                            }
+                            if (typeof child.userData.originalEmissive === 'number' && child.material?.emissive) {
+                                child.material.emissive.setHex(child.userData.originalEmissive);
+                                child.material.emissiveIntensity = 0;
+                            }
+                            if (typeof child.userData.originalColor === 'number' && child.material?.color) {
+                                child.material.color.setHex(child.userData.originalColor);
+                            }
+                            // Reset gradient texture to original for output cylinders
+                            if (child.material.map && child.userData.type === 'output' && child.userData.originalGradient) {
+                                child.material.map = child.userData.originalGradient;
+                                child.material.needsUpdate = true;
+                            }
+                        }
+                    }
+                });
             }
             
             // Handle camera controls
@@ -199,13 +317,60 @@ class BitcoinTransactionExplorer {
         
         this.renderer.domElement.addEventListener('mouseleave', () => {
             tooltip.style.display = 'none';
+            // Reset all hover effects on mouse leave
+            this.scene.children.forEach(child => {
+                if (child.userData) {
+                    if ((child.userData.type === 'input' || child.userData.type === 'input-tube') && typeof child.userData.originalColor === 'number' && child.material?.color) {
+                        child.material.color.setHex(child.userData.originalColor);
+                    }
+                    if (child.userData.type === 'output' || child.userData.type === 'output-tube') {
+                        if (typeof child.userData.originalOpacity === 'number') {
+                            child.material.opacity = child.userData.originalOpacity;
+                        }
+                        if (typeof child.userData.originalEmissive === 'number' && child.material?.emissive) {
+                            child.material.emissive.setHex(child.userData.originalEmissive);
+                            child.material.emissiveIntensity = 0;
+                        }
+                        if (typeof child.userData.originalColor === 'number' && child.material?.color) {
+                            child.material.color.setHex(child.userData.originalColor);
+                        }
+                        // Reset gradient texture to original for output cylinders
+                        if (child.material.map && child.userData.type === 'output' && child.userData.originalGradient) {
+                            child.material.map = child.userData.originalGradient;
+                            child.material.needsUpdate = true;
+                        }
+                    }
+                }
+            });
         });
         
         this.renderer.domElement.addEventListener('wheel', (e) => {
-            // Inverted zoom direction
-            this.controls.distance += e.deltaY * 0.1;
-            this.controls.distance = Math.max(5, Math.min(200, this.controls.distance));
-            this.updateCameraPosition();
+            // Stop automatic rotation when user starts zooming
+            this.isRotating = false;
+            const button = document.getElementById('toggle-rotation');
+            if (button) {
+                button.textContent = 'Start Rotation';
+            }
+            
+            // Zoom in/out with inverted scroll direction
+            if (this.isPerspective) {
+                // Perspective camera zoom
+                this.controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
+                this.controls.distance = Math.max(1, Math.min(1000, this.controls.distance)); // Allow much further zoom out
+                this.updateCameraPosition();
+            } else {
+                // Orthographic camera zoom
+                const zoomSpeed = 0.1;
+                this.orthographicZoom -= e.deltaY * zoomSpeed; // Inverted: was +=, now -=
+                this.orthographicZoom = Math.max(1, Math.min(2000, this.orthographicZoom)); // Allow much further zoom out
+                
+                const aspect = window.innerWidth / window.innerHeight;
+                this.camera.left = -this.orthographicZoom * aspect / 2;
+                this.camera.right = this.orthographicZoom * aspect / 2;
+                this.camera.top = this.orthographicZoom / 2;
+                this.camera.bottom = -this.orthographicZoom / 2;
+                this.camera.updateProjectionMatrix();
+            }
         });
         
         // Button controls
@@ -216,8 +381,8 @@ class BitcoinTransactionExplorer {
         });
         
         document.getElementById('reset-camera').addEventListener('click', () => {
-            this.controls.distance = 30;
-            this.controls.phi = Math.PI / 4;
+            this.controls.distance = 60;
+            this.controls.phi = Math.PI / 3;
             this.controls.theta = 0;
             this.controls.target.set(0, 0, 0);
             this.controls.panX = 0;
@@ -225,6 +390,14 @@ class BitcoinTransactionExplorer {
             this.controls.panZ = 0;
             this.updateCameraPosition();
         });
+        
+        // Add toggle view button functionality
+        const toggleViewButton = document.getElementById('toggle-view');
+        if (toggleViewButton) {
+            toggleViewButton.addEventListener('click', () => {
+                this.toggleCameraView();
+            });
+        }
         
         // Remove the toggle-flow button since we don't have flows anymore
         const toggleFlowButton = document.getElementById('toggle-flow');
@@ -251,7 +424,19 @@ class BitcoinTransactionExplorer {
                 const intersectedObject = intersects[0].object;
                 const userData = intersectedObject.userData;
                 
-                if (userData.type === 'output' && userData.spendingData) {
+                if (userData.type === 'input') {
+                    // Navigate to source transaction
+                    const txid = userData.data.txid;
+                    if (txid) {
+                        window.location.href = `transaction.html?txid=${txid}`;
+                    }
+                } else if (userData.type === 'input-tube') {
+                    // Navigate to address page
+                    const address = userData.data.prevout?.scriptpubkey_address;
+                    if (address) {
+                        window.location.href = `address.html?address=${address}`;
+                    }
+                } else if (userData.type === 'output' && userData.spendingData) {
                     // Navigate to spending transaction
                     window.location.href = `transaction.html?txid=${userData.spendingData.txid}`;
                 } else if (userData.type === 'output-tube') {
@@ -263,6 +448,26 @@ class BitcoinTransactionExplorer {
                 }
             }
         });
+    }
+
+    // Create a simple vertical gradient texture (top to bottom)
+    createVerticalGradientTexture(topColor, bottomColor) {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, size);
+        gradient.addColorStop(0, topColor);
+        gradient.addColorStop(1, bottomColor);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 1, size);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(1, 1);
+        texture.needsUpdate = true;
+        return texture;
     }
 
     updateCameraPosition() {
@@ -296,6 +501,11 @@ class BitcoinTransactionExplorer {
         const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
         fillLight.position.set(-10, -10, -5);
         this.scene.add(fillLight);
+
+        // Bottom fill light from below
+        const bottomFillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        bottomFillLight.position.set(0, -15, 0);
+        this.scene.add(bottomFillLight);
             
         // No placeholder geometry - wait for real data
     }
@@ -468,53 +678,158 @@ class BitcoinTransactionExplorer {
         const inputs = this.transactionData.vin || [];
         const outputs = this.transactionData.vout || [];
 
-        // Create input spheres on the left
-        inputs.forEach((input, index) => {
-            // Calculate sphere size based on amount (logarithmic scaling)
+        // Precompute input radii and vertical positions to avoid overlaps and align with tubes
+        const inputParams = inputs.map((input, index) => {
             const amount = input.prevout?.value || 0;
             const amountBTC = amount / 100000000;
-            const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
-            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
-            const sphereRadius = 1 * sizeScale;
-            
-            const geometry = new THREE.SphereGeometry(sphereRadius, 16, 16);
-            const material = new THREE.MeshLambertMaterial({ 
-                color: 0xff6b6b,
-                transparent: true,
-                opacity: 0.9, // High opacity but not fully opaque
-                depthWrite: true,
-                depthTest: true
-            });
-            const sphere = new THREE.Mesh(geometry, material);
-            sphere.renderOrder = 1; // Render after other objects
-            
-            sphere.position.set(-35, (inputs.length - 1) - index * 2, 0); // First inputs at top, moved much further away
-            sphere.userData = { type: 'input', index, data: input };
-            this.scene.add(sphere);
+            const logValue = Math.log10(amountBTC + 1);
+            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
+            const radius = 1 * sizeScale;
+            return { index, input, radius };
         });
 
-        // Create output spheres on the right
-        outputs.forEach((output, index) => {
-            // Calculate sphere size based on amount (logarithmic scaling)
+        const yPositions = [];
+        if (inputParams.length > 0) {
+            if (inputParams.length === 1) {
+                // Single input: position at same Y as transaction (Y=0)
+                yPositions[0] = 0;
+            } else {
+                // Multiple inputs: calculate total height needed for all inputs
+                let totalHeight = 0;
+                for (let i = 0; i < inputParams.length; i++) {
+                    if (i === 0) {
+                        totalHeight += inputParams[i].radius;
+                    } else {
+                        const prevRadius = inputParams[i - 1].radius;
+                        const radius = inputParams[i].radius;
+                        const spacing = Math.max(0.5, prevRadius + radius + 0.5);
+                        totalHeight += spacing;
+                    }
+                }
+                
+                // Start from the top and center around transaction cuboid (Y=0)
+                let currentY = totalHeight / 2;
+                const minSpacing = 0.5;
+                for (let i = 0; i < inputParams.length; i++) {
+                    if (i === 0) {
+                        yPositions[i] = currentY;
+                        currentY -= inputParams[i].radius;
+                    } else {
+                        const prevRadius = inputParams[i - 1].radius;
+                        const radius = inputParams[i].radius;
+                        const spacing = Math.max(minSpacing, prevRadius + radius + 0.5);
+                        currentY -= spacing;
+                        yPositions[i] = currentY;
+                    }
+                }
+            }
+        }
+
+        // Precompute output radii and vertical positions to avoid overlaps and align with tubes
+        const outputParams = outputs.map((output, index) => {
             const amount = output.value || 0;
             const amountBTC = amount / 100000000;
-            const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
-            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
-            const sphereRadius = 1 * sizeScale; // Increased base radius
+            const logValue = Math.log10(amountBTC + 1);
+            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
+            const radius = 1 * sizeScale;
+            return { index, output, radius };
+        });
+
+        const yPositionsOutputs = [];
+        if (outputParams.length > 0) {
+            if (outputParams.length === 1) {
+                // Single output: position at same Y as transaction (Y=0)
+                yPositionsOutputs[0] = 0;
+            } else {
+                // Multiple outputs: calculate total height needed for all outputs
+                let totalHeightOut = 0;
+                for (let i = 0; i < outputParams.length; i++) {
+                    if (i === 0) {
+                        totalHeightOut += outputParams[i].radius;
+                    } else {
+                        const prevRadius = outputParams[i - 1].radius;
+                        const radius = outputParams[i].radius;
+                        const spacing = Math.max(0.5, prevRadius + radius + 0.5);
+                        totalHeightOut += spacing;
+                    }
+                }
+                
+                // Start from the top and center around transaction cuboid (Y=0)
+                let currentYOut = totalHeightOut / 2;
+                const minSpacingOut = 0.5;
+                for (let i = 0; i < outputParams.length; i++) {
+                    if (i === 0) {
+                        yPositionsOutputs[i] = currentYOut;
+                        currentYOut -= outputParams[i].radius;
+                    } else {
+                        const prevRadius = outputParams[i - 1].radius;
+                        const radius = outputParams[i].radius;
+                        const spacing = Math.max(minSpacingOut, prevRadius + radius + 0.5);
+                        currentYOut -= spacing;
+                        yPositionsOutputs[i] = currentYOut;
+                    }
+                }
+            }
+        }
+
+        // Create input cylinders on the left
+        inputParams.forEach((param, index) => {
+            const { input, radius: cylinderRadius } = param;
+            const cylinderHeight = 120; // Much taller for strong presence
             
-            const geometry = new THREE.SphereGeometry(sphereRadius, 16, 16);
+            const geometry = new THREE.CylinderGeometry(cylinderRadius, cylinderRadius, cylinderHeight, 16, 1, true);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0x444444, // Match input connection color
+                transparent: true,
+                opacity: 0.75,
+                side: THREE.DoubleSide,
+                depthWrite: false, // Match input tube depth behavior
+                depthTest: true,
+                map: this.cylinderGradientTexture
+            });
+            const cylinder = new THREE.Mesh(geometry, material);
+            cylinder.renderOrder = 1; // Render after other objects
+            
+            // Rotate cylinder 90 degrees around Z-axis to make it horizontal
+            cylinder.rotation.z = Math.PI / 2;
+            
+            // Position cylinder so its top (positive X end) aligns with the connection line start point
+            // The connection line starts at (-35, y, 0) and the cylinder top should be at that point
+            // Since cylinder is rotated 90° around Z, its length extends in the -X direction
+            const cylinderLength = cylinderHeight; // Height becomes length when rotated
+            const topOffset = cylinderLength / 2; // Half the cylinder length
+            const y = yPositions[index] ?? ((inputs.length - 1) - index * 2);
+            cylinder.position.set(-35 - topOffset, y, 0);
+            
+            // Store the radius for spacing calculations
+            cylinder.userData.radius = cylinderRadius;
+            cylinder.userData = { type: 'input', index, data: input, originalColor: 0x444444 };
+            this.scene.add(cylinder);
+        });
+
+
+        // Create output spheres on the right with precomputed spacing
+        outputParams.forEach((param, index) => {
+            const { output, radius: sphereRadius } = param;
+            
+            const geometry = new THREE.SphereGeometry(sphereRadius, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2); // Open hemisphere
             const material = new THREE.MeshLambertMaterial({ 
                 color: 0xffffff, // White color
                 transparent: true,
                 opacity: 0.9, // High opacity but not fully opaque
+                side: THREE.DoubleSide,
                 depthWrite: true,
                 depthTest: true
             });
             const sphere = new THREE.Mesh(geometry, material);
             sphere.renderOrder = 1; // Render after other objects
             
-            sphere.position.set(35, (outputs.length - 1) - index * 2, 0); // First outputs at top, moved much further away
-            sphere.userData = { type: 'output', index, data: output };
+            // Rotate hemisphere so its opening faces outward (toward +X)
+            sphere.rotation.z = -Math.PI / 2;
+            
+            const y = yPositionsOutputs[index] ?? ((outputs.length - 1) - index * 2);
+            sphere.position.set(35, y, 0);
+            sphere.userData = { type: 'output', index, data: output, radius: sphereRadius, originalOpacity: material.opacity, originalEmissive: material.emissive ? material.emissive.getHex() : 0x000000, originalColor: material.color ? material.color.getHex() : 0xffffff };
             this.scene.add(sphere);
         });
 
@@ -553,77 +868,66 @@ class BitcoinTransactionExplorer {
         const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
         const circleRadius = 1 * sizeScale;
         
-        // Left side circle (input disc - perpendicular to X-axis)
-        const leftCircleGeometry = new THREE.CircleGeometry(circleRadius, 32);
-        const leftCircleMaterial = new THREE.MeshLambertMaterial({ 
-            color: 0xffffff, 
-            side: THREE.DoubleSide,
+        // Single spanning cylinder ring across the transaction and adjacent space
+        // Make its length 1/8th of the transaction cuboid height
+        const spanLength = 2.5;
+        const spanGeometry = new THREE.CylinderGeometry(circleRadius, circleRadius, spanLength, 32, 1, true);
+        const spanMaterial = new THREE.MeshLambertMaterial({
+            color: 0xffffff,
             transparent: true,
-            opacity: 0.5,
+            opacity: 0.1,
+            side: THREE.DoubleSide,
             depthWrite: false,
             depthTest: true
         });
-        const leftCircle = new THREE.Mesh(leftCircleGeometry, leftCircleMaterial);
-        leftCircle.position.set(-width/2 - 0.1, 0, 0);
-        leftCircle.rotation.y = Math.PI / 2; // Rotate to be perpendicular to X-axis
-        leftCircle.renderOrder = 1; // Render after other objects
-        this.scene.add(leftCircle);
-
-        // Right side circle (output disc - perpendicular to X-axis)
-        const rightCircleGeometry = new THREE.CircleGeometry(circleRadius, 32);
-        const rightCircleMaterial = new THREE.MeshLambertMaterial({ 
-            color: 0xffffff, 
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.5,
-            depthWrite: false,
-            depthTest: true
-        });
-        const rightCircle = new THREE.Mesh(rightCircleGeometry, rightCircleMaterial);
-        rightCircle.position.set(width/2 + 0.1, 0, 0);
-        rightCircle.rotation.y = -Math.PI / 2; // Rotate to be perpendicular to X-axis
-        rightCircle.renderOrder = 1; // Render after other objects
-        this.scene.add(rightCircle);
+        const spanRing = new THREE.Mesh(spanGeometry, spanMaterial);
+        spanRing.position.set(0, 0, 0);
+        spanRing.rotation.z = Math.PI / 2; // Align along X axis
+        spanRing.renderOrder = 1;
+        this.scene.add(spanRing);
 
         // Create connection curves
         inputs.forEach((input, index) => {
-            const startPoint = new THREE.Vector3(-35, (inputs.length - 1) - index * 2, 0);
-            const endPoint = new THREE.Vector3(-width/2, 0, 0); // End at left side of cuboid
+            const y = yPositions[index] ?? ((inputs.length - 1) - index * 2);
+            const startPoint = new THREE.Vector3(-35, y, 0);
+            const endPoint = new THREE.Vector3(-1, 0, 0); // End at left side of cuboid (width = 2)
             
             // Create control points for smooth curve
-            const controlPoint1 = new THREE.Vector3(-15, (inputs.length - 1) - index * 2 + 1, 0);
+            const controlPoint1 = new THREE.Vector3(-15, y + 1, 0);
             const controlPoint2 = new THREE.Vector3(-8, 0.5, 0);
             
             const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
             
-            // Calculate tube radius based on input sphere size (logarithmic scaling)
+            // Calculate tube radius based on input cylinder size (logarithmic scaling)
             const amount = input.prevout?.value || 0;
             const amountBTC = amount / 100000000;
             const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
             const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
             const tubeRadius = 1 * sizeScale;
             
-            const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 8, false);
+            const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 16, false);
             const material = new THREE.MeshLambertMaterial({ 
-                color: 0xff6b6b, 
-                opacity: 0.6, 
+                color: 0x222222, // Dark gray color
+                opacity: 0.8,
                 transparent: true,
+                side: THREE.DoubleSide,
                 depthWrite: false,
                 depthTest: true
             });
             const tube = new THREE.Mesh(tubeGeometry, material);
             tube.renderOrder = 0; // Render before circles
-            tube.userData = { type: 'input-tube', index: index };
+            tube.userData = { type: 'input-tube', index: index, data: input, originalColor: 0x444444 };
             this.scene.add(tube);
         });
 
         outputs.forEach((output, index) => {
-            const startPoint = new THREE.Vector3(width/2, 0, 0); // Start from right side of cuboid
-            const endPoint = new THREE.Vector3(35, (outputs.length - 1) - index * 2, 0);
+            const y = yPositionsOutputs[index] ?? ((outputs.length - 1) - index * 2);
+            const startPoint = new THREE.Vector3(1, 0, 0); // Start from right side of cuboid (width/2 where width=2)
+            const endPoint = new THREE.Vector3(35, y, 0);
             
             // Create control points for smooth curve
             const controlPoint1 = new THREE.Vector3(15, 0.5, 0); // Adjusted for new start point
-            const controlPoint2 = new THREE.Vector3(8, (outputs.length - 1) - index * 2 + 1, 0);
+            const controlPoint2 = new THREE.Vector3(8, y + 1, 0);
             
             const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
             
@@ -634,18 +938,87 @@ class BitcoinTransactionExplorer {
             const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
             const tubeRadius = 1 * sizeScale;
             
-            const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 8, false);
+            const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 16, false);
             const material = new THREE.MeshLambertMaterial({ 
                 color: 0xffffff, // White color
                 opacity: 0.6, 
                 transparent: true,
+                side: THREE.DoubleSide,
                 depthWrite: false,
                 depthTest: true
             });
             const tube = new THREE.Mesh(tubeGeometry, material);
             tube.renderOrder = 0; // Render before circles
-            tube.userData = { type: 'output-tube', index: index, data: output };
+            tube.userData = { type: 'output-tube', index: index, data: output, originalOpacity: material.opacity, originalEmissive: material.emissive ? material.emissive.getHex() : 0x000000, originalColor: material.color ? material.color.getHex() : 0xffffff };
             this.scene.add(tube);
+        });
+    }
+    
+    repositionInputCylinders() {
+        // Get all input cylinders
+        const inputCylinders = this.scene.children.filter(child => child.userData.type === 'input');
+        
+        if (inputCylinders.length === 0) return;
+        
+        // Sort by index to maintain order
+        inputCylinders.sort((a, b) => a.userData.index - b.userData.index);
+        
+        // Calculate positions with proper spacing
+        let currentY = (inputCylinders.length - 1) * 2; // Start position
+        const minSpacing = 0.5; // Minimum spacing between cylinders
+        
+        inputCylinders.forEach((cylinder, index) => {
+            const radius = cylinder.userData.radius || 1;
+            
+            // Calculate spacing based on radius of current and previous cylinder
+            let spacing = minSpacing;
+            if (index > 0) {
+                const prevRadius = inputCylinders[index - 1].userData.radius || 1;
+                spacing = Math.max(minSpacing, radius + prevRadius + 0.5); // Add buffer
+            }
+            
+            // Update Y position
+            if (index === 0) {
+                // First cylinder stays at top
+                cylinder.position.y = currentY;
+            } else {
+                // Subsequent cylinders are positioned with proper spacing
+                currentY -= spacing;
+                cylinder.position.y = currentY;
+            }
+        });
+        
+        // Update connection tube positions to match new cylinder positions
+        this.updateInputTubePositions();
+    }
+    
+    updateInputTubePositions() {
+        const inputCylinders = this.scene.children.filter(child => child.userData.type === 'input');
+        const inputTubes = this.scene.children.filter(child => child.userData.type === 'input-tube');
+        
+        inputCylinders.forEach(cylinder => {
+            const index = cylinder.userData.index;
+            const tube = inputTubes.find(t => t.userData.index === index);
+            
+            if (tube) {
+                // Update tube start and end points to match new cylinder position
+                const startPoint = new THREE.Vector3(-35, cylinder.position.y, 0);
+                const endPoint = new THREE.Vector3(-1, 0, 0); // -width/2 where width = 2
+                
+                // Create control points for smooth curve
+                const controlPoint1 = new THREE.Vector3(-15, cylinder.position.y + 1, 0);
+                const controlPoint2 = new THREE.Vector3(-8, 0.5, 0);
+                
+                const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
+                
+                // Update tube geometry
+                const tubeRadius = cylinder.userData.radius || 1;
+                const newTubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 8, false);
+                
+                // Replace the tube geometry
+                tube.geometry.dispose();
+                tube.geometry = newTubeGeometry;
+            }
         });
     }
 
@@ -653,7 +1026,7 @@ class BitcoinTransactionExplorer {
         requestAnimationFrame(() => this.animate());
         
         if (this.isRotating) {
-            this.controls.theta += 0.005;
+            this.controls.theta += 0.001;
             this.updateCameraPosition();
         }
         
@@ -691,13 +1064,55 @@ class BitcoinTransactionExplorer {
                     
                     if (sphere) {
                         if (spendingData.spent) {
-                            // Grey out spent outputs
-                            sphere.material.color.setHex(0x666666);
-                            if (tube) tube.material.color.setHex(0x666666);
-                            // Store spending data for tooltip and navigation
-                            sphere.userData.spendingData = spendingData;
-                            if (tube) tube.userData.spendingData = spendingData;
-                            console.log(`Output ${i} is SPENT - greyed out`);
+                            // Replace sphere with a cylinder for spent outputs
+                            const y = sphere.position.y;
+                            const sphereRadius = sphere.userData.radius || 1;
+                            const cylinderHeight = 120; // Much taller to match inputs
+                            
+                            const geometry = new THREE.CylinderGeometry(sphereRadius, sphereRadius, cylinderHeight, 16, 1, true);
+                            const material = new THREE.MeshLambertMaterial({ 
+                                color: 0xffffff, // Match spent output tube color
+                                transparent: true,
+                                opacity: 1,
+                                side: THREE.DoubleSide,
+                                depthWrite: false, // Match tube depth behavior
+                                depthTest: true,
+                                map: this.outputCylinderGradientTexture
+                            });
+                            const cylinder = new THREE.Mesh(geometry, material);
+                            cylinder.renderOrder = 1;
+                            
+                            // Rotate to horizontal and align base (negative X end) with connection end point at x=35
+                            cylinder.rotation.z = Math.PI / 2;
+                            const topOffset = cylinderHeight / 2;
+                            cylinder.position.set(35 + topOffset, y, 0);
+                            
+                            // Preserve user data, original material state, and add spending info
+                            cylinder.userData = {
+                                type: 'output',
+                                index: i,
+                                data: this.transactionData.vout[i],
+                                radius: sphereRadius,
+                                spendingData,
+                                originalOpacity: material.opacity,
+                                originalEmissive: material.emissive ? material.emissive.getHex() : 0x000000,
+                                originalColor: material.color ? material.color.getHex() : 0xffffff,
+                                originalGradient: this.outputCylinderGradientTexture
+                            };
+                            
+                            // Replace in scene
+                            this.scene.remove(sphere);
+                            this.scene.add(cylinder);
+                            
+                            // Grey out corresponding tube and store spending info, and set its originalColor to grey for proper hover-out
+                            if (tube) {
+                                tube.material.color.setHex(0x666666);
+                                tube.userData.spendingData = spendingData;
+                                if (tube.userData) {
+                                    tube.userData.originalColor = 0x666666;
+                                }
+                            }
+                            console.log(`Output ${i} is SPENT - replaced with cylinder`);
                         } else {
                             // Keep unspent outputs white
                             sphere.material.color.setHex(0xffffff);
@@ -716,9 +1131,52 @@ class BitcoinTransactionExplorer {
         console.log('=== END SPENDING STATUS CHECK ===\n');
     }
 
+    toggleCameraView() {
+        const currentPosition = this.camera.position.clone();
+        const currentTarget = this.controls.target.clone();
+        
+        if (this.isPerspective) {
+            // Switch to orthographic
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera = new THREE.OrthographicCamera(
+                this.orthographicZoom * aspect / -2,
+                this.orthographicZoom * aspect / 2,
+                this.orthographicZoom / 2,
+                this.orthographicZoom / -2,
+                0.1,
+                5000
+            );
+            this.isPerspective = false;
+        } else {
+            // Switch to perspective
+            this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+            this.isPerspective = true;
+        }
+        
+        // Restore position and target
+        this.camera.position.copy(currentPosition);
+        this.controls.target.copy(currentTarget);
+        this.camera.lookAt(this.controls.target);
+        
+        // Update the button text
+        const button = document.getElementById('toggle-view');
+        if (button) {
+            button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
+        }
+    }
+
     onWindowResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
+        if (this.isPerspective) {
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+        } else {
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 

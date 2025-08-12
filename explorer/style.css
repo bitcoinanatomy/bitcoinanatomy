@@ -195,6 +195,15 @@ body:not(.homepage) {
     letter-spacing: -0.05rem;
 }
 
+.header .subtitle {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #cccccc;
+    font-family: "Inter", sans-serif;
+    margin-top: 4px;
+    word-break: break-all;
+}
+
 /* Homepage header */
 .container .header {
     text-align: center;
@@ -682,7 +691,7 @@ button:active {
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     width: 90%;
-    max-width: 500px;
+    max-width: 510px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     animation: modalSlideIn 0.3s ease-out;
 }
