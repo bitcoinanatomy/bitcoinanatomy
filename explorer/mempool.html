@@ -38,16 +38,16 @@
         <div id="ui">
             <div class="header">
                 <h1>Mempool</h1>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span id="mempool-status">Loading...</span>
-                </div>
+                <div class="subtitle" id="mempool-subtitle">Loading...</div>
             </div>
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Mempool Information</h3>
-                    <div id="mempool-stats">
+                    <div class="panel-header">
+                        <h3>Mempool Information</h3>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                    </div>
+                    <div id="mempool-stats" class="panel-content">
                         <div>Total Transactions: <span id="total-transactions">Loading...</span></div>
                         <div>Total Size: <span id="total-size">Loading...</span></div>
                         <div>Total Fees: <span id="total-fees">Loading...</span></div>

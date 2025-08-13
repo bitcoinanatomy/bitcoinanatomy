@@ -239,6 +239,9 @@ class BitcoinAddressExplorer {
         
         // Modal functionality
         this.setupModal();
+        
+        // Panel toggle functionality
+        this.setupPanelToggle();
     }
 
     updateCameraPosition() {
@@ -365,6 +368,7 @@ class BitcoinAddressExplorer {
 
     updateUI(data) {
         if (!data || Object.keys(data).length === 0) {
+            document.getElementById('address-subtitle').textContent = 'Loading...';
             document.getElementById('address-hash').textContent = 'Loading...';
             document.getElementById('address-balance').textContent = 'Loading...';
             document.getElementById('address-tx-count').textContent = 'Loading...';
@@ -375,6 +379,11 @@ class BitcoinAddressExplorer {
             document.getElementById('address-unconfirmed').textContent = 'Loading...';
             return;
         }
+
+        // Update subtitle with address and balance
+        const balance = data.chain_stats ? (data.chain_stats.funded_txo_sum / 100000000).toFixed(8) : '0';
+        const subtitle = `${data.address || 'Unknown'} • ${balance} BTC`;
+        document.getElementById('address-subtitle').textContent = subtitle;
 
         document.getElementById('address-hash').textContent = data.address ? data.address.substring(0, 16) + '...' : 'N/A';
         document.getElementById('address-balance').textContent = data.chain_stats ? `${(data.chain_stats.funded_txo_sum / 100000000).toFixed(8)} BTC` : 'N/A';
@@ -723,6 +732,29 @@ class BitcoinAddressExplorer {
             currentUrl.searchParams.set('address', newAddress);
             window.location.href = currentUrl.toString();
         });
+    }
+    
+    setupPanelToggle() {
+        const toggleBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('address-info');
+        
+        if (toggleBtn && panelContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isMinimized = panelContent.classList.contains('minimized');
+                
+                if (isMinimized) {
+                    // Expand panel
+                    panelContent.classList.remove('minimized');
+                    toggleBtn.textContent = '−';
+                    toggleBtn.title = 'Minimize';
+                } else {
+                    // Minimize panel
+                    panelContent.classList.add('minimized');
+                    toggleBtn.textContent = '+';
+                    toggleBtn.title = 'Maximize';
+                }
+            });
+        }
     }
 }
 

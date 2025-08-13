@@ -25,6 +25,7 @@ class BitcoinDifficultyExplorer {
         this.setupThreeJS();
         this.setupOrbitControls();
         this.setupControls();
+        this.setupPanelToggle();
         this.createScene();
         this.animate();
         this.fetchData();
@@ -234,7 +235,7 @@ class BitcoinDifficultyExplorer {
             } else {
                 // Orthographic camera zoom
                 this.orthographicZoom -= e.deltaY * 0.1;
-                this.orthographicZoom = Math.max(5, Math.min(50, this.orthographicZoom));
+                this.orthographicZoom = Math.max(5, Math.min(100, this.orthographicZoom));
                 
                 const aspect = window.innerWidth / window.innerHeight;
                 this.camera.left = -this.orthographicZoom * aspect / 2;
@@ -410,7 +411,9 @@ class BitcoinDifficultyExplorer {
             
             const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
             const material = new THREE.MeshBasicMaterial({
-                color: color
+                color: color,
+                transparent: true,
+                opacity: 0.8
             });
             
             const blockMesh = new THREE.Mesh(geometry, material);
@@ -860,10 +863,9 @@ class BitcoinDifficultyExplorer {
 
     updateUI(data) {
         if (this.selectedAdjustment !== null) {
-            const header = document.querySelector('.header h1');
-            if (header) {
-                header.textContent = `Difficulty Adjustment ${this.selectedAdjustment}`;
-            }
+            // Update subtitle with adjustment period
+            const subtitle = `Adjustment ${this.selectedAdjustment} • ${(parseInt(this.selectedAdjustment) * 2016).toLocaleString()} blocks`;
+            document.getElementById('difficulty-subtitle').textContent = subtitle;
             
             // Update elements in the consolidated panel
             const adjustmentPeriod = document.getElementById('adjustment-period');
@@ -919,6 +921,29 @@ class BitcoinDifficultyExplorer {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    setupPanelToggle() {
+        const toggleBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('current-adjustment');
+        
+        if (toggleBtn && panelContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isMinimized = panelContent.classList.contains('minimized');
+                
+                if (isMinimized) {
+                    // Expand panel
+                    panelContent.classList.remove('minimized');
+                    toggleBtn.textContent = '−';
+                    toggleBtn.title = 'Minimize';
+                } else {
+                    // Minimize panel
+                    panelContent.classList.add('minimized');
+                    toggleBtn.textContent = '+';
+                    toggleBtn.title = 'Maximize';
+                }
+            });
+        }
     }
 }
 

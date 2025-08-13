@@ -37,17 +37,17 @@
         <!-- UI Overlay -->
         <div id="ui">
             <div class="header">
-                <h1>Address Details</h1>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span>Active</span>
-                </div>
+                <h1>Address</h1>
+                <div class="subtitle" id="address-subtitle">Loading...</div>
             </div>
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Address Information</h3>
-                    <div id="address-info">
+                    <div class="panel-header">
+                        <h3>Address Information</h3>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                    </div>
+                    <div id="address-info" class="panel-content">
                         <div>Address: <span id="address-hash">Loading...</span></div>
                         <div>Balance: <span id="address-balance">Loading...</span></div>
                         <div>Transactions: <span id="address-tx-count">Loading...</span></div>

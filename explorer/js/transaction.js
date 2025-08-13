@@ -408,6 +408,9 @@ class BitcoinTransactionExplorer {
         // Modal functionality
         this.setupModal();
         
+        // Panel toggle functionality
+        this.setupPanelToggle();
+        
         // Add double-click functionality
         this.renderer.domElement.addEventListener('dblclick', (event) => {
             const rect = this.renderer.domElement.getBoundingClientRect();
@@ -596,6 +599,7 @@ class BitcoinTransactionExplorer {
     updateUI(data) {
         if (!data || Object.keys(data).length === 0) {
             document.getElementById('tx-hash').textContent = 'Loading...';
+            document.getElementById('tx-date').textContent = 'Loading...';
             document.getElementById('tx-version').textContent = 'Loading...';
             document.getElementById('tx-locktime').textContent = 'Loading...';
             document.getElementById('tx-amount').textContent = 'Loading...';
@@ -616,13 +620,22 @@ class BitcoinTransactionExplorer {
         const totalOutput = data.vout ? data.vout.reduce((sum, output) => sum + output.value, 0) : 0;
         const fee = data.fee || 0;
 
-        // Update title hash in format: 4a5e14...89f3ad
-        const titleHash = data.txid ? 
-            data.txid.substring(0, 6) + '...' + data.txid.substring(data.txid.length - 6) : 
-            'Not Found';
+        // Update title hash to show full transaction ID
+        const titleHash = data.txid ? data.txid : 'Not Found';
         document.getElementById('tx-title-hash').textContent = titleHash;
         
         document.getElementById('tx-hash').textContent = data.txid ? data.txid.substring(0, 16) + '...' : 'N/A';
+        
+        // Format transaction date
+        let txDate = 'N/A';
+        if (data.status?.block_time) {
+            const date = new Date(data.status.block_time * 1000);
+            txDate = date.toLocaleString();
+        } else if (data.status?.confirmed === false) {
+            txDate = 'Unconfirmed';
+        }
+        document.getElementById('tx-date').textContent = txDate;
+        
         document.getElementById('tx-version').textContent = data.version !== undefined ? data.version.toString() : 'N/A';
         document.getElementById('tx-locktime').textContent = data.locktime !== undefined ? data.locktime.toString() : 'N/A';
         document.getElementById('tx-amount').textContent = totalOutput ? `${(totalOutput / 100000000).toFixed(8)} BTC` : 'N/A';
@@ -1178,6 +1191,29 @@ class BitcoinTransactionExplorer {
             this.camera.updateProjectionMatrix();
         }
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    setupPanelToggle() {
+        const toggleBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('tx-info');
+        
+        if (toggleBtn && panelContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isMinimized = panelContent.classList.contains('minimized');
+                
+                if (isMinimized) {
+                    // Expand panel
+                    panelContent.classList.remove('minimized');
+                    toggleBtn.textContent = '−';
+                    toggleBtn.title = 'Minimize';
+                } else {
+                    // Minimize panel
+                    panelContent.classList.add('minimized');
+                    toggleBtn.textContent = '+';
+                    toggleBtn.title = 'Maximize';
+                }
+            });
+        }
     }
 
     setupModal() {

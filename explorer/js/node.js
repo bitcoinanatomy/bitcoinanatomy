@@ -20,6 +20,7 @@ class BitcoinNodeExplorer {
         this.setupThreeJS();
         this.setupOrbitControls();
         this.setupControls();
+        this.setupPanelToggle();
         this.createScene();
         this.animate();
         
@@ -47,8 +48,18 @@ class BitcoinNodeExplorer {
                 const nodeData = await snapshotResponse.json();
                 
                 if (nodeData.nodes && Object.keys(nodeData.nodes).length > 0) {
-                    // Get a random node from the data
-                    const nodeAddresses = Object.keys(nodeData.nodes);
+                    // Filter out TOR nodes (.onion addresses) as they're not supported by the API
+                    const nodeAddresses = Object.keys(nodeData.nodes).filter(address => 
+                        !address.includes('.onion')
+                    );
+                    
+                    if (nodeAddresses.length === 0) {
+                        console.log('No non-TOR nodes available');
+                        this.showNoNodesError();
+                        return;
+                    }
+                    
+                    // Get a random node from the filtered data
                     const randomIndex = Math.floor(Math.random() * nodeAddresses.length);
                     const randomNodeAddress = nodeAddresses[randomIndex];
                     
@@ -1066,23 +1077,24 @@ class BitcoinNodeExplorer {
             existingPopup.remove();
         }
         
+        // Check if this is a TOR node
+        const isTorNode = this.nodeAddress && this.nodeAddress.includes('.onion');
+        
         // Create popup element
         const popup = document.createElement('div');
         popup.className = 'api-popup';
         popup.innerHTML = `
             <div class="popup-content">
                 <div class="popup-header">
-                    <h3>Node Not Found</h3>
+                    <h3>${isTorNode ? 'TOR Node Not Supported' : 'Node Not Found'}</h3>
                     <button class="popup-close">&times;</button>
                 </div>
                 <div class="popup-body">
-                    <p>The node <strong>${this.nodeAddress}</strong> was not found or is not activated.</p>
-                    <p>This can happen with:</p>
-                    <ul style="text-align: left; margin: 10px 0; padding-left: 20px;">
-                        <li>TOR nodes (.onion addresses)</li>
-                        <li>Nodes that are currently offline</li>
-                        <li>Nodes that haven't been activated on Bitnodes.io</li>
-                    </ul>
+                    <p>The node <strong>${this.nodeAddress}</strong> ${isTorNode ? 'is a TOR node' : 'was not found or is not activated'}.</p>
+                    ${isTorNode ? 
+                        '<p>TOR nodes (.onion addresses) are not supported by the Bitnodes.io API for individual node queries.</p>' :
+                        '<p>This can happen with:</p><ul style="text-align: left; margin: 10px 0; padding-left: 20px;"><li>Nodes that are currently offline</li><li>Nodes that haven\'t been activated on Bitnodes.io</li></ul>'
+                    }
                 </div>
                 <div class="popup-footer">
                     <a href="network.html" style="color: #4CAF50; text-decoration: none; margin-right: 10px;">← Back to Network</a>
@@ -1224,18 +1236,9 @@ class BitcoinNodeExplorer {
                 if (element) element.textContent = 'Not Available';
             });
             
-            // Update header
-            const header = document.querySelector('.header h1');
-            if (header) {
-                header.textContent = `Bitcoin Node - ${this.nodeAddress} (Not Found)`;
-            }
-            
-            // Update status
-            const statusElement = document.getElementById('node-status');
-            if (statusElement) {
-                statusElement.textContent = 'NOT FOUND';
-                statusElement.className = 'status-down';
-            }
+            // Update subtitle for error state
+            const subtitle = `${this.nodeAddress || 'Unknown'} • Not Found`;
+            document.getElementById('node-subtitle').textContent = subtitle;
             
             return;
         }
@@ -1274,18 +1277,9 @@ class BitcoinNodeExplorer {
         updateField('node-uptime', uptimeText);
         updateField('bandwidth', this.nodeData.mbps ? `${this.nodeData.mbps} Mbps` : 'N/A');
         
-        // Update header with node address
-        const header = document.querySelector('.header h1');
-        if (header) {
-            header.textContent = `Bitcoin Node - ${this.nodeData.address}`;
-        }
-        
-        // Update status indicator
-        const statusElement = document.getElementById('node-status');
-        if (statusElement) {
-            statusElement.textContent = this.nodeData.status;
-            statusElement.className = this.nodeData.status === 'UP' ? 'status-up' : 'status-down';
-        }
+        // Update subtitle with node address and status
+        const subtitle = `${this.nodeData.address} • ${this.nodeData.status}`;
+        document.getElementById('node-subtitle').textContent = subtitle;
     }
 
     animate() {
@@ -1468,6 +1462,29 @@ class BitcoinNodeExplorer {
         if (this.loadingModal) {
             this.loadingModal.remove();
             this.loadingModal = null;
+        }
+    }
+    
+    setupPanelToggle() {
+        const toggleBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('node-info');
+        
+        if (toggleBtn && panelContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isMinimized = panelContent.classList.contains('minimized');
+                
+                if (isMinimized) {
+                    // Expand panel
+                    panelContent.classList.remove('minimized');
+                    toggleBtn.textContent = '−';
+                    toggleBtn.title = 'Minimize';
+                } else {
+                    // Minimize panel
+                    panelContent.classList.add('minimized');
+                    toggleBtn.textContent = '+';
+                    toggleBtn.title = 'Maximize';
+                }
+            });
         }
     }
 }

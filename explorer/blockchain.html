@@ -38,16 +38,16 @@
         <div id="ui">
             <div class="header">
                 <h1>Blockchain</h1>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span>Syncing</span>
-                </div>
+                <div class="subtitle" id="blockchain-subtitle">Loading...</div>
             </div>
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Blockchain Information</h3>
-                    <div id="chain-info">
+                    <div class="panel-header">
+                        <h3>Blockchain Information</h3>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                    </div>
+                    <div id="chain-info" class="panel-content">
                         <div>Height: <span id="chain-height">Loading...</span></div>
                         <div>Total Size: <span id="chain-size">Loading...</span></div>
                         <div>Difficulty: <span id="chain-difficulty">Loading...</span></div>

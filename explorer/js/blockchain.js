@@ -17,6 +17,7 @@ class BitcoinBlockchainExplorer {
         this.setupThreeJS();
         this.setupOrbitControls();
         this.setupControls();
+        this.setupPanelToggle();
         this.createScene();
         this.animate();
         this.fetchData();
@@ -743,6 +744,12 @@ class BitcoinBlockchainExplorer {
         // Store the difficulty adjustments count for visualization
         this.difficultyAdjustments = data.numDiscs;
         
+        // Update subtitle with height and difficulty adjustments
+        const height = data.height?.toLocaleString() || '800,000';
+        const adjustments = data.numDiscs?.toLocaleString() || '0';
+        const subtitle = `Height ${height} • ${adjustments} difficulty adjustments`;
+        document.getElementById('blockchain-subtitle').textContent = subtitle;
+        
         // Display current height from Mempool.space
         document.getElementById('chain-height').textContent = data.height?.toLocaleString() || '800,000';
         document.getElementById('chain-size').textContent = '450 GB';
@@ -912,6 +919,29 @@ class BitcoinBlockchainExplorer {
         if (this.loadingModal) {
             this.loadingModal.remove();
             this.loadingModal = null;
+        }
+    }
+    
+    setupPanelToggle() {
+        const toggleBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('chain-info');
+        
+        if (toggleBtn && panelContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isMinimized = panelContent.classList.contains('minimized');
+                
+                if (isMinimized) {
+                    // Expand panel
+                    panelContent.classList.remove('minimized');
+                    toggleBtn.textContent = '−';
+                    toggleBtn.title = 'Minimize';
+                } else {
+                    // Minimize panel
+                    panelContent.classList.add('minimized');
+                    toggleBtn.textContent = '+';
+                    toggleBtn.title = 'Maximize';
+                }
+            });
         }
     }
 }

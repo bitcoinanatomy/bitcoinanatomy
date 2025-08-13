@@ -19,6 +19,7 @@ class BitcoinNetworkExplorer {
         this.setupThreeJS();
         this.setupOrbitControls();
         this.setupControls();
+        this.setupPanelToggle();
         this.createScene();
         this.animate();
         this.fetchData();
@@ -863,9 +864,9 @@ class BitcoinNetworkExplorer {
         document.getElementById('knots').textContent = (nodeImplementations['knots'] || 0).toLocaleString();
         document.getElementById('bcoin').textContent = (nodeImplementations['bcoin'] || 0).toLocaleString();
         
-        // Update timestamp
-        const header = document.querySelector('.header h1');
-        header.textContent = `Bitcoin Network - ${timestamp.toLocaleString()}`;
+        // Update subtitle with timestamp and node count
+        const subtitle = `${totalNodes.toLocaleString()} nodes • ${timestamp.toLocaleString()}`;
+        document.getElementById('network-subtitle').textContent = subtitle;
     }
 
     animate() {
@@ -883,6 +884,29 @@ class BitcoinNetworkExplorer {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    setupPanelToggle() {
+        const toggleBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('network-info');
+        
+        if (toggleBtn && panelContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isMinimized = panelContent.classList.contains('minimized');
+                
+                if (isMinimized) {
+                    // Expand panel
+                    panelContent.classList.remove('minimized');
+                    toggleBtn.textContent = '−';
+                    toggleBtn.title = 'Minimize';
+                } else {
+                    // Minimize panel
+                    panelContent.classList.add('minimized');
+                    toggleBtn.textContent = '+';
+                    toggleBtn.title = 'Maximize';
+                }
+            });
+        }
     }
 }
 

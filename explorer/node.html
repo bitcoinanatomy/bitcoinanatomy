@@ -37,17 +37,17 @@
         <!-- UI Overlay -->
         <div id="ui">
             <div class="header">
-                <h1>Node Details</h1>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span id="node-status">Loading...</span>
-                </div>
+                <h1>Node</h1>
+                <div class="subtitle" id="node-subtitle">Loading...</div>
             </div>
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Node Info</h3>
-                    <div id="node-info">
+                    <div class="panel-header">
+                        <h3>Node Info</h3>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                    </div>
+                    <div id="node-info" class="panel-content">
                         <div>Address: <span id="node-address">Loading...</span></div>
                         <div>Status: <span id="node-status-display">Loading...</span></div>
                         <div>Version: <span id="node-version">Loading...</span></div>

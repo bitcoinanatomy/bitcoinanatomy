@@ -33,6 +33,7 @@ class BitcoinBlockExplorer {
         this.setupControls();
         this.setupButtonControls();
         this.setupHoverTooltip();
+        this.setupPanelToggle();
         
         // Fetch chain tip height before creating scene
         await this.fetchChainTipHeight();
@@ -528,7 +529,7 @@ class BitcoinBlockExplorer {
             return;
         }
         
-        console.log(`Loading remaining ${remainingToLoad} transactions (${alreadyLoaded} already loaded) with 0.1s delay between requests...`);
+        console.log(`Loading remaining ${remainingToLoad} transactions (${alreadyLoaded} already loaded) with 0.005s delay between requests...`);
         
         // Load transactions one by one with delay (only unloaded ones)
         for (let i = 0; i < unloadedTransactions.length; i++) {
@@ -551,7 +552,7 @@ class BitcoinBlockExplorer {
                 // Update loaded transaction count
                 this.loadedTransactionCount = Math.max(this.loadedTransactionCount, txData.index + 1);
                 
-                console.log(`Loaded transaction ${loadedCount}/${totalToLoad}: ${txData.txid.substring(0, 16)}...`);
+                //console.log(`Loaded transaction ${loadedCount}/${totalToLoad}: ${txData.txid.substring(0, 16)}...`);
                 
             } catch (error) {
                 errorCount++;
@@ -560,7 +561,7 @@ class BitcoinBlockExplorer {
             
             // Add delay between requests (except for the last one)
             if (i < unloadedTransactions.length - 1 && !this.shouldStopLoadingAll) {
-                await new Promise(resolve => setTimeout(resolve, 100)); // 0.1 second delay
+                await new Promise(resolve => setTimeout(resolve, 5)); // 0.005 second delay (20x faster than original)
             }
         }
         
@@ -697,12 +698,12 @@ class BitcoinBlockExplorer {
             const txData = await response.json();
             
             // Calculate new height based on transaction size (matching address.js calculation)
-            const txSize = txData.size || 250; // Default size if not available
+            const txSize = txData.size || 200; // Default size if not available
             // Scale height based on transaction size: Math.max(0.1, txSize / 1000)
             const height = Math.max(0.1, txSize / 1000); // Scale height based on transaction size
             
             // Animate the height change (scale.y starts at 1.0) and adjust position to keep top-aligned
-            this.animateCuboidHeightTopAligned(cuboid, height, 1000);
+            this.animateCuboidHeightTopAligned(cuboid, height, 100);
             
             // Move loaded transactions maintaining their layer spacing
             const baseAlignedY = 2; // Base Y position for layer 0 loaded transactions
@@ -711,7 +712,7 @@ class BitcoinBlockExplorer {
             const alignedY = baseAlignedY - layer * spacingY; // Maintain layer spacing
             
             // Animate only the Y position upward to the aligned level
-            this.animateCuboidPosition(cuboid, alignedY, 1000);
+            this.animateCuboidPosition(cuboid, alignedY, 500);
             
             // Update the transaction cache with detailed information
             const tooltipContent = this.createDetailedTooltipContent(txData, txid);
@@ -721,7 +722,7 @@ class BitcoinBlockExplorer {
             cuboid.userData.transactionData = txData;
             cuboid.userData.size = txSize;
             
-            console.log(`Loaded transaction ${globalIndex + 1}: ${txid.substring(0, 16)}... (size: ${txSize} bytes, scale: ${sizeScale.toFixed(3)})`);
+            console.log(`Loaded transaction ${globalIndex + 1}: ${txid.substring(0, 16)}... (size: ${txSize} bytes)`);
             
         } catch (error) {
             console.error(`Error loading transaction ${globalIndex + 1} (${txid}):`, error);
@@ -1183,15 +1184,11 @@ class BitcoinBlockExplorer {
             return;
         }
         
-        // Update title with block height
-        const titleHeight = data.height ? `#${data.height.toLocaleString()}` : 'Not Found';
-        document.getElementById('block-title-height').textContent = titleHeight;
-        
-        // Update status with block hash (first 6 + last 6 characters)
-        const statusHash = data.id ? 
-            data.id.substring(0, 6) + '...' + data.id.substring(data.id.length - 6) : 
+        // Update subtitle with block height and hash
+        const subtitle = data.height ? 
+            `Height ${data.height.toLocaleString()} • ${data.id ? data.id.substring(0, 6) + '...' + data.id.substring(data.id.length - 6) : 'Hash not available'}` : 
             'Not Found';
-        document.getElementById('block-status-hash').textContent = statusHash;
+        document.getElementById('block-subtitle').textContent = subtitle;
         
         document.getElementById('block-height').textContent = data.height?.toLocaleString() || 'N/A';
         document.getElementById('block-hash').textContent = data.id?.substring(0, 16) + '...' || 'N/A';
@@ -1600,6 +1597,29 @@ class BitcoinBlockExplorer {
         if (this.loadingModal) {
             this.loadingModal.remove();
             this.loadingModal = null;
+        }
+    }
+    
+    setupPanelToggle() {
+        const toggleBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('block-info');
+        
+        if (toggleBtn && panelContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isMinimized = panelContent.classList.contains('minimized');
+                
+                if (isMinimized) {
+                    // Expand panel
+                    panelContent.classList.remove('minimized');
+                    toggleBtn.textContent = '−';
+                    toggleBtn.title = 'Minimize';
+                } else {
+                    // Minimize panel
+                    panelContent.classList.add('minimized');
+                    toggleBtn.textContent = '+';
+                    toggleBtn.title = 'Maximize';
+                }
+            });
         }
     }
 }

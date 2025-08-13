@@ -37,17 +37,17 @@
         <!-- UI Overlay -->
         <div id="ui">
             <div class="header">
-                <h1>Difficulty Adjustments</h1>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span>Loading</span>
-                </div>
+                <h1>Difficulty</h1>
+                <div class="subtitle" id="difficulty-subtitle">Loading...</div>
             </div>
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Difficulty Information</h3>
-                    <div id="current-adjustment">
+                    <div class="panel-header">
+                        <h3>Difficulty Information</h3>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                    </div>
+                    <div id="current-adjustment" class="panel-content">
                         <div>Period: <span id="adjustment-period">Loading...</span></div>
                         <div>Blocks: <span id="adjustment-blocks">Loading...</span></div>
                         <div>Difficulty: <span id="adjustment-difficulty">Loading...</span></div>

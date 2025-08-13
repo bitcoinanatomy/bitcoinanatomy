@@ -18,6 +18,7 @@ class BitcoinMempoolExplorer {
         this.setupThreeJS();
         this.setupOrbitControls();
         this.setupControls();
+        this.setupPanelToggle();
         this.createScene();
         this.animate();
         this.fetchData();
@@ -939,13 +940,9 @@ class BitcoinMempoolExplorer {
         document.getElementById('total-fees').textContent = `${(totalFees / 100000000).toFixed(2)} BTC`;
         document.getElementById('average-fee').textContent = `${averageFee.toFixed(2)} sat/vB`;
         document.getElementById('fee-range').textContent = `${minFee.toFixed(2)} - ${maxFee.toFixed(2)} sat/vB`;
-        document.getElementById('mempool-status').textContent = 'Active';
-        
-        // Update header
-        const header = document.querySelector('.header h1');
-        if (header) {
-            header.textContent = `Mempool - ${totalTx.toLocaleString()} Transactions`;
-        }
+        // Update subtitle with transaction count and total fees
+        const subtitle = `${totalTx.toLocaleString()} transactions • ${(totalFees / 100000000).toFixed(2)} BTC total fees`;
+        document.getElementById('mempool-subtitle').textContent = subtitle;
     }
 
     animate() {
@@ -1044,6 +1041,29 @@ class BitcoinMempoolExplorer {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    setupPanelToggle() {
+        const toggleBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('mempool-stats');
+        
+        if (toggleBtn && panelContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isMinimized = panelContent.classList.contains('minimized');
+                
+                if (isMinimized) {
+                    // Expand panel
+                    panelContent.classList.remove('minimized');
+                    toggleBtn.textContent = '−';
+                    toggleBtn.title = 'Minimize';
+                } else {
+                    // Minimize panel
+                    panelContent.classList.add('minimized');
+                    toggleBtn.textContent = '+';
+                    toggleBtn.title = 'Maximize';
+                }
+            });
+        }
     }
 }
 

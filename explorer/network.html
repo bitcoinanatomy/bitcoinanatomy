@@ -37,17 +37,17 @@
         <!-- UI Overlay -->
         <div id="ui">
             <div class="header">
-                <h1>Network Topology</h1>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span>Live</span>
-                </div>
+                <h1>Network</h1>
+                <div class="subtitle" id="network-subtitle">Loading...</div>
             </div>
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Network Information</h3>
-                    <div id="network-info">
+                    <div class="panel-header">
+                        <h3>Network Information</h3>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                    </div>
+                    <div id="network-info" class="panel-content">
                         <div>Total Nodes: <span id="total-nodes">Loading...</span></div>
                         <div>Active Connections: <span id="connections">Loading...</span></div>
                         <div>Hash Rate: <span id="hash-rate">Loading...</span></div>

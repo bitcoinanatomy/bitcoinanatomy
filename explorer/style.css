@@ -1,7 +1,7 @@
 /* ================================
    FONT IMPORTS
    ================================ */
-@font-face {
+   @font-face {
     font-family: "BureauGrotesque";
     src: url("../assets/fonts/BureauGrotesque/BureauGrotesque.eot");
     src: url("../assets/fonts/BureauGrotesque/BureauGrotesque.eot?#iefix") format("embedded-opentype"),
@@ -101,7 +101,7 @@ body:not(.homepage) {
 .nav-menu {
     display: flex;
     list-style: none;
-    gap: 30px;
+    gap: 10px;
 }
 
 .nav-link {
@@ -110,8 +110,11 @@ body:not(.homepage) {
     font-size: 0.9rem;
     font-weight: 500;
     transition: color 0.2s ease;
-    padding: 8px 12px;
-    border-radius: 6px;
+    padding: 8px 10px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.08rem;
+    font-weight: 200;
 }
 
 .nav-link:hover {
@@ -256,16 +259,55 @@ body:not(.homepage) {
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border-radius: 3px;
     padding: 20px;
     margin-bottom: 20px;
 }
 
-.panel h3 {
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.panel-header h3 {
     font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 15px;
+    margin: 0;
     color: #ffffff;
+}
+
+.panel-toggle {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    border-radius: 2px;
+}
+
+.panel-toggle:hover {
+    color: #cccccc;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.panel-content {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+}
+
+.panel-content.minimized {
+    max-height: 0;
+    opacity: 0;
 }
 
 .panel div {
@@ -283,14 +325,15 @@ body:not(.homepage) {
    BUTTONS & CONTROLS
    ================================ */
 button {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgb(0 0 0 / 11%);
     border: 1px solid rgba(255, 255, 255, 0.2);
     color: #ffffff;
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: 3px;
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
 }
 
 button:hover {
@@ -404,7 +447,7 @@ button:active {
 }
 
 .section-card .features li:before {
-    content: "•";
+    content: "â€¢";
     color: #fff;
     position: absolute;
     left: 0;
@@ -454,7 +497,7 @@ button:active {
 }
 
 .data-sources li:before {
-    content: "→";
+    content: "â†’";
     color: #fff;
     position: absolute;
     left: 0;

@@ -37,17 +37,17 @@
         <!-- UI Overlay -->
         <div id="ui">
             <div class="header">
-                <h1>Block Details <span id="block-title-height">Loading...</span></h1>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span id="block-status-hash">Loading...</span>
-                </div>
+                <h1>Block</h1>
+                <div class="subtitle" id="block-subtitle">Loading...</div>
             </div>
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Block Information</h3>
-                    <div id="block-info">
+                    <div class="panel-header">
+                        <h3>Block Information</h3>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                    </div>
+                    <div id="block-info" class="panel-content">
                         <div>Height: <span id="block-height">Loading...</span></div>
                         <div>Hash: <span id="block-hash">Loading...</span></div>
                         <div>Size: <span id="block-size">Loading...</span></div>

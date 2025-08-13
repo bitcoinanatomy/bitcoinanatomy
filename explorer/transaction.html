@@ -43,9 +43,13 @@
             
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Transaction Information</h3>
-                    <div id="tx-info">
+                    <div class="panel-header">
+                        <h3>Transaction Information</h3>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                    </div>
+                    <div id="tx-info" class="panel-content">
                         <div>Tx Hash: <span id="tx-hash">Loading...</span></div>
+                        <div>Date: <span id="tx-date">Loading...</span></div>
                         <div>Version: <span id="tx-version">Loading...</span></div>
                         <div>Locktime: <span id="tx-locktime">Loading...</span></div>
                         <div>Amount: <span id="tx-amount">Loading...</span></div>
