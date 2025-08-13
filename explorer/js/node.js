@@ -569,6 +569,47 @@ class BitcoinNodeExplorer {
             const button = document.getElementById('toggle-details');
             button.textContent = this.showDetails ? 'Hide Details' : 'Show Details';
         });
+        
+        // Navigation controls
+        document.getElementById('rotate-left').addEventListener('click', () => {
+            this.rotateLeft();
+        });
+        
+        document.getElementById('rotate-right').addEventListener('click', () => {
+            this.rotateRight();
+        });
+        
+        document.getElementById('rotate-up').addEventListener('click', () => {
+            this.rotateUp();
+        });
+        
+        document.getElementById('rotate-down').addEventListener('click', () => {
+            this.rotateDown();
+        });
+        
+        document.getElementById('pan-left').addEventListener('click', () => {
+            this.panLeft();
+        });
+        
+        document.getElementById('pan-right').addEventListener('click', () => {
+            this.panRight();
+        });
+        
+        document.getElementById('pan-up').addEventListener('click', () => {
+            this.panUp();
+        });
+        
+        document.getElementById('pan-down').addEventListener('click', () => {
+            this.panDown();
+        });
+        
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            this.zoomIn();
+        });
+        
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            this.zoomOut();
+        });
     }
 
     createScene() {
@@ -1486,6 +1527,121 @@ class BitcoinNodeExplorer {
                 }
             });
         }
+    }
+    
+    // Navigation methods
+    rotateLeft() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.theta -= 0.2;
+        this.controls.update();
+    }
+    
+    rotateRight() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.theta += 0.2;
+        this.controls.update();
+    }
+    
+    rotateUp() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.phi -= 0.2;
+        this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+        this.controls.update();
+    }
+    
+    rotateDown() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.phi += 0.2;
+        this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+        this.controls.update();
+    }
+    
+    panLeft() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        const right = new THREE.Vector3();
+        this.camera.getWorldDirection(new THREE.Vector3());
+        right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+        this.controls.target.add(right.multiplyScalar(-0.5));
+        this.controls.update();
+    }
+    
+    panRight() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        const right = new THREE.Vector3();
+        this.camera.getWorldDirection(new THREE.Vector3());
+        right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+        this.controls.target.add(right.multiplyScalar(0.5));
+        this.controls.update();
+    }
+    
+    panUp() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        const up = new THREE.Vector3();
+        up.setFromMatrixColumn(this.camera.matrix, 1);
+        this.controls.target.add(up.multiplyScalar(0.5));
+        this.controls.update();
+    }
+    
+    panDown() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        const up = new THREE.Vector3();
+        up.setFromMatrixColumn(this.camera.matrix, 1);
+        this.controls.target.add(up.multiplyScalar(-0.5));
+        this.controls.update();
+    }
+    
+    zoomIn() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.distance -= 2;
+        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+        this.controls.update();
+    }
+    
+    zoomOut() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.distance += 2;
+        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+        this.controls.update();
     }
 }
 

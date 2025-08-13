@@ -237,6 +237,47 @@ class BitcoinAddressExplorer {
             button.textContent = button.textContent === 'Show Transactions' ? 'Hide Transactions' : 'Show Transactions';
         });
         
+        // Navigation controls
+        document.getElementById('rotate-left').addEventListener('click', () => {
+            this.rotateLeft();
+        });
+        
+        document.getElementById('rotate-right').addEventListener('click', () => {
+            this.rotateRight();
+        });
+        
+        document.getElementById('rotate-up').addEventListener('click', () => {
+            this.rotateUp();
+        });
+        
+        document.getElementById('rotate-down').addEventListener('click', () => {
+            this.rotateDown();
+        });
+        
+        document.getElementById('pan-left').addEventListener('click', () => {
+            this.panLeft();
+        });
+        
+        document.getElementById('pan-right').addEventListener('click', () => {
+            this.panRight();
+        });
+        
+        document.getElementById('pan-up').addEventListener('click', () => {
+            this.panUp();
+        });
+        
+        document.getElementById('pan-down').addEventListener('click', () => {
+            this.panDown();
+        });
+        
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            this.zoomIn();
+        });
+        
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            this.zoomOut();
+        });
+        
         // Modal functionality
         this.setupModal();
         
@@ -732,6 +773,111 @@ class BitcoinAddressExplorer {
             currentUrl.searchParams.set('address', newAddress);
             window.location.href = currentUrl.toString();
         });
+    }
+    
+    // Navigation methods
+    rotateLeft() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.theta -= 0.2;
+        this.updateCameraPosition();
+    }
+    
+    rotateRight() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.theta += 0.2;
+        this.updateCameraPosition();
+    }
+    
+    rotateUp() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.phi -= 0.2;
+        this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+        this.updateCameraPosition();
+    }
+    
+    rotateDown() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.phi += 0.2;
+        this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+        this.updateCameraPosition();
+    }
+    
+    panLeft() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.panX -= 0.5;
+        this.updateCameraPosition();
+    }
+    
+    panRight() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.panX += 0.5;
+        this.updateCameraPosition();
+    }
+    
+    panUp() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.panY += 0.5;
+        this.updateCameraPosition();
+    }
+    
+    panDown() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.panY -= 0.5;
+        this.updateCameraPosition();
+    }
+    
+    zoomIn() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.distance -= 2;
+        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+        this.updateCameraPosition();
+    }
+    
+    zoomOut() {
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        this.controls.distance += 2;
+        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+        this.updateCameraPosition();
     }
     
     setupPanelToggle() {

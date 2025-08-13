@@ -30,6 +30,14 @@ body {
     background: #000000;
     color: #ffffff;
     min-height: 100vh;
+    /* Mobile optimizations */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Explorer pages - no scroll */
@@ -447,7 +455,7 @@ button:active {
 }
 
 .section-card .features li:before {
-    content: "â€¢";
+    content: "•";
     color: #fff;
     position: absolute;
     left: 0;
@@ -497,7 +505,7 @@ button:active {
 }
 
 .data-sources li:before {
-    content: "â†’";
+    content: "→";
     color: #fff;
     position: absolute;
     left: 0;
@@ -1048,5 +1056,226 @@ button:active {
     
     .transaction-hash {
         font-size: 10px;
+    }
+}
+
+/* ================================
+   MOBILE 3D NAVIGATION IMPROVEMENTS
+   ================================ */
+
+/* Canvas touch optimizations */
+#scene canvas {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Navigation controls */
+.navigation-controls {
+    display: flex;
+    gap: 12px;
+    margin-left: 8px;
+    align-items: flex-start;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.control-label {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.control-buttons button {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.control-buttons button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.control-buttons button:active {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(0.95);
+}
+
+/* Zoom controls are smaller */
+.control-group:last-child .control-buttons button {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+}
+
+/* Mobile controls improvements */
+@media (max-width: 768px) {
+    .controls {
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .controls button {
+        padding: 12px 16px;
+        font-size: 14px;
+        min-width: 80px;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .navigation-controls {
+        margin-left: 0;
+        margin-top: 12px;
+        width: 100%;
+        justify-content: center;
+        gap: 16px;
+    }
+    
+    .control-group {
+        gap: 6px;
+    }
+    
+    .control-label {
+        font-size: 11px;
+    }
+    
+    .control-buttons button {
+        width: 44px;
+        height: 44px;
+        font-size: 16px;
+        flex: none;
+    }
+    
+    .control-group:last-child .control-buttons button {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+    
+    /* Larger touch targets for mobile */
+    .panel-toggle {
+        width: 32px;
+        height: 32px;
+        font-size: 20px;
+    }
+    
+    /* Mobile sidebar adjustments */
+    .sidebar {
+        width: 100%;
+        max-width: none;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        top: auto;
+        height: auto;
+        max-height: 50vh;
+    }
+    
+    .panel {
+        margin: 0;
+        border-radius: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Mobile header adjustments */
+    .header {
+        padding: 15px 20px;
+    }
+    
+    .header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .subtitle {
+        font-size: 0.9rem;
+    }
+    
+    /* Mobile tooltip improvements */
+    .milestone-tooltip {
+        font-size: 10px;
+        padding: 6px 8px;
+        max-width: 120px;
+    }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .controls {
+        bottom: 30px;
+        left: 30px;
+        right: 30px;
+    }
+    
+    .controls button {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+}
+
+/* High DPI mobile devices */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    #scene canvas {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+    .sidebar {
+        max-height: 40vh;
+    }
+    
+    .header {
+        padding: 10px 20px;
+    }
+    
+    .header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .controls {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+    }
+    
+    .controls button {
+        padding: 8px 12px;
+        font-size: 12px;
     }
 }

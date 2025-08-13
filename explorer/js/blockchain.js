@@ -148,10 +148,13 @@ class BitcoinBlockchainExplorer {
                 this.camera.left = -this.orthographicZoom * aspect / 2;
                 this.camera.right = this.orthographicZoom * aspect / 2;
                 this.camera.top = this.orthographicZoom / 2;
-                this.camera.bottom = -this.orthographicZoom / 2;
+                this.camera.bottom = -this.orthographicZoom * aspect / 2;
                 this.camera.updateProjectionMatrix();
             }
         });
+
+        // Add touch controls for mobile
+        this.setupTouchControls();
         
         // Add hover tooltip functionality
         this.setupHoverTooltip();
@@ -249,6 +252,152 @@ class BitcoinBlockchainExplorer {
         });
     }
 
+    resetCamera() {
+        // Reset camera to default position, zoom, and target
+        this.camera.position.set(0, 30, 50);
+        this.controls.target.set(0, 0, 0);
+        this.controls.distance = 50;
+        this.controls.phi = Math.PI / 3;
+        this.controls.theta = 0;
+        this.controls.update();
+    }
+
+    setupTouchControls() {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartDistance = 0;
+        let isPinching = false;
+        let lastTouchTime = 0;
+        let touchCount = 0;
+
+        // Touch start
+        this.renderer.domElement.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            
+            this.isRotating = false;
+            const button = document.getElementById('toggle-rotation');
+            if (button) {
+                button.textContent = 'Start Rotation';
+            }
+
+            if (e.touches.length === 1) {
+                // Single touch - rotation/panning
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                this.controls.isMouseDown = true;
+                this.controls.lastMouseX = touchStartX;
+                this.controls.lastMouseY = touchStartY;
+            } else if (e.touches.length === 2) {
+                // Two finger touch - pinch to zoom
+                isPinching = true;
+                touchStartDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+
+            // Double tap detection
+            const currentTime = new Date().getTime();
+            const timeDiff = currentTime - lastTouchTime;
+            if (timeDiff < 300 && timeDiff > 0) {
+                // Double tap - reset camera
+                this.resetCamera();
+            }
+            lastTouchTime = currentTime;
+        });
+
+        // Touch move
+        this.renderer.domElement.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+
+            if (e.touches.length === 1 && !isPinching) {
+                // Single finger drag - rotation/panning
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                
+                const deltaX = touchX - this.controls.lastMouseX;
+                const deltaY = touchY - this.controls.lastMouseY;
+
+                // Use larger sensitivity for mobile
+                const sensitivity = 0.02;
+                
+                if (e.shiftKey || e.altKey) {
+                    // Panning
+                    const panSpeed = 0.002;
+                    const right = new THREE.Vector3();
+                    const up = new THREE.Vector3();
+                    
+                    this.camera.getWorldDirection(new THREE.Vector3());
+                    right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+                    up.setFromMatrixColumn(this.camera.matrix, 1);
+                    
+                    const panX = deltaX * panSpeed * this.controls.distance;
+                    const panY = deltaY * panSpeed * this.controls.distance;
+                    
+                    this.controls.target.add(right.multiplyScalar(panX));
+                    this.controls.target.add(up.multiplyScalar(panY));
+                } else {
+                    // Rotation
+                    this.controls.theta += deltaX * sensitivity;
+                    this.controls.phi -= deltaY * sensitivity;
+                    this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+                }
+                
+                this.controls.update();
+                this.controls.lastMouseX = touchX;
+                this.controls.lastMouseY = touchY;
+            } else if (e.touches.length === 2 && isPinching) {
+                // Pinch to zoom
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                const zoomFactor = touchStartDistance / currentDistance;
+                
+                if (this.isPerspective) {
+                    this.controls.distance *= zoomFactor;
+                    this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+                } else {
+                    this.orthographicZoom *= zoomFactor;
+                    this.orthographicZoom = Math.max(5, Math.min(50, this.orthographicZoom));
+                    
+                    const aspect = window.innerWidth / window.innerHeight;
+                    this.camera.left = -this.orthographicZoom * aspect / 2;
+                    this.camera.right = this.orthographicZoom * aspect / 2;
+                    this.camera.top = this.orthographicZoom / 2;
+                    this.camera.bottom = -this.orthographicZoom * aspect / 2;
+                    this.camera.updateProjectionMatrix();
+                }
+                
+                this.controls.update();
+                touchStartDistance = currentDistance;
+            }
+        });
+
+        // Touch end
+        this.renderer.domElement.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            
+            if (e.touches.length === 0) {
+                this.controls.isMouseDown = false;
+                isPinching = false;
+            } else if (e.touches.length === 1) {
+                // Switch from pinch to single touch
+                isPinching = false;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                this.controls.lastMouseX = touchStartX;
+                this.controls.lastMouseY = touchStartY;
+            }
+        });
+
+        // Prevent default touch behaviors
+        this.renderer.domElement.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+        });
+    }
+
     createMilestoneTooltips() {
         // Create multiple tooltips for milestone epochs
         const maxMilestones = 10; // Support up to 10 milestone tooltips
@@ -283,13 +432,7 @@ class BitcoinBlockchainExplorer {
         });
         
         document.getElementById('reset-camera').addEventListener('click', () => {
-            // Reset camera to default position, zoom, and target
-            this.camera.position.set(0, 30, 50);
-            this.controls.target.set(0, 0, 0);
-            this.controls.distance = 50;
-            this.controls.phi = Math.PI / 3;
-            this.controls.theta = 0;
-            this.controls.update();
+            this.resetCamera();
         });
         
         document.getElementById('toggle-utxos').addEventListener('click', () => {
@@ -312,6 +455,46 @@ class BitcoinBlockchainExplorer {
         
         document.getElementById('toggle-labels').addEventListener('click', () => {
             this.toggleLabels();
+        });
+        
+        document.getElementById('rotate-left').addEventListener('click', () => {
+            this.rotateLeft();
+        });
+        
+        document.getElementById('rotate-right').addEventListener('click', () => {
+            this.rotateRight();
+        });
+        
+        document.getElementById('rotate-up').addEventListener('click', () => {
+            this.rotateUp();
+        });
+        
+        document.getElementById('rotate-down').addEventListener('click', () => {
+            this.rotateDown();
+        });
+        
+        document.getElementById('pan-left').addEventListener('click', () => {
+            this.panLeft();
+        });
+        
+        document.getElementById('pan-right').addEventListener('click', () => {
+            this.panRight();
+        });
+        
+        document.getElementById('pan-up').addEventListener('click', () => {
+            this.panUp();
+        });
+        
+        document.getElementById('pan-down').addEventListener('click', () => {
+            this.panDown();
+        });
+        
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            this.zoomIn();
+        });
+        
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            this.zoomOut();
         });
     }
     
@@ -362,6 +545,174 @@ class BitcoinBlockchainExplorer {
                 }
             });
         }
+    }
+    
+    rotateLeft() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Rotate left by adjusting theta
+        this.controls.theta -= 0.2; // Rotate left
+        this.controls.update();
+    }
+    
+    rotateRight() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Rotate right by adjusting theta
+        this.controls.theta += 0.2; // Rotate right
+        this.controls.update();
+    }
+    
+    rotateUp() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Rotate up by adjusting phi
+        this.controls.phi -= 0.2; // Rotate up
+        this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+        this.controls.update();
+    }
+    
+    rotateDown() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Rotate down by adjusting phi
+        this.controls.phi += 0.2; // Rotate down
+        this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+        this.controls.update();
+    }
+    
+    panLeft() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Pan left by moving target
+        const right = new THREE.Vector3();
+        this.camera.getWorldDirection(new THREE.Vector3());
+        right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+        this.controls.target.add(right.multiplyScalar(-0.5));
+        this.controls.update();
+    }
+    
+    panRight() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Pan right by moving target
+        const right = new THREE.Vector3();
+        this.camera.getWorldDirection(new THREE.Vector3());
+        right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+        this.controls.target.add(right.multiplyScalar(0.5));
+        this.controls.update();
+    }
+    
+    panUp() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Pan up by moving target
+        const up = new THREE.Vector3();
+        up.setFromMatrixColumn(this.camera.matrix, 1);
+        this.controls.target.add(up.multiplyScalar(0.5));
+        this.controls.update();
+    }
+    
+    panDown() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Pan down by moving target
+        const up = new THREE.Vector3();
+        up.setFromMatrixColumn(this.camera.matrix, 1);
+        this.controls.target.add(up.multiplyScalar(-0.5));
+        this.controls.update();
+    }
+    
+    zoomIn() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Zoom in
+        if (this.isPerspective) {
+            this.controls.distance -= 2;
+            this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+        } else {
+            this.orthographicZoom -= 1;
+            this.orthographicZoom = Math.max(5, Math.min(50, this.orthographicZoom));
+            
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom * aspect / 2;
+            this.camera.updateProjectionMatrix();
+        }
+        this.controls.update();
+    }
+    
+    zoomOut() {
+        // Stop automatic rotation
+        this.isRotating = false;
+        const button = document.getElementById('toggle-rotation');
+        if (button) {
+            button.textContent = 'Start Rotation';
+        }
+        
+        // Zoom out
+        if (this.isPerspective) {
+            this.controls.distance += 2;
+            this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+        } else {
+            this.orthographicZoom += 1;
+            this.orthographicZoom = Math.max(5, Math.min(50, this.orthographicZoom));
+            
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom * aspect / 2;
+            this.camera.updateProjectionMatrix();
+        }
+        this.controls.update();
     }
     
     createUTXOs() {
