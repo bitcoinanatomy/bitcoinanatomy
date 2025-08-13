@@ -6,6 +6,7 @@
     <title>Anatomy of Bitcoin Explorer</title>
     <meta name="description" content="Interactive 3D visualization of Bitcoin's blockchain, transactions, and network architecture">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <style>
        
@@ -42,6 +43,7 @@
         
         <div class="sections">
             <a href="network.html" class="section-card">
+                <canvas class="card-3d" data-type="network"></canvas>
                 <h3>Network Explorer</h3>
                 <p>Explore the Bitcoin network topology and node distribution in 3D space.</p>
                 <ul class="features">
@@ -52,6 +54,7 @@
             </a>
             
             <a href="node.html" class="section-card">
+                <canvas class="card-3d" data-type="node"></canvas>
                 <h3>Node Explorer</h3>
                 <p>Explore individual Bitcoin nodes and their features in 3D visualization.</p>
                 <ul class="features">
@@ -62,6 +65,7 @@
             </a>
             
             <a href="blockchain.html" class="section-card">
+                <canvas class="card-3d" data-type="blockchain"></canvas>
                 <h3>Blockchain Explorer</h3>
                 <p>Visualize the complete Bitcoin blockchain as a 3D helix structure with historical data.</p>
                 <ul class="features">
@@ -73,6 +77,7 @@
             </a>
             
             <a href="difficulty.html" class="section-card">
+                <canvas class="card-3d" data-type="difficulty"></canvas>
                 <h3>Difficulty Explorer</h3>
                 <p>Explore Bitcoin's difficulty adjustment mechanism through 3D spiral visualization.</p>
                 <ul class="features">
@@ -84,6 +89,7 @@
             </a>
             
             <a href="block.html" class="section-card">
+                <canvas class="card-3d" data-type="block"></canvas>
                 <h3>Block Explorer</h3>
                 <p>Explore individual Bitcoin blocks in 3D, with detailed transaction data and visual representations of block structure.</p>
                 <ul class="features">
@@ -95,6 +101,7 @@
             </a>
             
             <a href="transaction.html" class="section-card">
+                <canvas class="card-3d" data-type="transaction"></canvas>
                 <h3>Transaction Explorer</h3>
                 <p>Visualize Bitcoin transactions in 3D, showing input/output relationships and spending patterns.</p>
                 <ul class="features">
@@ -106,6 +113,7 @@
             </a>
             
             <a href="address.html" class="section-card">
+                <canvas class="card-3d" data-type="address"></canvas>
                 <h3>Address Explorer</h3>
                 <p>Explore Bitcoin addresses with 3D visualizations of UTXOs and transaction history.</p>
                 <ul class="features">
@@ -117,6 +125,7 @@
             </a>
             
             <a href="mempool.html" class="section-card">
+                <canvas class="card-3d" data-type="mempool"></canvas>
                 <h3>Mempool Explorer</h3>
                 <p>Visualize the Bitcoin mempool - pending transactions waiting to be included in blocks.</p>
                 <ul class="features">
@@ -166,6 +175,387 @@
             link.addEventListener('click', () => {
                 hamburger.classList.remove('active');
                 navMenu.classList.remove('active');
+            });
+        });
+
+        // 3D Card Objects
+        class Card3DObject {
+            constructor(canvas, type) {
+                this.canvas = canvas;
+                this.type = type;
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.mesh = null;
+                this.animationId = null;
+                
+                this.init();
+            }
+            
+            init() {
+                // Scene setup
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x000000);
+                
+                // Camera setup (aspect ratio will be updated after renderer setup)
+                this.camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                this.camera.position.z = 5;
+                
+                // Renderer setup
+                this.renderer = new THREE.WebGLRenderer({ 
+                    canvas: this.canvas, 
+                    alpha: true,
+                    antialias: true 
+                });
+                
+                // Get canvas container dimensions
+                const rect = this.canvas.getBoundingClientRect();
+                this.renderer.setSize(rect.width, rect.height);
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+                
+                // Update camera aspect ratio
+                this.camera.aspect = rect.width / rect.height;
+                this.camera.updateProjectionMatrix();
+                
+                // Create object based on type
+                this.createObject();
+                
+                // Start animation
+                this.animate();
+                
+                // Handle window resize
+                window.addEventListener('resize', () => this.handleResize());
+            }
+            
+            createObject() {
+                const geometry = new THREE.BufferGeometry();
+                let material;
+                
+                switch(this.type) {
+                    case 'network':
+                        // 3D Network nodes randomly distributed with connections
+                        const networkPositions = [];
+                        const networkIndices = [];
+                        const nodePositions = [];
+                        
+                        // Create spherical 3D node positions
+                        for(let i = 0; i < 164; i++) {
+                            // Generate random spherical coordinates
+                            const radius = Math.random() * 1.5 + 1.5; // Random radius between 0.5 and 2
+                            const theta = Math.random() * Math.PI * 2; // Random azimuth angle
+                            const phi = Math.acos(2 * Math.random() - 1); // Random polar angle (uniform distribution)
+                            
+                            // Convert spherical to Cartesian coordinates
+                            const x = radius * Math.sin(phi) * Math.cos(theta);
+                            const y = radius * Math.sin(phi) * Math.sin(theta);
+                            const z = radius * Math.cos(phi);
+                            
+                            nodePositions.push([x, y, z]);
+                            networkPositions.push(x, y, z);
+                        }
+                        
+                        // Create connections between nearby nodes
+                        for(let i = 0; i < nodePositions.length; i++) {
+                            for(let j = i + 1; j < nodePositions.length; j++) {
+                                const dist = Math.sqrt(
+                                    Math.pow(nodePositions[i][0] - nodePositions[j][0], 2) +
+                                    Math.pow(nodePositions[i][1] - nodePositions[j][1], 2) +
+                                    Math.pow(nodePositions[i][2] - nodePositions[j][2], 2)
+                                );
+                                
+                                // Connect nodes that are close enough
+                                if(dist < 2.5) {
+                                    networkIndices.push(i, j);
+                                }
+                            }
+                        }
+                        
+                        // Create line geometry for connections
+                        const networkGeometry = new THREE.BufferGeometry();
+                        networkGeometry.setAttribute('position', new THREE.Float32BufferAttribute(networkPositions, 3));
+                        networkGeometry.setIndex(networkIndices);
+                        
+                        const networkLineMaterial = new THREE.LineBasicMaterial({ 
+                            color: 0x666666,
+                            opacity: 0.05,
+                            transparent: true
+                        });
+                        const networkLines = new THREE.LineSegments(networkGeometry, networkLineMaterial);
+                        
+                        // Create visible node spheres
+                        const networkNodeGeometry = new THREE.SphereGeometry(0.02, 1, 1);
+                        const networkNodeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                        
+                        // Create a group to hold all network objects for rotation
+                        this.mesh = new THREE.Group();
+                        this.mesh.add(networkLines);
+                        
+                        // Add all node spheres to the group
+                        for(let i = 0; i < nodePositions.length; i++) {
+                            const node = new THREE.Mesh(networkNodeGeometry, networkNodeMaterial);
+                            node.position.set(nodePositions[i][0], nodePositions[i][1], nodePositions[i][2]);
+                            this.mesh.add(node);
+                        }
+                        break;
+                        
+                    case 'node':
+                        // Node with connection points
+                        const nodeGeometry = new THREE.SphereGeometry(1, 16, 16);
+                        material = new THREE.MeshBasicMaterial({ 
+                            color: 0xffffff,
+                            wireframe: true 
+                        });
+                        this.mesh = new THREE.Mesh(nodeGeometry, material);
+                        
+                        // Add connection points
+                        const pointsGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+                        const pointsMaterial = new THREE.MeshBasicMaterial({ color: 0x666666 });
+                        
+                        for(let i = 0; i < 4; i++) {
+                            const angle = (i / 4) * Math.PI * 2;
+                            const point = new THREE.Mesh(pointsGeometry, pointsMaterial);
+                            point.position.set(
+                                Math.cos(angle) * 1.5,
+                                Math.sin(angle) * 1.5,
+                                0
+                            );
+                            this.scene.add(point);
+                        }
+                        break;
+                        
+                    case 'blockchain':
+                        // Helix structure using TubeGeometry for actual thick geometry
+                        const helixPoints = [];
+                        
+                        for(let i = 0; i < 70; i++) {
+                            const angle = i * 0.3;
+                            const radius = 1;
+                            const height = i * 0.1 - 3;
+                            
+                            helixPoints.push(new THREE.Vector3(
+                                Math.cos(angle) * radius,
+                                height,
+                                Math.sin(angle) * radius
+                            ));
+                        }
+                        
+                        // Create a curve from the points
+                        const helixCurve = new THREE.CatmullRomCurve3(helixPoints);
+                        
+                        // Create tube geometry along the curve with caps
+                        const tubeGeometry = new THREE.TubeGeometry(helixCurve, 70, 0.25, 8, false);
+                        
+                        // Create end caps for the tube
+                        const capGeometry = new THREE.CircleGeometry(0.25, 8);
+                        const capMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                        
+                        // Create group to hold tube and caps
+                        const helixGroup = new THREE.Group();
+                        
+                        // Add the main tube
+                        const tube = new THREE.Mesh(tubeGeometry, new THREE.MeshBasicMaterial({ 
+                            color: 0xffffff,
+                            wireframe: false
+                        }));
+                        helixGroup.add(tube);
+                        
+                        // Add start cap
+                        const startCap = new THREE.Mesh(capGeometry, capMaterial);
+                        const startPoint = helixPoints[0];
+                        const startTangent = helixCurve.getTangentAt(0);
+                        startCap.position.copy(startPoint);
+                        startCap.lookAt(startPoint.clone().add(startTangent));
+                        helixGroup.add(startCap);
+                        
+                        // Add end cap
+                        const endCap = new THREE.Mesh(capGeometry, capMaterial);
+                        const endPoint = helixPoints[helixPoints.length - 1];
+                        const endTangent = helixCurve.getTangentAt(1);
+                        endCap.position.copy(endPoint);
+                        endCap.lookAt(endPoint.clone().add(endTangent));
+                        helixGroup.add(endCap);
+                        
+                        this.mesh = helixGroup;
+                        
+                        // Rotate helix 90 degrees on X-axis to make it horizontal
+                        this.mesh.rotation.x = Math.PI / 2;
+                        // Rotate 45 degrees on Y-axis for better viewing angle
+                        this.mesh.rotation.z = Math.PI / 4;
+                        break;
+                        
+                    case 'difficulty':
+                        // Spiral structure
+                        const spiralGeometry = new THREE.BufferGeometry();
+                        const spiralPositions = [];
+                        const spiralIndices = [];
+                        
+                        for(let i = 0; i < 30; i++) {
+                            const angle = i * 0.2;
+                            const radius = 0.5 + i * 0.05;
+                            
+                            spiralPositions.push(
+                                Math.cos(angle) * radius,
+                                Math.sin(angle) * radius,
+                                0
+                            );
+                        }
+                        
+                        for(let i = 0; i < 29; i++) {
+                            spiralIndices.push(i, i + 1);
+                        }
+                        
+                        spiralGeometry.setAttribute('position', new THREE.Float32BufferAttribute(spiralPositions, 3));
+                        spiralGeometry.setIndex(spiralIndices);
+                        
+                        material = new THREE.LineBasicMaterial({ color: 0xffffff });
+                        this.mesh = new THREE.Line(spiralGeometry, material);
+                        break;
+                        
+                    case 'block':
+                        // Block with transaction cubes
+                        const blockGeometry = new THREE.BoxGeometry(2, 1, 1);
+                        material = new THREE.MeshBasicMaterial({ 
+                            color: 0xffffff,
+                            wireframe: true 
+                        });
+                        this.mesh = new THREE.Mesh(blockGeometry, material);
+                        
+                        // Add small transaction cubes
+                        for(let i = 0; i < 6; i++) {
+                            const txGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                            const txMaterial = new THREE.MeshBasicMaterial({ color: 0x666666 });
+                            const tx = new THREE.Mesh(txGeometry, txMaterial);
+                            
+                            tx.position.set(
+                                (Math.random() - 0.5) * 1.5,
+                                (Math.random() - 0.5) * 0.6,
+                                (Math.random() - 0.5) * 0.6
+                            );
+                            this.scene.add(tx);
+                        }
+                        break;
+                        
+                    case 'transaction':
+                        // Transaction flow with spheres
+                        const inputGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                        const inputMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                        const input = new THREE.Mesh(inputGeometry, inputMaterial);
+                        input.position.x = -1;
+                        this.scene.add(input);
+                        
+                        const outputGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                        const outputMaterial = new THREE.MeshBasicMaterial({ color: 0x666666 });
+                        const output = new THREE.Mesh(outputGeometry, outputMaterial);
+                        output.position.x = 1;
+                        this.scene.add(output);
+                        
+                        // Connection line
+                        const lineGeometry = new THREE.BufferGeometry();
+                        const linePositions = [-1, 0, 0, 1, 0, 0];
+                        lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+                        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x666666 });
+                        const line = new THREE.Line(lineGeometry, lineMaterial);
+                        this.scene.add(line);
+                        break;
+                        
+                    case 'address':
+                        // Central sphere with orbiting UTXOs
+                        const centerGeometry = new THREE.SphereGeometry(0.8, 16, 16);
+                        material = new THREE.MeshBasicMaterial({ 
+                            color: 0xffffff,
+                            wireframe: true 
+                        });
+                        this.mesh = new THREE.Mesh(centerGeometry, material);
+                        
+                        // Add orbiting UTXOs
+                        for(let i = 0; i < 5; i++) {
+                            const utxoGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+                            const utxoMaterial = new THREE.MeshBasicMaterial({ color: 0x666666 });
+                            const utxo = new THREE.Mesh(utxoGeometry, utxoMaterial);
+                            
+                            const angle = (i / 5) * Math.PI * 2;
+                            utxo.position.set(
+                                Math.cos(angle) * 1.5,
+                                Math.sin(angle) * 1.5,
+                                0
+                            );
+                            this.scene.add(utxo);
+                        }
+                        break;
+                        
+                    case 'mempool':
+                        // Floating transaction cubes
+                        for(let i = 0; i < 8; i++) {
+                            const txGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+                            const txMaterial = new THREE.MeshBasicMaterial({ 
+                                color: 0xffffff,
+                                wireframe: true 
+                            });
+                            const tx = new THREE.Mesh(txGeometry, txMaterial);
+                            
+                            tx.position.set(
+                                (Math.random() - 0.5) * 3,
+                                (Math.random() - 0.5) * 3,
+                                (Math.random() - 0.5) * 3
+                            );
+                            this.scene.add(tx);
+                        }
+                        break;
+                }
+                
+                if(this.mesh) {
+                    this.scene.add(this.mesh);
+                }
+            }
+            
+            animate() {
+                this.animationId = requestAnimationFrame(() => this.animate());
+                
+                if(this.mesh) {
+                    this.mesh.rotation.z += 0.001;
+                }
+                
+                // Rotate all objects in scene
+                this.scene.children.forEach(child => {
+                    if(child.type === 'Mesh') {
+                        child.rotation.z += 0.001;
+                    }
+                });
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+            
+            handleResize() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.renderer.setSize(rect.width, rect.height);
+                this.camera.aspect = rect.width / rect.height;
+                this.camera.updateProjectionMatrix();
+            }
+            
+            destroy() {
+                if(this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                if(this.renderer) {
+                    this.renderer.dispose();
+                }
+            }
+        }
+        
+        // Initialize 3D objects for all cards
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvases = document.querySelectorAll('.card-3d');
+            const cardObjects = [];
+            
+            canvases.forEach(canvas => {
+                const type = canvas.getAttribute('data-type');
+                const cardObject = new Card3DObject(canvas, type);
+                cardObjects.push(cardObject);
+            });
+            
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                cardObjects.forEach(obj => obj.destroy());
             });
         });
     </script>
