@@ -8,6 +8,7 @@ class BitcoinBlockchainExplorer {
         this.blocks = [];
         this.isRotating = true;
         this.showUTXOs = false;
+        this.showLabels = true;
         this.clock = new THREE.Clock();
         
         this.init();
@@ -21,8 +22,6 @@ class BitcoinBlockchainExplorer {
         this.createScene();
         this.animate();
         this.fetchData();
-        
-        setInterval(() => this.fetchData(), 30000);
     }
 
     setupThreeJS() {
@@ -194,9 +193,9 @@ class BitcoinBlockchainExplorer {
                     
                     // Check if it's the mempool disc
                     if (intersectedObject.userData.isMempool) {
-                        tooltip.textContent = `Mempool (Double-click to view mempool)`;
+                        tooltip.innerHTML = `Mempool<br>Double-click to view mempool`;
                     } else {
-                        tooltip.textContent = `Disc ${index} (Double-click to view details)`;
+                        tooltip.innerHTML = `Epoch ${index}<br>Double-click to view details`;
                     }
                     
                     tooltip.style.display = 'block';
@@ -214,6 +213,10 @@ class BitcoinBlockchainExplorer {
             tooltip.style.display = 'none';
         });
 
+                // Create milestone tracking tooltips array
+        this.milestoneTooltips = [];
+        this.createMilestoneTooltips();
+        
         // Add double-click handler for discs
         this.renderer.domElement.addEventListener('dblclick', (event) => {
             // Calculate mouse position in normalized device coordinates
@@ -244,6 +247,32 @@ class BitcoinBlockchainExplorer {
                 }
             }
         });
+    }
+
+    createMilestoneTooltips() {
+        // Create multiple tooltips for milestone epochs
+        const maxMilestones = 10; // Support up to 10 milestone tooltips
+        
+        for (let i = 0; i < maxMilestones; i++) {
+            const tooltip = document.createElement('div');
+            tooltip.style.position = 'absolute';
+            tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+            tooltip.style.color = 'white';
+            tooltip.style.padding = '8px 12px';
+            tooltip.style.borderRadius = '3px';
+            tooltip.style.fontSize = '11px';
+            tooltip.style.fontFamily = 'monospace';
+            tooltip.style.pointerEvents = 'none';
+            tooltip.style.zIndex = '1001';
+            tooltip.style.border = '1px solid #333';
+            tooltip.style.display = 'none';
+            tooltip.style.whiteSpace = 'pre-line';
+            tooltip.style.lineHeight = '1.2';
+            tooltip.style.textAlign = 'left';
+            document.body.appendChild(tooltip);
+            
+            this.milestoneTooltips.push(tooltip);
+        }
     }
 
     setupControls() {
@@ -280,6 +309,10 @@ class BitcoinBlockchainExplorer {
         document.getElementById('toggle-view').addEventListener('click', () => {
             this.toggleCameraView();
         });
+        
+        document.getElementById('toggle-labels').addEventListener('click', () => {
+            this.toggleLabels();
+        });
     }
     
     toggleCameraView() {
@@ -312,6 +345,23 @@ class BitcoinBlockchainExplorer {
         // Update the button text
         const button = document.getElementById('toggle-view');
         button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
+    }
+    
+    toggleLabels() {
+        this.showLabels = !this.showLabels;
+        
+        // Update button text
+        const button = document.getElementById('toggle-labels');
+        button.textContent = this.showLabels ? 'Hide Labels' : 'Show Labels';
+        
+        // Hide all milestone tooltips immediately if labels are turned off
+        if (this.milestoneTooltips) {
+            this.milestoneTooltips.forEach(tooltip => {
+                if (!this.showLabels) {
+                    tooltip.style.display = 'none';
+                }
+            });
+        }
     }
     
     createUTXOs() {
@@ -421,7 +471,7 @@ class BitcoinBlockchainExplorer {
     createBlockchainVisualization() {
         const radius = 5;
         const height = 1.5;
-        const numDiscs = this.difficultyAdjustments || 104; // Use difficulty adjustments count (each disc = 2016 blocks)
+        const numDiscs = this.difficultyAdjustments || 104 || 104*2 || 104*3 || 104*4;
         const discThickness = 0.05;
         // const discRadius = 1.7; // Removed fixed radius
         
@@ -444,16 +494,48 @@ class BitcoinBlockchainExplorer {
         // Generate disc positions along the helix
         for (let i = 0; i < numDiscs; i++) {
             const t = i * 0.06057;
-            const x = radius * Math.cos(t);
-            const y = height * t - 21; // Translate 20 units in Y-axis
-            const z = radius * Math.sin(t);
+            const x = -radius * Math.cos(t); // Inverted X-axis direction
+            const y = -(height * t) + 21; // Inverted Y-axis direction
+            const z = -radius * Math.sin(t); // Inverted Z-axis direction
             
             // Calculate color based on position in the sequence
             const progress = i / (numDiscs - 1);
             const color = new THREE.Color().lerpColors(startColor, endColor, progress);
             
             // Create cylinder disc with random radius
-            const randomRadius = 1.5 + Math.random() * 0.3; // Random between 1.5 and 1.8
+            let randomRadius = 1.5 + Math.random() * 0.3; // Random between 1.5 and 1.8
+            
+            if (i === 0) {
+                randomRadius = randomRadius * 1.60; 
+            }
+            
+            // Special exception for epoch 33 - reduce radius by 33%
+            if (i === 33) {
+                randomRadius = randomRadius * 0.57; // Reduce by 33%
+            }
+
+            if (i === 32) {
+                randomRadius = randomRadius * 0.77;
+            }
+
+
+            if (i === 8) {
+                randomRadius = randomRadius * 1.22;
+            }
+            if (i === 9) {
+                randomRadius = randomRadius * 1.23;
+            }
+            if (i === 10) {
+                randomRadius = randomRadius * 1.62;
+            }
+            if (i === 11) {
+                randomRadius = randomRadius * 1.22;
+            }
+            if (i === 12) {
+                randomRadius = randomRadius * 1.27;
+            }
+
+
             const geometry = new THREE.CylinderGeometry(randomRadius, randomRadius, discThickness, 32);
             const material = new THREE.MeshStandardMaterial({
                 color: color,
@@ -470,7 +552,9 @@ class BitcoinBlockchainExplorer {
             disc.userData = { 
                 index: i, 
                 t: t,
-                progress: progress
+                progress: progress,
+                isMilestone: i % 104 === 0 && i > 0, // Flag for milestone epochs (multiples of 104)
+                isGenesis: i === 0 // Flag for genesis block
             };
             
             this.scene.add(disc);
@@ -479,9 +563,9 @@ class BitcoinBlockchainExplorer {
         
         // Add mempool disc at the end of the helix
         const mempoolT = numDiscs * 0.06057;
-        const mempoolX = radius * Math.cos(mempoolT);
-        const mempoolY = height * mempoolT - 21;
-        const mempoolZ = radius * Math.sin(mempoolT);
+        const mempoolX = -radius * Math.cos(mempoolT); // Inverted X-axis direction
+        const mempoolY = -(height * mempoolT) + 21; // Inverted Y-axis direction
+        const mempoolZ = -radius * Math.sin(mempoolT); // Inverted Z-axis direction
         
         // Create mempool disc with distinct appearance
         const mempoolRadius = 1.8; // Slightly larger than regular discs
@@ -778,12 +862,105 @@ class BitcoinBlockchainExplorer {
             this.scene.rotation.y = elapsedTime * 0.1;
         }
         
+        // Update milestone tooltip position
+        this.updateMilestoneTooltip();
+        
         // Removed sphere animation for cleaner view
         
         // Update controls (if needed)
         // this.controls.update(); // Not needed for custom controls
         
         this.renderer.render(this.scene, this.camera);
+    }
+
+    updateMilestoneTooltip() {
+        if (!this.milestoneTooltips || this.milestoneTooltips.length === 0 || !this.showLabels) return;
+        
+        // Find milestone discs (multiples of 104) and genesis block
+        const milestoneDiscs = this.blocks.filter(block => 
+            block.userData && (block.userData.isMilestone || block.userData.isGenesis) && !block.userData.special
+        );
+        
+        // Hide all tooltips first
+        this.milestoneTooltips.forEach(tooltip => {
+            tooltip.style.display = 'none';
+        });
+        
+        // Update tooltips for visible milestone discs
+        let tooltipIndex = 0;
+        for (const disc of milestoneDiscs) {
+            if (tooltipIndex >= this.milestoneTooltips.length) break;
+            
+            const worldPosition = new THREE.Vector3();
+            disc.getWorldPosition(worldPosition);
+            
+            const vector = worldPosition.clone();
+            vector.project(this.camera);
+            
+            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+            
+            // Check if the milestone is on screen
+            const isOnScreen = vector.z < 1 && 
+                vector.x >= -1 && vector.x <= 1 && 
+                vector.y >= -1 && vector.y <= 1 &&
+                x >= 0 && x <= window.innerWidth && 
+                y >= 0 && y <= window.innerHeight;
+            
+            if (isOnScreen) {
+                const tooltip = this.milestoneTooltips[tooltipIndex];
+                const epochIndex = disc.userData.index;
+                
+                if (disc.userData.isGenesis) {
+                    // Special tooltip for genesis block
+                    tooltip.textContent = `Genesis\nBlock 0\nJan 3, 2009`;
+                } else {
+                    // Regular halving tooltip
+                    const halvingNumber = Math.floor(epochIndex / 104);
+                    const blockNumber = 210000 * halvingNumber;
+                    
+                    // Use actual halving dates
+                    let halvingDate;
+                    if (halvingNumber === 0) {
+                        halvingDate = new Date('2009-01-03T18:15:00Z');
+                    } else if (halvingNumber === 1) {
+                        halvingDate = new Date('2012-11-28T00:00:00Z');
+                    } else if (halvingNumber === 2) {
+                        halvingDate = new Date('2016-07-09T00:00:00Z');
+                    } else if (halvingNumber === 3) {
+                        halvingDate = new Date('2020-05-11T00:00:00Z');
+                    } else if (halvingNumber === 4) {
+                        halvingDate = new Date('2024-04-20T00:00:00Z');
+                    } else {
+                        // For future halvings, calculate approximate date
+                        const minutesSinceGenesis = blockNumber * 10;
+                        const genesisDate = new Date('2009-01-03T18:15:00Z');
+                        halvingDate = new Date(genesisDate.getTime() + minutesSinceGenesis * 60 * 1000);
+                    }
+                    
+                    const dateStr = halvingDate.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                    
+                    tooltip.textContent = `Halving ${halvingNumber}\nBlock ${blockNumber.toLocaleString()}\n${dateStr}`;
+                }
+                
+                // Position tooltip near the milestone disc
+                const maxX = window.innerWidth - 200;
+                const maxY = window.innerHeight - 50;
+                
+                const clampedX = Math.max(10, Math.min(maxX, x + 20));
+                const clampedY = Math.max(10, Math.min(maxY, y - 30));
+                
+                tooltip.style.left = `${clampedX}px`;
+                tooltip.style.top = `${clampedY}px`;
+                tooltip.style.display = 'block';
+                
+                tooltipIndex++;
+            }
+        }
     }
 
     onWindowResize() {
