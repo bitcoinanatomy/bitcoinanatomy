@@ -416,7 +416,7 @@ button:active {
 .section-card {
     background: #111;
     border: 1px solid #333;
-    border-radius: 8px;
+    border-radius: 3px;
     padding: 2rem;
     transition: all 0.3s ease;
     text-decoration: none;
@@ -425,33 +425,40 @@ button:active {
 }
 
 .section-card:hover {
-    border-color: #f7931a;
+    border-color: #ffffff;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(247, 147, 26, 0.2);
+    box-shadow: 0 8px 25px rgba(255 , 255, 255, 0.2);
 }
 
 .section-card h3 {
     color: #fff;
     margin-bottom: 1rem;
     font-size: 1.5rem;
+    font-family: "BureauGrotesque", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.01rem;
 }
 
 .section-card p {
     color: #fff;
     margin-bottom: 1rem;
+    letter-spacing: 0.05rem;
+    line-height: 1.5;
+    font-weight: 200;
 }
 
 .section-card .features {
     list-style: none;
     color: #fff;
     font-size: 0.9rem;
+
 }
 
 .section-card .features li {
     margin-bottom: 0.5rem;
     padding-left: 1rem;
     position: relative;
-    color: #fff;
+    color: #a4a4a4;
 }
 
 .section-card .features li:before {
@@ -463,10 +470,12 @@ button:active {
 
 /* About & Data Sources */
 .about, .data-sources {
-    background: #111;
-    border: 1px solid #333;
+
     border-radius: 8px;
-    padding: 2rem;
+    padding: 2rem 0;
+    
+    max-width: 600px;
+    
 }
 
 .about {
@@ -476,6 +485,9 @@ button:active {
 .about h2, .data-sources h2 {
     color: #fff;
     margin-bottom: 1rem;
+    font-family: "BureauGrotesque", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.01rem;
 }
 
 .about p {
