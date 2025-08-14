@@ -11,6 +11,8 @@ class BitcoinNetworkExplorer {
         this.showConnections = false;
         this.nodeData = null;
         this.latestSnapshot = null;
+        this.isPerspective = true;
+        this.orthographicZoom = 100;
         
         this.init();
     }
@@ -53,8 +55,8 @@ class BitcoinNetworkExplorer {
         this.camera = new THREE.PerspectiveCamera(
             75,
             window.innerWidth / window.innerHeight,
-            0.1,
-            1000
+            0.01,
+            2000
         );
         this.camera.position.set(-100, 50, 100);
         this.camera.lookAt(0, 0, 0);
@@ -158,9 +160,24 @@ class BitcoinNetworkExplorer {
             }
             
             // Zoom in/out with inverted scroll direction
-            controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
-            controls.distance = Math.max(34, Math.min(200, controls.distance)); // Increased min distance to avoid overlapping with globe
-            controls.update();
+            if (this.isPerspective) {
+                // Perspective camera zoom
+                controls.distance += e.deltaY * 0.1;
+                controls.distance = Math.max(36, Math.min(200, controls.distance));
+                controls.update();
+            } else {
+                // Orthographic camera zoom
+                const zoomSpeed = 0.1;
+                this.orthographicZoom += e.deltaY * zoomSpeed;
+                this.orthographicZoom = Math.max(10, Math.min(300, this.orthographicZoom));
+                
+                const aspect = window.innerWidth / window.innerHeight;
+                this.camera.left = -this.orthographicZoom * aspect / 2;
+                this.camera.right = this.orthographicZoom * aspect / 2;
+                this.camera.top = this.orthographicZoom / 2;
+                this.camera.bottom = -this.orthographicZoom / 2;
+                this.camera.updateProjectionMatrix();
+            }
         });
     }
 
@@ -187,6 +204,14 @@ class BitcoinNetworkExplorer {
         document.getElementById('show-all').addEventListener('click', () => {
             this.showAllNodes();
         });
+        
+        // Toggle view
+        const toggleViewButton = document.getElementById('toggle-view');
+        if (toggleViewButton) {
+            toggleViewButton.addEventListener('click', () => {
+                this.toggleCameraView();
+            });
+        }
         
         // Implementation filter clicks
         document.querySelectorAll('.implementation-item').forEach(item => {
@@ -922,8 +947,17 @@ class BitcoinNetworkExplorer {
     }
 
     onWindowResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
+        if (this.isPerspective) {
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+        } else {
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
     
@@ -1049,9 +1083,21 @@ class BitcoinNetworkExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.distance -= 2;
-        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-        this.controls.update();
+        if (this.isPerspective) {
+            this.controls.distance -= 2;
+            this.controls.distance = Math.max(10, Math.min(200, this.controls.distance));
+            this.controls.update();
+        } else {
+            this.orthographicZoom += 5;
+            this.orthographicZoom = Math.max(10, Math.min(300, this.orthographicZoom));
+            
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
     }
     
     zoomOut() {
@@ -1060,9 +1106,55 @@ class BitcoinNetworkExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.distance += 2;
-        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-        this.controls.update();
+        if (this.isPerspective) {
+            this.controls.distance += 2;
+            this.controls.distance = Math.max(10, Math.min(200, this.controls.distance));
+            this.controls.update();
+        } else {
+            this.orthographicZoom -= 5;
+            this.orthographicZoom = Math.max(10, Math.min(300, this.orthographicZoom));
+            
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
+    }
+    
+    toggleCameraView() {
+        const currentPosition = this.camera.position.clone();
+        const currentTarget = this.controls.target.clone();
+        
+        if (this.isPerspective) {
+            // Switch to orthographic
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera = new THREE.OrthographicCamera(
+                this.orthographicZoom * aspect / -2,
+                this.orthographicZoom * aspect / 2,
+                this.orthographicZoom / 2,
+                this.orthographicZoom / -2,
+                0.01,
+                2000
+            );
+            this.isPerspective = false;
+        } else {
+            // Switch to perspective
+            this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 2000);
+            this.isPerspective = true;
+        }
+        
+        // Restore position and target
+        this.camera.position.copy(currentPosition);
+        this.controls.target.copy(currentTarget);
+        this.camera.lookAt(this.controls.target);
+        
+        // Update the button text
+        const button = document.getElementById('toggle-view');
+        if (button) {
+            button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
+        }
     }
 }
 
