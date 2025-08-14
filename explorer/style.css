@@ -259,8 +259,10 @@ body:not(.homepage) {
     position: absolute;
     top: 20px;
     right: 20px;
+    bottom: 160px;
     width: 300px;
     pointer-events: auto;
+    overflow-y: auto;
 }
 
 .panel {
@@ -1221,10 +1223,11 @@ button:active {
         max-width: none;
         right: 0;
         left: 0;
-        bottom: 0;
+        bottom: 120px;
         top: auto;
         height: auto;
-        max-height: 50vh;
+        max-height: 40vh;
+        overflow-y: auto;
     }
     
     .panel {
