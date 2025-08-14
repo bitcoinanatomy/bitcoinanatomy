@@ -1160,8 +1160,8 @@ button:active {
 
 /* Zoom controls are smaller */
 .control-group:last-child .control-buttons button {
-    width: 28px;
-    height: 28px;
+    width: 33px;
+    height: 33px;
     font-size: 12px;
 }
 

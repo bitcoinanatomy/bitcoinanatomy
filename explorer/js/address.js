@@ -5,17 +5,21 @@ class BitcoinAddressExplorer {
         this.camera = null;
         this.renderer = null;
         this.isRotating = true;
+        this.isPerspective = true;
+        this.orthographicZoom = 30;
         this.controls = {
             distance: 30,
             phi: Math.PI / 4,
             theta: 0,
             target: new THREE.Vector3(0, 0, 0),
-            panX: 0,
-            panY: 0,
-            panZ: 0
+            isMouseDown: false,
+            lastMouseX: 0,
+            lastMouseY: 0
         };
         this.addressData = null;
         this.address = null;
+        this.displayedTransactionCount = 0; // Track how many transactions are currently displayed
+        this.noMoreTransactions = false; // Track if we've reached the end of available transactions
         
         // Get address from URL parameter, default to 1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv if none provided
         const urlParams = new URLSearchParams(window.location.search);
@@ -38,7 +42,7 @@ class BitcoinAddressExplorer {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);
         
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
         this.updateCameraPosition();
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -51,10 +55,6 @@ class BitcoinAddressExplorer {
     }
 
     setupMouseControls() {
-        let isMouseDown = false;
-        let lastMouseX = 0;
-        let lastMouseY = 0;
-        
         // Create tooltip element
         const tooltip = document.createElement('div');
         tooltip.style.position = 'absolute';
@@ -71,14 +71,20 @@ class BitcoinAddressExplorer {
         document.body.appendChild(tooltip);
         
         this.renderer.domElement.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
-            this.isRotating = false; // Stop auto rotation when user interacts
+            this.controls.isMouseDown = true;
+            this.controls.lastMouseX = e.clientX;
+            this.controls.lastMouseY = e.clientY;
+            
+            // Stop automatic rotation when user starts interacting
+            this.isRotating = false;
+            const button = document.getElementById('toggle-rotation');
+            if (button) {
+                button.textContent = 'Start Rotation';
+            }
         });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
-            isMouseDown = false;
+            this.controls.isMouseDown = false;
         });
         
         this.renderer.domElement.addEventListener('mousemove', (e) => {
@@ -149,25 +155,36 @@ class BitcoinAddressExplorer {
             }
             
             // Handle camera controls
-            if (!isMouseDown) return;
-
-            const deltaX = e.clientX - lastMouseX;
-            const deltaY = e.clientY - lastMouseY;
-
-            if (e.shiftKey) {
-                // Panning - inverted for natural feel
-                this.controls.panX -= deltaX * 0.05;
-                this.controls.panY += deltaY * 0.05;
-            } else {
-                // Rotation - inverted for natural feel
-                this.controls.theta -= deltaX * 0.01;
-                this.controls.phi += deltaY * 0.01;
-                this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+            if (this.controls.isMouseDown) {
+                const deltaX = e.clientX - this.controls.lastMouseX;
+                const deltaY = e.clientY - this.controls.lastMouseY;
+                
+                if (e.shiftKey) {
+                    // Panning with inverted axes and reduced intensity
+                    const panSpeed = 0.001;
+                    const right = new THREE.Vector3();
+                    const up = new THREE.Vector3();
+                    
+                    this.camera.getWorldDirection(new THREE.Vector3());
+                    right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+                    up.setFromMatrixColumn(this.camera.matrix, 1);
+                    
+                    const panX = deltaX * panSpeed * this.controls.distance;
+                    const panY = deltaY * panSpeed * this.controls.distance;
+                    
+                    this.controls.target.add(right.multiplyScalar(panX));
+                    this.controls.target.add(up.multiplyScalar(panY));
+                } else {
+                    // Rotation with inverted axes and reduced intensity
+                    this.controls.theta += deltaX * 0.005;
+                    this.controls.phi -= deltaY * 0.005;
+                    this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+                }
+                
+                this.updateCameraPosition();
+                this.controls.lastMouseX = e.clientX;
+                this.controls.lastMouseY = e.clientY;
             }
-
-            this.updateCameraPosition();
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
         });
         
         this.renderer.domElement.addEventListener('mouseleave', () => {
@@ -175,10 +192,32 @@ class BitcoinAddressExplorer {
         });
         
         this.renderer.domElement.addEventListener('wheel', (e) => {
-            // Inverted zoom direction
-            this.controls.distance += e.deltaY * 0.1;
-            this.controls.distance = Math.max(1, Math.min(200, this.controls.distance)); // Allow much closer zoom
-            this.updateCameraPosition();
+            // Stop automatic rotation when user starts zooming
+            this.isRotating = false;
+            const button = document.getElementById('toggle-rotation');
+            if (button) {
+                button.textContent = 'Start Rotation';
+            }
+            
+            // Zoom in/out with inverted scroll direction
+            if (this.isPerspective) {
+                // Perspective camera zoom
+                this.controls.distance += e.deltaY * 0.1;
+                this.controls.distance = Math.max(1, Math.min(200, this.controls.distance));
+                this.updateCameraPosition();
+            } else {
+                // Orthographic camera zoom
+                const zoomSpeed = 0.1;
+                this.orthographicZoom -= e.deltaY * zoomSpeed;
+                this.orthographicZoom = Math.max(5, Math.min(200, this.orthographicZoom));
+                
+                const aspect = window.innerWidth / window.innerHeight;
+                this.camera.left = -this.orthographicZoom * aspect / 2;
+                this.camera.right = this.orthographicZoom * aspect / 2;
+                this.camera.top = this.orthographicZoom / 2;
+                this.camera.bottom = -this.orthographicZoom / 2;
+                this.camera.updateProjectionMatrix();
+            }
         });
         
         // Double-click functionality
@@ -214,28 +253,12 @@ class BitcoinAddressExplorer {
             button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
         });
         
-        document.getElementById('reset-camera').addEventListener('click', () => {
-            this.controls.distance = 30;
-            this.controls.phi = Math.PI / 4;
-            this.controls.theta = 0;
-            this.controls.target.set(0, 0, 0);
-            this.controls.panX = 0;
-            this.controls.panY = 0;
-            this.controls.panZ = 0;
-            this.updateCameraPosition();
-        });
-        
-        document.getElementById('toggle-transactions').addEventListener('click', () => {
-            // Toggle transaction visibility
-            this.scene.children.forEach(child => {
-                if (child.userData.type === 'transaction') {
-                    child.visible = !child.visible;
-                }
+        const toggleViewButton = document.getElementById('toggle-view');
+        if (toggleViewButton) {
+            toggleViewButton.addEventListener('click', () => {
+                this.toggleCameraView();
             });
-            
-            const button = document.getElementById('toggle-transactions');
-            button.textContent = button.textContent === 'Show Transactions' ? 'Hide Transactions' : 'Show Transactions';
-        });
+        }
         
         // Navigation controls
         document.getElementById('rotate-left').addEventListener('click', () => {
@@ -278,6 +301,11 @@ class BitcoinAddressExplorer {
             this.zoomOut();
         });
         
+        // Load more transactions button
+        document.getElementById('load-more-transactions').addEventListener('click', () => {
+            this.loadMoreTransactions();
+        });
+        
         // Modal functionality
         this.setupModal();
         
@@ -291,16 +319,12 @@ class BitcoinAddressExplorer {
         const z = this.controls.distance * Math.sin(this.controls.phi) * Math.sin(this.controls.theta);
         
         this.camera.position.set(
-            x + this.controls.target.x + this.controls.panX,
-            y + this.controls.target.y + this.controls.panY,
-            z + this.controls.target.z + this.controls.panZ
+            x + this.controls.target.x,
+            y + this.controls.target.y,
+            z + this.controls.target.z
         );
             
-        this.camera.lookAt(
-            this.controls.target.x + this.controls.panX,
-            this.controls.target.y + this.controls.panY,
-            this.controls.target.z + this.controls.panZ
-        );
+        this.camera.lookAt(this.controls.target);
     }
 
     createScene() {
@@ -318,16 +342,153 @@ class BitcoinAddressExplorer {
         this.scene.add(fillLight);
     }
 
+    async fetchTransactionPage(lastSeenTxid = null) {
+        console.log('=== FETCHING TRANSACTION PAGE ===');
+        console.log('Last seen txid:', lastSeenTxid ? lastSeenTxid.substring(0, 16) + '...' : 'none (first page)');
+        
+        try {
+            let url;
+            if (!lastSeenTxid) {
+                // First page: get mempool + first confirmed transactions
+                url = `https://mempool.space/api/address/${this.address}/txs`;
+            } else {
+                // Subsequent pages: get only confirmed transactions
+                url = `https://mempool.space/api/address/${this.address}/txs/chain/${lastSeenTxid}`;
+            }
+            
+            console.log('Fetching:', url);
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                console.warn(`Failed to fetch transactions:`, response.status);
+                return [];
+            }
+            
+            const transactions = await response.json();
+            console.log(`Fetched ${transactions.length} transactions`);
+            
+            return transactions;
+            
+        } catch (error) {
+            console.error('Error fetching transaction page:', error);
+            return [];
+        }
+    }
+
+    async fetchAllTransactions() {
+        const allTransactions = [];
+        let lastSeenTxid = null;
+        let hasMore = true;
+        let pageCount = 0;
+        const maxPages = 50; // Safety limit to prevent infinite loops
+        
+        console.log('=== FETCHING ALL TRANSACTIONS ===');
+        
+        while (hasMore && pageCount < maxPages) {
+            try {
+                let url;
+                if (pageCount === 0) {
+                    // First page: get mempool + first confirmed transactions
+                    url = `https://mempool.space/api/address/${this.address}/txs`;
+                } else {
+                    // Subsequent pages: get only confirmed transactions
+                    url = `https://mempool.space/api/address/${this.address}/txs/chain/${lastSeenTxid}`;
+                }
+                
+                console.log(`Fetching page ${pageCount + 1}:`, url);
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    console.warn(`Failed to fetch transactions page ${pageCount + 1}:`, response.status);
+                    if (pageCount === 1) {
+                        // If pagination to /txs/chain fails, we only have the initial /txs response
+                        console.log('Chain pagination failed, using only initial transactions');
+                        this.fetchedAllTransactions = false;
+                    }
+                    break;
+                }
+                
+                const transactions = await response.json();
+                console.log(`Page ${pageCount + 1} returned ${transactions.length} transactions`);
+                
+                if (transactions.length === 0) {
+                    hasMore = false;
+                    break;
+                }
+                
+                allTransactions.push(...transactions);
+                
+                // Handle different page sizes based on endpoint
+                if (pageCount === 0) {
+                    // First page: up to 50 mempool + 25 confirmed = 75 max
+                    // If we get less than 25, there are no more confirmed transactions
+                    if (transactions.length < 25) {
+                        hasMore = false;
+                        console.log('No more confirmed transactions available');
+                    } else {
+                        // Set the last seen txid for chain pagination
+                        lastSeenTxid = transactions[transactions.length - 1].txid;
+                    }
+                } else {
+                    // Subsequent pages from /txs/chain: 25 transactions per page
+                    if (transactions.length < 25) {
+                        hasMore = false;
+                        console.log('Reached end of confirmed transaction history');
+                    } else {
+                        // Set the last seen txid for next page
+                        lastSeenTxid = transactions[transactions.length - 1].txid;
+                    }
+                }
+                
+                pageCount++;
+                
+                // Add a small delay to be respectful to the API
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+            } catch (error) {
+                console.error(`Error fetching transactions page ${pageCount + 1}:`, error);
+                break;
+            }
+        }
+        
+        console.log(`=== TRANSACTION FETCH COMPLETE ===`);
+        console.log(`Total pages fetched: ${pageCount}`);
+        console.log(`Total transactions: ${allTransactions.length}`);
+        
+        if (pageCount >= maxPages) {
+            console.warn(`Reached maximum page limit (${maxPages}). Some transactions may be missing.`);
+        }
+        
+        // Store whether we fetched all available transactions
+        this.fetchedAllTransactions = (pageCount < maxPages && allTransactions.length > 0);
+        console.log(`Fetched all available transactions: ${this.fetchedAllTransactions}`);
+        
+        return allTransactions;
+    }
+
     async fetchData() {
+        this.showLoadingModal('Loading address data...');
+        
         try {
             if (!this.address) {
                 console.error('No address provided in URL');
+                this.hideLoadingModal();
                 this.updateUI({});
                 return;
             }
 
+            this.updateLoadingProgress('Fetching address data...', 20);
+            
             // Fetch address data from Mempool.space
             const response = await fetch(`https://mempool.space/api/address/${this.address}`);
+            
+            if (response.status === 429) {
+                this.hideLoadingModal();
+                this.showRateLimitError('Mempool.space API');
+                return;
+            }
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -341,30 +502,27 @@ class BitcoinAddressExplorer {
             console.log('Chain stats:', this.addressData.chain_stats);
             console.log('Mempool stats:', this.addressData.mempool_stats);
             
-            // Fetch transaction history
-            const txsResponse = await fetch(`https://mempool.space/api/address/${this.address}/txs`);
+            this.updateLoadingProgress('Fetching transaction history...', 50);
             
-            if (txsResponse.ok) {
-                this.transactionHistory = await txsResponse.json();
-                console.log('=== TRANSACTION HISTORY ===');
-                console.log('Transaction count:', this.transactionHistory.length);
-                console.log('First 3 transactions:', this.transactionHistory.slice(0, 3));
-                console.log('Transaction details:');
-                this.transactionHistory.slice(0, 5).forEach((tx, index) => {
-                    console.log(`  TX ${index + 1}:`, {
-                        txid: tx.txid,
-                        size: tx.size,
-                        weight: tx.weight,
-                        fee: tx.fee,
-                        status: tx.status,
-                        vout_count: tx.vout ? tx.vout.length : 0,
-                        vin_count: tx.vin ? tx.vin.length : 0
-                    });
+            // Fetch first page of transaction history only
+            this.transactionHistory = await this.fetchTransactionPage();
+            console.log('=== COMPLETE TRANSACTION HISTORY ===');
+            console.log('Total transaction count:', this.transactionHistory.length);
+            console.log('First 3 transactions:', this.transactionHistory.slice(0, 3));
+            console.log('Transaction details:');
+            this.transactionHistory.slice(0, 5).forEach((tx, index) => {
+                console.log(`  TX ${index + 1}:`, {
+                    txid: tx.txid,
+                    size: tx.size,
+                    weight: tx.weight,
+                    fee: tx.fee,
+                    status: tx.status,
+                    vout_count: tx.vout ? tx.vout.length : 0,
+                    vin_count: tx.vin ? tx.vin.length : 0
                 });
-            } else {
-                console.warn('Could not fetch transaction history');
-                this.transactionHistory = [];
-            }
+            });
+            
+            this.updateLoadingProgress('Fetching UTXO data...', 70);
             
             // Fetch UTXO data
             const utxoResponse = await fetch(`https://mempool.space/api/address/${this.address}/utxo`);
@@ -398,11 +556,20 @@ class BitcoinAddressExplorer {
             console.log('Chain stats funded:', this.addressData.chain_stats ? this.addressData.chain_stats.funded_txo_sum : 0);
             console.log('Chain stats spent:', this.addressData.chain_stats ? this.addressData.chain_stats.spent_txo_sum : 0);
             
+            this.updateLoadingProgress('Creating visualization...', 90);
+            
             this.updateUI(this.addressData);
             this.createAddressVisualization();
             
+            this.updateLoadingProgress('Complete!', 100);
+            setTimeout(() => {
+                this.hideLoadingModal();
+            }, 500);
+            
         } catch (error) {
+            this.hideLoadingModal();
             console.error('Error fetching address data:', error);
+            this.showGenericError('Address data');
             this.updateUI({});
         }
     }
@@ -511,19 +678,36 @@ class BitcoinAddressExplorer {
     }
 
     createTransactionHistory(sphereRadius) {
-        // Create transaction history visualization
-        const txCount = Math.min(this.transactionHistory.length, 50); // Limit to 50 for performance
+        console.log('=== CREATING TRANSACTION HISTORY 3D MODEL ===');
+        console.log('Total transactions available:', this.transactionHistory.length);
+        console.log('Currently displayed transactions:', this.displayedTransactionCount);
         
-        // Calculate line parameters
-        const lineLength = 20; // Total length of the line
-        const spacing = lineLength / txCount; // Space between transactions
+        // Create transaction history visualization - show first 50 initially
+        const txCount = Math.min(this.transactionHistory.length, 50);
+        this.displayedTransactionCount = txCount;
         
-        // Calculate offset based on sphere radius and transaction count
-        const lineWidth = (txCount - 1) * spacing; // Total width of the transaction line
-        const offset = sphereRadius + Math.max(2, lineWidth / 2); // Start at sphere radius + line width consideration
+        console.log('Transactions to display in 3D model:', txCount);
+        console.log('Sphere radius:', sphereRadius);
+        
+        // Calculate line parameters - use consistent spacing
+        const baseSpacing = 0.4; // Fixed spacing between transactions
+        const offset = sphereRadius + 2; // Fixed offset from sphere
+        
+        console.log('Line parameters:', {
+            baseSpacing,
+            offset,
+            txCount
+        });
         
         for (let i = 0; i < txCount; i++) {
             const tx = this.transactionHistory[i];
+            
+            console.log(`Adding transaction ${i + 1}/${txCount}:`, {
+                txid: tx.txid.substring(0, 16) + '...',
+                size: tx.size,
+                status: tx.status,
+                vout_count: tx.vout ? tx.vout.length : 0
+            });
             
             // Calculate transaction size for cuboid dimensions
             const txSize = tx.size || 250;
@@ -531,11 +715,13 @@ class BitcoinAddressExplorer {
             const height = Math.max(0.1, txSize / 1000); // Scale height based on transaction size
             const depth = 0.1;
 
-            // Position transactions in a straight line
-            const linePosition = (i - txCount / 2) * spacing; // Center the line around origin
+            // Position transactions in a straight line with consistent spacing
             const x = 0; // X-axis position
             const y = 0; // Align all transactions to the top
-            const z = 0.5 + offset + linePosition; // Fixed distance from center
+            const z = offset + (i * baseSpacing); // Each transaction at fixed interval
+            
+            console.log(`  Position: x=${x}, y=${y}, z=${z.toFixed(2)}`);
+            console.log(`  Dimensions: w=${width}, h=${height.toFixed(3)}, d=${depth}`);
             
             const txGeometry = new THREE.BoxGeometry(width, height, depth);
             const txMaterial = new THREE.MeshLambertMaterial({ 
@@ -559,6 +745,161 @@ class BitcoinAddressExplorer {
                 }
             };
             this.scene.add(txCuboid);
+            
+            console.log(`  Successfully added transaction cuboid to scene`);
+        }
+        
+        console.log(`=== TRANSACTION HISTORY 3D MODEL COMPLETE ===`);
+        console.log(`Total transaction cuboids added to scene: ${txCount}`);
+        console.log(`Scene now has ${this.scene.children.length} total objects`);
+        
+        // Update button text
+        this.updateLoadMoreButton();
+    }
+    
+    async loadMoreTransactions() {
+        console.log('=== LOADING MORE TRANSACTIONS ===');
+        console.log('Currently have:', this.transactionHistory.length, 'transactions');
+        console.log('Currently displayed:', this.displayedTransactionCount);
+        
+        // Check if we have more fetched transactions to display first
+        if (this.displayedTransactionCount < this.transactionHistory.length) {
+            console.log('Displaying more from already fetched transactions');
+            this.displayMoreTransactions();
+            return;
+        }
+        
+        // Need to fetch more transactions from API
+        console.log('Fetching more transactions from API');
+        const lastTxid = this.transactionHistory[this.transactionHistory.length - 1]?.txid;
+        
+        if (!lastTxid) {
+            console.log('No last txid found, cannot fetch more');
+            return;
+        }
+        
+        const newTransactions = await this.fetchTransactionPage(lastTxid);
+        
+        if (newTransactions.length === 0) {
+            console.log('No more transactions available from API');
+            this.noMoreTransactions = true;
+            this.updateLoadMoreButton();
+            return;
+        }
+        
+        // Add new transactions to our array
+        this.transactionHistory.push(...newTransactions);
+        console.log(`Added ${newTransactions.length} new transactions. Total: ${this.transactionHistory.length}`);
+        
+        // Display the new transactions
+        this.displayMoreTransactions();
+    }
+    
+    displayMoreTransactions() {
+        const startIndex = this.displayedTransactionCount;
+        const endIndex = Math.min(startIndex + 50, this.transactionHistory.length);
+        const newTxCount = endIndex - startIndex;
+        
+        if (newTxCount === 0) {
+            console.log('No more transactions to display');
+            return;
+        }
+        
+        console.log(`Displaying transactions ${startIndex + 1} to ${endIndex}`);
+        
+        // Calculate sphere radius (same as in createAddressRepresentation)
+        const totalUtxoValue = this.utxoData ? this.utxoData.reduce((sum, utxo) => sum + utxo.value, 0) : 0;
+        const totalUtxoValueBTC = totalUtxoValue / 100000000;
+        const baseRadius = 1.5;
+        const valueScale = Math.max(0.3, Math.min(2.0, Math.log10(totalUtxoValueBTC + 1) * 0.3));
+        const sphereRadius = baseRadius * valueScale;
+        
+        // Calculate positioning for new transactions - extend existing line
+        const baseSpacing = 0.4; // Fixed spacing between transactions
+        const offset = sphereRadius + 2; // Fixed offset from sphere
+        
+        for (let i = 0; i < newTxCount; i++) {
+            const txIndex = startIndex + i;
+            const tx = this.transactionHistory[txIndex];
+            
+            console.log(`Adding transaction ${txIndex + 1}/${this.transactionHistory.length}:`, {
+                txid: tx.txid.substring(0, 16) + '...',
+                size: tx.size,
+                status: tx.status,
+                vout_count: tx.vout ? tx.vout.length : 0
+            });
+            
+            const txSize = tx.size || 250;
+            const width = 1.5;
+            const height = Math.max(0.1, txSize / 1000);
+            const depth = 0.1;
+            
+            // Position extending the line - each transaction at a fixed distance from the previous
+            const x = 0;
+            const y = 0;
+            const z = offset + (txIndex * baseSpacing);
+            
+            console.log(`  Position: x=${x}, y=${y}, z=${z.toFixed(2)}`);
+            
+            const txGeometry = new THREE.BoxGeometry(width, height, depth);
+            const txMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.6
+            });
+            const txCuboid = new THREE.Mesh(txGeometry, txMaterial);
+            txCuboid.position.set(x, y, z);
+            
+            const totalOutput = tx.vout ? tx.vout.reduce((sum, output) => sum + output.value, 0) : 0;
+            
+            txCuboid.userData = { 
+                type: 'transaction', 
+                data: {
+                    txid: tx.txid,
+                    value: totalOutput,
+                    size: txSize,
+                    status: tx.status
+                }
+            };
+            this.scene.add(txCuboid);
+        }
+        
+        // Update displayed count
+        this.displayedTransactionCount = endIndex;
+        console.log(`New total displayed transactions: ${this.displayedTransactionCount}`);
+        
+        // Update button text
+        this.updateLoadMoreButton();
+    }
+    
+    updateLoadMoreButton() {
+        const button = document.getElementById('load-more-transactions');
+        if (!button) return;
+        
+        const totalTxCount = this.addressData?.chain_stats?.tx_count || 0;
+        const remainingToDisplay = this.transactionHistory.length - this.displayedTransactionCount;
+        
+        console.log('Button update:', {
+            totalFromAPI: totalTxCount,
+            totalFetched: this.transactionHistory.length,
+            displayed: this.displayedTransactionCount,
+            remainingToDisplay: remainingToDisplay,
+            noMoreFromAPI: this.noMoreTransactions
+        });
+        
+        if (this.noMoreTransactions && remainingToDisplay <= 0) {
+            // No more transactions available from API and none to display
+            button.textContent = `All TXs Loaded (${this.displayedTransactionCount})`;
+            button.disabled = true;
+        } else if (remainingToDisplay > 0) {
+            // Have fetched transactions ready to display
+            const toDisplay = Math.min(50, remainingToDisplay);
+            button.textContent = `Load Next ${toDisplay} TXs`;
+            button.disabled = false;
+        } else {
+            // Need to fetch more from API
+            button.textContent = `Fetch More TXs`;
+            button.disabled = false;
         }
     }
 
@@ -649,8 +990,17 @@ class BitcoinAddressExplorer {
     }
 
     onWindowResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
+        if (this.isPerspective) {
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+        } else {
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
@@ -824,7 +1174,11 @@ class BitcoinAddressExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.panX -= 0.5;
+        
+        const right = new THREE.Vector3();
+        this.camera.getWorldDirection(new THREE.Vector3());
+        right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+        this.controls.target.add(right.multiplyScalar(-0.5));
         this.updateCameraPosition();
     }
     
@@ -834,7 +1188,11 @@ class BitcoinAddressExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.panX += 0.5;
+        
+        const right = new THREE.Vector3();
+        this.camera.getWorldDirection(new THREE.Vector3());
+        right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+        this.controls.target.add(right.multiplyScalar(0.5));
         this.updateCameraPosition();
     }
     
@@ -844,7 +1202,10 @@ class BitcoinAddressExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.panY += 0.5;
+        
+        const up = new THREE.Vector3();
+        up.setFromMatrixColumn(this.camera.matrix, 1);
+        this.controls.target.add(up.multiplyScalar(0.5));
         this.updateCameraPosition();
     }
     
@@ -854,7 +1215,10 @@ class BitcoinAddressExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.panY -= 0.5;
+        
+        const up = new THREE.Vector3();
+        up.setFromMatrixColumn(this.camera.matrix, 1);
+        this.controls.target.add(up.multiplyScalar(-0.5));
         this.updateCameraPosition();
     }
     
@@ -864,9 +1228,22 @@ class BitcoinAddressExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.distance -= 2;
-        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-        this.updateCameraPosition();
+        
+        if (this.isPerspective) {
+            this.controls.distance -= 2;
+            this.controls.distance = Math.max(1, Math.min(200, this.controls.distance));
+            this.updateCameraPosition();
+        } else {
+            this.orthographicZoom -= 2;
+            this.orthographicZoom = Math.max(5, Math.min(200, this.orthographicZoom));
+            
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
     }
     
     zoomOut() {
@@ -875,9 +1252,56 @@ class BitcoinAddressExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.distance += 2;
-        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-        this.updateCameraPosition();
+        
+        if (this.isPerspective) {
+            this.controls.distance += 2;
+            this.controls.distance = Math.max(1, Math.min(200, this.controls.distance));
+            this.updateCameraPosition();
+        } else {
+            this.orthographicZoom += 2;
+            this.orthographicZoom = Math.max(5, Math.min(200, this.orthographicZoom));
+            
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
+    }
+    
+    toggleCameraView() {
+        const currentPosition = this.camera.position.clone();
+        const currentTarget = this.controls.target.clone();
+        
+        if (this.isPerspective) {
+            // Switch to orthographic
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera = new THREE.OrthographicCamera(
+                this.orthographicZoom * aspect / -2,
+                this.orthographicZoom * aspect / 2,
+                this.orthographicZoom / 2,
+                this.orthographicZoom / -2,
+                0.1,
+                2000
+            );
+            this.isPerspective = false;
+        } else {
+            // Switch to perspective
+            this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            this.isPerspective = true;
+        }
+        
+        // Restore position and target
+        this.camera.position.copy(currentPosition);
+        this.controls.target.copy(currentTarget);
+        this.camera.lookAt(this.controls.target);
+        
+        // Update the button text
+        const button = document.getElementById('toggle-view');
+        if (button) {
+            button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
+        }
     }
     
     setupPanelToggle() {
@@ -901,6 +1325,301 @@ class BitcoinAddressExplorer {
                 }
             });
         }
+    }
+    
+    showLoadingModal(message) {
+        // Remove existing loading modal if any
+        const existingModal = document.querySelector('.loading-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Create loading modal
+        const modal = document.createElement('div');
+        modal.className = 'loading-modal';
+        modal.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">${message}</div>
+                <div class="loading-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="progress-text">0%</div>
+                </div>
+            </div>
+        `;
+        
+        // Add styles
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        `;
+        
+        const content = modal.querySelector('.loading-content');
+        content.style.cssText = `
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 40px;
+            text-align: center;
+            color: white;
+            min-width: 300px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+        `;
+        
+        const spinner = modal.querySelector('.loading-spinner');
+        spinner.style.cssText = `
+            width: 40px;
+            height: 40px;
+            border: 2px solid #333;
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        `;
+        
+        const text = modal.querySelector('.loading-text');
+        text.style.cssText = `
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #ccc;
+        `;
+        
+        const progress = modal.querySelector('.loading-progress');
+        progress.style.cssText = `
+            margin-top: 20px;
+        `;
+        
+        const progressBar = modal.querySelector('.progress-bar');
+        progressBar.style.cssText = `
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        `;
+        
+        const progressFill = modal.querySelector('.progress-fill');
+        progressFill.style.cssText = `
+            height: 100%;
+            background: #fff;
+            width: 0%;
+            transition: width 0.3s ease;
+        `;
+        
+        const progressText = modal.querySelector('.progress-text');
+        progressText.style.cssText = `
+            font-size: 12px;
+            color: #999;
+        `;
+        
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        this.loadingModal = modal;
+        document.body.appendChild(modal);
+    }
+    
+    updateLoadingProgress(message, percentage) {
+        if (!this.loadingModal) return;
+        
+        const text = this.loadingModal.querySelector('.loading-text');
+        const progressFill = this.loadingModal.querySelector('.progress-fill');
+        const progressText = this.loadingModal.querySelector('.progress-text');
+        
+        if (text) text.textContent = message;
+        if (progressFill) progressFill.style.width = `${percentage}%`;
+        if (progressText) progressText.textContent = `${percentage}%`;
+    }
+    
+    hideLoadingModal() {
+        if (this.loadingModal) {
+            this.loadingModal.remove();
+            this.loadingModal = null;
+        }
+    }
+    
+    showRateLimitError(apiName) {
+        this.showPopupMessage(
+            'Rate Limit Exceeded',
+            `${apiName} is temporarily unavailable due to too many requests. Please try again in a few minutes.`,
+            'warning'
+        );
+    }
+    
+    showGenericError(dataType) {
+        this.showPopupMessage(
+            'Error',
+            `Failed to load ${dataType}. Please check your connection and try again.`,
+            'error'
+        );
+    }
+    
+    showPopupMessage(title, message, type = 'info') {
+        // Remove existing popup if any
+        const existingPopup = document.querySelector('.api-popup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
+        
+        // Create popup element
+        const popup = document.createElement('div');
+        popup.className = 'api-popup';
+        popup.innerHTML = `
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h3>${title}</h3>
+                    <button class="popup-close">&times;</button>
+                </div>
+                <div class="popup-body">
+                    <p>${message}</p>
+                </div>
+                <div class="popup-footer">
+                    <button class="popup-retry">Retry</button>
+                    <button class="popup-dismiss">Dismiss</button>
+                </div>
+            </div>
+        `;
+        
+        // Add styles
+        popup.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        `;
+        
+        const content = popup.querySelector('.popup-content');
+        content.style.cssText = `
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 4px;
+            max-width: 350px;
+            width: 90%;
+            color: white;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+        `;
+        
+        const header = popup.querySelector('.popup-header');
+        header.style.cssText = `
+            padding: 16px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        `;
+        
+        const closeBtn = popup.querySelector('.popup-close');
+        closeBtn.style.cssText = `
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        `;
+        
+        closeBtn.addEventListener('mouseenter', () => {
+            closeBtn.style.color = '#fff';
+        });
+        closeBtn.addEventListener('mouseleave', () => {
+            closeBtn.style.color = '#999';
+        });
+        
+        const body = popup.querySelector('.popup-body');
+        body.style.cssText = `
+            padding: 20px;
+            line-height: 1.5;
+            font-size: 14px;
+        `;
+        
+        const footer = popup.querySelector('.popup-footer');
+        footer.style.cssText = `
+            padding: 16px 20px;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        `;
+        
+        const buttons = popup.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (btn.className.includes('popup-')) {
+                btn.style.cssText = `
+                    padding: 6px 12px;
+                    border: 1px solid #555;
+                    background: #000;
+                    color: white;
+                    border-radius: 2px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    transition: all 0.2s;
+                `;
+                btn.addEventListener('mouseenter', () => {
+                    btn.style.background = '#333';
+                    btn.style.borderColor = '#666';
+                });
+                btn.addEventListener('mouseleave', () => {
+                    btn.style.background = '#000';
+                    btn.style.borderColor = '#555';
+                });
+            }
+        });
+        
+        // Add event listeners
+        closeBtn.addEventListener('click', () => popup.remove());
+        popup.querySelector('.popup-dismiss').addEventListener('click', () => popup.remove());
+        popup.querySelector('.popup-retry').addEventListener('click', () => {
+            popup.remove();
+            this.fetchData();
+        });
+        
+        // Close on background click
+        popup.addEventListener('click', (e) => {
+            if (e.target === popup) {
+                popup.remove();
+            }
+        });
+        
+        // Auto-close after 10 seconds
+        setTimeout(() => {
+            if (document.body.contains(popup)) {
+                popup.remove();
+            }
+        }, 10000);
+        
+        document.body.appendChild(popup);
     }
 }
 
