@@ -173,6 +173,21 @@
                 navMenu.classList.remove('active');
             });
         });
+
+        // Mobile panel management
+        document.addEventListener('DOMContentLoaded', () => {
+            const isMobile = window.innerWidth <= 768;
+            const panelContent = document.querySelector('.panel-content');
+            const toggleButton = document.querySelector('.panel-toggle');
+            
+            if (isMobile && panelContent) {
+                // Start minimized on mobile
+                panelContent.classList.add('minimized');
+                if (toggleButton) {
+                    toggleButton.textContent = '+';
+                }
+            }
+        });
     </script>
 </body>
 </html> 

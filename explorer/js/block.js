@@ -176,23 +176,7 @@ class BitcoinBlockExplorer {
             button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
         });
         
-        document.getElementById('reset-camera').addEventListener('click', () => {
-            this.controls.target.set(0, 2, 0); // Reset to the raised center position
-            this.controls.distance = 20;
-            this.controls.phi = Math.PI / 3;
-            this.controls.theta = 0;
-            this.controls.update();
-        });
-        
-        document.getElementById('toggle-transactions').addEventListener('click', () => {
-            this.showTransactions = !this.showTransactions;
-            const button = document.getElementById('toggle-transactions');
-            button.textContent = this.showTransactions ? 'Hide Transactions' : 'Show Transactions';
-            
-            this.transactions.forEach(tx => {
-                tx.visible = this.showTransactions;
-            });
-        });
+
         
         document.getElementById('load-transactions').addEventListener('click', () => {
             this.loadTransactionData();

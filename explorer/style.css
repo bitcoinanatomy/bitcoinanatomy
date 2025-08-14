@@ -73,7 +73,7 @@ body:not(.homepage) {
     background: rgba(0, 0, 0, 0.95);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 1000;
+    z-index: 23000;
     padding: 0 20px;
     height: 60px;
     display: flex;
@@ -84,7 +84,7 @@ body:not(.homepage) {
 /* Explorer pages navbar positioning */
 #container .navbar {
     position: absolute;
-    z-index: 100;
+    z-index: 33000;
 }
 
 .nav-brand {
@@ -100,6 +100,8 @@ body:not(.homepage) {
     text-transform: uppercase;
     letter-spacing: -0.05rem;
     font-weight: 500;
+    z-index: 40000;
+    position: relative;
 }
 
 .nav-brand a:hover {
@@ -259,10 +261,8 @@ body:not(.homepage) {
     position: absolute;
     top: 20px;
     right: 20px;
-    bottom: 160px;
     width: 300px;
     pointer-events: auto;
-    overflow-y: auto;
 }
 
 .panel {
@@ -272,6 +272,8 @@ body:not(.homepage) {
     border-radius: 3px;
     padding: 20px;
     margin-bottom: 20px;
+    z-index: 2000;
+    position: relative;
 }
 
 .panel-header {
@@ -617,7 +619,7 @@ button:active {
    ================================ */
 .disclaimer {
     position: fixed;
-    bottom: 10px;
+    bottom: -2px;
     right: 10px;
     background: rgba(0, 0, 0, 0.8);
     color: #cccccc;
@@ -625,7 +627,7 @@ button:active {
     border-radius: 4px;
     font-size: 0.7rem;
     font-family: monospace;
-    z-index: 1000;
+    z-index: 34000;
     max-width: 300px;
     line-height: 1.3;
     pointer-events: none;
@@ -1166,7 +1168,7 @@ button:active {
 /* Mobile controls improvements */
 @media (max-width: 768px) {
     .controls {
-        bottom: 20px;
+        bottom: 80px;
         left: 20px;
         right: 20px;
         flex-wrap: wrap;
@@ -1198,15 +1200,15 @@ button:active {
     }
     
     .control-buttons button {
-        width: 44px;
-        height: 44px;
-        font-size: 16px;
+        width: 34px;
+        height: 34px;
+        font-size: 12px;
         flex: none;
     }
     
     .control-group:last-child .control-buttons button {
-        width: 40px;
-        height: 40px;
+        width: 35px;
+        height: 35px;
         font-size: 14px;
     }
     
@@ -1223,11 +1225,10 @@ button:active {
         max-width: none;
         right: 0;
         left: 0;
-        bottom: 120px;
+        bottom: 0;
         top: auto;
         height: auto;
-        max-height: 40vh;
-        overflow-y: auto;
+        max-height: 50vh;
     }
     
     .panel {

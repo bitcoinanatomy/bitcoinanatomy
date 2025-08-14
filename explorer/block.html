@@ -62,8 +62,6 @@
             
             <div class="controls">
                 <button id="toggle-rotation">Pause Rotation</button>
-                <button id="reset-camera">Reset Camera</button>
-                <button id="toggle-transactions">Show Transactions</button>
                 <button id="load-transactions">Load Transactions</button>
                 <button id="load-all-transactions">Load All</button>
                 <button id="toggle-view">Orthographic</button>
@@ -124,6 +122,21 @@
                 hamburger.classList.remove('active');
                 navMenu.classList.remove('active');
             });
+        });
+
+        // Mobile panel management
+        document.addEventListener('DOMContentLoaded', () => {
+            const isMobile = window.innerWidth <= 768;
+            const panelContent = document.querySelector('.panel-content');
+            const toggleButton = document.querySelector('.panel-toggle');
+            
+            if (isMobile && panelContent) {
+                // Start minimized on mobile
+                panelContent.classList.add('minimized');
+                if (toggleButton) {
+                    toggleButton.textContent = '+';
+                }
+            }
         });
     </script>
 </body>
