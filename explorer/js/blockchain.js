@@ -43,7 +43,7 @@ class BitcoinBlockchainExplorer {
         this.isPerspective = true;
         this.orthographicZoom = 20; // Store orthographic zoom level
         this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 30, 50);
+        this.camera.position.set(0, 30, 80);
         this.camera.lookAt(0, 0, 0);
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -59,7 +59,7 @@ class BitcoinBlockchainExplorer {
         // Create custom orbit controls
         this.controls = {
             target: new THREE.Vector3(0, 0, 0),
-            distance: 50,
+            distance: 80,
             phi: Math.PI / 3,
             theta: 0,
             isMouseDown: false,
@@ -337,9 +337,9 @@ class BitcoinBlockchainExplorer {
 
     resetCamera() {
         // Reset camera to default position, zoom, and target
-        this.camera.position.set(0, 30, 50);
+        this.camera.position.set(0, 30, 80);
         this.controls.target.set(0, 0, 0);
-        this.controls.distance = 50;
+        this.controls.distance = 80;
         this.controls.phi = Math.PI / 3;
         this.controls.theta = 0;
         this.controls.update();
@@ -579,6 +579,18 @@ class BitcoinBlockchainExplorer {
         document.getElementById('zoom-out').addEventListener('click', () => {
             this.zoomOut();
         });
+        
+        // Disc visibility slider
+        const discVisibilitySlider = document.getElementById('disc-visibility-slider');
+        const discVisibilityValue = document.getElementById('disc-visibility-value');
+        
+        if (discVisibilitySlider && discVisibilityValue) {
+            discVisibilitySlider.addEventListener('input', (e) => {
+                const percentage = parseInt(e.target.value);
+                discVisibilityValue.textContent = `${percentage}%`;
+                this.updateDiscVisibility(percentage);
+            });
+        }
     }
     
     toggleCameraView() {
@@ -1073,7 +1085,7 @@ class BitcoinBlockchainExplorer {
             
             this.updateLoadingProgress('Processing data...', 70);
             const height = await response.text();
-            const numDiscs = Math.floor(parseInt(height) / 2016);
+            const numDiscs = Math.floor(parseInt(height) / 2016) + 1; // Add 1 to include current period in progress
             
             console.log('Current height:', height);
             console.log('Difficulty adjustments:', numDiscs);
@@ -1550,6 +1562,51 @@ class BitcoinBlockchainExplorer {
                 }
             });
         }
+    }
+
+    updateDiscVisibility(percentage) {
+        // Filter blocks to only include difficulty adjustment discs (exclude UTXOs)
+        const difficultyDiscs = this.blocks.filter(block => 
+            !block.userData.special && !block.userData.isMempool
+        );
+        
+        // Get mempool disc separately
+        const mempoolDisc = this.blocks.find(block => block.userData.isMempool);
+        
+        if (difficultyDiscs.length === 0) return;
+        
+        // Calculate how many discs to show based on percentage
+        const totalDiscs = difficultyDiscs.length;
+        const discsToShow = Math.floor(totalDiscs * (percentage / 100));
+        
+        // Show/hide discs based on their index (chronological order)
+        difficultyDiscs.forEach((disc, index) => {
+            if (index < discsToShow) {
+                disc.visible = true;
+            } else {
+                disc.visible = false;
+            }
+        });
+        
+        // Show/hide mempool disc - only visible at 100%
+        if (mempoolDisc) {
+            mempoolDisc.visible = (percentage === 100);
+        }
+        
+        // Update the highest visible disc number display
+        const highestVisibleDiscElement = document.getElementById('highest-visible-disc');
+        if (highestVisibleDiscElement) {
+            if (discsToShow === 0) {
+                highestVisibleDiscElement.textContent = '0';
+            } else {
+                // Get the epoch number from the highest visible disc
+                const highestVisibleIndex = discsToShow - 1;
+                const epochNumber = difficultyDiscs[highestVisibleIndex].userData.index;
+                highestVisibleDiscElement.textContent = epochNumber.toLocaleString();
+            }
+        }
+        
+        console.log(`Showing ${discsToShow} of ${totalDiscs} difficulty adjustment discs (${percentage}%), mempool: ${percentage === 100}`);
     }
 }
 

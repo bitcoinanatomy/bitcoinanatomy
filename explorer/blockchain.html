@@ -6,6 +6,42 @@
     <title>Bitcoin Explorer - Blockchain</title>
     <meta name="description" content="Bitcoin blockchain 3D visualization">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Custom slider styling */
+        #disc-visibility-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            border: 2px solid #333;
+        }
+        
+        #disc-visibility-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            border: 2px solid #333;
+            box-sizing: border-box;
+        }
+        
+        #disc-visibility-slider::-webkit-slider-track {
+            background: #333;
+            border-radius: 3px;
+            height: 8px;
+        }
+        
+        #disc-visibility-slider::-moz-range-track {
+            background: #333;
+            border-radius: 3px;
+            height: 8px;
+            border: none;
+        }
+    </style>
 </head>
 <body>
     <div id="container">
@@ -56,6 +92,19 @@
                         <div>Avg Block Time: <span id="avg-block-time">Loading...</span></div>
                         <div>Difficulty Adjustments: <span id="total-transactions">Loading...</span></div>
                         <div>Chain Work: <span id="chain-work">Loading...</span></div>
+                        <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
+                            <div style="margin-bottom: 5px;">Disc Visibility: <span id="disc-visibility-value">100%</span> • Epoch <span id="highest-visible-disc">0</span></div>
+                            <input type="range" id="disc-visibility-slider" min="0" max="100" value="100" 
+                                   style="width: 100%; height: 8px; background: #333; outline: none; border-radius: 3px; 
+                                          -webkit-appearance: none; appearance: none;">
+                        </div>
+                        <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
+                            <div style="margin-bottom: 10px; font-weight: bold;">Display Options:</div>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="toggle-utxos" style="flex: 1; padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; font-size: 12px;">Show UTXOs</button>
+                                <button id="toggle-labels" style="flex: 1; padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; font-size: 12px;">Show Labels</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -63,9 +112,7 @@
             <div class="controls">
                 <button id="toggle-rotation">Pause Rotation</button>
                 <button id="reset-camera">Reset Camera</button>
-                <button id="toggle-utxos">Show UTXOs</button>
                 <button id="toggle-view">Orthographic</button>
-                <button id="toggle-labels">Show Labels</button>
                 <div class="navigation-controls">
                     <div class="control-group">
                         <div class="control-label">Rotate</div>

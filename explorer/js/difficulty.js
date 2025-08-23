@@ -14,6 +14,11 @@ class BitcoinDifficultyExplorer {
         this.isPerspective = true;
         this.orthographicZoom = 20;
         
+        // Animation state
+        this.isAnimating = false;
+        this.animationTimeouts = [];
+        this.currentAnimationBlock = 0;
+        
         // Get adjustment index from URL parameter, default to epoch 0
         const urlParams = new URLSearchParams(window.location.search);
         this.selectedAdjustment = urlParams.get('adjustment') || '0';
@@ -169,8 +174,10 @@ class BitcoinDifficultyExplorer {
                     const dateStr = `${month} ${day}, ${year}, ${time}`;
                     
                     // Create tooltip content
+                    const blockIndexInEpoch = object.userData.index + 1; // Convert from 0-based to 1-based index
                     const tooltipContent = `
                         <strong>Block ${blockInfo.height}</strong><br>
+                        Block ${blockIndexInEpoch} of 2016<br>
                         Size: ${blockInfo.size.toLocaleString()} bytes<br>
                         Date: ${dateStr}<br>
                         Transactions: ${blockInfo.nTx}<br>
@@ -336,6 +343,31 @@ class BitcoinDifficultyExplorer {
         document.getElementById('zoom-out').addEventListener('click', () => {
             this.zoomOut();
         });
+        
+        // Animation buttons
+        document.getElementById('animate-1000x').addEventListener('click', () => {
+            this.startBlockAnimation(1000);
+        });
+        
+        document.getElementById('animate-10000x').addEventListener('click', () => {
+            this.startBlockAnimation(10000);
+        });
+        
+        document.getElementById('animate-100000x').addEventListener('click', () => {
+            this.startBlockAnimation(100000);
+        });
+        
+        // Block visibility slider
+        const blockVisibilitySlider = document.getElementById('block-visibility-slider');
+        const blockVisibilityValue = document.getElementById('block-visibility-value');
+        
+        if (blockVisibilitySlider && blockVisibilityValue) {
+            blockVisibilitySlider.addEventListener('input', (e) => {
+                const percentage = parseInt(e.target.value);
+                blockVisibilityValue.textContent = `${percentage}%`;
+                this.updateBlockVisibility(percentage);
+            });
+        }
     }
     
     toggleCameraView() {
@@ -536,13 +568,11 @@ class BitcoinDifficultyExplorer {
         const selectedAdjustmentInt = parseInt(this.selectedAdjustment);
         const distanceFromTip = this.currentAdjustment ? this.currentAdjustment - selectedAdjustmentInt : 0;
         
-        // Show future discs only if we're far enough back in history
-        // If we're 0-1 adjustments from tip: show no future discs
-        // If we're 2+ adjustments from tip: show appropriate number to fill the gap (max 5)
-        // Exclude the current tip period itself (it's not "future", it's "present")
+        // Show future discs to bridge the gap between selected adjustment and current tip
+        // If we're viewing adjustment 450 and current is 452, we should show discs for 451 and 452
         let numFutureDiscs = 0;
-        if (distanceFromTip >= 2) {
-            numFutureDiscs = Math.min(5, distanceFromTip - 1); // -1 to exclude current tip
+        if (distanceFromTip > 0) {
+            numFutureDiscs = Math.min(5, distanceFromTip); // Show all periods up to current, max 5
         }
         
         // Debug logging
@@ -560,8 +590,9 @@ class BitcoinDifficultyExplorer {
         if (numFutureDiscs > 0) {
             console.log(`Creating ${numFutureDiscs} future discs...`);
             const startYAbove = 21; // Start higher above the spiral
+            const futureDiscRadius = discRadius * 1.1; // 5% bigger radius for future discs
             for (let i = 0; i < numFutureDiscs; i++) {
-                const geometry = new THREE.CylinderGeometry(discRadius, discRadius, discThickness, 32);
+                const geometry = new THREE.CylinderGeometry(futureDiscRadius, futureDiscRadius, discThickness, 32);
                 
                 // Gradient transparency from top (0.5) to bottom (0)
                 const opacity = 0.1 - (i * 0.02); // 0.1, 0.08, 0.06, 0.04, 0.02
@@ -602,9 +633,10 @@ class BitcoinDifficultyExplorer {
             console.log('Creating past discs...');
             const startYBelow = -21; // Start below the spiral
             const numPastDiscs = Math.min(5, parseInt(this.selectedAdjustment)); // Show up to 5 past discs, or current adjustment number if less
+            const pastDiscRadius = discRadius * 1.1; // 5% bigger radius for past discs
             
             for (let i = 0; i < numPastDiscs; i++) {
-                const geometry = new THREE.CylinderGeometry(discRadius, discRadius, discThickness, 32);
+                const geometry = new THREE.CylinderGeometry(pastDiscRadius, pastDiscRadius, discThickness, 32);
                 
                 // Gradient transparency from bottom (0.1) to top (0.02)
                 const opacity = 0.1 - (i * 0.02); // 0.1, 0.08, 0.06, 0.04, 0.02
@@ -1330,6 +1362,220 @@ class BitcoinDifficultyExplorer {
         this.controls.distance += 2;
         this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
         this.controls.update();
+    }
+
+    updateBlockVisibility(percentage) {
+        if (this.blocks.length === 0) return;
+        
+        // Calculate how many blocks to show based on percentage
+        const totalBlocks = this.blocks.length;
+        const blocksToShow = Math.floor(totalBlocks * (percentage / 100));
+        
+        // Show/hide blocks based on their index
+        this.blocks.forEach((block, index) => {
+            if (index < blocksToShow) {
+                block.visible = true;
+            } else {
+                block.visible = false;
+            }
+        });
+        
+        // Update the highest visible block number display
+        const highestVisibleBlockElement = document.getElementById('highest-visible-block');
+        if (highestVisibleBlockElement) {
+            if (blocksToShow === 0) {
+                highestVisibleBlockElement.textContent = '0';
+            } else {
+                // Get the actual block height from the highest visible block
+                const highestVisibleIndex = blocksToShow - 1;
+                if (this.blockData && this.blockData[0] && this.blockData[0][highestVisibleIndex]) {
+                    const blockHeight = this.blockData[0][highestVisibleIndex][0]?.height || (highestVisibleIndex + 1);
+                    highestVisibleBlockElement.textContent = blockHeight.toLocaleString();
+                } else {
+                    // Fallback: use block index + 1 as approximate block number
+                    highestVisibleBlockElement.textContent = (highestVisibleIndex + 1).toLocaleString();
+                }
+            }
+        }
+        
+        console.log(`Showing ${blocksToShow} of ${totalBlocks} blocks (${percentage}%)`);
+    }
+
+    startBlockAnimation(speed = 1000) {
+        if (this.isAnimating) {
+            this.stopBlockAnimation();
+            return;
+        }
+        
+        if (this.blocks.length === 0) return;
+        
+        console.log(`Starting block animation at ${speed}x speed...`);
+        this.isAnimating = true;
+        this.currentAnimationBlock = 0;
+        this.animationSpeed = speed; // Store current speed
+        
+        // Update button states
+        const button1000x = document.getElementById('animate-1000x');
+        const button10000x = document.getElementById('animate-10000x');
+        const button100000x = document.getElementById('animate-100000x');
+        
+        if (button1000x && button10000x && button100000x) {
+            if (speed === 1000) {
+                button1000x.textContent = 'Stop';
+                button1000x.style.background = '#666';
+                button10000x.textContent = '10000x';
+                button10000x.style.background = '#333';
+                button100000x.textContent = '100000x';
+                button100000x.style.background = '#333';
+            } else if (speed === 10000) {
+                button10000x.textContent = 'Stop';
+                button10000x.style.background = '#666';
+                button1000x.textContent = '1000x';
+                button1000x.style.background = '#333';
+                button100000x.textContent = '100000x';
+                button100000x.style.background = '#333';
+            } else { // speed === 100000
+                button100000x.textContent = 'Stop';
+                button100000x.style.background = '#666';
+                button1000x.textContent = '1000x';
+                button1000x.style.background = '#333';
+                button10000x.textContent = '10000x';
+                button10000x.style.background = '#333';
+            }
+        }
+        
+        // Hide all blocks initially
+        this.blocks.forEach(block => {
+            block.visible = false;
+        });
+        
+        // Reset block visibility slider to 0%
+        const slider = document.getElementById('block-visibility-slider');
+        const sliderValue = document.getElementById('block-visibility-value');
+        if (slider && sliderValue) {
+            slider.value = 0;
+            sliderValue.textContent = '0%';
+        }
+        
+        // Start the animation sequence
+        this.animateNextBlock(speed);
+    }
+    
+    stopBlockAnimation() {
+        console.log('Stopping block animation...');
+        this.isAnimating = false;
+        
+        // Clear all pending timeouts
+        this.animationTimeouts.forEach(timeout => clearTimeout(timeout));
+        this.animationTimeouts = [];
+        
+        // Update button text
+        const button1000x = document.getElementById('animate-1000x');
+        const button10000x = document.getElementById('animate-10000x');
+        const button100000x = document.getElementById('animate-100000x');
+        
+        if (button1000x && button10000x && button100000x) {
+            button1000x.textContent = '1000x';
+            button1000x.style.background = '#333';
+            button10000x.textContent = '10000x';
+            button10000x.style.background = '#333';
+            button100000x.textContent = '100000x';
+            button100000x.style.background = '#333';
+        }
+        
+        // Show all blocks
+        this.blocks.forEach(block => {
+            block.visible = true;
+        });
+        
+        // Reset block visibility slider to 100%
+        const slider = document.getElementById('block-visibility-slider');
+        const sliderValue = document.getElementById('block-visibility-value');
+        const highestVisibleBlockElement = document.getElementById('highest-visible-block');
+        
+        if (slider && sliderValue) {
+            slider.value = 100;
+            sliderValue.textContent = '100%';
+        }
+        
+        // Reset highest visible block to maximum
+        if (highestVisibleBlockElement && this.blockData && this.blockData[0] && this.blockData[0].length > 0) {
+            const lastBlockIndex = this.blockData[0].length - 1;
+            const lastBlockHeight = this.blockData[0][lastBlockIndex][0]?.height || this.blockData[0].length;
+            highestVisibleBlockElement.textContent = lastBlockHeight.toLocaleString();
+        }
+    }
+    
+    animateNextBlock(speed = 1000) {
+        if (!this.isAnimating || this.currentAnimationBlock >= this.blocks.length) {
+            // Animation complete
+            this.stopBlockAnimation();
+            return;
+        }
+        
+        // Show current block
+        const currentBlock = this.blocks[this.currentAnimationBlock];
+        if (currentBlock) {
+            currentBlock.visible = true;
+            
+            // Update slider to reflect current progress
+            const progress = ((this.currentAnimationBlock + 1) / this.blocks.length) * 100;
+            const slider = document.getElementById('block-visibility-slider');
+            const sliderValue = document.getElementById('block-visibility-value');
+            const highestVisibleBlockElement = document.getElementById('highest-visible-block');
+            
+            if (slider && sliderValue) {
+                slider.value = Math.floor(progress);
+                sliderValue.textContent = `${Math.floor(progress)}%`;
+            }
+            
+            // Update highest visible block number
+            if (highestVisibleBlockElement && this.blockData && this.blockData[0] && this.blockData[0][this.currentAnimationBlock]) {
+                const blockHeight = this.blockData[0][this.currentAnimationBlock][0]?.height || (this.currentAnimationBlock + 1);
+                highestVisibleBlockElement.textContent = blockHeight.toLocaleString();
+            }
+            
+            console.log(`Showing block ${this.currentAnimationBlock + 1}/${this.blocks.length}`);
+        }
+        
+        // Calculate delay for next block based on time difference
+        let delayMs = 600; // Default 10 minutes in seconds
+        
+        if (this.blockData && this.blockData[0] && this.blockData[0][this.currentAnimationBlock]) {
+            const blockData = this.blockData[0][this.currentAnimationBlock];
+            let timeDifference = blockData[8]?.time_difference || 600;
+            
+            // Force time difference to 0 for block 0 (genesis block)
+            if (this.currentAnimationBlock === 0) {
+                timeDifference = 0;
+            }
+            
+            // Handle negative time differences (treat as small positive value)
+            if (timeDifference < 0) {
+                timeDifference = Math.abs(timeDifference);
+            }
+            
+            // Scale time difference based on speed: actual seconds / speed = animation milliseconds
+            if (speed === 100000) {
+                delayMs = Math.max(1, timeDifference / 100); // 100000x speed
+            } else if (speed === 10000) {
+                delayMs = Math.max(1, timeDifference / 10); // 10000x speed
+            } else { // speed === 1000
+                delayMs = Math.max(1, timeDifference); // 1000x speed
+            }
+        }
+        
+        console.log(`Next block delay: ${delayMs}ms (${speed}x speed)`);
+        
+        // Move to next block
+        this.currentAnimationBlock++;
+        
+        // Schedule next block animation
+        const timeout = setTimeout(() => {
+            this.animateNextBlock(speed);
+        }, delayMs);
+        
+        this.animationTimeouts.push(timeout);
     }
 }
 
