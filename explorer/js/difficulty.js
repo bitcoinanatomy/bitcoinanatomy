@@ -1076,13 +1076,27 @@ class BitcoinDifficultyExplorer {
                     return block[8]?.time_difference || 600;
                 });
                 
+                // Debug: log some time differences to understand the data
+                console.log('Time differences sample:', timeDifferences.slice(0, 10));
+                console.log('Min time diff before filtering:', Math.min(...timeDifferences));
+                console.log('Max time diff before filtering:', Math.max(...timeDifferences));
+                
                 // For average, include all blocks (including block 0 with time diff 0)
                 const avgTimeDiff = timeDifferences.reduce((sum, time) => sum + time, 0) / totalBlocks;
                 
-                // For min/max, exclude block 0 by filtering out index 0
+                // For min/max, exclude block 0 and handle negative values
                 const timeDifferencesExcludingGenesis = timeDifferences.filter((_, index) => index !== 0);
-                const minTimeDiff = Math.min(...timeDifferencesExcludingGenesis);
-                const maxTimeDiff = Math.max(...timeDifferencesExcludingGenesis);
+                
+                // Filter out negative values for min/max calculations since negative time differences
+                // represent clock irregularities and aren't meaningful for "fastest/slowest" block times
+                const validTimeDifferences = timeDifferencesExcludingGenesis.filter(time => time > 0);
+                
+                const minTimeDiff = validTimeDifferences.length > 0 ? Math.min(...validTimeDifferences) : 0;
+                const maxTimeDiff = validTimeDifferences.length > 0 ? Math.max(...validTimeDifferences) : 0;
+                
+                console.log('Valid time differences count:', validTimeDifferences.length);
+                console.log('Final min time diff:', minTimeDiff);
+                console.log('Final max time diff:', maxTimeDiff);
                 
                 if (avgChange) {
                     avgChange.textContent = `${this.formatTimeFromSeconds(avgTimeDiff)}`;
