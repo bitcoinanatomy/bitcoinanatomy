@@ -23,9 +23,17 @@ class BitcoinBlockExplorer {
         const urlParams = new URLSearchParams(window.location.search);
         this.blockHeight = urlParams.get('height');
         
-        this.init().catch(error => {
-            console.error('Error during initialization:', error);
-        });
+        this.init();
+    }
+
+    formatDate(date) {
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames[date.getMonth()];
+        const day = date.getDate();
+        const year = date.getFullYear();
+        const time = date.toTimeString().split(' ')[0]; // Gets HH:MM:SS
+        return `${month} ${day}, ${year}, ${time}`;
     }
 
     async init() {
@@ -1220,7 +1228,7 @@ class BitcoinBlockExplorer {
         document.getElementById('block-size').textContent = data.size ? `${(data.size / 1024).toFixed(1)} KB` : 'N/A';
         document.getElementById('block-tx-count').textContent = data.tx_count?.toLocaleString() || 'N/A';
         
-        const blockTime = data.timestamp ? new Date(data.timestamp * 1000).toLocaleString() : 'N/A';
+        const blockTime = data.timestamp ? this.formatDate(new Date(data.timestamp * 1000)) : 'N/A';
         document.getElementById('block-time').textContent = blockTime;
         document.getElementById('merkle-root').textContent = data.merkle_root?.substring(0, 16) + '...' || 'N/A';
         document.getElementById('block-nonce').textContent = data.nonce?.toLocaleString() || 'N/A';

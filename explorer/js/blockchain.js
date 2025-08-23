@@ -8,10 +8,19 @@ class BitcoinBlockchainExplorer {
         this.blocks = [];
         this.isRotating = true;
         this.showUTXOs = false;
-        this.showLabels = true;
+        this.showLabels = false;
         this.clock = new THREE.Clock();
         
         this.init();
+    }
+
+    formatDate(date) {
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames[date.getMonth()];
+        const day = date.getDate();
+        const year = date.getFullYear();
+        return `${month} ${day}, ${year}`;
     }
 
     init() {
@@ -148,7 +157,7 @@ class BitcoinBlockchainExplorer {
                 this.camera.left = -this.orthographicZoom * aspect / 2;
                 this.camera.right = this.orthographicZoom * aspect / 2;
                 this.camera.top = this.orthographicZoom / 2;
-                this.camera.bottom = -this.orthographicZoom * aspect / 2;
+                this.camera.bottom = -this.orthographicZoom / 2;
                 this.camera.updateProjectionMatrix();
             }
         });
@@ -163,6 +172,7 @@ class BitcoinBlockchainExplorer {
         setupHoverTooltip() {
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
+        let hoveredDisc = null;
 
         // Create tooltip element
         const tooltip = document.createElement('div');
@@ -191,28 +201,60 @@ class BitcoinBlockchainExplorer {
 
             if (intersects.length > 0) {
                 const intersectedObject = intersects[0].object;
-                if (!intersectedObject.userData.special) { // Only show tooltip for discs, not UTXOs
+                if (!intersectedObject.userData.special) { // Only handle discs, not UTXOs
+                    // Reset previous hovered disc if different
+                    if (hoveredDisc && hoveredDisc !== intersectedObject) {
+                        this.resetDiscAppearance(hoveredDisc);
+                    }
+
+                    // Set new hovered disc
+                    if (hoveredDisc !== intersectedObject) {
+                        hoveredDisc = intersectedObject;
+                        this.highlightDisc(hoveredDisc);
+                    }
+
                     const index = intersectedObject.userData.index;
                     
                     // Check if it's the mempool disc
                     if (intersectedObject.userData.isMempool) {
                         tooltip.innerHTML = `Mempool<br>Double-click to view mempool`;
                     } else {
-                        tooltip.innerHTML = `Epoch ${index}<br>Double-click to view details`;
+                        // Calculate block range for this difficulty adjustment period
+                        const startBlock = index * 2016;
+                        const endBlock = startBlock + 2015;
+                        tooltip.innerHTML = `Epoch ${index}<br>Blocks ${startBlock.toLocaleString()} - ${endBlock.toLocaleString()}<br>Double-click to view details`;
                     }
                     
                     tooltip.style.display = 'block';
                     tooltip.style.left = event.clientX + 10 + 'px';
                     tooltip.style.top = event.clientY - 10 + 'px';
                 } else {
+                    // Reset hover state when not hovering over discs
+                    if (hoveredDisc) {
+                        this.resetDiscAppearance(hoveredDisc);
+                        hoveredDisc = null;
+                        this.resetAllDiscsOpacity();
+                    }
                     tooltip.style.display = 'none';
                 }
             } else {
+                // Reset hover state when not hovering over any object
+                if (hoveredDisc) {
+                    this.resetDiscAppearance(hoveredDisc);
+                    hoveredDisc = null;
+                    this.resetAllDiscsOpacity();
+                }
                 tooltip.style.display = 'none';
             }
         });
 
         this.renderer.domElement.addEventListener('mouseleave', () => {
+            // Reset hover state when mouse leaves the canvas
+            if (hoveredDisc) {
+                this.resetDiscAppearance(hoveredDisc);
+                hoveredDisc = null;
+                this.resetAllDiscsOpacity();
+            }
             tooltip.style.display = 'none';
         });
 
@@ -248,6 +290,47 @@ class BitcoinBlockchainExplorer {
                         window.location.href = `difficulty.html?adjustment=${index}`;
                     }
                 }
+            }
+        });
+    }
+
+    highlightDisc(disc) {
+        // Store original color if not already stored
+        if (!disc.userData.originalColor) {
+            disc.userData.originalColor = disc.material.color.clone();
+        }
+        
+        // Change disc color to white
+        disc.material.color.setHex(0xffffff);
+        
+        // Add subtle scale up effect (10% increase)
+        disc.scale.set(1.1, 1.1, 1.1);
+        
+        // Reduce opacity of all other discs
+        this.blocks.forEach(block => {
+            if (!block.userData.special && block !== disc && !block.userData.isMempool) {
+                block.material.transparent = true;
+                block.material.opacity = 0.9;
+            }
+        });
+    }
+
+    resetDiscAppearance(disc) {
+        // Restore original color
+        if (disc.userData.originalColor) {
+            disc.material.color.copy(disc.userData.originalColor);
+        }
+        
+        // Reset scale to normal
+        disc.scale.set(1, 1, 1);
+    }
+
+    resetAllDiscsOpacity() {
+        // Reset opacity of all discs back to 1.0
+        this.blocks.forEach(block => {
+            if (!block.userData.special && !block.userData.isMempool) {
+                block.material.opacity = 1.0;
+                block.material.transparent = false;
             }
         });
     }
@@ -366,7 +449,7 @@ class BitcoinBlockchainExplorer {
                     this.camera.left = -this.orthographicZoom * aspect / 2;
                     this.camera.right = this.orthographicZoom * aspect / 2;
                     this.camera.top = this.orthographicZoom / 2;
-                    this.camera.bottom = -this.orthographicZoom * aspect / 2;
+                    this.camera.bottom = -this.orthographicZoom / 2;
                     this.camera.updateProjectionMatrix();
                 }
                 
@@ -683,7 +766,7 @@ class BitcoinBlockchainExplorer {
             this.camera.left = -this.orthographicZoom * aspect / 2;
             this.camera.right = this.orthographicZoom * aspect / 2;
             this.camera.top = this.orthographicZoom / 2;
-            this.camera.bottom = -this.orthographicZoom * aspect / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
             this.camera.updateProjectionMatrix();
         }
         this.controls.update();
@@ -709,7 +792,7 @@ class BitcoinBlockchainExplorer {
             this.camera.left = -this.orthographicZoom * aspect / 2;
             this.camera.right = this.orthographicZoom * aspect / 2;
             this.camera.top = this.orthographicZoom / 2;
-            this.camera.bottom = -this.orthographicZoom * aspect / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
             this.camera.updateProjectionMatrix();
         }
         this.controls.update();
@@ -1289,11 +1372,7 @@ class BitcoinBlockchainExplorer {
                         halvingDate = new Date(genesisDate.getTime() + minutesSinceGenesis * 60 * 1000);
                     }
                     
-                    const dateStr = halvingDate.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                    });
+                    const dateStr = this.formatDate(halvingDate);
                     
                     tooltip.textContent = `Halving ${halvingNumber}\nBlock ${blockNumber.toLocaleString()}\n${dateStr}`;
                 }

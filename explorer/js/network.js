@@ -17,6 +17,16 @@ class BitcoinNetworkExplorer {
         this.init();
     }
 
+    formatDate(date) {
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames[date.getMonth()];
+        const day = date.getDate();
+        const year = date.getFullYear();
+        const time = date.toTimeString().split(' ')[0]; // Gets HH:MM:SS
+        return `${month} ${day}, ${year}, ${time}`;
+    }
+
     init() {
         this.setupThreeJS();
         this.setupOrbitControls();
@@ -931,7 +941,7 @@ class BitcoinNetworkExplorer {
         document.getElementById('bcoin').textContent = (nodeImplementations['bcoin'] || 0).toLocaleString();
         
         // Update subtitle with timestamp and node count
-        const subtitle = `${totalNodes.toLocaleString()} nodes • ${timestamp.toLocaleString()}`;
+        const subtitle = `${totalNodes.toLocaleString()} nodes • ${this.formatDate(timestamp)}`;
         document.getElementById('network-subtitle').textContent = subtitle;
     }
 

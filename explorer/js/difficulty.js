@@ -106,15 +106,29 @@ class BitcoinDifficultyExplorer {
         });
         
         this.renderer.domElement.addEventListener('mousemove', (e) => {
-            // Handle tooltip
+            // Handle tooltip and hover effects
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             
             raycaster.setFromCamera(mouse, this.camera);
             const intersects = raycaster.intersectObjects([...this.blocks, ...this.discs]);
             
+            // Reset all objects to normal scale first
+            [...this.blocks, ...this.discs].forEach(obj => {
+                if (obj.userData.isHovered) {
+                    obj.scale.set(1, 1, 1);
+                    obj.userData.isHovered = false;
+                }
+            });
+            
             if (intersects.length > 0) {
                 const object = intersects[0].object;
+                
+                // Apply hover scale effect
+                if (object.userData && (object.userData.isDisc || object.userData.isBlock)) {
+                    object.scale.set(1.1, 1.1, 1.1); // Subtle 10% scale increase
+                    object.userData.isHovered = true;
+                }
                 
                 if (object.userData && object.userData.isDisc) {
                     // Create tooltip for disc
@@ -146,7 +160,13 @@ class BitcoinDifficultyExplorer {
                     
                     // Format date from timestamp
                     const date = new Date(blockInfo.time * 1000);
-                    const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const month = monthNames[date.getMonth()];
+                    const day = date.getDate();
+                    const year = date.getFullYear();
+                    const time = date.toTimeString().split(' ')[0]; // Gets HH:MM:SS
+                    const dateStr = `${month} ${day}, ${year}, ${time}`;
                     
                     // Create tooltip content
                     const tooltipContent = `
@@ -154,7 +174,7 @@ class BitcoinDifficultyExplorer {
                         Size: ${blockInfo.size.toLocaleString()} bytes<br>
                         Date: ${dateStr}<br>
                         Transactions: ${blockInfo.nTx}<br>
-                        Time Difference: ${blockInfo.timeDifference}s
+                        Time Difference: ${this.formatTimeFromSeconds(blockInfo.timeDifference)}
                     `;
                     
                     tooltip.innerHTML = tooltipContent;
@@ -199,6 +219,14 @@ class BitcoinDifficultyExplorer {
         
         this.renderer.domElement.addEventListener('mouseleave', () => {
             tooltip.style.display = 'none';
+            
+            // Reset all hover states and scales when mouse leaves canvas
+            [...this.blocks, ...this.discs].forEach(obj => {
+                if (obj.userData.isHovered) {
+                    obj.scale.set(1, 1, 1);
+                    obj.userData.isHovered = false;
+                }
+            });
         });
         
         // Add double-click handler for block navigation
@@ -420,7 +448,13 @@ class BitcoinDifficultyExplorer {
             
             // Extract data exactly like React Native expects
             // time_difference is in Block[8], not Block[7]
-            const timeDifference = block[8]?.time_difference || 600;
+            let timeDifference = block[8]?.time_difference || 600;
+            
+            // Force time difference to 0 for block 0 (genesis block) since there's no previous block
+            if (i === 0) {
+                timeDifference = 0;
+            }
+            
             const size = block[5]?.size || 216; // Use actual size from data
             const time = block[1]?.time || 0; // Block timestamp
             const nTx = block[2]?.nTx || 0; // Number of transactions
@@ -474,7 +508,8 @@ class BitcoinDifficultyExplorer {
                     time: time,
                     nTx: nTx
                 },
-                isBlock: true
+                isBlock: true,
+                isHovered: false // Initialize hover state
             };
             
             this.scene.add(blockMesh);
@@ -497,41 +532,74 @@ class BitcoinDifficultyExplorer {
         const discThickness = 0.5; // Very thin for flat appearance
         const discSpacing = 21; // More spacing between discs
         
-        // Create 5 discs above (future periods)
-        const startYAbove = 21; // Start higher above the spiral
-        for (let i = 0; i < 5; i++) {
-            const geometry = new THREE.CylinderGeometry(discRadius, discRadius, discThickness, 32);
-            
-            // Gradient transparency from top (0.5) to bottom (0)
-            const opacity = 0.1 - (i * 0.02); // 0.5, 0.4, 0.3, 0.2, 0.1
-            
-            const material = new THREE.MeshBasicMaterial({
-                color: new THREE.Color(1, 1, 1), // White color
-                transparent: true,
-                opacity: opacity,
-                depthWrite: false, // Fix transparency issues
-                depthTest: true
-            });
-            
-            const disc = new THREE.Mesh(geometry, material);
-            disc.position.set(0, startYAbove + (i * discSpacing), 0);
-            disc.rotation.x = Math.PI; // Rotate 90 degrees on x-axis
-            
-            // Add click data to disc (future periods)
-            disc.userData = {
-                isDisc: true,
-                adjustmentIndex: parseInt(this.selectedAdjustment) + i + 1,
-                discIndex: i,
-                isFuture: true
-            };
-            
-            // Add to scene and array
-            this.scene.add(disc);
-            this.discs.push(disc);
+        // Calculate how many future discs to show based on distance from chain tip
+        const selectedAdjustmentInt = parseInt(this.selectedAdjustment);
+        const distanceFromTip = this.currentAdjustment ? this.currentAdjustment - selectedAdjustmentInt : 0;
+        
+        // Show future discs only if we're far enough back in history
+        // If we're 0-1 adjustments from tip: show no future discs
+        // If we're 2+ adjustments from tip: show appropriate number to fill the gap (max 5)
+        // Exclude the current tip period itself (it's not "future", it's "present")
+        let numFutureDiscs = 0;
+        if (distanceFromTip >= 2) {
+            numFutureDiscs = Math.min(5, distanceFromTip - 1); // -1 to exclude current tip
+        }
+        
+        // Debug logging
+        console.log('=== DISC CREATION DEBUG ===');
+        console.log('Current height:', this.currentHeight);
+        console.log('Current adjustment:', this.currentAdjustment);
+        console.log('Selected adjustment:', this.selectedAdjustment);
+        console.log('Selected adjustment (int):', selectedAdjustmentInt);
+        console.log('Distance from tip:', distanceFromTip);
+        console.log('Number of future discs to show:', numFutureDiscs);
+        console.log('Future discs will represent adjustments:', numFutureDiscs > 0 ? 
+            `${selectedAdjustmentInt + 1} to ${selectedAdjustmentInt + numFutureDiscs}` : 'none');
+        
+        // Create future discs based on calculated number
+        if (numFutureDiscs > 0) {
+            console.log(`Creating ${numFutureDiscs} future discs...`);
+            const startYAbove = 21; // Start higher above the spiral
+            for (let i = 0; i < numFutureDiscs; i++) {
+                const geometry = new THREE.CylinderGeometry(discRadius, discRadius, discThickness, 32);
+                
+                // Gradient transparency from top (0.5) to bottom (0)
+                const opacity = 0.1 - (i * 0.02); // 0.1, 0.08, 0.06, 0.04, 0.02
+                
+                const material = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color(1, 1, 1), // White color
+                    transparent: true,
+                    opacity: opacity,
+                    depthWrite: false, // Fix transparency issues
+                    depthTest: true
+                });
+                
+                const disc = new THREE.Mesh(geometry, material);
+                disc.position.set(0, startYAbove + (i * discSpacing), 0);
+                disc.rotation.x = Math.PI; // Rotate 90 degrees on x-axis
+                
+                // Add click data to disc (future periods)
+                disc.userData = {
+                    isDisc: true,
+                    adjustmentIndex: selectedAdjustmentInt + i + 1,
+                    discIndex: i,
+                    isFuture: true,
+                    isHovered: false // Initialize hover state
+                };
+                
+                console.log(`Created future disc ${i} for adjustment ${disc.userData.adjustmentIndex}`);
+                
+                // Add to scene and array
+                this.scene.add(disc);
+                this.discs.push(disc);
+            }
+        } else {
+            console.log('Skipping future discs - too close to chain tip');
         }
         
         // Create past discs below - only show the appropriate number based on current adjustment
         if (parseInt(this.selectedAdjustment) > 0) {
+            console.log('Creating past discs...');
             const startYBelow = -21; // Start below the spiral
             const numPastDiscs = Math.min(5, parseInt(this.selectedAdjustment)); // Show up to 5 past discs, or current adjustment number if less
             
@@ -558,14 +626,20 @@ class BitcoinDifficultyExplorer {
                     isDisc: true,
                     adjustmentIndex: parseInt(this.selectedAdjustment) - i - 1,
                     discIndex: i + 5,
-                    isPast: true
+                    isPast: true,
+                    isHovered: false // Initialize hover state
                 };
+                
+                console.log(`Created past disc ${i} for adjustment ${disc.userData.adjustmentIndex}`);
                 
                 // Add to scene and array
                 this.scene.add(disc);
                 this.discs.push(disc);
             }
         }
+        
+        console.log('Total discs created:', this.discs.length);
+        console.log('=== END DEBUG ===');
     }
 
     async fetchData() {
@@ -573,9 +647,29 @@ class BitcoinDifficultyExplorer {
         
         try {
             this.updateLoadingProgress('Fetching epoch data...', 30);
+            
+            // Get current blockchain height to determine if we're at the tip
+            console.log('=== FETCHING CHAIN TIP HEIGHT ===');
+            const heightResponse = await fetch('https://mempool.space/api/blocks/tip/height');
+            let currentHeight = 0;
+            if (heightResponse.ok) {
+                currentHeight = parseInt(await heightResponse.text());
+                this.currentHeight = currentHeight;
+                this.currentAdjustment = Math.floor(currentHeight / 2016);
+                console.log('Height response OK');
+                console.log('Current height:', currentHeight);
+                console.log('Current adjustment calculated:', this.currentAdjustment);
+            } else {
+                console.log('Height response failed:', heightResponse.status);
+            }
+            
             // Calculate the first block of the difficulty epoch
             const BLOCKS_PER_EPOCH = 2016;
             const firstBlock = parseInt(this.selectedAdjustment) * BLOCKS_PER_EPOCH;
+            console.log('Selected adjustment from URL:', this.selectedAdjustment);
+            console.log('First block for epoch:', firstBlock);
+            console.log('=== END HEIGHT FETCH DEBUG ===');
+            
             const fileName = `rcp_bitcoin_block_data_${firstBlock.toString().padStart(7, '0')}.json`;
             const response = await fetch(`https://pvxg.net/bitcoin_data/difficulty_epochs/${fileName}`);
             
@@ -902,16 +996,49 @@ class BitcoinDifficultyExplorer {
         document.body.appendChild(popup);
     }
 
+    formatTimeFromSeconds(seconds) {
+        const roundedSeconds = Math.round(seconds);
+        const days = Math.floor(roundedSeconds / 86400);
+        const hours = Math.floor((roundedSeconds % 86400) / 3600);
+        const minutes = Math.floor((roundedSeconds % 3600) / 60);
+        const remainingSeconds = roundedSeconds % 60;
+        
+        if (days > 0) {
+            return `${days}d ${hours}h ${minutes}m ${remainingSeconds}s`;
+        } else if (hours > 0) {
+            return `${hours}h ${minutes}m ${remainingSeconds}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${remainingSeconds}s`;
+        } else {
+            return `${remainingSeconds}s`;
+        }
+    }
+
+    formatDateOnly(date) {
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames[date.getMonth()];
+        const day = date.getDate();
+        const year = date.getFullYear();
+        return `${month} ${day}, ${year}`;
+    }
+
     updateUI(data) {
         if (this.selectedAdjustment !== null) {
-            // Update subtitle with adjustment period
-            const subtitle = `Adjustment ${this.selectedAdjustment} • ${(parseInt(this.selectedAdjustment) * 2016).toLocaleString()} blocks`;
+            // Calculate block range for this difficulty adjustment period
+            const epochNumber = parseInt(this.selectedAdjustment);
+            const startBlock = epochNumber * 2016;
+            const endBlock = startBlock + 2015;
+            
+            // Update subtitle with adjustment period and block range
+            const subtitle = `Adjustment ${this.selectedAdjustment} • Blocks ${startBlock.toLocaleString()} - ${endBlock.toLocaleString()}`;
             document.getElementById('difficulty-subtitle').textContent = subtitle;
             
             // Update elements in the consolidated panel
             const adjustmentPeriod = document.getElementById('adjustment-period');
-            const adjustmentBlocks = document.getElementById('adjustment-blocks');
-            const totalAdjustments = document.getElementById('total-adjustments');
+            const blockRange = document.getElementById('block-range');
+            const startDate = document.getElementById('start-date');
+            const endDate = document.getElementById('end-date');
             const avgChange = document.getElementById('avg-change');
             const lastChange = document.getElementById('last-change');
             const nextExpected = document.getElementById('next-expected');
@@ -919,28 +1046,52 @@ class BitcoinDifficultyExplorer {
             if (adjustmentPeriod) {
                 adjustmentPeriod.textContent = this.selectedAdjustment;
             }
-            if (adjustmentBlocks) {
-                adjustmentBlocks.textContent = `${(parseInt(this.selectedAdjustment) * 2016).toLocaleString()}`;
+            if (blockRange) {
+                blockRange.textContent = `${startBlock.toLocaleString()} - ${endBlock.toLocaleString()}`;
             }
             
             if (this.blockData && this.blockData[0]) {
                 const blocks = this.blockData[0];
-                const totalBlocks = blocks.length;
-                const avgTimeDiff = blocks.reduce((sum, block) => sum + (block[8]?.time_difference || 600), 0) / totalBlocks;
-                const minTimeDiff = Math.min(...blocks.map(block => block[8]?.time_difference || 600));
-                const maxTimeDiff = Math.max(...blocks.map(block => block[8]?.time_difference || 600));
                 
-                if (totalAdjustments) {
-                    totalAdjustments.textContent = `${totalBlocks} blocks`;
+                // Get start and end dates from first and last blocks
+                if (startDate && blocks.length > 0) {
+                    const firstBlockTimestamp = blocks[0][1]?.time || 0;
+                    const firstBlockDate = new Date(firstBlockTimestamp * 1000);
+                    startDate.textContent = this.formatDateOnly(firstBlockDate);
                 }
+                
+                if (endDate && blocks.length > 0) {
+                    const lastBlockTimestamp = blocks[blocks.length - 1][1]?.time || 0;
+                    const lastBlockDate = new Date(lastBlockTimestamp * 1000);
+                    endDate.textContent = this.formatDateOnly(lastBlockDate);
+                }
+                
+                const totalBlocks = blocks.length;
+                
+                // Calculate time differences, excluding block 0 (genesis block)
+                const timeDifferences = blocks.map((block, index) => {
+                    if (index === 0) {
+                        return 0; // Force block 0 to have 0 time difference
+                    }
+                    return block[8]?.time_difference || 600;
+                });
+                
+                // For average, include all blocks (including block 0 with time diff 0)
+                const avgTimeDiff = timeDifferences.reduce((sum, time) => sum + time, 0) / totalBlocks;
+                
+                // For min/max, exclude block 0 by filtering out index 0
+                const timeDifferencesExcludingGenesis = timeDifferences.filter((_, index) => index !== 0);
+                const minTimeDiff = Math.min(...timeDifferencesExcludingGenesis);
+                const maxTimeDiff = Math.max(...timeDifferencesExcludingGenesis);
+                
                 if (avgChange) {
-                    avgChange.textContent = `${avgTimeDiff.toFixed(0)}s avg`;
+                    avgChange.textContent = `${this.formatTimeFromSeconds(avgTimeDiff)}`;
                 }
                 if (lastChange) {
-                    lastChange.textContent = `${minTimeDiff}s fastest`;
+                    lastChange.textContent = `${this.formatTimeFromSeconds(minTimeDiff)}`;
                 }
                 if (nextExpected) {
-                    nextExpected.textContent = `${maxTimeDiff}s slowest`;
+                    nextExpected.textContent = `${this.formatTimeFromSeconds(maxTimeDiff)}`;
                 }
             }
         }
@@ -955,7 +1106,72 @@ class BitcoinDifficultyExplorer {
             this.scene.rotation.y = elapsedTime * 0.1;
         }
         
+        // Update disc opacity based on camera angle
+        this.updateDiscOpacity();
+        
         this.renderer.render(this.scene, this.camera);
+    }
+    
+    updateDiscOpacity() {
+        // Calculate camera tilt angle in degrees
+        const phi = this.controls.phi;
+        const phiDegrees = phi * (180 / Math.PI);
+        
+        // Calculate fade factor based on camera tilt
+        // Fade starts at 45 degrees and is complete at 30 degrees (up) and 150 degrees (down)
+        // Scale starts at 65 degrees and goes to zero at 30 degrees (up) and 150 degrees (down)
+        let fadeOpacity = 1.0;
+        let scaleValue = 1.0;
+        
+        const fadeStartAngle = 60; // Start fading at 45 degrees
+        const scaleStartAngle = 40; // Start scaling down at 65 degrees
+        const maxAngle = 30; // Completely faded/scaled at 30 degrees (looking up)
+        const maxAngleDown = 150; // Completely faded/scaled at 150 degrees (looking down)
+        
+        if (phiDegrees < fadeStartAngle) {
+            // Looking up - fade based on how much below 45 degrees
+            const fadeRange = fadeStartAngle - maxAngle; // 15 degrees
+            const fadeAmount = Math.max(0, fadeStartAngle - phiDegrees) / fadeRange;
+            fadeOpacity = Math.max(0, 1 - fadeAmount);
+            
+            // Scale down starting at 65 degrees
+            if (phiDegrees < scaleStartAngle) {
+                const scaleRange = scaleStartAngle - maxAngle; // 35 degrees
+                const scaleAmount = Math.max(0, scaleStartAngle - phiDegrees) / scaleRange;
+                scaleValue = Math.max(0, 1 - scaleAmount);
+            }
+        } else if (phiDegrees > (180 - fadeStartAngle)) {
+            // Looking down - fade based on how much above 135 degrees
+            const fadeRange = maxAngleDown - (180 - fadeStartAngle); // 15 degrees
+            const fadeAmount = Math.max(0, phiDegrees - (180 - fadeStartAngle)) / fadeRange;
+            fadeOpacity = Math.max(0, 1 - fadeAmount);
+            
+            // Scale down starting at 115 degrees (180 - 65)
+            if (phiDegrees > (180 - scaleStartAngle)) {
+                const scaleRange = maxAngleDown - (180 - scaleStartAngle); // 35 degrees
+                const scaleAmount = Math.max(0, phiDegrees - (180 - scaleStartAngle)) / scaleRange;
+                scaleValue = Math.max(0, 1 - scaleAmount);
+            }
+        }
+        
+        // Apply fade opacity and scale to all discs
+        this.discs.forEach(disc => {
+            if (disc.material) {
+                // Store original opacity if not already stored
+                if (disc.userData.originalOpacity === undefined) {
+                    disc.userData.originalOpacity = disc.material.opacity;
+                }
+                
+                // Apply fade while preserving original opacity differences
+                disc.material.opacity = disc.userData.originalOpacity * fadeOpacity;
+                disc.material.transparent = true;
+                
+                // Apply scale (only if not currently being hovered for manual scaling)
+                if (!disc.userData.isHovered) {
+                    disc.scale.set(scaleValue, scaleValue, scaleValue);
+                }
+            }
+        });
     }
 
     onWindowResize() {

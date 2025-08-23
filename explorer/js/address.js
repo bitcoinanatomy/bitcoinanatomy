@@ -28,6 +28,16 @@ class BitcoinAddressExplorer {
         this.init();
     }
 
+    formatDate(date) {
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames[date.getMonth()];
+        const day = date.getDate();
+        const year = date.getFullYear();
+        const time = date.toTimeString().split(' ')[0]; // Gets HH:MM:SS
+        return `${month} ${day}, ${year}, ${time}`;
+    }
+
     init() {
         this.setupThreeJS();
         this.setupMouseControls();
@@ -112,7 +122,7 @@ class BitcoinAddressExplorer {
                     let dateStr = 'Unknown';
                     if (tx.status && tx.status.block_time) {
                         const date = new Date(tx.status.block_time * 1000);
-                        dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                        dateStr = this.formatDate(date);
                     }
                     tooltipContent = `
                         <strong>Transaction</strong><br>
