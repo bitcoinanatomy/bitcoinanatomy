@@ -155,6 +155,147 @@ class BitcoinMempoolExplorer {
                 this.camera.updateProjectionMatrix();
             }
         });
+
+        // Add touch controls for mobile
+        this.setupTouchControls();
+    }
+
+    setupTouchControls() {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartDistance = 0;
+        let isPinching = false;
+        let lastTouchTime = 0;
+        let touchCount = 0;
+
+        // Touch start
+        this.renderer.domElement.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            
+            this.isRotating = false;
+            const button = document.getElementById('toggle-rotation');
+            if (button) {
+                button.textContent = 'Start Rotation';
+            }
+
+            if (e.touches.length === 1) {
+                // Single touch - rotation/panning
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                this.controls.isMouseDown = true;
+                this.controls.lastMouseX = touchStartX;
+                this.controls.lastMouseY = touchStartY;
+            } else if (e.touches.length === 2) {
+                // Two finger touch - pinch to zoom
+                isPinching = true;
+                touchStartDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+
+            // Double tap detection
+            const currentTime = new Date().getTime();
+            const timeDiff = currentTime - lastTouchTime;
+            if (timeDiff < 300 && timeDiff > 0) {
+                // Double tap - reset camera
+                this.camera.position.set(0, 50, 100);
+                this.controls.target.set(0, 0, 0);
+                this.controls.distance = 100;
+                this.controls.phi = Math.PI / 3;
+                this.controls.theta = 0;
+                this.controls.update();
+            }
+            lastTouchTime = currentTime;
+        });
+
+        // Touch move
+        this.renderer.domElement.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+
+            if (e.touches.length === 1 && !isPinching) {
+                // Single finger drag - rotation/panning
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                
+                const deltaX = touchX - this.controls.lastMouseX;
+                const deltaY = touchY - this.controls.lastMouseY;
+
+                // Use larger sensitivity for mobile
+                const sensitivity = 0.02;
+                
+                if (e.shiftKey || e.altKey) {
+                    // Panning
+                    const panSpeed = 0.002;
+                    const right = new THREE.Vector3();
+                    const up = new THREE.Vector3();
+                    
+                    this.camera.getWorldDirection(new THREE.Vector3());
+                    right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
+                    up.setFromMatrixColumn(this.camera.matrix, 1);
+                    
+                    const panX = deltaX * panSpeed * this.controls.distance;
+                    const panY = deltaY * panSpeed * this.controls.distance;
+                    
+                    this.controls.target.add(right.multiplyScalar(panX));
+                    this.controls.target.add(up.multiplyScalar(panY));
+                } else {
+                    // Rotation
+                    this.controls.theta += deltaX * sensitivity;
+                    this.controls.phi -= deltaY * sensitivity;
+                    this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
+                }
+                
+                this.controls.update();
+                this.controls.lastMouseX = touchX;
+                this.controls.lastMouseY = touchY;
+            } else if (e.touches.length === 2 && isPinching) {
+                // Pinch to zoom
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                const zoomFactor = touchStartDistance / currentDistance;
+                
+                if (this.isPerspective) {
+                    this.controls.distance *= zoomFactor;
+                    this.controls.distance = Math.max(20, Math.min(200, this.controls.distance));
+                } else {
+                    this.orthographicZoom = this.orthographicZoom || 1;
+                    this.orthographicZoom *= zoomFactor;
+                    this.orthographicZoom = Math.max(0.1, Math.min(5, this.orthographicZoom));
+                    
+                    this.camera.zoom = this.orthographicZoom;
+                    this.camera.updateProjectionMatrix();
+                }
+                
+                this.controls.update();
+                touchStartDistance = currentDistance;
+            }
+        });
+
+        // Touch end
+        this.renderer.domElement.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            
+            if (e.touches.length === 0) {
+                this.controls.isMouseDown = false;
+                isPinching = false;
+            } else if (e.touches.length === 1) {
+                // Switch from pinch to single touch
+                isPinching = false;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                this.controls.lastMouseX = touchStartX;
+                this.controls.lastMouseY = touchStartY;
+            }
+        });
+
+        // Prevent default touch behaviors
+        this.renderer.domElement.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+        });
     }
 
     setupControls() {
