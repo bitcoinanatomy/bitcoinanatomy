@@ -14,7 +14,26 @@ class BitcoinNetworkExplorer {
         this.isPerspective = true;
         this.orthographicZoom = 100;
         
+        // Mobile optimization flags
+        this.isMobile = this.detectMobile();
+        this.maxNodes = this.isMobile ? 1000 : 10000; // Limit nodes on mobile
+        this.nodeComplexity = this.isMobile ? 3 : 6; // Reduce sphere complexity on mobile
+        
+        if (this.isMobile) {
+            console.log('Mobile device detected - applying performance optimizations:');
+            console.log(`- Maximum nodes: ${this.maxNodes}`);
+            console.log(`- Node complexity: ${this.nodeComplexity} segments`);
+            console.log(`- Batch processing enabled`);
+        }
+        
         this.init();
+    }
+
+    detectMobile() {
+        // Detect mobile devices
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+               window.innerWidth <= 768 || 
+               ('ontouchstart' in window);
     }
 
     formatDate(date) {
@@ -71,11 +90,24 @@ class BitcoinNetworkExplorer {
         this.camera.position.set(-100, 50, 100);
         this.camera.lookAt(0, 0, 0);
         
-        // Renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        // Renderer with mobile optimizations
+        const rendererOptions = { 
+            antialias: !this.isMobile, // Disable antialiasing on mobile for better performance
+            powerPreference: this.isMobile ? "low-power" : "high-performance"
+        };
+        
+        this.renderer = new THREE.WebGLRenderer(rendererOptions);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Disable shadows on mobile for better performance
+        if (!this.isMobile) {
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        }
+        
+        // Set pixel ratio for mobile optimization
+        this.renderer.setPixelRatio(this.isMobile ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio);
+        
         container.appendChild(this.renderer.domElement);
         
         // Handle resize
@@ -763,12 +795,46 @@ class BitcoinNetworkExplorer {
         this.connections = [];
         
         const nodes = this.nodeData.nodes;
-        const nodeEntries = Object.entries(nodes);
+        let nodeEntries = Object.entries(nodes);
         
-        console.log(`Creating ${nodeEntries.length} nodes`);
+        // Limit nodes on mobile devices
+        if (this.isMobile && nodeEntries.length > this.maxNodes) {
+            console.log(`Mobile device detected: limiting nodes from ${nodeEntries.length} to ${this.maxNodes}`);
+            // Take a sample of nodes, prioritizing those with location data
+            const nodesWithLocation = nodeEntries.filter(([address, nodeInfo]) => {
+                const [version, userAgent, timestamp, height, latestHeight, hostname, city, country, lat, lng] = nodeInfo;
+                return lat !== null && lng !== null && lat !== 0.0 && lng !== 0.0;
+            });
+            
+            const nodesWithoutLocation = nodeEntries.filter(([address, nodeInfo]) => {
+                const [version, userAgent, timestamp, height, latestHeight, hostname, city, country, lat, lng] = nodeInfo;
+                return lat === null || lng === null || lat === 0.0 || lng === 0.0;
+            });
+            
+            // Take proportional samples
+            const locationSample = Math.floor(this.maxNodes * 0.8); // 80% with location
+            const noLocationSample = this.maxNodes - locationSample; // 20% without location
+            
+            nodeEntries = [
+                ...nodesWithLocation.slice(0, locationSample),
+                ...nodesWithoutLocation.slice(0, noLocationSample)
+            ];
+        }
         
-        // Process each node
-        nodeEntries.forEach(([address, nodeInfo], index) => {
+        console.log(`Creating ${nodeEntries.length} nodes (mobile: ${this.isMobile})`);
+        
+        // Process nodes in batches to prevent UI blocking
+        this.createNodesBatch(nodeEntries, 0);
+    }
+
+    createNodesBatch(nodeEntries, startIndex) {
+        const batchSize = this.isMobile ? 50 : 200; // Smaller batches on mobile
+        const endIndex = Math.min(startIndex + batchSize, nodeEntries.length);
+        
+        try {
+            // Process current batch
+            for (let i = startIndex; i < endIndex; i++) {
+            const [address, nodeInfo] = nodeEntries[i];
             const [version, userAgent, timestamp, height, latestHeight, hostname, city, country, lat, lng, timezone, asn, org] = nodeInfo;
             
             // Determine node implementation based on user agent
@@ -801,8 +867,8 @@ class BitcoinNetworkExplorer {
                 z = radius * Math.sin(phi) * Math.sin(theta);
             }
             
-            // Create node geometry with reduced complexity
-            const geometry = new THREE.SphereGeometry(nodeSize, 6, 6);
+            // Create node geometry with mobile-optimized complexity
+            const geometry = new THREE.SphereGeometry(nodeSize, this.nodeComplexity, this.nodeComplexity);
             const material = new THREE.MeshBasicMaterial({
                 color: nodeColor,
                 transparent: true,
@@ -822,14 +888,47 @@ class BitcoinNetworkExplorer {
                 latestHeight: latestHeight,
                 asn: asn,
                 org: org,
-                index: index
+                index: i
             };
             
             this.scene.add(node);
             this.nodes.push(node);
-        });
+        }
         
-        console.log(`Created ${this.nodes.length} nodes`);
+        // Update progress (less frequently on mobile to reduce overhead)
+        const progress = Math.floor((endIndex / nodeEntries.length) * 20) + 80; // 80-100%
+        if (!this.isMobile || endIndex % (batchSize * 2) === 0 || endIndex === nodeEntries.length) {
+            this.updateLoadingProgress(`Creating nodes... (${endIndex}/${nodeEntries.length})`, progress);
+        }
+        
+            // Continue with next batch or finish
+            if (endIndex < nodeEntries.length) {
+                // Schedule next batch to prevent UI blocking
+                setTimeout(() => {
+                    this.createNodesBatch(nodeEntries, endIndex);
+                }, this.isMobile ? 10 : 1); // Longer delay on mobile
+            } else {
+                console.log(`Created ${this.nodes.length} nodes`);
+                this.updateLoadingProgress('Complete!', 100);
+                setTimeout(() => {
+                    this.hideLoadingModal();
+                }, 500);
+            }
+        } catch (error) {
+            console.error('Error creating nodes batch:', error);
+            console.log(`Successfully created ${this.nodes.length} nodes before error`);
+            
+            // Complete loading even if there was an error
+            this.updateLoadingProgress('Complete!', 100);
+            setTimeout(() => {
+                this.hideLoadingModal();
+            }, 500);
+            
+            // Show a warning if very few nodes were created
+            if (this.nodes.length < 100) {
+                console.warn('Very few nodes created - device may be running out of memory');
+            }
+        }
     }
 
     getNodeType(userAgent) {
@@ -908,13 +1007,13 @@ class BitcoinNetworkExplorer {
                 
                 this.updateLoadingProgress('Creating visualization...', 80);
                 console.log('Fetched node data:', this.nodeData);
-                this.createNetworkVisualization();
+                console.log(`Total nodes in dataset: ${Object.keys(this.nodeData.nodes).length}`);
+                
+                // Update UI first (doesn't require node creation)
                 this.updateUI();
                 
-                this.updateLoadingProgress('Complete!', 100);
-                setTimeout(() => {
-                    this.hideLoadingModal();
-                }, 500);
+                // Start node creation (this will handle progress updates and modal hiding)
+                this.createNetworkVisualization();
             }
         } catch (error) {
             this.hideLoadingModal();
@@ -1080,7 +1179,13 @@ class BitcoinNetworkExplorer {
         document.getElementById('bcoin').textContent = (nodeImplementations['bcoin'] || 0).toLocaleString();
         
         // Update subtitle with timestamp and node count
-        const subtitle = `${totalNodes.toLocaleString()} nodes • ${this.formatDate(timestamp)}`;
+        let subtitle = `${totalNodes.toLocaleString()} nodes • ${this.formatDate(timestamp)}`;
+        
+        // Add mobile optimization notice
+        if (this.isMobile && this.nodes.length < totalNodes) {
+            subtitle += ` • Showing ${this.nodes.length.toLocaleString()} (mobile optimized)`;
+        }
+        
         document.getElementById('network-subtitle').textContent = subtitle;
     }
 
