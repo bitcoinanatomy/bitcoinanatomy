@@ -595,10 +595,14 @@ button:active {
    ================================ */
 .implementation-item {
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 8px 8px;
     border-radius: 3px;
     transition: background-color 0.2s;
-    margin: 2px 0;
+    margin: 5px 0;
+    border: 1px #ffffff2e solid;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
 }
 
 .implementation-item:hover {
@@ -607,6 +611,23 @@ button:active {
 
 .implementation-item.active {
     background-color: rgba(255, 255, 255, 0.2);
+}
+
+.implementation-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.15);
+    width: 0%;
+    transition: width 0.6s ease-out;
+    z-index: -1;
+    border-radius: 3px;
+}
+
+.implementation-item span {
+    position: relative;
+    z-index: 2;
 }
 
 .implementation-name {

@@ -1292,19 +1292,33 @@ class BitcoinNetworkExplorer {
         
         console.log('📊 Node implementation counts:', nodeImplementations);
         
+        // Calculate total rendered nodes
+        const totalRenderedNodes = this.nodes.length;
+        
         // Update UI
         document.getElementById('total-nodes').textContent = totalNodes.toLocaleString();
         document.getElementById('connections').textContent = '0';
         document.getElementById('hash-rate').textContent = '450 EH/s'; // Placeholder
         document.getElementById('difficulty').textContent = '67.96 T'; // Placeholder
         
-        // Update implementation counts
-        document.getElementById('bitcoin-core').textContent = (nodeImplementations['bitcoin-core'] || 0).toLocaleString();
-        document.getElementById('other').textContent = (nodeImplementations['other'] || 0).toLocaleString();
-        document.getElementById('knots').textContent = (nodeImplementations['knots'] || 0).toLocaleString();
-        document.getElementById('bcoin').textContent = (nodeImplementations['bcoin'] || 0).toLocaleString();
+        // Update implementation counts and percentage bars
+        const implementations = ['bitcoin-core', 'knots', 'bcoin', 'other'];
+        implementations.forEach(impl => {
+            const count = nodeImplementations[impl] || 0;
+            const percentage = totalRenderedNodes > 0 ? (count / totalRenderedNodes * 100) : 0;
+            
+            // Update count text
+            document.getElementById(impl).textContent = count.toLocaleString();
+            
+            // Update percentage bar
+            const bar = document.getElementById(`bar-${impl}`);
+            if (bar) {
+                bar.style.width = `${percentage}%`;
+                console.log(`  📊 ${impl}: ${count} nodes (${percentage.toFixed(1)}%)`);
+            }
+        });
         
-        console.log('✅ UI updated with implementation counts');
+        console.log('✅ UI updated with implementation counts and percentage bars');
         
         // Update subtitle with timestamp and node count
         let subtitle = `${totalNodes.toLocaleString()} nodes • ${this.formatDate(timestamp)}`;
