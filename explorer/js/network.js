@@ -1,6 +1,8 @@
 // Bitcoin Explorer - Network Page
 class BitcoinNetworkExplorer {
     constructor() {
+        console.log('🚀 BitcoinNetworkExplorer constructor called');
+        
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -13,6 +15,7 @@ class BitcoinNetworkExplorer {
         this.latestSnapshot = null;
         this.isPerspective = true;
         this.orthographicZoom = 100;
+        this.animateLogged = false;
         
         // Mobile optimization flags
         this.isMobile = this.detectMobile();
@@ -20,10 +23,14 @@ class BitcoinNetworkExplorer {
         this.nodeComplexity = this.isMobile ? 3 : 6; // Reduce sphere complexity on mobile
         
         if (this.isMobile) {
-            console.log('Mobile device detected - applying performance optimizations:');
-            console.log(`- Maximum nodes: ${this.maxNodes}`);
-            console.log(`- Node complexity: ${this.nodeComplexity} segments`);
-            console.log(`- Batch processing enabled`);
+            console.log('📱 Mobile device detected - applying performance optimizations:');
+            console.log(`  - Maximum nodes: ${this.maxNodes}`);
+            console.log(`  - Node complexity: ${this.nodeComplexity} segments`);
+            console.log(`  - Batch processing enabled`);
+        } else {
+            console.log('💻 Desktop device detected:');
+            console.log(`  - Maximum nodes: ${this.maxNodes}`);
+            console.log(`  - Node complexity: ${this.nodeComplexity} segments`);
         }
         
         this.init();
@@ -47,13 +54,30 @@ class BitcoinNetworkExplorer {
     }
 
     init() {
+        console.log('⚙️ Initializing BitcoinNetworkExplorer...');
+        
+        console.log('  1️⃣ Setting up Three.js...');
         this.setupThreeJS();
+        
+        console.log('  2️⃣ Setting up orbit controls...');
         this.setupOrbitControls();
+        
+        console.log('  3️⃣ Setting up UI controls...');
         this.setupControls();
+        
+        console.log('  4️⃣ Setting up panel toggle...');
         this.setupPanelToggle();
+        
+        console.log('  5️⃣ Creating scene...');
         this.createScene();
+        
+        console.log('  6️⃣ Starting animation loop...');
         this.animate();
+        
+        console.log('  7️⃣ Fetching data...');
         this.fetchData();
+        
+        console.log('✅ Initialization complete!');
     }
     
     formatNodeAddress(address) {
@@ -786,13 +810,28 @@ class BitcoinNetworkExplorer {
     }
 
     createNetworkVisualization() {
-        if (!this.nodeData || !this.nodeData.nodes) return;
+        console.log('🎨 createNetworkVisualization called');
+        
+        if (!this.nodeData || !this.nodeData.nodes) {
+            console.error('❌ No node data available!', {
+                nodeData: this.nodeData,
+                hasNodes: this.nodeData?.nodes ? 'yes' : 'no'
+            });
+            return;
+        }
+        
+        console.log('✅ Node data exists:', {
+            totalNodes: Object.keys(this.nodeData.nodes).length,
+            timestamp: this.nodeData.timestamp
+        });
         
         // Clear existing nodes and connections
         this.nodes.forEach(node => this.scene.remove(node));
         this.connections.forEach(connection => this.scene.remove(connection));
         this.nodes = [];
         this.connections = [];
+        
+        console.log('🧹 Cleared existing nodes and connections');
         
         const nodes = this.nodeData.nodes;
         let nodeEntries = Object.entries(nodes);
@@ -831,21 +870,45 @@ class BitcoinNetworkExplorer {
         const batchSize = this.isMobile ? 50 : 200; // Smaller batches on mobile
         const endIndex = Math.min(startIndex + batchSize, nodeEntries.length);
         
+        console.log(`🔧 createNodesBatch called: startIndex=${startIndex}, endIndex=${endIndex}, batchSize=${batchSize}`);
+        
         try {
             // Process current batch
             for (let i = startIndex; i < endIndex; i++) {
             const [address, nodeInfo] = nodeEntries[i];
             const [version, userAgent, timestamp, height, latestHeight, hostname, city, country, lat, lng, timezone, asn, org] = nodeInfo;
             
+            // Only log details for first 3 nodes and every 1000th node to reduce console spam
+            const shouldLog = i < 3 || i % 1000 === 0;
+            
+            if (shouldLog) {
+                console.log(`📍 Processing node ${i}:`, {
+                    address,
+                    userAgent,
+                    height,
+                    latestHeight,
+                    lat,
+                    lng,
+                    city,
+                    country
+                });
+            }
+            
             // Determine node implementation based on user agent
             const nodeImplementation = this.getNodeType(userAgent);
             const nodeColor = this.getNodeColor(nodeImplementation);
             const nodeSize = this.getNodeSize(nodeImplementation);
             
+            if (shouldLog) {
+                console.log(`  └─ Node ${i} type: ${nodeImplementation}, color: ${nodeColor.toString(16)}, size: ${nodeSize}`);
+            }
+            
             // Calculate position
             let x, y, z;
             
-            if (lat !== null && lng !== null && lat !== 0.0 && lng !== 0.0) {
+            // Check if lat/lng are valid (not null, not undefined, not 0.0)
+            // Using != instead of !== checks for both null and undefined
+            if (lat != null && lng != null && !isNaN(lat) && !isNaN(lng) && lat !== 0.0 && lng !== 0.0) {
                 // Convert lat/lng to 3D position on sphere
                 const radius = 33.1; // Slightly larger than Earth
                 const phi = (90 - lat) * (Math.PI / 180);
@@ -854,6 +917,10 @@ class BitcoinNetworkExplorer {
                 x = radius * Math.sin(phi) * Math.cos(theta);
                 y = radius * Math.cos(phi);
                 z = radius * Math.sin(phi) * Math.sin(theta);
+                
+                if (shouldLog) {
+                    console.log(`  └─ Node ${i} position (geo): lat=${lat}, lng=${lng} → x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}`);
+                }
             } else {
                 // TOR nodes or nodes without coordinates - distribute randomly across entire sphere surface
                 const baseRadius = 65; // Base distance from Earth sphere
@@ -865,6 +932,10 @@ class BitcoinNetworkExplorer {
                 x = radius * Math.sin(phi) * Math.cos(theta);
                 y = radius * Math.cos(phi);
                 z = radius * Math.sin(phi) * Math.sin(theta);
+                
+                if (shouldLog) {
+                    console.log(`  └─ Node ${i} position (random - no coords): x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}`);
+                }
             }
             
             // Create node geometry with mobile-optimized complexity
@@ -891,6 +962,16 @@ class BitcoinNetworkExplorer {
                 index: i
             };
             
+            if (shouldLog) {
+                console.log(`  └─ Node ${i} userData:`, {
+                    type: nodeImplementation,
+                    height: height,
+                    latestHeight: latestHeight,
+                    city: city,
+                    country: country
+                });
+            }
+            
             this.scene.add(node);
             this.nodes.push(node);
         }
@@ -904,11 +985,22 @@ class BitcoinNetworkExplorer {
             // Continue with next batch or finish
             if (endIndex < nodeEntries.length) {
                 // Schedule next batch to prevent UI blocking
+                console.log(`⏭️ Batch complete. Scheduling next batch...`);
                 setTimeout(() => {
                     this.createNodesBatch(nodeEntries, endIndex);
                 }, this.isMobile ? 10 : 1); // Longer delay on mobile
             } else {
-                console.log(`Created ${this.nodes.length} nodes`);
+                console.log(`🎉 ALL BATCHES COMPLETE! Created ${this.nodes.length} nodes total`);
+                console.log(`🎬 Final scene info:`, {
+                    sceneChildren: this.scene.children.length,
+                    nodesArray: this.nodes.length,
+                    sceneChildrenTypes: this.scene.children.map(child => child.type)
+                });
+                
+                // Update UI with node counts now that nodes are created
+                console.log('📊 Updating UI with node implementation counts...');
+                this.updateUI();
+                
                 this.updateLoadingProgress('Complete!', 100);
                 setTimeout(() => {
                     this.hideLoadingModal();
@@ -917,6 +1009,10 @@ class BitcoinNetworkExplorer {
         } catch (error) {
             console.error('Error creating nodes batch:', error);
             console.log(`Successfully created ${this.nodes.length} nodes before error`);
+            
+            // Update UI with whatever nodes we managed to create
+            console.log('📊 Updating UI with partial node counts...');
+            this.updateUI();
             
             // Complete loading even if there was an error
             this.updateLoadingProgress('Complete!', 100);
@@ -989,9 +1085,11 @@ class BitcoinNetworkExplorer {
             if (snapshotsData.results && snapshotsData.results.length > 0) {
                 this.latestSnapshot = snapshotsData.results[0];
                 
-                // Fetch the detailed snapshot data
+                // Fetch the detailed snapshot data with geo field
                 this.updateLoadingProgress('Loading node data...', 60);
-                const snapshotResponse = await fetch(this.latestSnapshot.url);
+                const snapshotUrl = this.latestSnapshot.url + (this.latestSnapshot.url.includes('?') ? '&' : '?') + 'field=geo';
+                console.log('📡 Fetching snapshot with geo data from:', snapshotUrl);
+                const snapshotResponse = await fetch(snapshotUrl);
                 
                 if (snapshotResponse.status === 429) {
                     this.hideLoadingModal();
@@ -1006,13 +1104,34 @@ class BitcoinNetworkExplorer {
                 this.nodeData = await snapshotResponse.json();
                 
                 this.updateLoadingProgress('Creating visualization...', 80);
-                console.log('Fetched node data:', this.nodeData);
-                console.log(`Total nodes in dataset: ${Object.keys(this.nodeData.nodes).length}`);
+                console.log('✅ Fetched node data:', this.nodeData);
+                console.log(`📊 Total nodes in dataset: ${Object.keys(this.nodeData.nodes).length}`);
                 
-                // Update UI first (doesn't require node creation)
-                this.updateUI();
+                // Sample first few nodes to check structure
+                const sampleNodes = Object.entries(this.nodeData.nodes).slice(0, 3);
+                console.log('📍 Sample nodes to verify structure:');
+                sampleNodes.forEach(([address, nodeInfo], idx) => {
+                    console.log(`  Node ${idx}:`, {
+                        address,
+                        arrayLength: nodeInfo.length,
+                        version: nodeInfo[0],
+                        userAgent: nodeInfo[1],
+                        timestamp: nodeInfo[2],
+                        height: nodeInfo[3],
+                        latestHeight: nodeInfo[4],
+                        hostname: nodeInfo[5],
+                        city: nodeInfo[6],
+                        country: nodeInfo[7],
+                        lat: nodeInfo[8],
+                        lng: nodeInfo[9],
+                        timezone: nodeInfo[10],
+                        asn: nodeInfo[11],
+                        org: nodeInfo[12]
+                    });
+                });
                 
                 // Start node creation (this will handle progress updates and modal hiding)
+                // updateUI() will be called AFTER nodes are created
                 this.createNetworkVisualization();
             }
         } catch (error) {
@@ -1153,11 +1272,16 @@ class BitcoinNetworkExplorer {
     }
 
     updateUI() {
-        if (!this.nodeData) return;
+        if (!this.nodeData) {
+            console.warn('⚠️ updateUI called but no nodeData available');
+            return;
+        }
         
         const totalNodes = this.nodeData.total_nodes;
         const latestHeight = this.nodeData.latest_height;
         const timestamp = new Date(this.nodeData.timestamp * 1000);
+        
+        console.log('📊 Counting node implementations from', this.nodes.length, 'nodes...');
         
         // Count node implementations
         const nodeImplementations = {};
@@ -1165,6 +1289,8 @@ class BitcoinNetworkExplorer {
             const implementation = node.userData.type;
             nodeImplementations[implementation] = (nodeImplementations[implementation] || 0) + 1;
         });
+        
+        console.log('📊 Node implementation counts:', nodeImplementations);
         
         // Update UI
         document.getElementById('total-nodes').textContent = totalNodes.toLocaleString();
@@ -1177,6 +1303,8 @@ class BitcoinNetworkExplorer {
         document.getElementById('other').textContent = (nodeImplementations['other'] || 0).toLocaleString();
         document.getElementById('knots').textContent = (nodeImplementations['knots'] || 0).toLocaleString();
         document.getElementById('bcoin').textContent = (nodeImplementations['bcoin'] || 0).toLocaleString();
+        
+        console.log('✅ UI updated with implementation counts');
         
         // Update subtitle with timestamp and node count
         let subtitle = `${totalNodes.toLocaleString()} nodes • ${this.formatDate(timestamp)}`;
@@ -1192,12 +1320,31 @@ class BitcoinNetworkExplorer {
     animate() {
         requestAnimationFrame(() => this.animate());
         
+        // Log animate start once
+        this.logAnimateStart();
+        
         // Rotate scene (optional, can be disabled)
         if (this.isRotating) {
             this.scene.rotation.y += 0.001; // Faster rotation
         }
         
         this.renderer.render(this.scene, this.camera);
+    }
+    
+    // Add a one-time log to verify animate is running
+    logAnimateStart() {
+        if (!this.animateLogged) {
+            console.log('🎬 Animate loop is running');
+            console.log('📹 Renderer info:', {
+                width: this.renderer.domElement.width,
+                height: this.renderer.domElement.height
+            });
+            console.log('📷 Camera info:', {
+                position: this.camera.position,
+                type: this.camera.type
+            });
+            this.animateLogged = true;
+        }
     }
 
     onWindowResize() {
@@ -1414,12 +1561,15 @@ class BitcoinNetworkExplorer {
 
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('📄 DOMContentLoaded event fired');
+    
     if (typeof THREE === 'undefined') {
-        console.error('Three.js not loaded!');
+        console.error('❌ Three.js not loaded!');
         document.getElementById('scene').innerHTML = '<div style="color: white; padding: 20px;">Error: Three.js failed to load. Please refresh the page.</div>';
         return;
     }
     
-    console.log('Three.js loaded successfully:', THREE.REVISION);
+    console.log('✅ Three.js loaded successfully, version:', THREE.REVISION);
+    console.log('🎯 Creating BitcoinNetworkExplorer instance...');
     new BitcoinNetworkExplorer();
 }); 
