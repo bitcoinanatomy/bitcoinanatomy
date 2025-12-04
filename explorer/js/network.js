@@ -17,6 +17,11 @@ class BitcoinNetworkExplorer {
         this.orthographicZoom = 100;
         this.animateLogged = false;
         
+        // Cache configuration
+        this.CACHE_KEY = 'bitnodes_data_cache';
+        this.CACHE_TIMESTAMP_KEY = 'bitnodes_cache_timestamp';
+        this.CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+        
         // Mobile optimization flags
         this.isMobile = this.detectMobile();
         this.maxNodes = this.isMobile ? 1000 : 10000; // Limit nodes on mobile
@@ -415,6 +420,17 @@ class BitcoinNetworkExplorer {
         if (toggleViewButton) {
             toggleViewButton.addEventListener('click', () => {
                 this.toggleCameraView();
+            });
+        }
+        
+        // Clear cache and reload
+        const clearCacheButton = document.getElementById('clear-cache');
+        if (clearCacheButton) {
+            clearCacheButton.addEventListener('click', () => {
+                if (confirm('Clear cached data and reload from API?')) {
+                    this.clearCache();
+                    location.reload();
+                }
             });
         }
         
@@ -1062,8 +1078,105 @@ class BitcoinNetworkExplorer {
         }
     }
 
+    // Cache management methods
+    getCachedData() {
+        try {
+            const cachedData = localStorage.getItem(this.CACHE_KEY);
+            const cacheTimestamp = localStorage.getItem(this.CACHE_TIMESTAMP_KEY);
+            
+            if (!cachedData || !cacheTimestamp) {
+                console.log('📦 No cached data found');
+                return null;
+            }
+            
+            const timestamp = parseInt(cacheTimestamp, 10);
+            const age = Date.now() - timestamp;
+            const ageMinutes = Math.floor(age / 60000);
+            
+            if (age > this.CACHE_EXPIRY_MS) {
+                console.log(`📦 Cache expired (${ageMinutes} minutes old, max ${this.CACHE_EXPIRY_MS / 60000} minutes)`);
+                this.clearCache();
+                return null;
+            }
+            
+            console.log(`✅ Using cached data (${ageMinutes} minutes old)`);
+            return JSON.parse(cachedData);
+        } catch (error) {
+            console.error('❌ Error reading cache:', error);
+            this.clearCache();
+            return null;
+        }
+    }
+    
+    setCachedData(data) {
+        try {
+            const dataString = JSON.stringify(data);
+            const sizeInMB = (dataString.length / (1024 * 1024)).toFixed(2);
+            
+            console.log(`💾 Caching data (${sizeInMB} MB)...`);
+            
+            localStorage.setItem(this.CACHE_KEY, dataString);
+            localStorage.setItem(this.CACHE_TIMESTAMP_KEY, Date.now().toString());
+            
+            console.log('✅ Data cached successfully');
+            this.updateCacheStatus();
+        } catch (error) {
+            console.error('❌ Error caching data (storage full?):', error);
+            // If storage is full, clear old cache and try again
+            this.clearCache();
+        }
+    }
+    
+    clearCache() {
+        localStorage.removeItem(this.CACHE_KEY);
+        localStorage.removeItem(this.CACHE_TIMESTAMP_KEY);
+        console.log('🗑️ Cache cleared');
+        this.updateCacheStatus();
+    }
+    
+    updateCacheStatus() {
+        const cacheTimestamp = localStorage.getItem(this.CACHE_TIMESTAMP_KEY);
+        const subtitle = document.getElementById('network-subtitle');
+        
+        if (cacheTimestamp && subtitle) {
+            const age = Date.now() - parseInt(cacheTimestamp, 10);
+            const ageMinutes = Math.floor(age / 60000);
+            const currentText = subtitle.textContent;
+            
+            if (!currentText.includes('(cached')) {
+                subtitle.textContent = currentText + ` (cached ${ageMinutes}m ago)`;
+            }
+        }
+    }
+
     async fetchData() {
         this.showLoadingModal('Loading network data...');
+        
+        // Check cache first
+        const cachedData = this.getCachedData();
+        if (cachedData) {
+            this.updateLoadingProgress('Loading from cache...', 50);
+            this.nodeData = cachedData;
+            
+            // Sample nodes logging
+            const sampleNodes = Object.entries(this.nodeData.nodes).slice(0, 3);
+            console.log('📍 Sample nodes from cache:');
+            sampleNodes.forEach(([address, nodeInfo], idx) => {
+                console.log(`  Node ${idx}:`, {
+                    address,
+                    userAgent: nodeInfo[1],
+                    height: nodeInfo[3],
+                    city: nodeInfo[6],
+                    country: nodeInfo[7],
+                    lat: nodeInfo[8],
+                    lng: nodeInfo[9]
+                });
+            });
+            
+            this.updateLoadingProgress('Creating visualization...', 80);
+            this.createNetworkVisualization();
+            return;
+        }
         
         try {
             // First, get the latest snapshot
@@ -1106,6 +1219,9 @@ class BitcoinNetworkExplorer {
                 this.updateLoadingProgress('Creating visualization...', 80);
                 console.log('✅ Fetched node data:', this.nodeData);
                 console.log(`📊 Total nodes in dataset: ${Object.keys(this.nodeData.nodes).length}`);
+                
+                // Cache the data
+                this.setCachedData(this.nodeData);
                 
                 // Sample first few nodes to check structure
                 const sampleNodes = Object.entries(this.nodeData.nodes).slice(0, 3);
