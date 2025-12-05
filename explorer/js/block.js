@@ -19,6 +19,9 @@ class BitcoinBlockExplorer {
         this.shouldStopLoadingAll = false; // Flag to stop load all process
         this.chainTipHeight = null; // Store chain tip height
         this.rawBlockData = null; // Store raw block data for download
+        this.blockHeaderData = null; // Store block header hex data
+        this.headerMesh = null; // 3D mesh for block header
+        this.headerAnimated = false; // Track if header has been animated up
         
         // Get block height from URL parameter, will fetch chain tip if none provided
         const urlParams = new URLSearchParams(window.location.search);
@@ -481,14 +484,49 @@ class BitcoinBlockExplorer {
                     }
                 }
                 
-                // If no transaction found, check for blocks
+                // If no transaction found, check for header
                 if (!foundInteraction) {
                     for (let i = 0; i < intersects.length && !foundInteraction; i++) {
                         const intersectedObject = intersects[i].object;
                         
-                        // Check if it's a block
+                        // Check if it's the header
+                        if (intersectedObject.userData && intersectedObject.userData.type === 'header') {
+                            let tooltipContent = `
+                                <strong>Block Header</strong><br>
+                                Size: 80 bytes<br>
+                                <br>
+                                <em>Contains:</em><br>
+                                • Version (4 bytes)<br>
+                                • Previous Block Hash (32 bytes)<br>
+                                • Merkle Root (32 bytes)<br>
+                                • Timestamp (4 bytes)<br>
+                                • Difficulty Target (4 bytes)<br>
+                                • Nonce (4 bytes)
+                            `;
+                            
+                            if (this.blockHeaderData) {
+                                tooltipContent += `<br><br><em>Hex: ${this.blockHeaderData.substring(0, 24)}...</em>`;
+                            }
+                            
+                            tooltip.innerHTML = tooltipContent;
+                            tooltip.style.display = 'block';
+                            tooltip.style.left = event.clientX + 10 + 'px';
+                            tooltip.style.top = event.clientY - 10 + 'px';
+                            tooltip.style.pointerEvents = 'none';
+                            foundInteraction = true;
+                        }
+                    }
+                }
+                
+                // If no header found, check for blocks
+                if (!foundInteraction) {
+                    for (let i = 0; i < intersects.length && !foundInteraction; i++) {
+                        const intersectedObject = intersects[i].object;
+                        
+                        // Check if it's a block (but not the header)
                         if (intersectedObject.geometry.type === 'BoxGeometry' && 
-                            intersectedObject.geometry.parameters.width === 3) {
+                            intersectedObject.geometry.parameters.width === 3 &&
+                            (!intersectedObject.userData || intersectedObject.userData.type !== 'header')) {
                             
                             // Calculate which block this is based on its Z position
                             // Past blocks are at positive Z, future blocks are at negative Z
@@ -918,6 +956,13 @@ class BitcoinBlockExplorer {
             // Animate only the Y position upward to the aligned level
             this.animateCuboidPosition(cuboid, alignedY, 500);
             
+            // Animate header up with the first transaction (layer 0)
+            if (!this.headerAnimated && this.headerMesh && layer === 0) {
+                const headerTargetY = baseAlignedY + 0.19; // Keep same offset above transactions
+                this.animateCuboidPosition(this.headerMesh, headerTargetY, 500);
+                this.headerAnimated = true;
+            }
+            
             // Update the transaction cache with detailed information
             const tooltipContent = this.createDetailedTooltipContent(txData, txid);
             this.transactionCache.set(txid, tooltipContent);
@@ -1234,6 +1279,24 @@ class BitcoinBlockExplorer {
         // Store block reference for later use
         this.blockMesh = block;
         
+        // Create block header representation (80 bytes)
+        // Using same scale as transactions: width spans tx grid, height = max(0.1, 80/1000) = 0.1
+        const HEADER_WIDTH = 2.5;  // Spans the transaction grid (10 cols * 0.25 spacing)
+        const HEADER_HEIGHT = 0.01;  // Thin slice representing 80 bytes
+        const HEADER_DEPTH = 0.01;  // Same depth as transaction cuboids
+        
+        const headerGeometry = new THREE.BoxGeometry(HEADER_WIDTH, HEADER_HEIGHT, HEADER_DEPTH);
+        const headerMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8
+        });
+        this.headerMesh = new THREE.Mesh(headerGeometry, headerMaterial);
+        this.headerMesh.position.set(0, 1.4, -1.125); // Position at front of block, aligned with first transaction row
+        this.headerMesh.renderOrder = 0;
+        this.headerMesh.userData = { type: 'header', description: 'Block Header (80 bytes)' };
+        this.scene.add(this.headerMesh);
+        
         // Create past blocks in front of the current block (only if current height allows)
         const maxPastBlocks = Math.min(5, currentHeight); // Don't show more past blocks than available
         
@@ -1340,7 +1403,7 @@ class BitcoinBlockExplorer {
             
             this.blockData = await blockResponse.json();
             
-            this.updateLoadingProgress('Fetching transaction IDs...', 70);
+            this.updateLoadingProgress('Fetching transaction IDs...', 60);
             // Fetch transaction IDs for this block
             const txidsResponse = await fetch(`https://mempool.space/api/block/${blockHash}/txids`);
             
@@ -1356,6 +1419,18 @@ class BitcoinBlockExplorer {
             } else {
                 console.warn('Could not fetch transaction IDs, using fallback visualization');
                 this.transactionIds = [];
+            }
+            
+            this.updateLoadingProgress('Fetching block header...', 80);
+            // Fetch block header (80 bytes)
+            const headerResponse = await fetch(`https://mempool.space/api/block/${blockHash}/header`);
+            
+            if (headerResponse.ok) {
+                this.blockHeaderData = await headerResponse.text();
+                console.log(`Fetched block header: ${this.blockHeaderData.substring(0, 32)}...`);
+            } else {
+                console.warn('Could not fetch block header');
+                this.blockHeaderData = null;
             }
             
             this.updateLoadingProgress('Creating visualization...', 90);
