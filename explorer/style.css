@@ -1468,6 +1468,88 @@ body.raw-data-open .controls {
     border-color: rgba(255, 255, 255, 0.5);
 }
 
+.raw-data-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.raw-data-find-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.raw-data-btn-small {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    color: #fff;
+    font-size: 10px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.raw-data-btn-small:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: #2a2a2a;
+}
+
+.find-tx-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.find-tx-input-wrapper.hidden {
+    display: none;
+}
+
+.find-tx-input-wrapper input {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    color: #fff;
+    font-size: 10px;
+    font-family: monospace;
+    padding: 4px 8px;
+    width: 180px;
+}
+
+.find-tx-input-wrapper input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.find-tx-input-wrapper input::placeholder {
+    color: #666;
+}
+
+.find-tx-result {
+    font-size: 10px;
+    color: #888;
+}
+
+.find-tx-result.found {
+    color: #4CAF50;
+}
+
+.find-tx-result.not-found {
+    color: #f44336;
+}
+
+/* Transaction highlight in raw data */
+#raw-data-text.has-highlight {
+    color: #444;
+}
+
+#raw-data-text .tx-highlight {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
 .raw-data-content {
     flex: 1;
     overflow: hidden;

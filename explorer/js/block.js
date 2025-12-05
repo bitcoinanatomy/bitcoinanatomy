@@ -381,6 +381,35 @@ class BitcoinBlockExplorer {
             this.reformatRawData(parseInt(e.target.value));
         });
         
+        // Find transaction controls
+        document.getElementById('find-tx-toggle').addEventListener('click', () => {
+            const wrapper = document.getElementById('find-tx-input-wrapper');
+            const toggle = document.getElementById('find-tx-toggle');
+            wrapper.classList.toggle('hidden');
+            if (!wrapper.classList.contains('hidden')) {
+                document.getElementById('find-tx-input').focus();
+                toggle.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('find-tx-close').addEventListener('click', () => {
+            document.getElementById('find-tx-input-wrapper').classList.add('hidden');
+            document.getElementById('find-tx-toggle').style.display = '';
+            document.getElementById('find-tx-input').value = '';
+            document.getElementById('find-tx-result').textContent = '';
+            this.clearHighlight();
+        });
+        
+        document.getElementById('find-tx-btn').addEventListener('click', () => {
+            this.findTransactionInRawData();
+        });
+        
+        document.getElementById('find-tx-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.findTransactionInRawData();
+            }
+        });
+        
         // Navigation controls
         document.getElementById('rotate-left').addEventListener('click', () => {
             this.rotateLeft();
@@ -2131,6 +2160,181 @@ class BitcoinBlockExplorer {
             if (i + chunkSize < totalLines) {
                 await new Promise(resolve => setTimeout(resolve, 10));
             }
+        }
+    }
+    
+    async findTransactionInRawData() {
+        const input = document.getElementById('find-tx-input');
+        const result = document.getElementById('find-tx-result');
+        const textElement = document.getElementById('raw-data-text');
+        
+        const txid = input.value.trim().toLowerCase();
+        
+        if (!txid || txid.length !== 64) {
+            result.textContent = 'Invalid TXID (need 64 hex chars)';
+            result.className = 'find-tx-result not-found';
+            return;
+        }
+        
+        if (!this.rawBlockData || !this.rawBlockData.hex) {
+            result.textContent = 'No data loaded';
+            result.className = 'find-tx-result not-found';
+            return;
+        }
+        
+        const hexData = this.rawBlockData.hex.toLowerCase();
+        
+        // TXIDs are hashes and don't appear directly in raw block data
+        // Instead, fetch the transaction hex and search for a unique portion of it
+        result.textContent = 'Fetching TX data...';
+        result.className = 'find-tx-result';
+        
+        try {
+            // Fetch the transaction's raw hex
+            const response = await fetch(`https://mempool.space/api/tx/${txid}/hex`);
+            
+            if (!response.ok) {
+                result.textContent = 'TX not found on mempool';
+                result.className = 'find-tx-result not-found';
+                return;
+            }
+            
+            const txHex = (await response.text()).toLowerCase();
+            
+            // Search for the transaction's raw data in the block
+            // Try finding a unique portion (first 64 chars after version/marker)
+            // Skip version (8) + marker (2) + flag (2) = 12 chars, then take next 64
+            let searchPattern = txHex.substring(12, 76);
+            let foundPosition = hexData.indexOf(searchPattern);
+            let matchType = 'input reference';
+            
+            // If not found, try the full start of transaction
+            if (foundPosition === -1) {
+                searchPattern = txHex.substring(0, 64);
+                foundPosition = hexData.indexOf(searchPattern);
+                matchType = 'tx start';
+            }
+            
+            // Try without segwit marker/flag (legacy search)
+            if (foundPosition === -1) {
+                // Version (8 chars) + input count position varies
+                searchPattern = txHex.substring(0, 8);
+                const matches = [];
+                let pos = 0;
+                while ((pos = hexData.indexOf(searchPattern, pos)) !== -1) {
+                    matches.push(pos);
+                    pos++;
+                }
+                if (matches.length > 0) {
+                    // Try to find by matching more of the tx
+                    for (const matchPos of matches) {
+                        if (hexData.substring(matchPos, matchPos + 40) === txHex.substring(0, 40)) {
+                            foundPosition = matchPos;
+                            matchType = 'version match';
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (foundPosition === -1) {
+                result.textContent = 'TX data not found in block';
+                result.className = 'find-tx-result not-found';
+                return;
+            }
+            
+            // Calculate line number based on current bytes per line
+            const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
+            const charsPerLine = bytesPerLine * 2;
+            const lineNumber = Math.floor(foundPosition / charsPerLine);
+            
+            result.textContent = `Found at byte ${Math.floor(foundPosition / 2).toLocaleString()} (${matchType})`;
+            result.className = 'find-tx-result found';
+            
+            // Highlight the transaction in the display
+            this.highlightTransaction(foundPosition, txHex.length);
+            
+            // Scroll to the approximate position in the text element
+            const lineHeight = parseFloat(window.getComputedStyle(textElement).lineHeight) || 15;
+            const scrollPosition = lineNumber * lineHeight;
+            textElement.scrollTop = Math.max(0, scrollPosition - 100);
+            
+        } catch (error) {
+            console.error('Error finding transaction:', error);
+            result.textContent = 'Error fetching TX';
+            result.className = 'find-tx-result not-found';
+        }
+    }
+    
+    highlightTransaction(startPos, length) {
+        if (!this.rawBlockData || !this.rawBlockData.hex) return;
+        
+        const textElement = document.getElementById('raw-data-text');
+        const hexString = this.rawBlockData.hex;
+        const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
+        const charsPerLine = bytesPerLine * 2;
+        
+        // Format the hex with line breaks
+        const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
+        const lines = hexString.match(regex) || [hexString];
+        
+        // Calculate which characters to highlight (accounting for newlines)
+        const endPos = startPos + length;
+        
+        // Build HTML with highlight
+        let currentPos = 0;
+        let html = '';
+        
+        for (let i = 0; i < lines.length; i++) {
+            const lineStart = currentPos;
+            const lineEnd = currentPos + lines[i].length;
+            const line = lines[i];
+            
+            // Check if this line contains any part of the highlight
+            if (lineEnd > startPos && lineStart < endPos) {
+                // This line has some highlighted content
+                const highlightStart = Math.max(0, startPos - lineStart);
+                const highlightEnd = Math.min(line.length, endPos - lineStart);
+                
+                const before = line.substring(0, highlightStart);
+                const highlighted = line.substring(highlightStart, highlightEnd);
+                const after = line.substring(highlightEnd);
+                
+                html += this.escapeHtml(before);
+                html += `<span class="tx-highlight">${this.escapeHtml(highlighted)}</span>`;
+                html += this.escapeHtml(after);
+            } else {
+                html += this.escapeHtml(line);
+            }
+            
+            if (i < lines.length - 1) {
+                html += '\n';
+            }
+            
+            currentPos = lineEnd;
+        }
+        
+        textElement.innerHTML = html;
+        textElement.classList.add('has-highlight');
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    clearHighlight() {
+        const textElement = document.getElementById('raw-data-text');
+        textElement.classList.remove('has-highlight');
+        
+        // Re-render without highlight if data exists
+        if (this.rawBlockData && this.rawBlockData.hex) {
+            const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
+            const charsPerLine = bytesPerLine * 2;
+            const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
+            const formattedHex = this.rawBlockData.hex.match(regex)?.join('\n') || this.rawBlockData.hex;
+            textElement.textContent = formattedHex;
         }
     }
     

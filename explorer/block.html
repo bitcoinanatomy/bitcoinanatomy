@@ -109,15 +109,26 @@
             </div>
             <div class="raw-data-info">
                 <span id="raw-data-size">Size: --</span>
-                <div class="raw-data-bytes-control">
-                    <label for="bytes-per-line">Bytes/line:</label>
-                    <select id="bytes-per-line">
-                        <option value="16">16</option>
-                        <option value="32" selected>32</option>
-                        <option value="64">64</option>
-                        <option value="128">128</option>
-                        <option value="256">256</option>
-                    </select>
+                <div class="raw-data-controls-row">
+                    <div class="raw-data-bytes-control">
+                        <label for="bytes-per-line">Bytes/line:</label>
+                        <select id="bytes-per-line">
+                            <option value="16">16</option>
+                            <option value="32" selected>32</option>
+                            <option value="64">64</option>
+                            <option value="128">128</option>
+                            <option value="256">256</option>
+                        </select>
+                    </div>
+                    <div class="raw-data-find-control">
+                        <button id="find-tx-toggle" class="raw-data-btn-small">Find TX</button>
+                        <div id="find-tx-input-wrapper" class="find-tx-input-wrapper hidden">
+                            <input type="text" id="find-tx-input" placeholder="Paste transaction ID..." />
+                            <button id="find-tx-btn" class="raw-data-btn-small">Find</button>
+                            <button id="find-tx-close" class="raw-data-btn-small">&times;</button>
+                        </div>
+                        <span id="find-tx-result" class="find-tx-result"></span>
+                    </div>
                 </div>
             </div>
             <div class="raw-data-content">
