@@ -1431,6 +1431,41 @@ body.raw-data-open .controls {
     color: #888;
     font-family: monospace;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.raw-data-bytes-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.raw-data-bytes-control label {
+    color: #888;
+    font-size: 11px;
+}
+
+.raw-data-bytes-control select {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    color: #fff;
+    font-size: 11px;
+    font-family: monospace;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.raw-data-bytes-control select:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.raw-data-bytes-control select:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 .raw-data-content {

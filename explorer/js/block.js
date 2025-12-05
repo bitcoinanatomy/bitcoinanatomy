@@ -376,6 +376,11 @@ class BitcoinBlockExplorer {
             }
         });
         
+        // Bytes per line dropdown
+        document.getElementById('bytes-per-line').addEventListener('change', (e) => {
+            this.reformatRawData(parseInt(e.target.value));
+        });
+        
         // Navigation controls
         document.getElementById('rotate-left').addEventListener('click', () => {
             this.rotateLeft();
@@ -2077,16 +2082,19 @@ class BitcoinBlockExplorer {
             
             sizeElement.textContent = `Size: ${sizeFormatted} (${hexString.length.toLocaleString()} hex chars)`;
             
-            // Display hex with line breaks for readability (64 chars per line)
+            // Display hex with line breaks based on selected bytes per line
             textElement.className = '';
+            const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
+            const charsPerLine = bytesPerLine * 2; // 2 hex chars per byte
             
             // For very large data, chunk the display to prevent UI freeze
             if (hexString.length > 100000) {
                 // Display in chunks to prevent UI freeze
-                await this.displayLargeText(textElement, hexString);
+                await this.displayLargeText(textElement, hexString, charsPerLine);
             } else {
                 // Format with line breaks
-                const formattedHex = hexString.match(/.{1,64}/g)?.join('\n') || hexString;
+                const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
+                const formattedHex = hexString.match(regex)?.join('\n') || hexString;
                 textElement.textContent = formattedHex;
             }
             
@@ -2100,9 +2108,10 @@ class BitcoinBlockExplorer {
         }
     }
     
-    async displayLargeText(element, hexString) {
+    async displayLargeText(element, hexString, charsPerLine = 64) {
         // Format with line breaks
-        const lines = hexString.match(/.{1,64}/g) || [hexString];
+        const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
+        const lines = hexString.match(regex) || [hexString];
         const totalLines = lines.length;
         const chunkSize = 1000; // Lines per chunk
         
@@ -2122,6 +2131,38 @@ class BitcoinBlockExplorer {
             if (i + chunkSize < totalLines) {
                 await new Promise(resolve => setTimeout(resolve, 10));
             }
+        }
+    }
+    
+    async reformatRawData(bytesPerLine) {
+        if (!this.rawBlockData || !this.rawBlockData.hex) {
+            return;
+        }
+        
+        const textElement = document.getElementById('raw-data-text');
+        const hexString = this.rawBlockData.hex;
+        const charsPerLine = bytesPerLine * 2; // 2 hex chars per byte
+        
+        // Adjust font size based on bytes per line
+        if (bytesPerLine >= 256) {
+            textElement.style.fontSize = '0.12vw';
+        } else if (bytesPerLine >= 128) {
+            textElement.style.fontSize = '0.3vw';
+        } else if (bytesPerLine >= 64) {
+            textElement.style.fontSize = '0.5vw';
+        } else {
+            textElement.style.fontSize = '10px'; // Default size
+        }
+        
+        // Show brief loading state for large data
+        if (hexString.length > 100000) {
+            textElement.textContent = 'Reformatting...';
+            await new Promise(resolve => setTimeout(resolve, 10));
+            await this.displayLargeText(textElement, hexString, charsPerLine);
+        } else {
+            const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
+            const formattedHex = hexString.match(regex)?.join('\n') || hexString;
+            textElement.textContent = formattedHex;
         }
     }
     
