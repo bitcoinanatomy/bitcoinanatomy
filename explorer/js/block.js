@@ -18,6 +18,7 @@ class BitcoinBlockExplorer {
         this.isLoadingAll = false; // Track if load all is in progress
         this.shouldStopLoadingAll = false; // Flag to stop load all process
         this.chainTipHeight = null; // Store chain tip height
+        this.rawBlockData = null; // Store raw block data for download
         
         // Get block height from URL parameter, will fetch chain tip if none provided
         const urlParams = new URLSearchParams(window.location.search);
@@ -344,6 +345,32 @@ class BitcoinBlockExplorer {
         
         document.getElementById('toggle-view').addEventListener('click', () => {
             this.toggleCameraView();
+        });
+        
+        // Raw data button - toggle panel
+        document.getElementById('show-raw-data').addEventListener('click', () => {
+            const modal = document.getElementById('raw-data-modal');
+            if (modal.classList.contains('active')) {
+                this.hideRawDataModal();
+            } else {
+                this.fetchRawBlockData();
+            }
+        });
+        
+        // Raw data panel controls
+        document.getElementById('close-raw-data').addEventListener('click', () => {
+            this.hideRawDataModal();
+        });
+        
+        document.getElementById('download-raw-data').addEventListener('click', () => {
+            this.downloadRawData();
+        });
+        
+        // Close panel on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.hideRawDataModal();
+            }
         });
         
         // Navigation controls
@@ -1468,18 +1495,23 @@ class BitcoinBlockExplorer {
     }
 
     onWindowResize() {
+        // Get the container dimensions (respects split screen)
+        const container = document.getElementById('container');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        
         if (this.isPerspective) {
-            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.aspect = width / height;
             this.camera.updateProjectionMatrix();
         } else {
-            const aspect = window.innerWidth / window.innerHeight;
+            const aspect = width / height;
             this.camera.left = -this.orthographicZoom * aspect / 2;
             this.camera.right = this.orthographicZoom * aspect / 2;
             this.camera.top = this.orthographicZoom / 2;
             this.camera.bottom = -this.orthographicZoom / 2;
             this.camera.updateProjectionMatrix();
         }
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(width, height);
     }
 
     showRateLimitError(apiName) {
@@ -1903,6 +1935,165 @@ class BitcoinBlockExplorer {
         this.controls.distance += 2;
         this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
         this.updateCameraPosition();
+    }
+    
+    // Raw block data methods
+    async fetchRawBlockData() {
+        if (!this.blockData || !this.blockData.id) {
+            this.showPopupMessage('Error', 'Block data not loaded yet. Please wait for the block to load.', 'error');
+            return;
+        }
+        
+        const blockHash = this.blockData.id;
+        const textElement = document.getElementById('raw-data-text');
+        const sizeElement = document.getElementById('raw-data-size');
+        const downloadBtn = document.getElementById('download-raw-data');
+        
+        // Show panel (this also triggers resize)
+        this.showRawDataModal();
+        
+        // If data is already loaded for this block, just show it
+        if (this.rawBlockData && this.rawBlockData.hash === blockHash) {
+            return;
+        }
+        
+        // Show loading state
+        textElement.textContent = '';
+        textElement.className = 'raw-data-loading';
+        sizeElement.textContent = 'Loading...';
+        downloadBtn.disabled = true;
+        
+        try {
+            const response = await fetch(`https://mempool.space/api/block/${blockHash}/raw`);
+            
+            if (response.status === 429) {
+                this.hideRawDataModal();
+                this.showRateLimitError('Mempool.space API');
+                return;
+            }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            // Get the raw data as ArrayBuffer
+            const arrayBuffer = await response.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            
+            // Convert to hex string for display
+            const hexString = Array.from(bytes)
+                .map(byte => byte.toString(16).padStart(2, '0'))
+                .join('');
+            
+            // Store raw data for download
+            this.rawBlockData = {
+                hex: hexString,
+                bytes: bytes,
+                hash: blockHash
+            };
+            
+            // Format size
+            const sizeBytes = bytes.length;
+            const sizeFormatted = sizeBytes >= 1024 * 1024 
+                ? `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`
+                : sizeBytes >= 1024 
+                    ? `${(sizeBytes / 1024).toFixed(2)} KB`
+                    : `${sizeBytes} bytes`;
+            
+            sizeElement.textContent = `Size: ${sizeFormatted} (${hexString.length.toLocaleString()} hex chars)`;
+            
+            // Display hex with line breaks for readability (64 chars per line)
+            textElement.className = '';
+            
+            // For very large data, chunk the display to prevent UI freeze
+            if (hexString.length > 100000) {
+                // Display in chunks to prevent UI freeze
+                await this.displayLargeText(textElement, hexString);
+            } else {
+                // Format with line breaks
+                const formattedHex = hexString.match(/.{1,64}/g)?.join('\n') || hexString;
+                textElement.textContent = formattedHex;
+            }
+            
+            downloadBtn.disabled = false;
+            
+        } catch (error) {
+            console.error('Error fetching raw block data:', error);
+            textElement.className = '';
+            textElement.textContent = `Error loading raw block data:\n${error.message}`;
+            sizeElement.textContent = 'Error';
+        }
+    }
+    
+    async displayLargeText(element, hexString) {
+        // Format with line breaks
+        const lines = hexString.match(/.{1,64}/g) || [hexString];
+        const totalLines = lines.length;
+        const chunkSize = 1000; // Lines per chunk
+        
+        element.textContent = `Loading ${totalLines.toLocaleString()} lines...\n`;
+        
+        // Process in chunks with small delays to keep UI responsive
+        for (let i = 0; i < totalLines; i += chunkSize) {
+            const chunk = lines.slice(i, Math.min(i + chunkSize, totalLines));
+            
+            if (i === 0) {
+                element.textContent = chunk.join('\n');
+            } else {
+                element.textContent += '\n' + chunk.join('\n');
+            }
+            
+            // Small delay every chunk to allow UI to breathe
+            if (i + chunkSize < totalLines) {
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+        }
+    }
+    
+    showRawDataModal() {
+        const modal = document.getElementById('raw-data-modal');
+        modal.classList.add('active');
+        document.body.classList.add('raw-data-open');
+        
+        // Trigger resize immediately and after transition completes
+        this.onWindowResize();
+        setTimeout(() => {
+            this.onWindowResize();
+        }, 350);
+    }
+    
+    hideRawDataModal() {
+        const modal = document.getElementById('raw-data-modal');
+        modal.classList.remove('active');
+        document.body.classList.remove('raw-data-open');
+        
+        // Trigger resize immediately and after transition completes
+        this.onWindowResize();
+        setTimeout(() => {
+            this.onWindowResize();
+        }, 350);
+    }
+    
+    downloadRawData() {
+        if (!this.rawBlockData) {
+            console.warn('No raw block data available for download');
+            return;
+        }
+        
+        // Create blob from the raw bytes
+        const blob = new Blob([this.rawBlockData.bytes], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create download link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `block_${this.rawBlockData.hash.substring(0, 16)}.bin`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Cleanup
+        URL.revokeObjectURL(url);
     }
 }
 
