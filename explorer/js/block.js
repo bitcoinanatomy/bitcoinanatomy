@@ -22,10 +22,14 @@ class BitcoinBlockExplorer {
         this.blockHeaderData = null; // Store block header hex data
         this.headerMesh = null; // 3D mesh for block header
         this.headerAnimated = false; // Track if header has been animated up
+        this.highlightedCuboid = null; // Track highlighted transaction in 3D
+        this.hoveredCuboid = null; // Track hovered transaction for visual feedback
         
-        // Get block height from URL parameter, will fetch chain tip if none provided
+        // Get block height and transaction ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         this.blockHeight = urlParams.get('height');
+        this.focusTxid = urlParams.get('txid'); // Transaction to highlight on load
+        this.bytesPerLine = urlParams.get('bytes'); // Bytes per line for raw data display
         
         this.init();
     }
@@ -46,6 +50,14 @@ class BitcoinBlockExplorer {
         this.setupButtonControls();
         this.setupHoverTooltip();
         this.setupPanelToggle();
+        
+        // Apply bytes per line from URL parameter if provided
+        if (this.bytesPerLine) {
+            const validValues = ['16', '32', '64', '128', '256'];
+            if (validValues.includes(this.bytesPerLine)) {
+                document.getElementById('bytes-per-line').value = this.bytesPerLine;
+            }
+        }
         
         // Fetch chain tip height before creating scene
         await this.fetchChainTipHeight();
@@ -378,7 +390,13 @@ class BitcoinBlockExplorer {
         
         // Bytes per line dropdown
         document.getElementById('bytes-per-line').addEventListener('change', (e) => {
-            this.reformatRawData(parseInt(e.target.value));
+            const bytesValue = parseInt(e.target.value);
+            this.reformatRawData(bytesValue);
+            
+            // Update URL with bytes parameter
+            const url = new URL(window.location);
+            url.searchParams.set('bytes', bytesValue);
+            window.history.pushState({}, '', url);
         });
         
         // Find transaction controls
@@ -398,6 +416,12 @@ class BitcoinBlockExplorer {
             document.getElementById('find-tx-input').value = '';
             document.getElementById('find-tx-result').textContent = '';
             this.clearHighlight();
+            this.clearCuboid3DHighlight();
+            
+            // Remove txid from URL
+            const url = new URL(window.location);
+            url.searchParams.delete('txid');
+            window.history.pushState({}, '', url);
         });
         
         document.getElementById('find-tx-btn').addEventListener('click', () => {
@@ -472,9 +496,10 @@ class BitcoinBlockExplorer {
         document.body.appendChild(tooltip);
 
         this.renderer.domElement.addEventListener('mousemove', (event) => {
-            // Calculate mouse position in normalized device coordinates
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            // Calculate mouse position in normalized device coordinates relative to canvas
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
             // Update the picking ray with the camera and mouse position
             raycaster.setFromCamera(mouse, this.camera);
@@ -487,11 +512,13 @@ class BitcoinBlockExplorer {
                 let foundInteraction = false;
                 
                 // Check for transactions first (higher priority)
+                let hoveredTx = null;
                 for (let i = 0; i < intersects.length && !foundInteraction; i++) {
                     const intersectedObject = intersects[i].object;
                     
                     if (this.transactions.includes(intersectedObject)) {
                         const txData = intersectedObject.userData;
+                        hoveredTx = intersectedObject;
                         
                         // Check if we have detailed data cached for this transaction
                         const txid = txData.txid;
@@ -505,7 +532,8 @@ class BitcoinBlockExplorer {
                             // Use basic content
                             tooltipContent = `
                                 <strong>Transaction ${txData.index + 1}</strong><br>
-                                TXID: ${txid ? txid.substring(0, 16) + '...' : 'Loading...'}
+                                TXID: ${txid ? txid.substring(0, 16) + '...' : 'Loading...'}<br>
+                                <em style="color:#888;font-size:10px">Shift+Click: Find in raw data</em>
                             `;
                             tooltip.style.pointerEvents = 'none'; // No interaction needed
                         }
@@ -515,6 +543,25 @@ class BitcoinBlockExplorer {
                         tooltip.style.left = event.clientX + 10 + 'px';
                         tooltip.style.top = event.clientY - 10 + 'px';
                         foundInteraction = true;
+                    }
+                }
+                
+                // Update hover highlight (only if not in highlight mode)
+                if (!this.highlightedCuboid) {
+                    if (hoveredTx !== this.hoveredCuboid) {
+                        // Clear previous hover
+                        if (this.hoveredCuboid) {
+                            this.hoveredCuboid.material.opacity = 0.8;
+                            this.hoveredCuboid.scale.x = 1;
+                            this.hoveredCuboid.scale.z = 1;
+                        }
+                        // Set new hover - make it brighter and slightly larger
+                        if (hoveredTx) {
+                            hoveredTx.material.opacity = 1;
+                            hoveredTx.scale.x = 1.5;
+                            hoveredTx.scale.z = 1.5;
+                        }
+                        this.hoveredCuboid = hoveredTx;
                     }
                 }
                 
@@ -596,23 +643,48 @@ class BitcoinBlockExplorer {
                 if (!foundInteraction) {
                     tooltip.style.display = 'none';
                     tooltip.style.pointerEvents = 'none';
+                    
+                    // Clear hover if not hovering any transaction
+                    if (this.hoveredCuboid && !this.highlightedCuboid) {
+                        this.hoveredCuboid.material.opacity = 0.8;
+                        this.hoveredCuboid.scale.x = 1;
+                        this.hoveredCuboid.scale.z = 1;
+                        this.hoveredCuboid = null;
+                    }
                 }
             } else {
                 tooltip.style.display = 'none';
                 tooltip.style.pointerEvents = 'none'; // Reset pointer events for hover mode
+                
+                // Clear hover when nothing intersected
+                if (this.hoveredCuboid && !this.highlightedCuboid) {
+                    this.hoveredCuboid.material.opacity = 0.8;
+                    this.hoveredCuboid.scale.x = 1;
+                    this.hoveredCuboid.scale.z = 1;
+                    this.hoveredCuboid = null;
+                }
             }
         });
 
         this.renderer.domElement.addEventListener('mouseleave', () => {
             tooltip.style.display = 'none';
             tooltip.style.pointerEvents = 'none'; // Reset pointer events for hover mode
+            
+            // Clear hover highlight
+            if (this.hoveredCuboid && !this.highlightedCuboid) {
+                this.hoveredCuboid.material.opacity = 0.8;
+                this.hoveredCuboid.scale.x = 1;
+                this.hoveredCuboid.scale.z = 1;
+                this.hoveredCuboid = null;
+            }
         });
         
         // Add single-click functionality to fetch detailed transaction data
         this.renderer.domElement.addEventListener('click', (event) => {
-            // Calculate mouse position in normalized device coordinates
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            // Calculate mouse position in normalized device coordinates relative to canvas
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
             // Update the picking ray with the camera and mouse position
             raycaster.setFromCamera(mouse, this.camera);
@@ -629,9 +701,14 @@ class BitcoinBlockExplorer {
                     if (this.transactions.includes(intersectedObject)) {
                         const txData = intersectedObject.userData;
                         
-                        // Show detailed transaction data (cached or fetch new)
                         if (txData.txid && !txData.txid.startsWith('dummy_tx_')) {
-                            this.showTransactionDetails(txData.txid, tooltip, event);
+                            // Shift+Click: Find and highlight in raw data
+                            if (event.shiftKey) {
+                                this.findTransactionInRawDataByTxid(txData.txid);
+                            } else {
+                                // Normal click: Show detailed transaction data (cached or fetch new)
+                                this.showTransactionDetails(txData.txid, tooltip, event);
+                            }
                         }
                         break; // Stop after finding the first transaction
                     }
@@ -641,9 +718,10 @@ class BitcoinBlockExplorer {
         
         // Add double-click functionality to navigate to transaction page
         this.renderer.domElement.addEventListener('dblclick', (event) => {
-            // Calculate mouse position in normalized device coordinates
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            // Calculate mouse position in normalized device coordinates relative to canvas
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
             // Update the picking ray with the camera and mouse position
             raycaster.setFromCamera(mouse, this.camera);
@@ -785,15 +863,20 @@ class BitcoinBlockExplorer {
             tx.userData.txid && !tx.userData.txid.startsWith('dummy_tx_')
         );
         
-        // Filter out transactions that are already loaded (have transactionData)
+        // Filter out transactions that are fully loaded (have transactionData and position animated)
         const unloadedTransactions = transactionsWithData.filter(tx => 
             !tx.userData.transactionData
         );
         
+        // Find transactions that have size loaded but position not animated
+        const sizeOnlyTransactions = transactionsWithData.filter(tx =>
+            tx.userData.transactionData && tx.userData.sizeOnlyLoaded
+        );
+        
         const totalToLoad = transactionsWithData.length;
-        const alreadyLoaded = totalToLoad - unloadedTransactions.length;
-        const remainingToLoad = unloadedTransactions.length;
-        let loadedCount = alreadyLoaded; // Start count from already loaded
+        const fullyLoaded = totalToLoad - unloadedTransactions.length - sizeOnlyTransactions.length;
+        const remainingToLoad = unloadedTransactions.length + sizeOnlyTransactions.length;
+        let loadedCount = fullyLoaded; // Start count from fully loaded
         let errorCount = 0;
         
         if (remainingToLoad === 0) {
@@ -805,7 +888,30 @@ class BitcoinBlockExplorer {
             return;
         }
         
-        console.log(`Loading remaining ${remainingToLoad} transactions (${alreadyLoaded} already loaded) with 0.005s delay between requests...`);
+        // First, animate position for size-only loaded transactions (no API call needed)
+        for (const cuboid of sizeOnlyTransactions) {
+            if (this.shouldStopLoadingAll) break;
+            
+            const layer = cuboid.userData.layer;
+            const baseAlignedY = 2;
+            const spacingY = 0.3;
+            const alignedY = baseAlignedY - layer * spacingY;
+            
+            this.animateCuboidPosition(cuboid, alignedY, 500);
+            cuboid.userData.sizeOnlyLoaded = false;
+            
+            // Animate header if needed
+            if (!this.headerAnimated && this.headerMesh && layer === 0) {
+                const headerTargetY = baseAlignedY + 0.19;
+                this.animateCuboidPosition(this.headerMesh, headerTargetY, 500);
+                this.headerAnimated = true;
+            }
+            
+            loadedCount++;
+            button.textContent = `Stop Loading (${loadedCount}/${totalToLoad})`;
+        }
+        
+        console.log(`Loading remaining ${unloadedTransactions.length} transactions (${sizeOnlyTransactions.length} position-animated, ${fullyLoaded} fully loaded) with 0.005s delay between requests...`);
         
         // Load transactions one by one with delay (only unloaded ones)
         for (let i = 0; i < unloadedTransactions.length; i++) {
@@ -1004,6 +1110,7 @@ class BitcoinBlockExplorer {
             // Update cuboid userData with transaction details
             cuboid.userData.transactionData = txData;
             cuboid.userData.size = txSize;
+            cuboid.userData.sizeOnlyLoaded = false; // Position has been animated
             
             console.log(`Loaded transaction ${globalIndex + 1}: ${txid.substring(0, 16)}... (size: ${txSize} bytes)`);
             
@@ -1474,6 +1581,11 @@ class BitcoinBlockExplorer {
             this.updateLoadingProgress('Complete!', 100);
             setTimeout(() => {
                 this.hideLoadingModal();
+                
+                // If a transaction ID was provided in URL, highlight it
+                if (this.focusTxid) {
+                    this.findTransactionInRawDataByTxid(this.focusTxid);
+                }
             }, 500);
             
         } catch (error) {
@@ -2116,6 +2228,17 @@ class BitcoinBlockExplorer {
             const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
             const charsPerLine = bytesPerLine * 2; // 2 hex chars per byte
             
+            // Adjust font size based on bytes per line
+            if (bytesPerLine >= 256) {
+                textElement.style.fontSize = '0.12vw';
+            } else if (bytesPerLine >= 128) {
+                textElement.style.fontSize = '0.3vw';
+            } else if (bytesPerLine >= 64) {
+                textElement.style.fontSize = '0.5vw';
+            } else {
+                textElement.style.fontSize = '10px'; // Default size
+            }
+            
             // For very large data, chunk the display to prevent UI freeze
             if (hexString.length > 100000) {
                 // Display in chunks to prevent UI freeze
@@ -2186,8 +2309,8 @@ class BitcoinBlockExplorer {
         
         // TXIDs are hashes and don't appear directly in raw block data
         // Instead, fetch the transaction hex and search for a unique portion of it
-        result.textContent = 'Fetching TX data...';
-        result.className = 'find-tx-result';
+        result.textContent = 'Fetching transaction...';
+        result.className = 'find-tx-result loading';
         
         try {
             // Fetch the transaction's raw hex
@@ -2253,6 +2376,22 @@ class BitcoinBlockExplorer {
             
             // Highlight the transaction in the display
             this.highlightTransaction(foundPosition, txHex.length);
+            
+            // Also highlight the 3D model
+            const cuboid = this.transactions.find(tx => tx.userData.txid === txid);
+            if (cuboid) {
+                // Load the transaction size if not already loaded
+                if (!cuboid.userData.transactionData) {
+                    await this.loadSingleTransactionSizeOnly(cuboid, txid);
+                }
+                // Highlight by dimming all other transactions
+                this.highlightCuboid3D(cuboid);
+                
+                // Update URL with transaction ID
+                const url = new URL(window.location);
+                url.searchParams.set('txid', txid);
+                window.history.pushState({}, '', url);
+            }
             
             // Scroll to the approximate position in the text element
             const lineHeight = parseFloat(window.getComputedStyle(textElement).lineHeight) || 15;
@@ -2336,6 +2475,110 @@ class BitcoinBlockExplorer {
             const formattedHex = this.rawBlockData.hex.match(regex)?.join('\n') || this.rawBlockData.hex;
             textElement.textContent = formattedHex;
         }
+    }
+    
+    async findTransactionInRawDataByTxid(txid) {
+        // Update URL with transaction ID (without reloading page)
+        const url = new URL(window.location);
+        url.searchParams.set('txid', txid);
+        window.history.pushState({}, '', url);
+        
+        // Find and load the transaction on the 3D model
+        const cuboid = this.transactions.find(tx => tx.userData.txid === txid);
+        if (cuboid) {
+            // Load the transaction data if not already loaded (size only, no position change)
+            if (!cuboid.userData.transactionData) {
+                await this.loadSingleTransactionSizeOnly(cuboid, txid);
+            }
+            
+            // Highlight by dimming all other transactions
+            this.highlightCuboid3D(cuboid);
+        }
+        
+        // Open the find UI
+        const wrapper = document.getElementById('find-tx-input-wrapper');
+        const toggle = document.getElementById('find-tx-toggle');
+        const input = document.getElementById('find-tx-input');
+        const result = document.getElementById('find-tx-result');
+        
+        wrapper.classList.remove('hidden');
+        toggle.style.display = 'none';
+        
+        // Set the txid in the input
+        input.value = txid;
+        
+        // Show loading state
+        result.textContent = 'Loading raw data...';
+        result.className = 'find-tx-result loading';
+        
+        // If raw data not loaded, fetch it first and wait for it to complete
+        if (!this.rawBlockData || !this.rawBlockData.hex) {
+            await this.fetchRawBlockData();
+        } else {
+            // Just open the panel if data already loaded
+            this.showRawDataModal();
+        }
+        
+        // Wait for raw data to be available and displayed
+        while (!this.rawBlockData || !this.rawBlockData.hex) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Update loading state
+        result.textContent = 'Locating transaction...';
+        
+        // Additional wait for DOM to settle after large text rendering
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Now find the transaction
+        await this.findTransactionInRawData();
+    }
+    
+    async loadSingleTransactionSizeOnly(cuboid, txid) {
+        try {
+            const response = await fetch(`https://mempool.space/api/tx/${txid}`);
+            if (!response.ok) return;
+            
+            const txData = await response.json();
+            const txSize = txData.size || 200;
+            const height = Math.max(0.1, txSize / 1000);
+            
+            // Only animate height, no position change
+            this.animateCuboidHeightTopAligned(cuboid, height, 100);
+            
+            // Update userData - mark as size-only loaded (position not animated yet)
+            cuboid.userData.transactionData = txData;
+            cuboid.userData.size = txSize;
+            cuboid.userData.sizeOnlyLoaded = true; // Flag to allow position animation later
+            
+            // Cache tooltip
+            const tooltipContent = this.createDetailedTooltipContent(txData, txid);
+            this.transactionCache.set(txid, tooltipContent);
+        } catch (error) {
+            console.error('Error loading transaction size:', error);
+        }
+    }
+    
+    highlightCuboid3D(targetCuboid) {
+        // Dim all other transactions, keep target at full opacity
+        this.transactions.forEach(cuboid => {
+            if (cuboid === targetCuboid) {
+                cuboid.material.opacity = 1;
+            } else {
+                cuboid.material.opacity = 0.15;
+            }
+        });
+        
+        // Store reference to restore later
+        this.highlightedCuboid = targetCuboid;
+    }
+    
+    clearCuboid3DHighlight() {
+        // Restore all transactions to original opacity
+        this.transactions.forEach(cuboid => {
+            cuboid.material.opacity = 0.8;
+        });
+        this.highlightedCuboid = null;
     }
     
     async reformatRawData(bytesPerLine) {

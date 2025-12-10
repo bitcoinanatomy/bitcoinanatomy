@@ -1539,6 +1539,23 @@ body.raw-data-open .controls {
     color: #f44336;
 }
 
+.find-tx-result.loading {
+    color: #fff;
+}
+
+.find-tx-result.loading::after {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border: 1px solid #555;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
 /* Transaction highlight in raw data */
 #raw-data-text.has-highlight {
     color: #444;
