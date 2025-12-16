@@ -218,6 +218,78 @@ body:not(.homepage) {
     word-break: break-all;
 }
 
+/* Snapshot navigation buttons */
+.snapshot-navigation {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.snapshot-nav-btn {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    background: transparent;
+    border: 1px solid #444;
+    color: #888;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.snapshot-nav-btn:hover:not(:disabled) {
+    background: #222;
+    border-color: #666;
+    color: #fff;
+}
+
+.snapshot-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Archive dropdown */
+.archive-dropdown {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    background: #000;
+    border: 1px solid #444;
+    color: #888;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 180px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    padding-right: 22px;
+}
+
+.archive-dropdown:hover {
+    background-color: #111;
+    border-color: #666;
+    color: #fff;
+}
+
+.archive-dropdown:focus {
+    outline: none;
+    border-color: #666;
+}
+
+.archive-dropdown option {
+    background: #000;
+    color: #ccc;
+    padding: 4px 8px;
+}
+
+.archive-dropdown optgroup {
+    background: #111;
+    color: #fff;
+    font-weight: bold;
+}
+
 /* Homepage header */
 .container .header {
     text-align: center;

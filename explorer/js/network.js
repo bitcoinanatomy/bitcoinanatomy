@@ -13,6 +13,8 @@ class BitcoinNetworkExplorer {
         this.showConnections = false;
         this.nodeData = null;
         this.latestSnapshot = null;
+        this.snapshotsData = null; // Store the full snapshots response
+        this.currentSnapshotIndex = 0; // Track current position in results array
         this.isPerspective = true;
         this.orthographicZoom = 100;
         this.animateLogged = false;
@@ -72,6 +74,12 @@ class BitcoinNetworkExplorer {
         
         console.log('  4️⃣ Setting up panel toggle...');
         this.setupPanelToggle();
+        
+        console.log('  4.5️⃣ Setting up snapshot navigation...');
+        this.setupSnapshotNavigation();
+        
+        console.log('  4.6️⃣ Setting up archive dropdown...');
+        this.setupArchiveDropdown();
         
         console.log('  5️⃣ Creating scene...');
         this.createScene();
@@ -1175,6 +1183,9 @@ class BitcoinNetworkExplorer {
             
             this.updateLoadingProgress('Creating visualization...', 80);
             this.createNetworkVisualization();
+            
+            // Still fetch snapshots list for navigation (lightweight call)
+            this.fetchSnapshotsList();
             return;
         }
         
@@ -1196,6 +1207,9 @@ class BitcoinNetworkExplorer {
             const snapshotsData = await snapshotsResponse.json();
             
             if (snapshotsData.results && snapshotsData.results.length > 0) {
+                // Store the full snapshots response for navigation
+                this.snapshotsData = snapshotsData;
+                this.currentSnapshotIndex = 0;
                 this.latestSnapshot = snapshotsData.results[0];
                 
                 // Fetch the detailed snapshot data with geo field
@@ -1249,6 +1263,9 @@ class BitcoinNetworkExplorer {
                 // Start node creation (this will handle progress updates and modal hiding)
                 // updateUI() will be called AFTER nodes are created
                 this.createNetworkVisualization();
+                
+                // Update snapshot navigation buttons
+                this.updateSnapshotNavButtons();
             }
         } catch (error) {
             this.hideLoadingModal();
@@ -1513,6 +1530,708 @@ class BitcoinNetworkExplorer {
                 }
             });
         }
+    }
+    
+    setupSnapshotNavigation() {
+        const prevBtn = document.getElementById('prev-snapshot');
+        const nextBtn = document.getElementById('next-snapshot');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.loadPreviousSnapshot());
+        }
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.loadNextSnapshot());
+        }
+    }
+    
+    formatSnapshotDate(timestamp) {
+        const date = new Date(timestamp * 1000);
+        const options = {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZoneName: 'short'
+        };
+        return date.toLocaleString(undefined, options);
+    }
+    
+    updateSnapshotNavButtons() {
+        const prevBtn = document.getElementById('prev-snapshot');
+        const nextBtn = document.getElementById('next-snapshot');
+        
+        if (!this.snapshotsData || !this.snapshotsData.results) {
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            return;
+        }
+        
+        const results = this.snapshotsData.results;
+        const hasOlderSnapshots = this.currentSnapshotIndex < results.length - 1 || this.snapshotsData.next;
+        const hasNewerSnapshots = this.currentSnapshotIndex > 0 || this.snapshotsData.previous;
+        
+        // Previous = older in time (higher index or next page)
+        if (prevBtn) {
+            prevBtn.disabled = !hasOlderSnapshots;
+            if (this.currentSnapshotIndex < results.length - 1) {
+                const prevSnapshot = results[this.currentSnapshotIndex + 1];
+                prevBtn.title = `Previous: ${this.formatSnapshotDate(prevSnapshot.timestamp)}`;
+            } else if (this.snapshotsData.next) {
+                prevBtn.title = 'Load older snapshots...';
+            } else {
+                prevBtn.title = 'No older snapshots';
+            }
+        }
+        
+        // Next = newer in time (lower index or previous page)
+        if (nextBtn) {
+            nextBtn.disabled = !hasNewerSnapshots;
+            if (this.currentSnapshotIndex > 0) {
+                const nextSnapshot = results[this.currentSnapshotIndex - 1];
+                nextBtn.title = `Next: ${this.formatSnapshotDate(nextSnapshot.timestamp)}`;
+            } else if (this.snapshotsData.previous) {
+                nextBtn.title = 'Load newer snapshots...';
+            } else {
+                nextBtn.title = 'Already at latest snapshot';
+            }
+        }
+    }
+    
+    async loadPreviousSnapshot() {
+        if (!this.snapshotsData || !this.snapshotsData.results) return;
+        
+        const results = this.snapshotsData.results;
+        
+        // Try to go to older snapshot (higher index)
+        if (this.currentSnapshotIndex < results.length - 1) {
+            this.currentSnapshotIndex++;
+            await this.loadSnapshotByIndex(this.currentSnapshotIndex);
+        } else if (this.snapshotsData.next) {
+            // Need to fetch older snapshots from next page
+            await this.fetchOlderSnapshots();
+        }
+    }
+    
+    async loadNextSnapshot() {
+        if (!this.snapshotsData || !this.snapshotsData.results) return;
+        
+        // Try to go to newer snapshot (lower index)
+        if (this.currentSnapshotIndex > 0) {
+            this.currentSnapshotIndex--;
+            await this.loadSnapshotByIndex(this.currentSnapshotIndex);
+        } else if (this.snapshotsData.previous) {
+            // Need to fetch newer snapshots from previous page
+            await this.fetchNewerSnapshots();
+        }
+    }
+    
+    async fetchOlderSnapshots() {
+        if (!this.snapshotsData.next) return;
+        
+        this.showLoadingModal('Loading older snapshots...');
+        this.updateLoadingProgress('Fetching snapshot list...', 20);
+        
+        try {
+            const response = await fetch(this.snapshotsData.next);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const newData = await response.json();
+            
+            // Append older snapshots to our list
+            this.snapshotsData.results = [...this.snapshotsData.results, ...newData.results];
+            this.snapshotsData.next = newData.next;
+            
+            // Move to the first snapshot of the new page
+            this.currentSnapshotIndex++;
+            await this.loadSnapshotByIndex(this.currentSnapshotIndex);
+        } catch (error) {
+            console.error('Error fetching older snapshots:', error);
+            this.hideLoadingModal();
+            this.showGenericError('older snapshots');
+        }
+    }
+    
+    async fetchNewerSnapshots() {
+        if (!this.snapshotsData.previous) return;
+        
+        this.showLoadingModal('Loading newer snapshots...');
+        this.updateLoadingProgress('Fetching snapshot list...', 20);
+        
+        try {
+            const response = await fetch(this.snapshotsData.previous);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const newData = await response.json();
+            
+            // Prepend newer snapshots to our list (adjusting current index)
+            const newCount = newData.results.length;
+            this.snapshotsData.results = [...newData.results, ...this.snapshotsData.results];
+            this.snapshotsData.previous = newData.previous;
+            this.currentSnapshotIndex += newCount;
+            
+            // Move to the last snapshot of the new page (newest of the prepended)
+            this.currentSnapshotIndex--;
+            await this.loadSnapshotByIndex(this.currentSnapshotIndex);
+        } catch (error) {
+            console.error('Error fetching newer snapshots:', error);
+            this.hideLoadingModal();
+            this.showGenericError('newer snapshots');
+        }
+    }
+    
+    async loadSnapshotByIndex(index) {
+        const snapshot = this.snapshotsData.results[index];
+        if (!snapshot) return;
+        
+        // Clear the cache since we're loading a different snapshot
+        this.clearCache();
+        
+        this.showLoadingModal('Loading snapshot...');
+        this.updateLoadingProgress(`Loading snapshot from ${this.formatSnapshotDate(snapshot.timestamp)}...`, 30);
+        
+        try {
+            const snapshotUrl = snapshot.url + (snapshot.url.includes('?') ? '&' : '?') + 'field=geo';
+            console.log('📡 Fetching snapshot with geo data from:', snapshotUrl);
+            
+            this.updateLoadingProgress('Downloading node data...', 50);
+            const response = await fetch(snapshotUrl);
+            
+            if (response.status === 429) {
+                this.hideLoadingModal();
+                this.showRateLimitError('Bitnodes.io API');
+                return;
+            }
+            
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            this.nodeData = await response.json();
+            this.latestSnapshot = snapshot;
+            
+            this.updateLoadingProgress('Creating visualization...', 80);
+            this.createNetworkVisualization();
+            this.updateSnapshotNavButtons();
+        } catch (error) {
+            console.error('Error loading snapshot:', error);
+            this.hideLoadingModal();
+            this.showGenericError('snapshot data');
+        }
+    }
+    
+    async fetchSnapshotsList() {
+        // Lightweight fetch of just the snapshots list (for navigation when using cached data)
+        try {
+            const response = await fetch('https://bitnodes.io/api/v1/snapshots/');
+            if (!response.ok) return;
+            
+            const snapshotsData = await response.json();
+            if (snapshotsData.results && snapshotsData.results.length > 0) {
+                this.snapshotsData = snapshotsData;
+                
+                // Find the current snapshot in the list by matching timestamp
+                if (this.nodeData && this.nodeData.timestamp) {
+                    const currentTimestamp = this.nodeData.timestamp;
+                    const index = snapshotsData.results.findIndex(s => s.timestamp === currentTimestamp);
+                    this.currentSnapshotIndex = index >= 0 ? index : 0;
+                } else {
+                    this.currentSnapshotIndex = 0;
+                }
+                
+                this.updateSnapshotNavButtons();
+            }
+        } catch (error) {
+            console.log('Could not fetch snapshots list:', error);
+            // Non-critical, just means navigation won't work
+        }
+    }
+    
+    // Archive snapshots data (weekly snapshots from bitnodes.io/archive)
+    getArchiveSnapshots() {
+        return {
+            2025: [
+                { timestamp: 1764375604, date: 'Sat Nov 29 00:20:04 2025 UTC', nodes: 24335 },
+                { timestamp: 1763770728, date: 'Sat Nov 22 00:18:48 2025 UTC', nodes: 23265 },
+                { timestamp: 1763165509, date: 'Sat Nov 15 00:11:49 2025 UTC', nodes: 23127 },
+                { timestamp: 1762560432, date: 'Sat Nov 8 00:07:12 2025 UTC', nodes: 24182 },
+                { timestamp: 1761955513, date: 'Sat Nov 1 00:05:13 2025 UTC', nodes: 24031 },
+                { timestamp: 1761697657, date: 'Wed Oct 29 00:27:37 2025 UTC', nodes: 23928 },
+                { timestamp: 1761092452, date: 'Wed Oct 22 00:20:52 2025 UTC', nodes: 23735 },
+                { timestamp: 1760487076, date: 'Wed Oct 15 00:11:16 2025 UTC', nodes: 24159 },
+                { timestamp: 1759882225, date: 'Wed Oct 8 00:10:25 2025 UTC', nodes: 24166 },
+                { timestamp: 1759277241, date: 'Wed Oct 1 00:07:21 2025 UTC', nodes: 23964 },
+                { timestamp: 1759105049, date: 'Mon Sep 29 00:17:29 2025 UTC', nodes: 23372 },
+                { timestamp: 1758500095, date: 'Mon Sep 22 00:14:55 2025 UTC', nodes: 23523 },
+                { timestamp: 1757894888, date: 'Mon Sep 15 00:08:08 2025 UTC', nodes: 26879 },
+                { timestamp: 1757289979, date: 'Mon Sep 8 00:06:19 2025 UTC', nodes: 23964 },
+                { timestamp: 1756685173, date: 'Mon Sep 1 00:06:13 2025 UTC', nodes: 23615 },
+                { timestamp: 1756427187, date: 'Fri Aug 29 00:26:27 2025 UTC', nodes: 23578 },
+                { timestamp: 1755822229, date: 'Fri Aug 22 00:23:49 2025 UTC', nodes: 23480 },
+                { timestamp: 1755217188, date: 'Fri Aug 15 00:19:48 2025 UTC', nodes: 23263 },
+                { timestamp: 1754611891, date: 'Fri Aug 8 00:11:31 2025 UTC', nodes: 23356 },
+                { timestamp: 1754006453, date: 'Fri Aug 1 00:00:53 2025 UTC', nodes: 22482 },
+                { timestamp: 1753748770, date: 'Tue Jul 29 00:26:10 2025 UTC', nodes: 22843 },
+                { timestamp: 1753143763, date: 'Tue Jul 22 00:22:43 2025 UTC', nodes: 23076 },
+                { timestamp: 1752538586, date: 'Tue Jul 15 00:16:26 2025 UTC', nodes: 22879 },
+                { timestamp: 1751933384, date: 'Tue Jul 8 00:09:44 2025 UTC', nodes: 22817 },
+                { timestamp: 1751328065, date: 'Tue Jul 1 00:01:05 2025 UTC', nodes: 21770 },
+                { timestamp: 1751156828, date: 'Sun Jun 29 00:27:08 2025 UTC', nodes: 22111 },
+                { timestamp: 1750551577, date: 'Sun Jun 22 00:19:37 2025 UTC', nodes: 22000 },
+                { timestamp: 1749946380, date: 'Sun Jun 15 00:13:00 2025 UTC', nodes: 21969 },
+                { timestamp: 1749341504, date: 'Sun Jun 8 00:11:44 2025 UTC', nodes: 22158 },
+                { timestamp: 1748736096, date: 'Sun Jun 1 00:01:36 2025 UTC', nodes: 22299 },
+                { timestamp: 1748478531, date: 'Thu May 29 00:28:51 2025 UTC', nodes: 22312 },
+                { timestamp: 1747873306, date: 'Thu May 22 00:21:46 2025 UTC', nodes: 21579 },
+                { timestamp: 1747268121, date: 'Thu May 15 00:15:21 2025 UTC', nodes: 22104 },
+                { timestamp: 1746662689, date: 'Thu May 8 00:04:49 2025 UTC', nodes: 21863 },
+                { timestamp: 1746057855, date: 'Thu May 1 00:04:15 2025 UTC', nodes: 21395 },
+                { timestamp: 1745886126, date: 'Tue Apr 29 00:22:06 2025 UTC', nodes: 21064 },
+                { timestamp: 1745280818, date: 'Tue Apr 22 00:13:38 2025 UTC', nodes: 21512 },
+                { timestamp: 1744675732, date: 'Tue Apr 15 00:08:52 2025 UTC', nodes: 21284 },
+                { timestamp: 1744070582, date: 'Tue Apr 8 00:03:02 2025 UTC', nodes: 21370 },
+                { timestamp: 1743465781, date: 'Tue Apr 1 00:03:01 2025 UTC', nodes: 21813 },
+                { timestamp: 1743207707, date: 'Sat Mar 29 00:21:47 2025 UTC', nodes: 21781 },
+                { timestamp: 1742602825, date: 'Sat Mar 22 00:20:25 2025 UTC', nodes: 21162 },
+                { timestamp: 1741997710, date: 'Sat Mar 15 00:15:10 2025 UTC', nodes: 21812 },
+                { timestamp: 1741392315, date: 'Sat Mar 8 00:05:15 2025 UTC', nodes: 21197 },
+                { timestamp: 1740787435, date: 'Sat Mar 1 00:03:55 2025 UTC', nodes: 21966 },
+                { timestamp: 1740183809, date: 'Sat Feb 22 00:23:29 2025 UTC', nodes: 21848 },
+                { timestamp: 1739578459, date: 'Sat Feb 15 00:14:19 2025 UTC', nodes: 21810 },
+                { timestamp: 1738973630, date: 'Sat Feb 8 00:13:50 2025 UTC', nodes: 21804 },
+                { timestamp: 1738368329, date: 'Sat Feb 1 00:05:29 2025 UTC', nodes: 21030 },
+                { timestamp: 1738110254, date: 'Wed Jan 29 00:24:14 2025 UTC', nodes: 21057 },
+                { timestamp: 1737505009, date: 'Wed Jan 22 00:16:49 2025 UTC', nodes: 20875 },
+                { timestamp: 1736900176, date: 'Wed Jan 15 00:16:16 2025 UTC', nodes: 20581 },
+                { timestamp: 1736294986, date: 'Wed Jan 8 00:09:46 2025 UTC', nodes: 20912 },
+                { timestamp: 1735690131, date: 'Wed Jan 1 00:08:51 2025 UTC', nodes: 20766 }
+            ],
+            2024: [
+                { timestamp: 1735432191, date: 'Sun Dec 29 00:29:51 2024 UTC', nodes: 20333 },
+                { timestamp: 1734827047, date: 'Sun Dec 22 00:24:07 2024 UTC', nodes: 20599 },
+                { timestamp: 1734221883, date: 'Sun Dec 15 00:18:03 2024 UTC', nodes: 21140 },
+                { timestamp: 1733616586, date: 'Sun Dec 8 00:09:46 2024 UTC', nodes: 20144 },
+                { timestamp: 1733011555, date: 'Sun Dec 1 00:05:55 2024 UTC', nodes: 19362 },
+                { timestamp: 1732839987, date: 'Fri Nov 29 00:26:27 2024 UTC', nodes: 19287 },
+                { timestamp: 1732234584, date: 'Fri Nov 22 00:16:24 2024 UTC', nodes: 19472 },
+                { timestamp: 1731629779, date: 'Fri Nov 15 00:16:19 2024 UTC', nodes: 19499 },
+                { timestamp: 1731024903, date: 'Fri Nov 8 00:15:03 2024 UTC', nodes: 18758 },
+                { timestamp: 1730419533, date: 'Fri Nov 1 00:05:33 2024 UTC', nodes: 19423 },
+                { timestamp: 1730160285, date: 'Tue Oct 29 00:04:45 2024 UTC', nodes: 19524 },
+                { timestamp: 1729555484, date: 'Tue Oct 22 00:04:44 2024 UTC', nodes: 19256 },
+                { timestamp: 1728950662, date: 'Tue Oct 15 00:04:22 2024 UTC', nodes: 18837 },
+                { timestamp: 1728345854, date: 'Tue Oct 8 00:04:14 2024 UTC', nodes: 18984 },
+                { timestamp: 1727740867, date: 'Tue Oct 1 00:01:07 2024 UTC', nodes: 18956 },
+                { timestamp: 1727569282, date: 'Sun Sep 29 00:21:22 2024 UTC', nodes: 18991 },
+                { timestamp: 1726964476, date: 'Sun Sep 22 00:21:16 2024 UTC', nodes: 19112 },
+                { timestamp: 1726359060, date: 'Sun Sep 15 00:11:00 2024 UTC', nodes: 19436 },
+                { timestamp: 1725753687, date: 'Sun Sep 8 00:01:27 2024 UTC', nodes: 19203 },
+                { timestamp: 1725148865, date: 'Sun Sep 1 00:01:05 2024 UTC', nodes: 19345 },
+                { timestamp: 1724890201, date: 'Thu Aug 29 00:10:01 2024 UTC', nodes: 19421 },
+                { timestamp: 1724285377, date: 'Thu Aug 22 00:09:37 2024 UTC', nodes: 19178 },
+                { timestamp: 1723680524, date: 'Thu Aug 15 00:08:44 2024 UTC', nodes: 19320 },
+                { timestamp: 1723075718, date: 'Thu Aug 8 00:08:38 2024 UTC', nodes: 19663 },
+                { timestamp: 1722470724, date: 'Thu Aug 1 00:05:24 2024 UTC', nodes: 19292 },
+                { timestamp: 1722212215, date: 'Mon Jul 29 00:16:55 2024 UTC', nodes: 19180 },
+                { timestamp: 1721607266, date: 'Mon Jul 22 00:14:26 2024 UTC', nodes: 7614 },
+                { timestamp: 1721002440, date: 'Mon Jul 15 00:14:00 2024 UTC', nodes: 10930 },
+                { timestamp: 1720397297, date: 'Mon Jul 8 00:08:17 2024 UTC', nodes: 19383 },
+                { timestamp: 1719792494, date: 'Mon Jul 1 00:08:14 2024 UTC', nodes: 19286 },
+                { timestamp: 1719620866, date: 'Sat Jun 29 00:27:46 2024 UTC', nodes: 19124 },
+                { timestamp: 1719015872, date: 'Sat Jun 22 00:24:32 2024 UTC', nodes: 19234 },
+                { timestamp: 1718410833, date: 'Sat Jun 15 00:20:33 2024 UTC', nodes: 19466 },
+                { timestamp: 1717805597, date: 'Sat Jun 8 00:13:17 2024 UTC', nodes: 19077 },
+                { timestamp: 1717200374, date: 'Sat Jun 1 00:06:14 2024 UTC', nodes: 19382 },
+                { timestamp: 1716942004, date: 'Wed May 29 00:20:04 2024 UTC', nodes: 18393 },
+                { timestamp: 1716337028, date: 'Wed May 22 00:17:08 2024 UTC', nodes: 18271 },
+                { timestamp: 1715732068, date: 'Wed May 15 00:14:28 2024 UTC', nodes: 17750 },
+                { timestamp: 1715126989, date: 'Wed May 8 00:09:49 2024 UTC', nodes: 19145 },
+                { timestamp: 1714521871, date: 'Wed May 1 00:04:31 2024 UTC', nodes: 19368 },
+                { timestamp: 1714350618, date: 'Mon Apr 29 00:30:18 2024 UTC', nodes: 18890 },
+                { timestamp: 1713745615, date: 'Mon Apr 22 00:26:55 2024 UTC', nodes: 19054 },
+                { timestamp: 1713140476, date: 'Mon Apr 15 00:21:16 2024 UTC', nodes: 17756 },
+                { timestamp: 1712535253, date: 'Mon Apr 8 00:14:13 2024 UTC', nodes: 17969 },
+                { timestamp: 1711930068, date: 'Mon Apr 1 00:07:48 2024 UTC', nodes: 17883 },
+                { timestamp: 1711672003, date: 'Fri Mar 29 00:26:43 2024 UTC', nodes: 18210 },
+                { timestamp: 1711066753, date: 'Fri Mar 22 00:19:13 2024 UTC', nodes: 17953 },
+                { timestamp: 1710461741, date: 'Fri Mar 15 00:15:41 2024 UTC', nodes: 18277 },
+                { timestamp: 1709856788, date: 'Fri Mar 8 00:13:08 2024 UTC', nodes: 18358 },
+                { timestamp: 1709251755, date: 'Fri Mar 1 00:09:15 2024 UTC', nodes: 18419 },
+                { timestamp: 1709166140, date: 'Thu Feb 29 00:22:20 2024 UTC', nodes: 18364 },
+                { timestamp: 1708561280, date: 'Thu Feb 22 00:21:20 2024 UTC', nodes: 18209 },
+                { timestamp: 1707956086, date: 'Thu Feb 15 00:14:46 2024 UTC', nodes: 17797 },
+                { timestamp: 1707350820, date: 'Thu Feb 8 00:07:00 2024 UTC', nodes: 17606 },
+                { timestamp: 1706745660, date: 'Thu Feb 1 00:01:00 2024 UTC', nodes: 15514 },
+                { timestamp: 1706488021, date: 'Mon Jan 29 00:27:01 2024 UTC', nodes: 15167 },
+                { timestamp: 1705882931, date: 'Mon Jan 22 00:22:11 2024 UTC', nodes: 15634 },
+                { timestamp: 1705277778, date: 'Mon Jan 15 00:16:18 2024 UTC', nodes: 15933 },
+                { timestamp: 1704672612, date: 'Mon Jan 8 00:10:12 2024 UTC', nodes: 17777 },
+                { timestamp: 1704067368, date: 'Mon Jan 1 00:02:48 2024 UTC', nodes: 17197 }
+            ],
+            2023: [
+                { timestamp: 1703808960, date: 'Fri Dec 29 00:16:00 2023 UTC', nodes: 17250 },
+                { timestamp: 1703204117, date: 'Fri Dec 22 00:15:17 2023 UTC', nodes: 16358 },
+                { timestamp: 1702599162, date: 'Fri Dec 15 00:12:42 2023 UTC', nodes: 16990 },
+                { timestamp: 1701994308, date: 'Fri Dec 8 00:11:48 2023 UTC', nodes: 17271 },
+                { timestamp: 1701389008, date: 'Fri Dec 1 00:03:28 2023 UTC', nodes: 16854 },
+                { timestamp: 1701216759, date: 'Wed Nov 29 00:12:39 2023 UTC', nodes: 16328 },
+                { timestamp: 1700611941, date: 'Wed Nov 22 00:12:21 2023 UTC', nodes: 16553 },
+                { timestamp: 1700007117, date: 'Wed Nov 15 00:11:57 2023 UTC', nodes: 16919 },
+                { timestamp: 1699401788, date: 'Wed Nov 8 00:03:08 2023 UTC', nodes: 16754 },
+                { timestamp: 1698796955, date: 'Wed Nov 1 00:02:35 2023 UTC', nodes: 17000 },
+                { timestamp: 1698538672, date: 'Sun Oct 29 00:17:52 2023 UTC', nodes: 15716 },
+                { timestamp: 1697933646, date: 'Sun Oct 22 00:14:06 2023 UTC', nodes: 16903 },
+                { timestamp: 1697328479, date: 'Sun Oct 15 00:07:59 2023 UTC', nodes: 16574 },
+                { timestamp: 1696723616, date: 'Sun Oct 8 00:06:56 2023 UTC', nodes: 16793 },
+                { timestamp: 1696118719, date: 'Sun Oct 1 00:05:19 2023 UTC', nodes: 16727 },
+                { timestamp: 1695946741, date: 'Fri Sep 29 00:19:01 2023 UTC', nodes: 16510 },
+                { timestamp: 1695341580, date: 'Fri Sep 22 00:13:00 2023 UTC', nodes: 16347 },
+                { timestamp: 1694736392, date: 'Fri Sep 15 00:06:32 2023 UTC', nodes: 16645 },
+                { timestamp: 1694131430, date: 'Fri Sep 8 00:03:50 2023 UTC', nodes: 16141 },
+                { timestamp: 1693526498, date: 'Fri Sep 1 00:01:38 2023 UTC', nodes: 16495 },
+                { timestamp: 1693267801, date: 'Tue Aug 29 00:10:01 2023 UTC', nodes: 16179 },
+                { timestamp: 1692662973, date: 'Tue Aug 22 00:09:33 2023 UTC', nodes: 15513 },
+                { timestamp: 1692058168, date: 'Tue Aug 15 00:09:28 2023 UTC', nodes: 16154 },
+                { timestamp: 1691453237, date: 'Tue Aug 8 00:07:17 2023 UTC', nodes: 16796 },
+                { timestamp: 1690848118, date: 'Tue Aug 1 00:01:58 2023 UTC', nodes: 16900 },
+                { timestamp: 1690589315, date: 'Sat Jul 29 00:08:35 2023 UTC', nodes: 16716 },
+                { timestamp: 1689984393, date: 'Sat Jul 22 00:06:33 2023 UTC', nodes: 17099 },
+                { timestamp: 1689379452, date: 'Sat Jul 15 00:04:12 2023 UTC', nodes: 16774 },
+                { timestamp: 1688774465, date: 'Sat Jul 8 00:01:05 2023 UTC', nodes: 16747 },
+                { timestamp: 1688169600, date: 'Sat Jul 1 00:00:00 2023 UTC', nodes: 16722 },
+                { timestamp: 1687998116, date: 'Thu Jun 29 00:21:56 2023 UTC', nodes: 16794 },
+                { timestamp: 1687392837, date: 'Thu Jun 22 00:13:57 2023 UTC', nodes: 16896 },
+                { timestamp: 1686788007, date: 'Thu Jun 15 00:13:27 2023 UTC', nodes: 17149 },
+                { timestamp: 1686182848, date: 'Thu Jun 8 00:07:28 2023 UTC', nodes: 17186 },
+                { timestamp: 1685578038, date: 'Thu Jun 1 00:07:18 2023 UTC', nodes: 16862 },
+                { timestamp: 1685319869, date: 'Mon May 29 00:24:29 2023 UTC', nodes: 17205 },
+                { timestamp: 1684714761, date: 'Mon May 22 00:19:21 2023 UTC', nodes: 16894 },
+                { timestamp: 1684109811, date: 'Mon May 15 00:16:51 2023 UTC', nodes: 17075 },
+                { timestamp: 1683504599, date: 'Mon May 8 00:09:59 2023 UTC', nodes: 17008 },
+                { timestamp: 1682899629, date: 'Mon May 1 00:07:09 2023 UTC', nodes: 17539 },
+                { timestamp: 1682727784, date: 'Sat Apr 29 00:23:04 2023 UTC', nodes: 17303 },
+                { timestamp: 1682122808, date: 'Sat Apr 22 00:20:08 2023 UTC', nodes: 17468 },
+                { timestamp: 1681517650, date: 'Sat Apr 15 00:14:10 2023 UTC', nodes: 17510 },
+                { timestamp: 1680912554, date: 'Sat Apr 8 00:09:14 2023 UTC', nodes: 17634 },
+                { timestamp: 1680307616, date: 'Sat Apr 1 00:06:56 2023 UTC', nodes: 17447 },
+                { timestamp: 1680049474, date: 'Wed Mar 29 00:24:34 2023 UTC', nodes: 17308 },
+                { timestamp: 1679444443, date: 'Wed Mar 22 00:20:43 2023 UTC', nodes: 17134 },
+                { timestamp: 1678839335, date: 'Wed Mar 15 00:15:35 2023 UTC', nodes: 16271 },
+                { timestamp: 1678234030, date: 'Wed Mar 8 00:07:10 2023 UTC', nodes: 16376 },
+                { timestamp: 1677628955, date: 'Wed Mar 1 00:02:35 2023 UTC', nodes: 16431 },
+                { timestamp: 1677025392, date: 'Wed Feb 22 00:23:12 2023 UTC', nodes: 15436 },
+                { timestamp: 1676420185, date: 'Wed Feb 15 00:16:25 2023 UTC', nodes: 14053 },
+                { timestamp: 1675815297, date: 'Wed Feb 8 00:14:57 2023 UTC', nodes: 14464 },
+                { timestamp: 1675209943, date: 'Wed Feb 1 00:05:43 2023 UTC', nodes: 12529 },
+                { timestamp: 1674951670, date: 'Sun Jan 29 00:21:10 2023 UTC', nodes: 14322 },
+                { timestamp: 1674346688, date: 'Sun Jan 22 00:18:08 2023 UTC', nodes: 14623 },
+                { timestamp: 1673741842, date: 'Sun Jan 15 00:17:22 2023 UTC', nodes: 14511 },
+                { timestamp: 1673136610, date: 'Sun Jan 8 00:10:10 2023 UTC', nodes: 14777 },
+                { timestamp: 1672531655, date: 'Sun Jan 1 00:07:35 2023 UTC', nodes: 15434 }
+            ],
+            2022: [
+                { timestamp: 1672273281, date: 'Thu Dec 29 00:21:21 2022 UTC', nodes: 15379 },
+                { timestamp: 1671668220, date: 'Thu Dec 22 00:17:00 2022 UTC', nodes: 13762 },
+                { timestamp: 1671063181, date: 'Thu Dec 15 00:13:01 2022 UTC', nodes: 15184 },
+                { timestamp: 1670458075, date: 'Thu Dec 8 00:07:55 2022 UTC', nodes: 15439 },
+                { timestamp: 1669852979, date: 'Thu Dec 1 00:02:59 2022 UTC', nodes: 13802 },
+                { timestamp: 1669680949, date: 'Tue Nov 29 00:15:49 2022 UTC', nodes: 14056 },
+                { timestamp: 1669076089, date: 'Tue Nov 22 00:14:49 2022 UTC', nodes: 14234 },
+                { timestamp: 1668470889, date: 'Tue Nov 15 00:08:09 2022 UTC', nodes: 15317 },
+                { timestamp: 1667866022, date: 'Tue Nov 8 00:07:02 2022 UTC', nodes: 15762 },
+                { timestamp: 1667260886, date: 'Tue Nov 1 00:01:26 2022 UTC', nodes: 15625 },
+                { timestamp: 1667002538, date: 'Sat Oct 29 00:15:38 2022 UTC', nodes: 14168 },
+                { timestamp: 1666397282, date: 'Sat Oct 22 00:08:02 2022 UTC', nodes: 14492 },
+                { timestamp: 1665792409, date: 'Sat Oct 15 00:06:49 2022 UTC', nodes: 14613 },
+                { timestamp: 1665187515, date: 'Sat Oct 8 00:05:15 2022 UTC', nodes: 14991 },
+                { timestamp: 1664582610, date: 'Sat Oct 1 00:03:30 2022 UTC', nodes: 14321 },
+                { timestamp: 1664410202, date: 'Thu Sep 29 00:10:02 2022 UTC', nodes: 14343 },
+                { timestamp: 1663805364, date: 'Thu Sep 22 00:09:24 2022 UTC', nodes: 13764 },
+                { timestamp: 1663200478, date: 'Thu Sep 15 00:07:58 2022 UTC', nodes: 14886 },
+                { timestamp: 1662595541, date: 'Thu Sep 8 00:05:41 2022 UTC', nodes: 14638 },
+                { timestamp: 1661990462, date: 'Thu Sep 1 00:01:02 2022 UTC', nodes: 14175 },
+                { timestamp: 1661731878, date: 'Mon Aug 29 00:11:18 2022 UTC', nodes: 14612 },
+                { timestamp: 1661127069, date: 'Mon Aug 22 00:11:09 2022 UTC', nodes: 12752 },
+                { timestamp: 1660521975, date: 'Mon Aug 15 00:06:15 2022 UTC', nodes: 14386 },
+                { timestamp: 1659916957, date: 'Mon Aug 8 00:02:37 2022 UTC', nodes: 14852 },
+                { timestamp: 1659312097, date: 'Mon Aug 1 00:01:37 2022 UTC', nodes: 13738 },
+                { timestamp: 1659053827, date: 'Fri Jul 29 00:17:07 2022 UTC', nodes: 14035 },
+                { timestamp: 1658448795, date: 'Fri Jul 22 00:13:15 2022 UTC', nodes: 14887 },
+                { timestamp: 1657843656, date: 'Fri Jul 15 00:07:36 2022 UTC', nodes: 15215 },
+                { timestamp: 1657238659, date: 'Fri Jul 8 00:04:19 2022 UTC', nodes: 15138 },
+                { timestamp: 1656633779, date: 'Fri Jul 1 00:02:59 2022 UTC', nodes: 15476 },
+                { timestamp: 1656461677, date: 'Wed Jun 29 00:14:37 2022 UTC', nodes: 15953 },
+                { timestamp: 1655856597, date: 'Wed Jun 22 00:09:57 2022 UTC', nodes: 15975 },
+                { timestamp: 1655251776, date: 'Wed Jun 15 00:09:36 2022 UTC', nodes: 15846 },
+                { timestamp: 1654646854, date: 'Wed Jun 8 00:07:34 2022 UTC', nodes: 15954 },
+                { timestamp: 1654041784, date: 'Wed Jun 1 00:03:04 2022 UTC', nodes: 16127 },
+                { timestamp: 1653782682, date: 'Sun May 29 00:04:42 2022 UTC', nodes: 15185 },
+                { timestamp: 1653177787, date: 'Sun May 22 00:03:07 2022 UTC', nodes: 15473 },
+                { timestamp: 1652572920, date: 'Sun May 15 00:02:00 2022 UTC', nodes: 15705 },
+                { timestamp: 1651968079, date: 'Sun May 8 00:01:19 2022 UTC', nodes: 15557 },
+                { timestamp: 1651363231, date: 'Sun May 1 00:00:31 2022 UTC', nodes: 15367 },
+                { timestamp: 1651191715, date: 'Fri Apr 29 00:21:55 2022 UTC', nodes: 15786 },
+                { timestamp: 1650586677, date: 'Fri Apr 22 00:17:57 2022 UTC', nodes: 15441 },
+                { timestamp: 1649981543, date: 'Fri Apr 15 00:12:23 2022 UTC', nodes: 15142 },
+                { timestamp: 1649376552, date: 'Fri Apr 8 00:09:12 2022 UTC', nodes: 15799 },
+                { timestamp: 1648771419, date: 'Fri Apr 1 00:03:39 2022 UTC', nodes: 15101 },
+                { timestamp: 1648512738, date: 'Tue Mar 29 00:12:18 2022 UTC', nodes: 15003 },
+                { timestamp: 1647907676, date: 'Tue Mar 22 00:07:56 2022 UTC', nodes: 15079 },
+                { timestamp: 1647302744, date: 'Tue Mar 15 00:05:44 2022 UTC', nodes: 14915 },
+                { timestamp: 1646697803, date: 'Tue Mar 8 00:03:23 2022 UTC', nodes: 15019 },
+                { timestamp: 1646092973, date: 'Tue Mar 1 00:02:53 2022 UTC', nodes: 14996 },
+                { timestamp: 1645488952, date: 'Tue Feb 22 00:15:52 2022 UTC', nodes: 15233 },
+                { timestamp: 1644884116, date: 'Tue Feb 15 00:15:16 2022 UTC', nodes: 15212 },
+                { timestamp: 1644278951, date: 'Tue Feb 8 00:09:11 2022 UTC', nodes: 14977 },
+                { timestamp: 1643673867, date: 'Tue Feb 1 00:04:27 2022 UTC', nodes: 14997 },
+                { timestamp: 1643415283, date: 'Sat Jan 29 00:14:43 2022 UTC', nodes: 15036 },
+                { timestamp: 1642810360, date: 'Sat Jan 22 00:12:40 2022 UTC', nodes: 15091 },
+                { timestamp: 1642205266, date: 'Sat Jan 15 00:07:46 2022 UTC', nodes: 14900 },
+                { timestamp: 1641600312, date: 'Sat Jan 8 00:05:12 2022 UTC', nodes: 14950 },
+                { timestamp: 1640995478, date: 'Sat Jan 1 00:04:38 2022 UTC', nodes: 14727 }
+            ],
+            2021: [
+                { timestamp: 1640737012, date: 'Wed Dec 29 00:16:52 2021 UTC', nodes: 14964 },
+                { timestamp: 1640131958, date: 'Wed Dec 22 00:12:38 2021 UTC', nodes: 14719 },
+                { timestamp: 1639526917, date: 'Wed Dec 15 00:08:37 2021 UTC', nodes: 14696 },
+                { timestamp: 1638921959, date: 'Wed Dec 8 00:05:59 2021 UTC', nodes: 14723 },
+                { timestamp: 1638316922, date: 'Wed Dec 1 00:02:02 2021 UTC', nodes: 14688 },
+                { timestamp: 1638144864, date: 'Mon Nov 29 00:14:24 2021 UTC', nodes: 14373 },
+                { timestamp: 1637539941, date: 'Mon Nov 22 00:12:21 2021 UTC', nodes: 13640 },
+                { timestamp: 1636934980, date: 'Mon Nov 15 00:09:40 2021 UTC', nodes: 13513 },
+                { timestamp: 1636329902, date: 'Mon Nov 8 00:05:02 2021 UTC', nodes: 12712 },
+                { timestamp: 1635724808, date: 'Mon Nov 1 00:00:08 2021 UTC', nodes: 12669 },
+                { timestamp: 1635466286, date: 'Fri Oct 29 00:11:26 2021 UTC', nodes: 12017 },
+                { timestamp: 1634861433, date: 'Fri Oct 22 00:10:33 2021 UTC', nodes: 13956 },
+                { timestamp: 1634256276, date: 'Fri Oct 15 00:04:36 2021 UTC', nodes: 14261 },
+                { timestamp: 1633651387, date: 'Fri Oct 8 00:03:07 2021 UTC', nodes: 13501 },
+                { timestamp: 1633046511, date: 'Fri Oct 1 00:01:51 2021 UTC', nodes: 10531 },
+                { timestamp: 1632874366, date: 'Wed Sep 29 00:12:46 2021 UTC', nodes: 11250 },
+                { timestamp: 1632269307, date: 'Wed Sep 22 00:08:27 2021 UTC', nodes: 11502 },
+                { timestamp: 1631664389, date: 'Wed Sep 15 00:06:29 2021 UTC', nodes: 11111 },
+                { timestamp: 1631059319, date: 'Wed Sep 8 00:01:59 2021 UTC', nodes: 10069 },
+                { timestamp: 1630454401, date: 'Wed Sep 1 00:00:01 2021 UTC', nodes: 10169 },
+                { timestamp: 1630195754, date: 'Sun Aug 29 00:09:14 2021 UTC', nodes: 11507 },
+                { timestamp: 1629590836, date: 'Sun Aug 22 00:07:16 2021 UTC', nodes: 12484 },
+                { timestamp: 1628985701, date: 'Sun Aug 15 00:01:41 2021 UTC', nodes: 11793 },
+                { timestamp: 1628380889, date: 'Sun Aug 8 00:01:29 2021 UTC', nodes: 12239 },
+                { timestamp: 1627776070, date: 'Sun Aug 1 00:01:10 2021 UTC', nodes: 10811 },
+                { timestamp: 1627518244, date: 'Thu Jul 29 00:24:04 2021 UTC', nodes: 12259 },
+                { timestamp: 1626913192, date: 'Thu Jul 22 00:19:52 2021 UTC', nodes: 12780 },
+                { timestamp: 1626307822, date: 'Thu Jul 15 00:10:22 2021 UTC', nodes: 12781 },
+                { timestamp: 1625702683, date: 'Thu Jul 8 00:04:43 2021 UTC', nodes: 11496 },
+                { timestamp: 1625097611, date: 'Thu Jul 1 00:00:11 2021 UTC', nodes: 10326 },
+                { timestamp: 1624925663, date: 'Tue Jun 29 00:14:23 2021 UTC', nodes: 10569 },
+                { timestamp: 1624320804, date: 'Tue Jun 22 00:13:24 2021 UTC', nodes: 9752 },
+                { timestamp: 1623715703, date: 'Tue Jun 15 00:08:23 2021 UTC', nodes: 9042 },
+                { timestamp: 1623110833, date: 'Tue Jun 8 00:07:13 2021 UTC', nodes: 9406 },
+                { timestamp: 1622505755, date: 'Tue Jun 1 00:02:35 2021 UTC', nodes: 9803 },
+                { timestamp: 1622247624, date: 'Sat May 29 00:20:24 2021 UTC', nodes: 9786 },
+                { timestamp: 1621642482, date: 'Sat May 22 00:14:42 2021 UTC', nodes: 9656 },
+                { timestamp: 1621037442, date: 'Sat May 15 00:10:42 2021 UTC', nodes: 9727 },
+                { timestamp: 1620432317, date: 'Sat May 8 00:05:17 2021 UTC', nodes: 9526 },
+                { timestamp: 1619827440, date: 'Sat May 1 00:04:00 2021 UTC', nodes: 9832 },
+                { timestamp: 1619655665, date: 'Thu Apr 29 00:21:05 2021 UTC', nodes: 9752 },
+                { timestamp: 1619050599, date: 'Thu Apr 22 00:16:39 2021 UTC', nodes: 9740 },
+                { timestamp: 1618445550, date: 'Thu Apr 15 00:12:30 2021 UTC', nodes: 9640 },
+                { timestamp: 1617840365, date: 'Thu Apr 8 00:06:05 2021 UTC', nodes: 9435 },
+                { timestamp: 1617235397, date: 'Thu Apr 1 00:03:17 2021 UTC', nodes: 9690 },
+                { timestamp: 1616977297, date: 'Mon Mar 29 00:21:37 2021 UTC', nodes: 9171 },
+                { timestamp: 1616372460, date: 'Mon Mar 22 00:21:00 2021 UTC', nodes: 10200 },
+                { timestamp: 1615767321, date: 'Mon Mar 15 00:15:21 2021 UTC', nodes: 10318 },
+                { timestamp: 1615162148, date: 'Mon Mar 8 00:09:08 2021 UTC', nodes: 10384 },
+                { timestamp: 1614557068, date: 'Mon Mar 1 00:04:28 2021 UTC', nodes: 10487 },
+                { timestamp: 1613952943, date: 'Mon Feb 22 00:15:43 2021 UTC', nodes: 10265 },
+                { timestamp: 1613347893, date: 'Mon Feb 15 00:11:33 2021 UTC', nodes: 9962 },
+                { timestamp: 1612743008, date: 'Mon Feb 8 00:10:08 2021 UTC', nodes: 9631 },
+                { timestamp: 1612138005, date: 'Mon Feb 1 00:06:45 2021 UTC', nodes: 11249 },
+                { timestamp: 1611880910, date: 'Fri Jan 29 00:41:50 2021 UTC', nodes: 11767 },
+                { timestamp: 1611275511, date: 'Fri Jan 22 00:31:51 2021 UTC', nodes: 11850 },
+                { timestamp: 1610669997, date: 'Fri Jan 15 00:19:57 2021 UTC', nodes: 11050 },
+                { timestamp: 1610065148, date: 'Fri Jan 8 00:19:08 2021 UTC', nodes: 9434 },
+                { timestamp: 1609459918, date: 'Fri Jan 1 00:11:58 2021 UTC', nodes: 11029 }
+            ],
+            2020: [
+                { timestamp: 1609201190, date: 'Tue Dec 29 00:19:50 2020 UTC', nodes: 10709 },
+                { timestamp: 1608596306, date: 'Tue Dec 22 00:18:26 2020 UTC', nodes: 11478 },
+                { timestamp: 1607991247, date: 'Tue Dec 15 00:14:07 2020 UTC', nodes: 11223 },
+                { timestamp: 1607385830, date: 'Tue Dec 8 00:03:50 2020 UTC', nodes: 11195 },
+                { timestamp: 1606780813, date: 'Tue Dec 1 00:00:13 2020 UTC', nodes: 11022 },
+                { timestamp: 1606610057, date: 'Sun Nov 29 00:34:17 2020 UTC', nodes: 11238 },
+                { timestamp: 1606005044, date: 'Sun Nov 22 00:30:44 2020 UTC', nodes: 11033 },
+                { timestamp: 1605399754, date: 'Sun Nov 15 00:22:34 2020 UTC', nodes: 10709 },
+                { timestamp: 1604794392, date: 'Sun Nov 8 00:13:12 2020 UTC', nodes: 11065 },
+                { timestamp: 1604189429, date: 'Sun Nov 1 00:10:29 2020 UTC', nodes: 11080 }
+            ],
+            2019: [
+                { timestamp: 1577578276, date: 'Sun Dec 29 00:11:16 2019 UTC', nodes: 9510 },
+                { timestamp: 1576973212, date: 'Sun Dec 22 00:06:52 2019 UTC', nodes: 9512 },
+                { timestamp: 1576368334, date: 'Sun Dec 15 00:05:34 2019 UTC', nodes: 9567 },
+                { timestamp: 1575763385, date: 'Sun Dec 8 00:03:05 2019 UTC', nodes: 9435 },
+                { timestamp: 1575158535, date: 'Sun Dec 1 00:02:15 2019 UTC', nodes: 9574 }
+            ],
+            2018: [
+                { timestamp: 1546043081, date: 'Sat Dec 29 00:24:41 2018 UTC', nodes: 10247 },
+                { timestamp: 1545438208, date: 'Sat Dec 22 00:23:28 2018 UTC', nodes: 9930 },
+                { timestamp: 1544833366, date: 'Sat Dec 15 00:22:46 2018 UTC', nodes: 9720 },
+                { timestamp: 1514764941, date: 'Mon Jan 1 00:02:21 2018 UTC', nodes: 11748 }
+            ],
+            2017: [
+                { timestamp: 1514506683, date: 'Fri Dec 29 00:18:03 2017 UTC', nodes: 11799 },
+                { timestamp: 1483228917, date: 'Sun Jan 1 00:01:57 2017 UTC', nodes: 5459 }
+            ],
+            2016: [
+                { timestamp: 1482970669, date: 'Thu Dec 29 00:17:49 2016 UTC', nodes: 5513 },
+                { timestamp: 1451606409, date: 'Fri Jan 1 00:00:09 2016 UTC', nodes: 5645 }
+            ],
+            2015: [
+                { timestamp: 1451347826, date: 'Tue Dec 29 00:10:26 2015 UTC', nodes: 5378 },
+                { timestamp: 1420070689, date: 'Thu Jan 1 00:04:49 2015 UTC', nodes: 6289 }
+            ],
+            2014: [
+                { timestamp: 1419812501, date: 'Mon Dec 29 00:21:41 2014 UTC', nodes: 6528 },
+                { timestamp: 1409799688, date: 'Thu Sep 4 03:01:28 2014 UTC', nodes: 6997 }
+            ]
+        };
+    }
+    
+    setupArchiveDropdown() {
+        const archiveSelect = document.getElementById('archive-select');
+        if (!archiveSelect) return;
+        
+        const archiveData = this.getArchiveSnapshots();
+        const years = Object.keys(archiveData).sort((a, b) => b - a); // Sort descending
+        
+        // Populate dropdown with optgroups by year
+        years.forEach(year => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = year;
+            
+            archiveData[year].forEach(snapshot => {
+                const option = document.createElement('option');
+                option.value = snapshot.timestamp;
+                // Format: "Nov 29 - 24,335 nodes"
+                const dateMatch = snapshot.date.match(/^[A-Z][a-z]{2} ([A-Z][a-z]{2} \d+)/);
+                const shortDate = dateMatch ? dateMatch[1] : snapshot.date.substring(0, 10);
+                option.textContent = `${shortDate} - ${snapshot.nodes.toLocaleString()} nodes`;
+                option.title = `${snapshot.date} - ${snapshot.nodes.toLocaleString()} nodes`;
+                optgroup.appendChild(option);
+            });
+            
+            archiveSelect.appendChild(optgroup);
+        });
+        
+        // Add change event listener
+        archiveSelect.addEventListener('change', async (e) => {
+            const timestamp = e.target.value;
+            if (timestamp) {
+                await this.loadArchiveSnapshot(parseInt(timestamp));
+                // Reset dropdown to placeholder
+                archiveSelect.value = '';
+            }
+        });
+    }
+    
+    async loadArchiveSnapshot(timestamp) {
+        this.showLoadingModal('Loading archive snapshot...');
+        this.updateLoadingProgress(`Loading ${this.formatSnapshotDate(timestamp)}...`, 20);
+        
+        // Clear cache since we're loading historical data
+        this.clearCache();
+        
+        try {
+            // Archive snapshots use a different URL format
+            const archiveUrl = `https://bitnodes.io/api/v1/snapshots/${timestamp}/?field=geo`;
+            console.log('📡 Fetching archive snapshot from:', archiveUrl);
+            
+            this.updateLoadingProgress('Downloading node data...', 50);
+            const response = await fetch(archiveUrl);
+            
+            if (response.status === 429) {
+                this.hideLoadingModal();
+                this.showRateLimitError('Bitnodes.io API');
+                return;
+            }
+            
+            if (response.status === 404) {
+                // Try the weekly archive format instead
+                console.log('📡 Trying weekly archive format...');
+                this.updateLoadingProgress('Trying archive format...', 60);
+                const weeklyUrl = `https://bitnodes.io/weekly/${timestamp}.json`;
+                const weeklyResponse = await fetch(weeklyUrl);
+                
+                if (!weeklyResponse.ok) {
+                    throw new Error(`Archive snapshot not found: ${timestamp}`);
+                }
+                
+                // Weekly archive has different format - need to transform
+                const weeklyData = await weeklyResponse.json();
+                this.nodeData = this.transformWeeklyArchiveData(timestamp, weeklyData);
+            } else if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            } else {
+                this.nodeData = await response.json();
+            }
+            
+            // Update snapshot tracking
+            this.latestSnapshot = { timestamp, total_nodes: Object.keys(this.nodeData.nodes || {}).length };
+            this.snapshotsData = null; // Clear regular snapshots since we're in archive mode
+            this.currentSnapshotIndex = 0;
+            
+            this.updateLoadingProgress('Creating visualization...', 80);
+            this.createNetworkVisualization();
+            this.updateSnapshotNavButtons();
+            
+            // Update subtitle to indicate archive mode
+            const subtitle = document.getElementById('network-subtitle');
+            if (subtitle) {
+                const totalNodes = this.nodeData.total_nodes || Object.keys(this.nodeData.nodes || {}).length;
+                subtitle.textContent = `Archive: ${totalNodes.toLocaleString()} nodes • ${this.formatSnapshotDate(timestamp)}`;
+            }
+        } catch (error) {
+            console.error('Error loading archive snapshot:', error);
+            this.hideLoadingModal();
+            this.showGenericError('archive snapshot');
+        }
+    }
+    
+    transformWeeklyArchiveData(timestamp, weeklyData) {
+        // Weekly archive format: array of arrays
+        // [address, port, version, userAgent, connectedSince, services, height, hostname, city, countryCode, lat, lng, timezone, asn, org]
+        const nodes = {};
+        
+        if (Array.isArray(weeklyData)) {
+            weeklyData.forEach(nodeArray => {
+                if (Array.isArray(nodeArray) && nodeArray.length >= 2) {
+                    const [address, port, version, userAgent, connectedSince, services, height, hostname, city, country, lat, lng, timezone, asn, org] = nodeArray;
+                    const nodeKey = `${address}:${port}`;
+                    // Transform to standard snapshot format
+                    nodes[nodeKey] = [
+                        version || 70015,
+                        userAgent || '/Satoshi:0.0.0/',
+                        connectedSince || timestamp,
+                        height || 0,
+                        height || 0,
+                        hostname || '',
+                        city || null,
+                        country || null,
+                        lat || null,
+                        lng || null,
+                        timezone || null,
+                        asn || null,
+                        org || null
+                    ];
+                }
+            });
+        }
+        
+        return {
+            timestamp: timestamp,
+            total_nodes: Object.keys(nodes).length,
+            latest_height: 0,
+            nodes: nodes
+        };
     }
     
     // Navigation methods
