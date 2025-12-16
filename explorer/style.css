@@ -439,6 +439,11 @@ button:active {
     pointer-events: auto;
 }
 
+.controls-main {
+    display: flex;
+    gap: 10px;
+}
+
 /* Filter Controls */
 .filter-controls {
     position: absolute;
@@ -549,7 +554,7 @@ button:active {
 }
 
 .section-card .features li:before {
-    content: "•";
+    content: "â€¢";
     color: #fff;
     position: absolute;
     left: 0;
@@ -604,7 +609,7 @@ button:active {
 }
 
 .data-sources li:before {
-    content: "→";
+    content: "â†’";
     color: #fff;
     position: absolute;
     left: 0;
@@ -1421,6 +1426,19 @@ body.raw-data-open .sidebar {
 body.raw-data-open .controls {
     right: auto;
     left: 10px;
+    flex-wrap: wrap;
+}
+
+body.raw-data-open .controls-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+body.raw-data-open .navigation-controls {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 8px;
 }
 
 .raw-data-modal {
@@ -1430,7 +1448,7 @@ body.raw-data-open .controls {
     width: 50%;
     height: calc(100% - 60px);
     background: #0a0a0a;
-    border-left: 1px solid rgba(255, 255, 255, 0.15);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 40000;
     display: none;
     flex-direction: column;
@@ -1473,7 +1491,7 @@ body.raw-data-open .controls {
 }
 
 .raw-data-btn {
-    padding: 6px 12px;
+    padding: 3px 12px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 3px;
@@ -1488,6 +1506,117 @@ body.raw-data-open .controls {
     border-color: rgba(255, 255, 255, 0.3);
 }
 
+.decode-btn.active {
+    background: rgb(255 255 255);
+    border-color: #ffffff;
+    color: #000000;
+}
+
+.decode-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 16px;
+    font-size: 11px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+/* Decoded transaction section colors - matching SatSigner */
+/* https://github.com/satsigner/satsigner/blob/master/apps/mobile/components/SSTransactionDecoded.tsx#L69 */
+.decode-version { background: rgba(255, 255, 255, 0.15); color: #ffffff; }
+.decode-marker { background: rgba(136, 136, 136, 0.2); color: #888888; }
+.decode-flag { background: rgba(255, 255, 255, 0.15); color: #ffffff; }
+.decode-txInVarInt { background: rgba(136, 136, 136, 0.2); color: #888888; }
+.decode-txInHash { background: rgba(224, 25, 25, 0.25); color: #E01919; }
+.decode-txInIndex { background: rgba(134, 11, 11, 0.3); color: #860B0B; }
+.decode-txInScriptVarInt { background: rgba(221, 149, 149, 0.2); color: #DD9595; }
+.decode-txInScript { background: rgba(134, 11, 11, 0.3); color: #860B0B; }
+.decode-txInSequence { background: rgba(134, 11, 11, 0.3); color: #860B0B; }
+.decode-txOutVarInt { background: rgba(147, 204, 146, 0.2); color: #93CC92; }
+.decode-txOutValue { background: rgba(7, 188, 3, 0.25); color: #07BC03; }
+.decode-txOutScriptVarInt { background: rgba(147, 204, 146, 0.2); color: #93CC92; }
+.decode-txOutScript { background: rgba(96, 138, 100, 0.25); color: #608A64; }
+.decode-witnessVarInt { background: rgba(143, 82, 82, 0.15); color: #8F5252; }
+.decode-witnessItemsVarInt { background: rgba(143, 82, 82, 0.15); color: #8F5252; }
+.decode-witnessItem { background: rgba(105, 64, 64, 0.25); color: #694040; }
+.decode-witnessItemEmpty { background: rgba(105, 64, 64, 0.2); color: #694040; }
+.decode-witnessItemPubkey { background: rgba(143, 82, 82, 0.25); color: #8F5252; }
+.decode-witnessItemSignature { background: rgba(105, 64, 64, 0.25); color: #694040; }
+.decode-witnessItemScript { background: rgba(105, 64, 64, 0.25); color: #694040; }
+.decode-locktime { background: rgba(238, 238, 238, 0.15); color: #eeeeee; }
+
+/* Ordinals Inscription colors - envelope/content-type in muted red tones */
+.decode-inscriptionEnvelope { background: rgba(165, 70, 60, 0.25); color: #A5463C; }
+.decode-inscriptionContentTypeTag { background: rgba(150, 75, 65, 0.2); color: #964B41; }
+.decode-inscriptionContentType { background: rgba(150, 75, 65, 0.25); color: #964B41; }
+.decode-inscriptionBodyTag { background: rgba(105, 64, 64, 0.2); color: #694040; }
+.decode-inscriptionBody { background: rgba(105, 64, 64, 0.25); color: #694040; }
+.decode-inscriptionPushOpcode { background: rgba(140, 65, 55, 0.2); color: #8C4137; }
+.decode-inscriptionBodyChunk { background: rgba(105, 64, 64, 0.2); color: #694040; }
+.decode-inscriptionEndif { background: rgba(143, 82, 82, 0.25); color: #8F5252; }
+.decode-inscriptionUnknownTag { background: rgba(105, 64, 64, 0.2); color: #694040; }
+.decode-inscriptionUnknownValue { background: rgba(105, 64, 64, 0.2); color: #694040; }
+
+/* Taproot script elements - witness-related, muted reds */
+.decode-taprootPubkeyPush { background: rgba(105, 64, 64, 0.2); color: #694040; }
+.decode-taprootPubkey { background: rgba(143, 82, 82, 0.25); color: #8F5252; }
+.decode-opChecksig { background: rgba(105, 64, 64, 0.25); color: #694040; }
+
+/* Taproot control block - witness-related, muted reds */
+.decode-controlBlockPush { background: rgba(105, 64, 64, 0.2); color: #694040; }
+.decode-controlByte { background: rgba(143, 82, 82, 0.2); color: #8F5252; }
+.decode-internalPubkey { background: rgba(143, 82, 82, 0.25); color: #8F5252; }
+.decode-merkleProof { background: rgba(105, 64, 64, 0.2); color: #694040; }
+
+.decode-section {
+    cursor: pointer;
+    border-radius: 2px;
+    transition: filter 0.15s;
+}
+
+.decode-section:hover {
+    filter: brightness(1.3);
+}
+
+.decode-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.95);
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #fff;
+    pointer-events: none;
+    z-index: 99999;
+    max-width: 350px;
+    font-family: monospace;
+}
+
+.decode-tooltip .tooltip-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+
+.decode-tooltip .tooltip-value {
+    color: rgba(255, 255, 255, 0.8);
+    word-break: break-all;
+    line-height: 1.4;
+}
+
 .raw-data-close {
     font-size: 18px;
     font-weight: bold;
@@ -1496,17 +1625,58 @@ body.raw-data-open .controls {
 }
 
 .raw-data-info {
-    padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.03);
+    padding: 10px 16px;
+    /* background: rgba(255, 255, 255, 0.03); */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     font-size: 11px;
     color: #888;
     font-family: monospace;
     flex-shrink: 0;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    flex-direction: column;
+    gap: 8px;
+    gap: 10px;
+}
+
+.raw-data-view-toggle {
+    display: flex;
+    gap: 0;
+}
+
+.view-toggle-btn {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #888;
+    font-size: 11px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.view-toggle-btn:first-child {
+    border-radius: 3px 0 0 3px;
+    border-right: none;
+}
+
+.view-toggle-btn:not(:first-child):not(:last-child) {
+    border-radius: 0;
+    border-right: none;
+}
+
+.view-toggle-btn:last-child {
+    border-radius: 0 3px 3px 0;
+}
+
+.view-toggle-btn:hover:not(.active) {
+    background: #252525;
+    color: #ccc;
+}
+
+.view-toggle-btn.active {
+    background: #333;
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .raw-data-bytes-control {
@@ -1540,6 +1710,13 @@ body.raw-data-open .controls {
     border-color: rgba(255, 255, 255, 0.5);
 }
 
+.raw-data-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
 .raw-data-controls-row {
     display: flex;
     align-items: center;
@@ -1550,6 +1727,7 @@ body.raw-data-open .controls {
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
 }
 
 .raw-data-btn-small {
@@ -1637,6 +1815,12 @@ body.raw-data-open .controls {
     color: #fff;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+#raw-data-text .tx-highlight:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .raw-data-content {
@@ -1723,7 +1907,7 @@ body.raw-data-open .controls {
         bottom: 0;
         height: 60%;
         border-left: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     .raw-data-header {

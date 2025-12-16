@@ -61,11 +61,13 @@
             </div>
             
             <div class="controls">
-                <button id="toggle-rotation">Pause Rotation</button>
-                <button id="load-transactions">Load Transactions</button>
-                <button id="load-all-transactions">Load All</button>
-                <button id="toggle-view">Orthographic</button>
-                <button id="show-raw-data">Raw Data</button>
+                <div class="controls-main">
+                    <button id="toggle-rotation">Pause Rotation</button>
+                    <button id="load-transactions">Load Transactions</button>
+                    <button id="load-all-transactions">Load All</button>
+                    <button id="toggle-view">Orthographic</button>
+                    <button id="show-raw-data">Raw Data</button>
+                </div>
                 <div class="navigation-controls">
                     <div class="control-group">
                         <div class="control-label">Rotate</div>
@@ -108,27 +110,34 @@
                 </div>
             </div>
             <div class="raw-data-info">
-                <span id="raw-data-size">Size: --</span>
-                <div class="raw-data-controls-row">
-                    <div class="raw-data-bytes-control">
-                        <label for="bytes-per-line">Bytes/line:</label>
-                        <select id="bytes-per-line">
-                            <option value="16">16</option>
-                            <option value="32" selected>32</option>
-                            <option value="64">64</option>
-                            <option value="128">128</option>
-                            <option value="256">256</option>
-                        </select>
-                    </div>
-                    <div class="raw-data-find-control">
-                        <button id="find-tx-toggle" class="raw-data-btn-small">Find TX</button>
-                        <div id="find-tx-input-wrapper" class="find-tx-input-wrapper hidden">
-                            <input type="text" id="find-tx-input" placeholder="Paste transaction ID..." />
-                            <button id="find-tx-btn" class="raw-data-btn-small">Find</button>
-                            <button id="find-tx-close" class="raw-data-btn-small">&times;</button>
+                <div class="raw-data-top-row">
+                    <span id="raw-data-size">Size: --</span>
+                    <div class="raw-data-controls-row">
+                        <div class="raw-data-view-toggle">
+                            <button id="view-binary" class="view-toggle-btn">Binary</button>
+                            <button id="view-hex" class="view-toggle-btn active">Hex</button>
+                            <button id="view-ascii" class="view-toggle-btn">ASCII</button>
                         </div>
-                        <span id="find-tx-result" class="find-tx-result"></span>
+                        <div class="raw-data-bytes-control">
+                            <label for="bytes-per-line">Bytes/line:</label>
+                            <select id="bytes-per-line">
+                                <option value="16">16</option>
+                                <option value="32" selected>32</option>
+                                <option value="64">64</option>
+                                <option value="128">128</option>
+                                <option value="256">256</option>
+                            </select>
+                        </div>
                     </div>
+                </div>
+                <div class="raw-data-find-control">
+                    <button id="find-tx-toggle" class="raw-data-btn-small">Find TX</button>
+                    <div id="find-tx-input-wrapper" class="find-tx-input-wrapper hidden">
+                        <input type="text" id="find-tx-input" placeholder="Paste transaction ID..." />
+                        <button id="find-tx-btn" class="raw-data-btn-small">Find</button>
+                        <button id="find-tx-close" class="raw-data-btn-small">&times;</button>
+                    </div>
+                    <span id="find-tx-result" class="find-tx-result"></span>
                 </div>
             </div>
             <div class="raw-data-content">

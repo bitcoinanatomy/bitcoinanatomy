@@ -19,6 +19,7 @@ class BitcoinBlockExplorer {
         this.shouldStopLoadingAll = false; // Flag to stop load all process
         this.chainTipHeight = null; // Store chain tip height
         this.rawBlockData = null; // Store raw block data for download
+        this.rawViewMode = 'hex'; // 'hex' or 'ascii'
         this.blockHeaderData = null; // Store block header hex data
         this.headerMesh = null; // 3D mesh for block header
         this.headerAnimated = false; // Track if header has been animated up
@@ -30,6 +31,14 @@ class BitcoinBlockExplorer {
         this.blockHeight = urlParams.get('height');
         this.focusTxid = urlParams.get('txid'); // Transaction to highlight on load
         this.bytesPerLine = urlParams.get('bytes'); // Bytes per line for raw data display
+        this.urlViewMode = urlParams.get('view'); // View mode for raw data (hex/ascii/binary)
+        
+        // Set initial view mode from URL
+        if (this.urlViewMode === 'ascii') {
+            this.rawViewMode = 'ascii';
+        } else if (this.urlViewMode === 'binary') {
+            this.rawViewMode = 'binary';
+        }
         
         this.init();
     }
@@ -397,6 +406,46 @@ class BitcoinBlockExplorer {
             const url = new URL(window.location);
             url.searchParams.set('bytes', bytesValue);
             window.history.pushState({}, '', url);
+        });
+        
+        // View toggle (Hex/ASCII)
+        document.getElementById('view-hex').addEventListener('click', () => {
+            if (this.rawViewMode !== 'hex') {
+                this.rawViewMode = 'hex';
+                this.updateViewToggleButtons();
+                this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
+                
+                // Update URL with view parameter
+                const url = new URL(window.location);
+                url.searchParams.delete('view'); // hex is default, remove param
+                window.history.pushState({}, '', url);
+            }
+        });
+        
+        document.getElementById('view-ascii').addEventListener('click', () => {
+            if (this.rawViewMode !== 'ascii') {
+                this.rawViewMode = 'ascii';
+                this.updateViewToggleButtons();
+                this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
+                
+                // Update URL with view parameter
+                const url = new URL(window.location);
+                url.searchParams.set('view', 'ascii');
+                window.history.pushState({}, '', url);
+            }
+        });
+        
+        document.getElementById('view-binary').addEventListener('click', () => {
+            if (this.rawViewMode !== 'binary') {
+                this.rawViewMode = 'binary';
+                this.updateViewToggleButtons();
+                this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
+                
+                // Update URL with view parameter
+                const url = new URL(window.location);
+                url.searchParams.set('view', 'binary');
+                window.history.pushState({}, '', url);
+            }
         });
         
         // Find transaction controls
@@ -2223,32 +2272,10 @@ class BitcoinBlockExplorer {
             
             sizeElement.textContent = `Size: ${sizeFormatted} (${hexString.length.toLocaleString()} hex chars)`;
             
-            // Display hex with line breaks based on selected bytes per line
+            // Display data based on current view mode
             textElement.className = '';
             const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
-            const charsPerLine = bytesPerLine * 2; // 2 hex chars per byte
-            
-            // Adjust font size based on bytes per line
-            if (bytesPerLine >= 256) {
-                textElement.style.fontSize = '0.12vw';
-            } else if (bytesPerLine >= 128) {
-                textElement.style.fontSize = '0.3vw';
-            } else if (bytesPerLine >= 64) {
-                textElement.style.fontSize = '0.5vw';
-            } else {
-                textElement.style.fontSize = '10px'; // Default size
-            }
-            
-            // For very large data, chunk the display to prevent UI freeze
-            if (hexString.length > 100000) {
-                // Display in chunks to prevent UI freeze
-                await this.displayLargeText(textElement, hexString, charsPerLine);
-            } else {
-                // Format with line breaks
-                const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
-                const formattedHex = hexString.match(regex)?.join('\n') || hexString;
-                textElement.textContent = formattedHex;
-            }
+            await this.reformatRawData(bytesPerLine);
             
             downloadBtn.disabled = false;
             
@@ -2309,8 +2336,12 @@ class BitcoinBlockExplorer {
         
         // TXIDs are hashes and don't appear directly in raw block data
         // Instead, fetch the transaction hex and search for a unique portion of it
-        result.textContent = 'Fetching transaction...';
+        result.textContent = 'Fetching TX data...';
         result.className = 'find-tx-result loading';
+        
+        // Dim the text area while searching
+        textElement.style.opacity = '0.5';
+        textElement.style.pointerEvents = 'none';
         
         try {
             // Fetch the transaction's raw hex
@@ -2319,10 +2350,16 @@ class BitcoinBlockExplorer {
             if (!response.ok) {
                 result.textContent = 'TX not found on mempool';
                 result.className = 'find-tx-result not-found';
+                textElement.style.opacity = '1';
+                textElement.style.pointerEvents = '';
                 return;
             }
             
             const txHex = (await response.text()).toLowerCase();
+            
+            // Update loading state - use requestAnimationFrame for reliable UI update
+            result.textContent = 'Searching in block...';
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             
             // Search for the transaction's raw data in the block
             // Try finding a unique portion (first 64 chars after version/marker)
@@ -2363,19 +2400,43 @@ class BitcoinBlockExplorer {
             if (foundPosition === -1) {
                 result.textContent = 'TX data not found in block';
                 result.className = 'find-tx-result not-found';
+                textElement.style.opacity = '1';
+                textElement.style.pointerEvents = '';
                 return;
             }
             
-            // Calculate line number based on current bytes per line
-            const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
-            const charsPerLine = bytesPerLine * 2;
-            const lineNumber = Math.floor(foundPosition / charsPerLine);
+            // Show highlighting state
+            const bytePosition = Math.floor(foundPosition / 2);
+            result.textContent = 'Highlighting...';
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             
-            result.textContent = `Found at byte ${Math.floor(foundPosition / 2).toLocaleString()} (${matchType})`;
+            // Calculate line number based on current bytes per line and view mode
+            const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
+            
+            // Chars per line varies by mode: ASCII=1, Hex=2, Binary=8 per byte
+            let charsPerLine, positionInView;
+            if (this.rawViewMode === 'ascii') {
+                charsPerLine = bytesPerLine;
+                positionInView = bytePosition;
+            } else if (this.rawViewMode === 'binary') {
+                charsPerLine = bytesPerLine * 8;
+                positionInView = bytePosition * 8;
+            } else {
+                charsPerLine = bytesPerLine * 2;
+                positionInView = foundPosition;
+            }
+            const lineNumber = Math.floor(positionInView / charsPerLine);
+            
+            // Highlight the transaction in the display (pass hex positions, highlightTransaction will convert)
+            this.highlightTransaction(foundPosition, txHex.length);
+            
+            // Show final result
+            result.textContent = `Found at byte ${bytePosition.toLocaleString()} (${matchType})`;
             result.className = 'find-tx-result found';
             
-            // Highlight the transaction in the display
-            this.highlightTransaction(foundPosition, txHex.length);
+            // Restore text area
+            textElement.style.opacity = '1';
+            textElement.style.pointerEvents = '';
             
             // Also highlight the 3D model
             const cuboid = this.transactions.find(tx => tx.userData.txid === txid);
@@ -2402,20 +2463,55 @@ class BitcoinBlockExplorer {
             console.error('Error finding transaction:', error);
             result.textContent = 'Error fetching TX';
             result.className = 'find-tx-result not-found';
+            textElement.style.opacity = '1';
+            textElement.style.pointerEvents = '';
         }
     }
     
-    highlightTransaction(startPos, length) {
+    highlightTransaction(hexStartPos, hexLength) {
         if (!this.rawBlockData || !this.rawBlockData.hex) return;
         
         const textElement = document.getElementById('raw-data-text');
-        const hexString = this.rawBlockData.hex;
         const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
-        const charsPerLine = bytesPerLine * 2;
         
-        // Format the hex with line breaks
+        // Set appropriate font size based on bytes per line and view mode
+        const isAscii = this.rawViewMode === 'ascii';
+        const isBinary = this.rawViewMode === 'binary';
+        if (bytesPerLine >= 256) {
+            textElement.style.fontSize = isAscii ? '0.24vw' : isBinary ? '0.03vw' : '0.12vw';
+        } else if (bytesPerLine >= 128) {
+            textElement.style.fontSize = isAscii ? '0.6vw' : isBinary ? '0.08vw' : '0.3vw';
+        } else if (bytesPerLine >= 64) {
+            textElement.style.fontSize = isAscii ? '1vw' : isBinary ? '0.15vw' : '0.5vw';
+        } else {
+            textElement.style.fontSize = isAscii ? '20px' : isBinary ? '4px' : '10px';
+        }
+        
+        let dataString, charsPerLine, startPos, length;
+        
+        if (this.rawViewMode === 'ascii') {
+            // ASCII mode: convert hex positions to byte positions
+            dataString = this.bytesToAscii(this.rawBlockData.bytes);
+            charsPerLine = bytesPerLine; // 1 char per byte in ASCII
+            startPos = Math.floor(hexStartPos / 2); // hex position / 2 = byte position
+            length = Math.floor(hexLength / 2); // hex length / 2 = byte length
+        } else if (this.rawViewMode === 'binary') {
+            // Binary mode: convert hex positions to binary positions
+            dataString = this.bytesToBinary(this.rawBlockData.bytes);
+            charsPerLine = bytesPerLine * 8; // 8 binary chars per byte
+            startPos = Math.floor(hexStartPos / 2) * 8; // hex position / 2 * 8 = binary position
+            length = Math.floor(hexLength / 2) * 8; // hex length / 2 * 8 = binary length
+        } else {
+            // Hex mode
+            dataString = this.rawBlockData.hex;
+            charsPerLine = bytesPerLine * 2; // 2 hex chars per byte
+            startPos = hexStartPos;
+            length = hexLength;
+        }
+        
+        // Format with line breaks
         const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
-        const lines = hexString.match(regex) || [hexString];
+        const lines = dataString.match(regex) || [dataString];
         
         // Calculate which characters to highlight (accounting for newlines)
         const endPos = startPos + length;
@@ -2455,6 +2551,19 @@ class BitcoinBlockExplorer {
         
         textElement.innerHTML = html;
         textElement.classList.add('has-highlight');
+        
+        // Add double-click handler to navigate to transaction page
+        const highlightSpans = textElement.querySelectorAll('.tx-highlight');
+        highlightSpans.forEach(span => {
+            span.style.cursor = 'pointer';
+            span.title = 'Double-click to view transaction details';
+            span.addEventListener('dblclick', () => {
+                const txid = document.getElementById('find-tx-input').value.trim();
+                if (txid && txid.length === 64) {
+                    window.location.href = `transaction.html?txid=${txid}`;
+                }
+            });
+        });
     }
     
     escapeHtml(text) {
@@ -2463,18 +2572,21 @@ class BitcoinBlockExplorer {
         return div.innerHTML;
     }
     
-    clearHighlight() {
+    async clearHighlight() {
         const textElement = document.getElementById('raw-data-text');
         textElement.classList.remove('has-highlight');
         
-        // Re-render without highlight if data exists
+        // Save scroll position before re-rendering
+        const scrollTop = textElement.scrollTop;
+        
+        // Re-render without highlight if data exists (respects current view mode)
         if (this.rawBlockData && this.rawBlockData.hex) {
             const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
-            const charsPerLine = bytesPerLine * 2;
-            const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
-            const formattedHex = this.rawBlockData.hex.match(regex)?.join('\n') || this.rawBlockData.hex;
-            textElement.textContent = formattedHex;
+            await this.reformatRawData(bytesPerLine);
         }
+        
+        // Restore scroll position after re-rendering
+        textElement.scrollTop = scrollTop;
     }
     
     async findTransactionInRawDataByTxid(txid) {
@@ -2588,28 +2700,102 @@ class BitcoinBlockExplorer {
         
         const textElement = document.getElementById('raw-data-text');
         const hexString = this.rawBlockData.hex;
-        const charsPerLine = bytesPerLine * 2; // 2 hex chars per byte
+        const bytes = this.rawBlockData.bytes;
         
-        // Adjust font size based on bytes per line
+        // Adjust font size based on bytes per line and view mode
+        // ASCII = 2x hex, Binary gets progressively smaller at higher bytes/line
+        const isAscii = this.rawViewMode === 'ascii';
+        const isBinary = this.rawViewMode === 'binary';
         if (bytesPerLine >= 256) {
-            textElement.style.fontSize = '0.12vw';
+            textElement.style.fontSize = isAscii ? '0.24vw' : isBinary ? '0.03vw' : '0.12vw';
         } else if (bytesPerLine >= 128) {
-            textElement.style.fontSize = '0.3vw';
+            textElement.style.fontSize = isAscii ? '0.6vw' : isBinary ? '0.08vw' : '0.3vw';
         } else if (bytesPerLine >= 64) {
-            textElement.style.fontSize = '0.5vw';
+            textElement.style.fontSize = isAscii ? '1vw' : isBinary ? '0.15vw' : '0.5vw';
         } else {
-            textElement.style.fontSize = '10px'; // Default size
+            textElement.style.fontSize = isAscii ? '20px' : isBinary ? '4px' : '10px';
         }
         
         // Show brief loading state for large data
-        if (hexString.length > 100000) {
+        const isLarge = hexString.length > 100000;
+        if (isLarge) {
             textElement.textContent = 'Reformatting...';
             await new Promise(resolve => setTimeout(resolve, 10));
-            await this.displayLargeText(textElement, hexString, charsPerLine);
+        }
+        
+        if (this.rawViewMode === 'ascii') {
+            // ASCII view
+            const asciiString = this.bytesToAscii(bytes);
+            if (isLarge) {
+                await this.displayLargeText(textElement, asciiString, bytesPerLine, 'ascii');
+            } else {
+                const regex = new RegExp(`.{1,${bytesPerLine}}`, 'g');
+                const formatted = asciiString.match(regex)?.join('\n') || asciiString;
+                textElement.textContent = formatted;
+            }
+        } else if (this.rawViewMode === 'binary') {
+            // Binary view - 8 chars per byte
+            const binaryString = this.bytesToBinary(bytes);
+            const charsPerLine = bytesPerLine * 8; // 8 binary chars per byte
+            if (isLarge) {
+                await this.displayLargeText(textElement, binaryString, charsPerLine, 'binary');
+            } else {
+                const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
+                const formatted = binaryString.match(regex)?.join('\n') || binaryString;
+                textElement.textContent = formatted;
+            }
         } else {
-            const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
-            const formattedHex = hexString.match(regex)?.join('\n') || hexString;
-            textElement.textContent = formattedHex;
+            // Hex view
+            const charsPerLine = bytesPerLine * 2; // 2 hex chars per byte
+            if (isLarge) {
+                await this.displayLargeText(textElement, hexString, charsPerLine, 'hex');
+            } else {
+                const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
+                const formattedHex = hexString.match(regex)?.join('\n') || hexString;
+                textElement.textContent = formattedHex;
+            }
+        }
+    }
+    
+    bytesToAscii(bytes) {
+        // Convert bytes to ASCII, using '.' for non-printable characters
+        let result = '';
+        for (let i = 0; i < bytes.length; i++) {
+            const byte = bytes[i];
+            // Printable ASCII range: 32-126
+            if (byte >= 32 && byte <= 126) {
+                result += String.fromCharCode(byte);
+            } else {
+                result += '.';
+            }
+        }
+        return result;
+    }
+    
+    bytesToBinary(bytes) {
+        // Convert bytes to binary string (8 bits per byte)
+        let result = '';
+        for (let i = 0; i < bytes.length; i++) {
+            result += bytes[i].toString(2).padStart(8, '0');
+        }
+        return result;
+    }
+    
+    updateViewToggleButtons() {
+        const hexBtn = document.getElementById('view-hex');
+        const binaryBtn = document.getElementById('view-binary');
+        const asciiBtn = document.getElementById('view-ascii');
+        
+        hexBtn.classList.remove('active');
+        binaryBtn.classList.remove('active');
+        asciiBtn.classList.remove('active');
+        
+        if (this.rawViewMode === 'hex') {
+            hexBtn.classList.add('active');
+        } else if (this.rawViewMode === 'binary') {
+            binaryBtn.classList.add('active');
+        } else {
+            asciiBtn.classList.add('active');
         }
     }
     
@@ -2617,6 +2803,9 @@ class BitcoinBlockExplorer {
         const modal = document.getElementById('raw-data-modal');
         modal.classList.add('active');
         document.body.classList.add('raw-data-open');
+        
+        // Update view toggle buttons to reflect current mode
+        this.updateViewToggleButtons();
         
         // Trigger resize immediately and after transition completes
         this.onWindowResize();

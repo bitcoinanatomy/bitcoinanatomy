@@ -68,12 +68,15 @@
             </div>
             
             <div class="controls">
-                <button id="toggle-rotation">Pause Rotation</button>
-                <button id="reset-camera">Reset Camera</button>
-                <button id="toggle-view">Orthographic</button>
-                <button id="toggle-flow">Show Flow</button>
-                <button id="change-transaction">Load Transaction</button>
-                <button id="back-to-block" style="display: none;">Back to Block</button>
+                <div class="controls-main">
+                    <button id="toggle-rotation">Pause Rotation</button>
+                    <button id="reset-camera">Reset Camera</button>
+                    <button id="toggle-view">Orthographic</button>
+                    <button id="toggle-flow">Show Flow</button>
+                    <button id="change-transaction">Load Transaction</button>
+                    <button id="show-raw-data">Raw Data</button>
+                    <button id="back-to-block" style="display: none;">Back to Block</button>
+                </div>
                 <div class="navigation-controls">
                     <div class="control-group">
                         <div class="control-label">Rotate</div>
@@ -107,6 +110,58 @@
     
     <div class="disclaimer">
         Data sources: Mempool.space
+    </div>
+
+    <!-- Raw Transaction Data Modal -->
+    <div id="raw-data-modal" class="raw-data-modal">
+        <div class="raw-data-container">
+            <div class="raw-data-header">
+                <h3>Raw Transaction Data</h3>
+                <div class="raw-data-actions">
+                    <button id="copy-raw-data" class="raw-data-btn" title="Copy to clipboard">Copy</button>
+                    <button id="download-raw-data" class="raw-data-btn" title="Download">Download</button>
+                    <button id="close-raw-data" class="raw-data-btn raw-data-close" title="Close">&times;</button>
+                </div>
+            </div>
+            <div class="raw-data-info">
+                <div class="raw-data-top-row">
+                    <span id="raw-data-size">Size: --</span>
+                    <div class="raw-data-controls-row">
+                        <div class="raw-data-view-toggle">
+                            <button id="view-binary" class="view-toggle-btn">Binary</button>
+                            <button id="view-hex" class="view-toggle-btn active">Hex</button>
+                            <button id="view-ascii" class="view-toggle-btn">ASCII</button>
+                        </div>
+                        <button id="toggle-decode" class="raw-data-btn decode-btn" title="Color-code transaction parts">Decode</button>
+                        <div class="raw-data-bytes-control">
+                            <label for="bytes-per-line">Bytes/line:</label>
+                            <select id="bytes-per-line">
+                                <option value="16">16</option>
+                                <option value="32" selected>32</option>
+                                <option value="64">64</option>
+                                <option value="128">128</option>
+                                <option value="256">256</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="raw-data-content">
+                <pre id="raw-data-text"></pre>
+            </div>
+            <div id="decode-legend" class="decode-legend" style="display: none;">
+                <span class="legend-item"><span class="legend-color" style="background: #fff;"></span>Version/Flag</span>
+                <span class="legend-item"><span class="legend-color" style="background: #888;"></span>Count</span>
+                <span class="legend-item"><span class="legend-color" style="background: #E01919;"></span>Input TXID</span>
+                <span class="legend-item"><span class="legend-color" style="background: #860B0B;"></span>Input Data</span>
+                <span class="legend-item"><span class="legend-color" style="background: #07BC03;"></span>Output Value</span>
+                <span class="legend-item"><span class="legend-color" style="background: #93CC92;"></span>Output VarInt</span>
+                <span class="legend-item"><span class="legend-color" style="background: #608A64;"></span>Output Script</span>
+                <span class="legend-item"><span class="legend-color" style="background: #8F5252;"></span>Witness</span>
+                <span class="legend-item"><span class="legend-color" style="background: #694040;"></span>Witness Data</span>
+                <span class="legend-item"><span class="legend-color" style="background: #eee;"></span>Locktime</span>
+            </div>
+        </div>
     </div>
 
     <!-- Transaction Change Modal -->
