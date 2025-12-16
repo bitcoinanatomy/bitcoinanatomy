@@ -26,12 +26,20 @@ class BitcoinBlockExplorer {
         this.highlightedCuboid = null; // Track highlighted transaction in 3D
         this.hoveredCuboid = null; // Track hovered transaction for visual feedback
         
+        // Decode mode properties
+        this.decodeMode = false;
+        this.decodedSections = null;
+        this.decodeTooltip = null;
+        this.highlightRange = null; // Track highlighted transaction byte range
+        
         // Get block height and transaction ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         this.blockHeight = urlParams.get('height');
         this.focusTxid = urlParams.get('txid'); // Transaction to highlight on load
         this.bytesPerLine = urlParams.get('bytes'); // Bytes per line for raw data display
         this.urlViewMode = urlParams.get('view'); // View mode for raw data (hex/ascii/binary)
+        this.urlDecodeMode = urlParams.get('decode') === 'on'; // Decode mode from URL
+        this.urlRawDataOpen = urlParams.get('rawdata') === 'open'; // Whether raw data panel should be open
         
         // Set initial view mode from URL
         if (this.urlViewMode === 'ascii') {
@@ -62,7 +70,7 @@ class BitcoinBlockExplorer {
         
         // Apply bytes per line from URL parameter if provided
         if (this.bytesPerLine) {
-            const validValues = ['16', '32', '64', '128', '256'];
+            const validValues = ['16', '32', '64', '128', '256', '512'];
             if (validValues.includes(this.bytesPerLine)) {
                 document.getElementById('bytes-per-line').value = this.bytesPerLine;
             }
@@ -74,6 +82,17 @@ class BitcoinBlockExplorer {
         this.createScene();
         this.animate();
         this.fetchData();
+        
+        // Auto-open raw data panel if URL parameter is set
+        if (this.urlRawDataOpen) {
+            // Wait for block data to load first
+            const waitForBlockData = setInterval(() => {
+                if (this.blockData && this.blockData.id) {
+                    clearInterval(waitForBlockData);
+                    this.fetchRawBlockData();
+                }
+            }, 100);
+        }
     }
 
     setupThreeJS() {
@@ -446,6 +465,46 @@ class BitcoinBlockExplorer {
                 url.searchParams.set('view', 'binary');
                 window.history.pushState({}, '', url);
             }
+        });
+        
+        // Decode toggle button
+        document.getElementById('toggle-decode').addEventListener('click', () => {
+            this.decodeMode = !this.decodeMode;
+            const decodeBtn = document.getElementById('toggle-decode');
+            const legend = document.getElementById('decode-legend');
+            
+            if (this.decodeMode) {
+                decodeBtn.classList.add('active');
+                legend.style.display = 'flex';
+                // Parse block if not already done
+                if (!this.decodedSections && this.rawBlockData) {
+                    this.decodedSections = this.parseBlock(this.rawBlockData.bytes);
+                }
+            } else {
+                decodeBtn.classList.remove('active');
+                legend.style.display = 'none';
+            }
+            
+            const bytesPerLine = parseInt(document.getElementById('bytes-per-line').value) || 32;
+            
+            // If there's an active highlight, preserve it when toggling decode mode
+            if (this.highlightRange) {
+                const hexStartPos = this.highlightRange.start * 2;
+                const hexLength = (this.highlightRange.end - this.highlightRange.start) * 2;
+                this.highlightTransaction(hexStartPos, hexLength);
+            } else {
+                // Re-render with or without decode highlighting
+                this.reformatRawData(bytesPerLine);
+            }
+            
+            // Update URL with decode parameter
+            const url = new URL(window.location);
+            if (this.decodeMode) {
+                url.searchParams.set('decode', 'on');
+            } else {
+                url.searchParams.delete('decode');
+            }
+            window.history.pushState({}, '', url);
         });
         
         // Find transaction controls
@@ -2110,7 +2169,7 @@ class BitcoinBlockExplorer {
             button.textContent = 'Start Rotation';
         }
         this.controls.theta -= 0.2;
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     rotateRight() {
@@ -2120,7 +2179,7 @@ class BitcoinBlockExplorer {
             button.textContent = 'Start Rotation';
         }
         this.controls.theta += 0.2;
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     rotateUp() {
@@ -2131,7 +2190,7 @@ class BitcoinBlockExplorer {
         }
         this.controls.phi -= 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     rotateDown() {
@@ -2142,7 +2201,7 @@ class BitcoinBlockExplorer {
         }
         this.controls.phi += 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     panLeft() {
@@ -2152,7 +2211,7 @@ class BitcoinBlockExplorer {
             button.textContent = 'Start Rotation';
         }
         this.controls.panX -= 0.5;
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     panRight() {
@@ -2162,7 +2221,7 @@ class BitcoinBlockExplorer {
             button.textContent = 'Start Rotation';
         }
         this.controls.panX += 0.5;
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     panUp() {
@@ -2172,7 +2231,7 @@ class BitcoinBlockExplorer {
             button.textContent = 'Start Rotation';
         }
         this.controls.panY += 0.5;
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     panDown() {
@@ -2182,7 +2241,7 @@ class BitcoinBlockExplorer {
             button.textContent = 'Start Rotation';
         }
         this.controls.panY -= 0.5;
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     zoomIn() {
@@ -2193,7 +2252,7 @@ class BitcoinBlockExplorer {
         }
         this.controls.distance -= 2;
         this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     zoomOut() {
@@ -2204,7 +2263,7 @@ class BitcoinBlockExplorer {
         }
         this.controls.distance += 2;
         this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-        this.updateCameraPosition();
+        this.controls.update();
     }
     
     // Raw block data methods
@@ -2271,6 +2330,16 @@ class BitcoinBlockExplorer {
                     : `${sizeBytes} bytes`;
             
             sizeElement.textContent = `Size: ${sizeFormatted} (${hexString.length.toLocaleString()} hex chars)`;
+            
+            // Parse block for decode mode
+            this.decodedSections = this.parseBlock(bytes);
+            
+            // Enable decode mode from URL if set
+            if (this.urlDecodeMode && !this.decodeMode) {
+                this.decodeMode = true;
+                document.getElementById('toggle-decode').classList.add('active');
+                document.getElementById('decode-legend').style.display = 'flex';
+            }
             
             // Display data based on current view mode
             textElement.className = '';
@@ -2477,7 +2546,9 @@ class BitcoinBlockExplorer {
         // Set appropriate font size based on bytes per line and view mode
         const isAscii = this.rawViewMode === 'ascii';
         const isBinary = this.rawViewMode === 'binary';
-        if (bytesPerLine >= 256) {
+        if (bytesPerLine >= 512) {
+            textElement.style.fontSize = isAscii ? '0.12vw' : isBinary ? '0.015vw' : '0.06vw';
+        } else if (bytesPerLine >= 256) {
             textElement.style.fontSize = isAscii ? '0.24vw' : isBinary ? '0.03vw' : '0.12vw';
         } else if (bytesPerLine >= 128) {
             textElement.style.fontSize = isAscii ? '0.6vw' : isBinary ? '0.08vw' : '0.3vw';
@@ -2485,6 +2556,17 @@ class BitcoinBlockExplorer {
             textElement.style.fontSize = isAscii ? '1vw' : isBinary ? '0.15vw' : '0.5vw';
         } else {
             textElement.style.fontSize = isAscii ? '20px' : isBinary ? '4px' : '10px';
+        }
+        
+        // Store highlight range in bytes for use in decode mode
+        const highlightByteStart = Math.floor(hexStartPos / 2);
+        const highlightByteEnd = highlightByteStart + Math.floor(hexLength / 2);
+        this.highlightRange = { start: highlightByteStart, end: highlightByteEnd };
+        
+        // If decode mode is active, render with decode colors AND highlight
+        if (this.decodeMode && this.decodedSections) {
+            this.renderDecodedDataWithHighlight(bytesPerLine, highlightByteStart, highlightByteEnd);
+            return;
         }
         
         let dataString, charsPerLine, startPos, length;
@@ -2553,7 +2635,121 @@ class BitcoinBlockExplorer {
         textElement.classList.add('has-highlight');
         
         // Add double-click handler to navigate to transaction page
-        const highlightSpans = textElement.querySelectorAll('.tx-highlight');
+        this.addHighlightClickHandlers();
+    }
+    
+    renderDecodedDataWithHighlight(bytesPerLine, highlightByteStart, highlightByteEnd) {
+        const textElement = document.getElementById('raw-data-text');
+        const hexString = this.rawBlockData.hex;
+        const bytes = this.rawBlockData.bytes;
+        
+        // Convert byte positions to character positions based on view mode
+        const getCharPos = (bytePos) => {
+            if (this.rawViewMode === 'ascii') {
+                return bytePos;
+            } else if (this.rawViewMode === 'binary') {
+                return bytePos * 8;
+            } else {
+                return bytePos * 2;
+            }
+        };
+        
+        // Get the full string in current view mode
+        let fullString;
+        let charsPerLine;
+        if (this.rawViewMode === 'ascii') {
+            fullString = this.bytesToAscii(bytes);
+            charsPerLine = bytesPerLine;
+        } else if (this.rawViewMode === 'binary') {
+            fullString = this.bytesToBinary(bytes);
+            charsPerLine = bytesPerLine * 8;
+        } else {
+            fullString = hexString;
+            charsPerLine = bytesPerLine * 2;
+        }
+        
+        // Convert highlight byte range to char range
+        const highlightCharStart = getCharPos(highlightByteStart);
+        const highlightCharEnd = getCharPos(highlightByteEnd);
+        
+        // Sort sections by start position
+        const sortedSections = [...this.decodedSections].sort((a, b) => a.start - b.start);
+        
+        let html = '';
+        let currentCharPos = 0;
+        let currentLinePos = 0;
+        
+        // Helper to check if a position is within highlight range
+        const isInHighlight = (charPos) => charPos >= highlightCharStart && charPos < highlightCharEnd;
+        
+        // Helper to add text with line breaks and optional highlight
+        const addTextWithBreaks = (text, cssClass, section, textStartCharPos) => {
+            let remaining = text;
+            let charPos = textStartCharPos;
+            
+            while (remaining.length > 0) {
+                const spaceOnLine = charsPerLine - currentLinePos;
+                const chunk = remaining.substring(0, spaceOnLine);
+                remaining = remaining.substring(spaceOnLine);
+                
+                // Check if any part of this chunk is in the highlight range
+                const chunkStart = charPos;
+                const chunkEnd = charPos + chunk.length;
+                const chunkInHighlight = chunkStart < highlightCharEnd && chunkEnd > highlightCharStart;
+                
+                if (cssClass) {
+                    const dataAttrs = section ? `data-label="${this.escapeAttr(section.label)}" data-value="${this.escapeAttr(String(section.value))}"` : '';
+                    const highlightClass = chunkInHighlight ? ' tx-highlight-decode' : '';
+                    html += `<span class="decode-section ${cssClass}${highlightClass}" ${dataAttrs}>${this.escapeHtml(chunk)}</span>`;
+                } else {
+                    if (chunkInHighlight) {
+                        html += `<span class="tx-highlight">${this.escapeHtml(chunk)}</span>`;
+                    } else {
+                        html += this.escapeHtml(chunk);
+                    }
+                }
+                
+                charPos += chunk.length;
+                currentLinePos += chunk.length;
+                if (currentLinePos >= charsPerLine && remaining.length > 0) {
+                    html += '\n';
+                    currentLinePos = 0;
+                }
+            }
+        };
+        
+        for (const section of sortedSections) {
+            const sectionStartChar = getCharPos(section.start);
+            const sectionEndChar = getCharPos(section.end);
+            
+            // Add any gap before this section
+            if (sectionStartChar > currentCharPos) {
+                const gapText = fullString.substring(currentCharPos, sectionStartChar);
+                addTextWithBreaks(gapText, null, null, currentCharPos);
+            }
+            
+            // Add the section with coloring
+            const sectionText = fullString.substring(sectionStartChar, sectionEndChar);
+            addTextWithBreaks(sectionText, section.cssClass, section, sectionStartChar);
+            
+            currentCharPos = sectionEndChar;
+        }
+        
+        // Add any remaining text after the last section
+        if (currentCharPos < fullString.length) {
+            const remainingText = fullString.substring(currentCharPos);
+            addTextWithBreaks(remainingText, null, null, currentCharPos);
+        }
+        
+        textElement.innerHTML = html;
+        textElement.classList.add('has-highlight');
+        this.setupDecodeTooltips();
+        this.addHighlightClickHandlers();
+    }
+    
+    addHighlightClickHandlers() {
+        const textElement = document.getElementById('raw-data-text');
+        const highlightSpans = textElement.querySelectorAll('.tx-highlight, .tx-highlight-decode');
         highlightSpans.forEach(span => {
             span.style.cursor = 'pointer';
             span.title = 'Double-click to view transaction details';
@@ -2575,6 +2771,9 @@ class BitcoinBlockExplorer {
     async clearHighlight() {
         const textElement = document.getElementById('raw-data-text');
         textElement.classList.remove('has-highlight');
+        
+        // Clear highlight range
+        this.highlightRange = null;
         
         // Save scroll position before re-rendering
         const scrollTop = textElement.scrollTop;
@@ -2706,7 +2905,9 @@ class BitcoinBlockExplorer {
         // ASCII = 2x hex, Binary gets progressively smaller at higher bytes/line
         const isAscii = this.rawViewMode === 'ascii';
         const isBinary = this.rawViewMode === 'binary';
-        if (bytesPerLine >= 256) {
+        if (bytesPerLine >= 512) {
+            textElement.style.fontSize = isAscii ? '0.12vw' : isBinary ? '0.015vw' : '0.06vw';
+        } else if (bytesPerLine >= 256) {
             textElement.style.fontSize = isAscii ? '0.24vw' : isBinary ? '0.03vw' : '0.12vw';
         } else if (bytesPerLine >= 128) {
             textElement.style.fontSize = isAscii ? '0.6vw' : isBinary ? '0.08vw' : '0.3vw';
@@ -2714,6 +2915,12 @@ class BitcoinBlockExplorer {
             textElement.style.fontSize = isAscii ? '1vw' : isBinary ? '0.15vw' : '0.5vw';
         } else {
             textElement.style.fontSize = isAscii ? '20px' : isBinary ? '4px' : '10px';
+        }
+        
+        // If decode mode is active, render decoded view
+        if (this.decodeMode && this.decodedSections) {
+            await this.renderDecodedData(bytesPerLine);
+            return;
         }
         
         // Show brief loading state for large data
@@ -2807,6 +3014,11 @@ class BitcoinBlockExplorer {
         // Update view toggle buttons to reflect current mode
         this.updateViewToggleButtons();
         
+        // Update URL with rawdata parameter
+        const url = new URL(window.location);
+        url.searchParams.set('rawdata', 'open');
+        window.history.pushState({}, '', url);
+        
         // Trigger resize immediately and after transition completes
         this.onWindowResize();
         setTimeout(() => {
@@ -2818,6 +3030,11 @@ class BitcoinBlockExplorer {
         const modal = document.getElementById('raw-data-modal');
         modal.classList.remove('active');
         document.body.classList.remove('raw-data-open');
+        
+        // Update URL - remove rawdata parameter
+        const url = new URL(window.location);
+        url.searchParams.delete('rawdata');
+        window.history.pushState({}, '', url);
         
         // Trigger resize immediately and after transition completes
         this.onWindowResize();
@@ -2846,6 +3063,829 @@ class BitcoinBlockExplorer {
         
         // Cleanup
         URL.revokeObjectURL(url);
+    }
+    
+    // Parse a Bitcoin block and return sections with byte ranges
+    parseBlock(bytes) {
+        const sections = [];
+        let offset = 0;
+        
+        // Helper to read bytes
+        const readBytes = (n) => {
+            const slice = bytes.slice(offset, offset + n);
+            offset += n;
+            return slice;
+        };
+        
+        // Helper to read little-endian integer
+        const readLE = (n) => {
+            let val = 0;
+            for (let i = 0; i < n; i++) {
+                val += bytes[offset + i] * Math.pow(256, i);
+            }
+            offset += n;
+            return val;
+        };
+        
+        // Helper to read VarInt and return start/end positions
+        const readVarInt = () => {
+            const start = offset;
+            const first = bytes[offset++];
+            let value;
+            if (first < 0xfd) {
+                value = first;
+            } else if (first === 0xfd) {
+                value = readLE(2);
+            } else if (first === 0xfe) {
+                value = readLE(4);
+            } else {
+                value = readLE(8);
+            }
+            return { value, start, end: offset };
+        };
+        
+        // Helper to convert bytes to hex
+        const toHex = (arr) => Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Helper to reverse endianness
+        const reverseHex = (arr) => Array.from(arr).reverse().map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        try {
+            // ===== BLOCK HEADER (80 bytes) =====
+            
+            // Version (4 bytes)
+            const versionStart = offset;
+            const version = readLE(4);
+            sections.push({
+                type: 'blockVersion',
+                start: versionStart,
+                end: offset,
+                label: 'Block Version',
+                value: version,
+                cssClass: 'decode-version'
+            });
+            
+            // Previous block hash (32 bytes)
+            const prevHashStart = offset;
+            const prevHash = reverseHex(readBytes(32));
+            sections.push({
+                type: 'prevBlockHash',
+                start: prevHashStart,
+                end: offset,
+                label: 'Previous Block Hash',
+                value: prevHash.substring(0, 16) + '...',
+                cssClass: 'decode-marker'
+            });
+            
+            // Merkle root (32 bytes)
+            const merkleStart = offset;
+            const merkleRoot = reverseHex(readBytes(32));
+            sections.push({
+                type: 'merkleRoot',
+                start: merkleStart,
+                end: offset,
+                label: 'Merkle Root',
+                value: merkleRoot.substring(0, 16) + '...',
+                cssClass: 'decode-txOutVarInt'
+            });
+            
+            // Time (4 bytes)
+            const timeStart = offset;
+            const time = readLE(4);
+            const date = new Date(time * 1000);
+            sections.push({
+                type: 'blockTime',
+                start: timeStart,
+                end: offset,
+                label: 'Block Time',
+                value: date.toISOString(),
+                cssClass: 'decode-locktime'
+            });
+            
+            // Bits (4 bytes)
+            const bitsStart = offset;
+            const bits = readLE(4);
+            sections.push({
+                type: 'blockBits',
+                start: bitsStart,
+                end: offset,
+                label: 'Bits (Difficulty)',
+                value: '0x' + bits.toString(16).padStart(8, '0'),
+                cssClass: 'decode-locktime'
+            });
+            
+            // Nonce (4 bytes)
+            const nonceStart = offset;
+            const nonce = readLE(4);
+            sections.push({
+                type: 'blockNonce',
+                start: nonceStart,
+                end: offset,
+                label: 'Nonce',
+                value: nonce,
+                cssClass: 'decode-locktime'
+            });
+            
+            // ===== TRANSACTIONS =====
+            
+            // Transaction count (VarInt)
+            const txCountInfo = readVarInt();
+            const txCount = txCountInfo.value;
+            sections.push({
+                type: 'txCount',
+                start: txCountInfo.start,
+                end: txCountInfo.end,
+                label: 'Transaction Count',
+                value: txCount,
+                cssClass: 'decode-txInVarInt'
+            });
+            
+            // Parse each transaction
+            for (let txIdx = 0; txIdx < txCount && offset < bytes.length; txIdx++) {
+                const txStart = offset;
+                
+                // Version (4 bytes)
+                const txVersionStart = offset;
+                const txVersion = readLE(4);
+                sections.push({
+                    type: 'version',
+                    start: txVersionStart,
+                    end: offset,
+                    label: `TX ${txIdx} Version`,
+                    value: txVersion,
+                    cssClass: 'decode-version'
+                });
+                
+                // Check for SegWit marker (0x00) and flag (0x01)
+                let isSegWit = false;
+                if (bytes[offset] === 0x00 && bytes[offset + 1] === 0x01) {
+                    isSegWit = true;
+                    const markerStart = offset;
+                    offset += 1;
+                    sections.push({
+                        type: 'marker',
+                        start: markerStart,
+                        end: offset,
+                        label: `TX ${txIdx} Marker`,
+                        value: '00',
+                        cssClass: 'decode-marker'
+                    });
+                    const flagStart = offset;
+                    offset += 1;
+                    sections.push({
+                        type: 'flag',
+                        start: flagStart,
+                        end: offset,
+                        label: `TX ${txIdx} Flag`,
+                        value: '01',
+                        cssClass: 'decode-flag'
+                    });
+                }
+                
+                // Input count (VarInt)
+                const inputCountInfo = readVarInt();
+                const inputCount = inputCountInfo.value;
+                sections.push({
+                    type: 'txInVarInt',
+                    start: inputCountInfo.start,
+                    end: inputCountInfo.end,
+                    label: `TX ${txIdx} Input Count`,
+                    value: inputCount,
+                    cssClass: 'decode-txInVarInt'
+                });
+                
+                // Inputs
+                for (let i = 0; i < inputCount; i++) {
+                    // Previous TX hash (32 bytes)
+                    const hashStart = offset;
+                    const prevTxHash = reverseHex(readBytes(32));
+                    sections.push({
+                        type: 'txInHash',
+                        start: hashStart,
+                        end: offset,
+                        label: `TX ${txIdx} In ${i} TXID`,
+                        value: prevTxHash.substring(0, 12) + '...',
+                        cssClass: 'decode-txInHash'
+                    });
+                    
+                    // Output index (4 bytes)
+                    const indexStart = offset;
+                    const outputIndex = readLE(4);
+                    sections.push({
+                        type: 'txInIndex',
+                        start: indexStart,
+                        end: offset,
+                        label: `TX ${txIdx} In ${i} Vout`,
+                        value: outputIndex,
+                        cssClass: 'decode-txInIndex'
+                    });
+                    
+                    // Script length (VarInt)
+                    const scriptLenInfo = readVarInt();
+                    const scriptLen = scriptLenInfo.value;
+                    sections.push({
+                        type: 'txInScriptVarInt',
+                        start: scriptLenInfo.start,
+                        end: scriptLenInfo.end,
+                        label: `TX ${txIdx} In ${i} Script Len`,
+                        value: scriptLen,
+                        cssClass: 'decode-txInScriptVarInt'
+                    });
+                    
+                    // Script (variable)
+                    if (scriptLen > 0) {
+                        const scriptStart = offset;
+                        readBytes(scriptLen);
+                        sections.push({
+                            type: 'txInScript',
+                            start: scriptStart,
+                            end: offset,
+                            label: `TX ${txIdx} In ${i} ScriptSig`,
+                            value: `${scriptLen} bytes`,
+                            cssClass: 'decode-txInScript'
+                        });
+                    }
+                    
+                    // Sequence (4 bytes)
+                    const seqStart = offset;
+                    const sequence = readLE(4);
+                    sections.push({
+                        type: 'txInSequence',
+                        start: seqStart,
+                        end: offset,
+                        label: `TX ${txIdx} In ${i} Sequence`,
+                        value: '0x' + sequence.toString(16).padStart(8, '0'),
+                        cssClass: 'decode-txInSequence'
+                    });
+                }
+                
+                // Output count (VarInt)
+                const outputCountInfo = readVarInt();
+                const outputCount = outputCountInfo.value;
+                sections.push({
+                    type: 'txOutVarInt',
+                    start: outputCountInfo.start,
+                    end: outputCountInfo.end,
+                    label: `TX ${txIdx} Output Count`,
+                    value: outputCount,
+                    cssClass: 'decode-txOutVarInt'
+                });
+                
+                // Outputs
+                for (let i = 0; i < outputCount; i++) {
+                    // Value (8 bytes)
+                    const valueStart = offset;
+                    const valueLow = readLE(4);
+                    const valueHigh = readLE(4);
+                    const satoshis = valueLow + valueHigh * 0x100000000;
+                    sections.push({
+                        type: 'txOutValue',
+                        start: valueStart,
+                        end: offset,
+                        label: `TX ${txIdx} Out ${i} Value`,
+                        value: `${satoshis} sats`,
+                        cssClass: 'decode-txOutValue'
+                    });
+                    
+                    // Script length (VarInt)
+                    const outScriptLenInfo = readVarInt();
+                    const outScriptLen = outScriptLenInfo.value;
+                    sections.push({
+                        type: 'txOutScriptVarInt',
+                        start: outScriptLenInfo.start,
+                        end: outScriptLenInfo.end,
+                        label: `TX ${txIdx} Out ${i} Script Len`,
+                        value: outScriptLen,
+                        cssClass: 'decode-txOutScriptVarInt'
+                    });
+                    
+                    // Script (variable)
+                    if (outScriptLen > 0) {
+                        const outScriptStart = offset;
+                        readBytes(outScriptLen);
+                        sections.push({
+                            type: 'txOutScript',
+                            start: outScriptStart,
+                            end: offset,
+                            label: `TX ${txIdx} Out ${i} Script`,
+                            value: `${outScriptLen} bytes`,
+                            cssClass: 'decode-txOutScript'
+                        });
+                    }
+                }
+                
+                // Witness data (if SegWit)
+                if (isSegWit) {
+                    for (let i = 0; i < inputCount; i++) {
+                        const witnessCountInfo = readVarInt();
+                        const witnessCount = witnessCountInfo.value;
+                        sections.push({
+                            type: 'witnessVarInt',
+                            start: witnessCountInfo.start,
+                            end: witnessCountInfo.end,
+                            label: `TX ${txIdx} Witness ${i} Count`,
+                            value: witnessCount,
+                            cssClass: 'decode-witnessVarInt'
+                        });
+                        
+                        for (let w = 0; w < witnessCount; w++) {
+                            const itemLenInfo = readVarInt();
+                            const itemLen = itemLenInfo.value;
+                            sections.push({
+                                type: 'witnessItemsVarInt',
+                                start: itemLenInfo.start,
+                                end: itemLenInfo.end,
+                                label: `TX ${txIdx} Wit ${i} Item ${w} Len`,
+                                value: itemLen,
+                                cssClass: 'decode-witnessItemsVarInt'
+                            });
+                            
+                            if (itemLen > 0) {
+                                const itemStart = offset;
+                                const item = readBytes(itemLen);
+                                
+                                // Check for Ordinals inscription (taproot script)
+                                if (itemLen > 100) {
+                                    const inscription = this.parseInscription(item, itemStart);
+                                    if (inscription) {
+                                        // Add inscription sections instead of generic witness item
+                                        sections.push(...inscription.sections);
+                                        continue;
+                                    }
+                                }
+                                
+                                // Determine witness item type
+                                let cssClass = 'decode-witnessItem';
+                                let itemType = 'Witness';
+                                if (itemLen === 64 || itemLen === 65) {
+                                    cssClass = 'decode-witnessItemSignature';
+                                    itemType = 'Signature';
+                                } else if (itemLen === 33 || itemLen === 32) {
+                                    cssClass = 'decode-witnessItemPubkey';
+                                    itemType = 'Pubkey';
+                                } else if (itemLen > 100) {
+                                    cssClass = 'decode-witnessItemScript';
+                                    itemType = 'Script';
+                                }
+                                
+                                sections.push({
+                                    type: 'witnessItem',
+                                    start: itemStart,
+                                    end: offset,
+                                    label: `TX ${txIdx} Wit ${i} ${itemType}`,
+                                    value: `${itemLen} bytes`,
+                                    cssClass: cssClass
+                                });
+                            } else {
+                                sections.push({
+                                    type: 'witnessItemEmpty',
+                                    start: itemLenInfo.start,
+                                    end: itemLenInfo.end,
+                                    label: `TX ${txIdx} Wit ${i} Empty`,
+                                    value: '(OP_0)',
+                                    cssClass: 'decode-witnessItemEmpty'
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // Locktime (4 bytes)
+                const locktimeStart = offset;
+                const locktime = readLE(4);
+                sections.push({
+                    type: 'locktime',
+                    start: locktimeStart,
+                    end: offset,
+                    label: `TX ${txIdx} Locktime`,
+                    value: locktime,
+                    cssClass: 'decode-locktime'
+                });
+            }
+            
+        } catch (e) {
+            console.error('Error parsing block:', e, 'at offset:', offset);
+        }
+        
+        return sections;
+    }
+    
+    // Parse Ordinals inscription from witness script
+    parseInscription(script, baseOffset) {
+        const sections = [];
+        let pos = 0;
+        
+        const readByte = () => script[pos++];
+        const hasBytes = (n) => pos + n <= script.length;
+        
+        const readPushData = () => {
+            if (pos >= script.length) return null;
+            const opcode = script[pos];
+            const opcodeStart = pos;
+            
+            if (opcode >= 0x01 && opcode <= 0x4b) {
+                const len = opcode;
+                pos++;
+                const dataStart = pos;
+                if (!hasBytes(len)) return null;
+                const data = script.slice(pos, pos + len);
+                pos += len;
+                return { data, start: opcodeStart, end: pos, opcodeStart, opcodeEnd: dataStart, dataStart, dataEnd: pos, opcodeType: 'direct', opcodeLen: len };
+            }
+            else if (opcode === 0x4c) {
+                pos++;
+                if (!hasBytes(1)) return null;
+                const len = script[pos++];
+                const dataStart = pos;
+                if (!hasBytes(len)) return null;
+                const data = script.slice(pos, pos + len);
+                pos += len;
+                return { data, start: opcodeStart, end: pos, opcodeStart, opcodeEnd: dataStart, dataStart, dataEnd: pos, opcodeType: 'OP_PUSHDATA1', opcodeLen: len };
+            }
+            else if (opcode === 0x4d) {
+                pos++;
+                if (!hasBytes(2)) return null;
+                const len = script[pos] | (script[pos + 1] << 8);
+                pos += 2;
+                const dataStart = pos;
+                if (!hasBytes(len)) return null;
+                const data = script.slice(pos, pos + len);
+                pos += len;
+                return { data, start: opcodeStart, end: pos, opcodeStart, opcodeEnd: dataStart, dataStart, dataEnd: pos, opcodeType: 'OP_PUSHDATA2', opcodeLen: len };
+            }
+            else if (opcode === 0x4e) {
+                pos++;
+                if (!hasBytes(4)) return null;
+                const len = script[pos] | (script[pos + 1] << 8) | (script[pos + 2] << 16) | (script[pos + 3] << 24);
+                pos += 4;
+                const dataStart = pos;
+                if (!hasBytes(len)) return null;
+                const data = script.slice(pos, pos + len);
+                pos += len;
+                return { data, start: opcodeStart, end: pos, opcodeStart, opcodeEnd: dataStart, dataStart, dataEnd: pos, opcodeType: 'OP_PUSHDATA4', opcodeLen: len };
+            }
+            else if (opcode === 0x00) {
+                pos++;
+                return { data: new Uint8Array(0), start: opcodeStart, end: pos, opcodeStart, opcodeEnd: pos, dataStart: pos, dataEnd: pos, opcodeType: 'OP_0', opcodeLen: 0 };
+            }
+            return null;
+        };
+        
+        while (pos < script.length - 5) {
+            if (script[pos] === 0x00 && script[pos + 1] === 0x63) {
+                const envelopeStart = pos;
+                
+                // Look for pubkey + OP_CHECKSIG before envelope
+                if (envelopeStart > 0 && script[envelopeStart - 1] === 0xac) {
+                    const checksigPos = envelopeStart - 1;
+                    let scanPos = 0;
+                    let lastPushStart = -1, lastPushDataStart = -1, lastPushDataEnd = -1, lastPushLen = 0;
+                    
+                    while (scanPos < checksigPos) {
+                        const opcode = script[scanPos];
+                        if (opcode >= 0x01 && opcode <= 0x4b) {
+                            lastPushStart = scanPos;
+                            lastPushLen = opcode;
+                            lastPushDataStart = scanPos + 1;
+                            lastPushDataEnd = scanPos + 1 + opcode;
+                            scanPos = lastPushDataEnd;
+                        } else if (opcode === 0x4c && scanPos + 1 < checksigPos) {
+                            lastPushStart = scanPos;
+                            lastPushLen = script[scanPos + 1];
+                            lastPushDataStart = scanPos + 2;
+                            lastPushDataEnd = scanPos + 2 + lastPushLen;
+                            scanPos = lastPushDataEnd;
+                        } else if (opcode === 0x4d && scanPos + 2 < checksigPos) {
+                            lastPushStart = scanPos;
+                            lastPushLen = script[scanPos + 1] | (script[scanPos + 2] << 8);
+                            lastPushDataStart = scanPos + 3;
+                            lastPushDataEnd = scanPos + 3 + lastPushLen;
+                            scanPos = lastPushDataEnd;
+                        } else {
+                            scanPos++;
+                        }
+                    }
+                    
+                    if (lastPushStart >= 0 && lastPushDataEnd === checksigPos) {
+                        if (lastPushDataStart > lastPushStart) {
+                            sections.push({ type: 'taprootPubkeyPush', start: baseOffset + lastPushStart, end: baseOffset + lastPushDataStart, label: 'Pubkey Push', value: `OP_PUSHBYTES_${lastPushLen}`, cssClass: 'decode-taprootPubkeyPush' });
+                        }
+                        const pubkeyHex = Array.from(script.slice(lastPushDataStart, lastPushDataEnd)).map(b => b.toString(16).padStart(2, '0')).join('');
+                        sections.push({ type: 'taprootPubkey', start: baseOffset + lastPushDataStart, end: baseOffset + lastPushDataEnd, label: 'X-only Pubkey', value: pubkeyHex.substring(0, 16) + '...', cssClass: 'decode-taprootPubkey' });
+                    }
+                    sections.push({ type: 'opChecksig', start: baseOffset + checksigPos, end: baseOffset + checksigPos + 1, label: 'OP_CHECKSIG', value: '0xac', cssClass: 'decode-opChecksig' });
+                }
+                
+                pos += 2;
+                const protocolPush = readPushData();
+                if (!protocolPush) { pos = envelopeStart + 1; continue; }
+                
+                const protocolId = String.fromCharCode(...protocolPush.data);
+                if (protocolId !== 'ord') { pos = envelopeStart + 1; continue; }
+                
+                sections.push({ type: 'inscriptionEnvelope', start: baseOffset + envelopeStart, end: baseOffset + pos, label: 'Inscription Envelope', value: 'OP_FALSE OP_IF "ord"', cssClass: 'decode-inscriptionEnvelope' });
+                
+                let contentType = null;
+                
+                while (pos < script.length) {
+                    if (script[pos] === 0x68) {
+                        const endifStart = pos;
+                        pos++;
+                        sections.push({ type: 'inscriptionEndif', start: baseOffset + endifStart, end: baseOffset + pos, label: 'Inscription End', value: 'OP_ENDIF', cssClass: 'decode-inscriptionEndif' });
+                        
+                        // Control block after OP_ENDIF
+                        if (pos < script.length) {
+                            const controlPush = readPushData();
+                            if (controlPush && controlPush.data.length >= 33) {
+                                const controlByte = controlPush.data[0];
+                                const leafVersion = controlByte & 0xfe;
+                                const parity = controlByte & 0x01;
+                                
+                                if (controlPush.opcodeEnd > controlPush.opcodeStart) {
+                                    sections.push({ type: 'controlBlockPush', start: baseOffset + controlPush.opcodeStart, end: baseOffset + controlPush.opcodeEnd, label: 'Control Block Push', value: `${controlPush.opcodeType} (${controlPush.data.length} bytes)`, cssClass: 'decode-controlBlockPush' });
+                                }
+                                sections.push({ type: 'controlByte', start: baseOffset + controlPush.dataStart, end: baseOffset + controlPush.dataStart + 1, label: 'Control Byte', value: `0x${controlByte.toString(16)} (leaf v${leafVersion >> 1}, parity ${parity})`, cssClass: 'decode-controlByte' });
+                                
+                                if (controlPush.data.length >= 33) {
+                                    const internalPubkey = Array.from(controlPush.data.slice(1, 33)).map(b => b.toString(16).padStart(2, '0')).join('');
+                                    sections.push({ type: 'internalPubkey', start: baseOffset + controlPush.dataStart + 1, end: baseOffset + controlPush.dataStart + 33, label: 'Internal Pubkey', value: internalPubkey.substring(0, 16) + '...', cssClass: 'decode-internalPubkey' });
+                                }
+                                if (controlPush.data.length > 33) {
+                                    const merkleBytes = controlPush.data.length - 33;
+                                    sections.push({ type: 'merkleProof', start: baseOffset + controlPush.dataStart + 33, end: baseOffset + controlPush.dataEnd, label: 'Merkle Proof', value: `${merkleBytes} bytes`, cssClass: 'decode-merkleProof' });
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    
+                    const tagPush = readPushData();
+                    if (!tagPush) break;
+                    const tag = tagPush.data;
+                    
+                    if (tag.length === 0) {
+                        sections.push({ type: 'inscriptionBodyTag', start: baseOffset + tagPush.start, end: baseOffset + tagPush.end, label: 'Body Tag', value: 'OP_0 (body start)', cssClass: 'decode-inscriptionBodyTag' });
+                        
+                        let chunkIndex = 0;
+                        while (pos < script.length && script[pos] !== 0x68) {
+                            const chunkPush = readPushData();
+                            if (!chunkPush) break;
+                            
+                            if (chunkPush.opcodeType !== 'direct' && chunkPush.opcodeType !== 'OP_0') {
+                                sections.push({ type: 'inscriptionPushOpcode', start: baseOffset + chunkPush.opcodeStart, end: baseOffset + chunkPush.opcodeEnd, label: `Push Marker ${chunkIndex}`, value: `${chunkPush.opcodeType} (${chunkPush.opcodeLen} bytes)`, cssClass: 'decode-inscriptionPushOpcode' });
+                            }
+                            
+                            if (chunkPush.data.length > 0) {
+                                let chunkPreview = `${chunkPush.data.length} bytes`;
+                                if (contentType && contentType.includes('text')) {
+                                    try {
+                                        const text = new TextDecoder().decode(chunkPush.data);
+                                        chunkPreview = text.substring(0, 30) + (text.length > 30 ? '...' : '');
+                                    } catch (e) {}
+                                }
+                                sections.push({ type: 'inscriptionBodyChunk', start: baseOffset + chunkPush.dataStart, end: baseOffset + chunkPush.dataEnd, label: `Body Chunk ${chunkIndex}`, value: chunkPreview, cssClass: 'decode-inscriptionBodyChunk' });
+                            }
+                            chunkIndex++;
+                        }
+                        continue;
+                    }
+                    
+                    if (tag.length === 1 && tag[0] === 1) {
+                        sections.push({ type: 'inscriptionContentTypeTag', start: baseOffset + tagPush.start, end: baseOffset + tagPush.end, label: 'Content-Type Tag', value: '0x01', cssClass: 'decode-inscriptionContentTypeTag' });
+                        const valuePush = readPushData();
+                        if (valuePush) {
+                            contentType = String.fromCharCode(...valuePush.data);
+                            sections.push({ type: 'inscriptionContentType', start: baseOffset + valuePush.start, end: baseOffset + valuePush.end, label: 'Content-Type', value: contentType, cssClass: 'decode-inscriptionContentType' });
+                        }
+                        continue;
+                    }
+                    
+                    sections.push({ type: 'inscriptionUnknownTag', start: baseOffset + tagPush.start, end: baseOffset + tagPush.end, label: 'Unknown Tag', value: `0x${Array.from(tag).map(b => b.toString(16).padStart(2, '0')).join('')}`, cssClass: 'decode-inscriptionUnknownTag' });
+                    const unknownValue = readPushData();
+                    if (unknownValue) {
+                        sections.push({ type: 'inscriptionUnknownValue', start: baseOffset + unknownValue.start, end: baseOffset + unknownValue.end, label: 'Unknown Value', value: `${unknownValue.data.length} bytes`, cssClass: 'decode-inscriptionUnknownValue' });
+                    }
+                }
+                
+                if (sections.length > 0) {
+                    return { sections, contentType };
+                }
+            }
+            pos++;
+        }
+        return null;
+    }
+    
+    async renderDecodedData(bytesPerLine) {
+        const textElement = document.getElementById('raw-data-text');
+        const hexString = this.rawBlockData.hex;
+        const bytes = this.rawBlockData.bytes;
+        
+        // Show loading for large blocks
+        if (hexString.length > 100000) {
+            textElement.innerHTML = 'Decoding block...';
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        
+        // Convert byte positions to character positions based on view mode
+        const getCharPos = (bytePos) => {
+            if (this.rawViewMode === 'ascii') {
+                return bytePos;
+            } else if (this.rawViewMode === 'binary') {
+                return bytePos * 8;
+            } else {
+                return bytePos * 2;
+            }
+        };
+        
+        // Get the full string in current view mode
+        let fullString;
+        let charsPerLine;
+        if (this.rawViewMode === 'ascii') {
+            fullString = this.bytesToAscii(bytes);
+            charsPerLine = bytesPerLine;
+        } else if (this.rawViewMode === 'binary') {
+            fullString = this.bytesToBinary(bytes);
+            charsPerLine = bytesPerLine * 8;
+        } else {
+            fullString = hexString;
+            charsPerLine = bytesPerLine * 2;
+        }
+        
+        // Build HTML with colored spans
+        // Sort sections by start position
+        const sortedSections = [...this.decodedSections].sort((a, b) => a.start - b.start);
+        
+        let html = '';
+        let currentCharPos = 0;
+        let currentLinePos = 0;
+        
+        // Helper to add text with line breaks
+        const addTextWithBreaks = (text, cssClass, section) => {
+            let remaining = text;
+            while (remaining.length > 0) {
+                const spaceOnLine = charsPerLine - currentLinePos;
+                const chunk = remaining.substring(0, spaceOnLine);
+                remaining = remaining.substring(spaceOnLine);
+                
+                if (cssClass) {
+                    const dataAttrs = section ? `data-label="${this.escapeAttr(section.label)}" data-value="${this.escapeAttr(String(section.value))}"` : '';
+                    html += `<span class="decode-section ${cssClass}" ${dataAttrs}>${this.escapeHtml(chunk)}</span>`;
+                } else {
+                    html += this.escapeHtml(chunk);
+                }
+                
+                currentLinePos += chunk.length;
+                if (currentLinePos >= charsPerLine && remaining.length > 0) {
+                    html += '\n';
+                    currentLinePos = 0;
+                }
+            }
+        };
+        
+        for (const section of sortedSections) {
+            const sectionStartChar = getCharPos(section.start);
+            const sectionEndChar = getCharPos(section.end);
+            
+            // Add any gap before this section
+            if (sectionStartChar > currentCharPos) {
+                const gapText = fullString.substring(currentCharPos, sectionStartChar);
+                addTextWithBreaks(gapText, null, null);
+            }
+            
+            // Add the section with coloring
+            const sectionText = fullString.substring(sectionStartChar, sectionEndChar);
+            addTextWithBreaks(sectionText, section.cssClass, section);
+            
+            currentCharPos = sectionEndChar;
+        }
+        
+        // Add any remaining text after the last section
+        if (currentCharPos < fullString.length) {
+            const remainingText = fullString.substring(currentCharPos);
+            addTextWithBreaks(remainingText, null, null);
+        }
+        
+        // Add final newline if needed
+        if (currentLinePos > 0 && currentLinePos < charsPerLine) {
+            // Content ends mid-line, that's fine
+        }
+        
+        textElement.innerHTML = html;
+        this.setupDecodeTooltips();
+    }
+    
+    escapeHtml(text) {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+    
+    setupDecodeTooltips() {
+        // Create tooltip element if it doesn't exist
+        let tooltip = document.getElementById('decode-tooltip');
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = 'decode-tooltip';
+            tooltip.className = 'decode-tooltip';
+            tooltip.style.cssText = 'position:fixed;background:rgba(0,0,0,0.95);padding:8px 12px;font-size:13px;color:#fff;z-index:99999;max-width:350px;font-family:monospace;display:none;';
+            document.body.appendChild(tooltip);
+        }
+        
+        // Color map matching SatSigner's color scheme
+        const sectionColors = {
+            'decode-version': '#ffffff',
+            'decode-marker': '#888888',
+            'decode-flag': '#ffffff',
+            'decode-txInVarInt': '#888888',
+            'decode-txInHash': '#E01919',
+            'decode-txInIndex': '#860B0B',
+            'decode-txInScriptVarInt': '#DD9595',
+            'decode-txInScript': '#860B0B',
+            'decode-txInSequence': '#860B0B',
+            'decode-txOutVarInt': '#93CC92',
+            'decode-txOutValue': '#07BC03',
+            'decode-txOutScriptVarInt': '#93CC92',
+            'decode-txOutScript': '#608A64',
+            'decode-witnessVarInt': '#8F5252',
+            'decode-witnessItemsVarInt': '#8F5252',
+            'decode-witnessItem': '#694040',
+            'decode-witnessItemEmpty': '#694040',
+            'decode-witnessItemPubkey': '#8F5252',
+            'decode-witnessItemSignature': '#694040',
+            'decode-witnessItemScript': '#694040',
+            'decode-locktime': '#eeeeee',
+            // Ordinals Inscription colors - envelope/content-type in muted red tones
+            'decode-inscriptionEnvelope': '#A5463C',
+            'decode-inscriptionContentTypeTag': '#964B41',
+            'decode-inscriptionContentType': '#964B41',
+            'decode-inscriptionBodyTag': '#694040',
+            'decode-inscriptionBody': '#694040',
+            'decode-inscriptionPushOpcode': '#8C4137',
+            'decode-inscriptionBodyChunk': '#694040',
+            'decode-inscriptionEndif': '#8F5252',
+            'decode-inscriptionUnknownTag': '#694040',
+            'decode-inscriptionUnknownValue': '#694040',
+            // Taproot script elements - witness-related, muted reds
+            'decode-taprootPubkeyPush': '#694040',
+            'decode-taprootPubkey': '#8F5252',
+            'decode-opChecksig': '#694040',
+            // Taproot control block - witness-related, muted reds
+            'decode-controlBlockPush': '#694040',
+            'decode-controlByte': '#8F5252',
+            'decode-internalPubkey': '#8F5252',
+            'decode-merkleProof': '#694040'
+        };
+        
+        const textElement = document.getElementById('raw-data-text');
+        
+        // Remove any existing listeners
+        if (this._tooltipHandler) {
+            textElement.removeEventListener('mouseover', this._tooltipHandler);
+            textElement.removeEventListener('mouseout', this._tooltipOutHandler);
+        }
+        
+        // Mouseover handler
+        this._tooltipHandler = (e) => {
+            const section = e.target.closest('.decode-section');
+            if (section) {
+                const label = section.getAttribute('data-label');
+                const value = section.getAttribute('data-value');
+                let color = '#fff';
+                for (const [cls, clr] of Object.entries(sectionColors)) {
+                    if (section.classList.contains(cls)) {
+                        color = clr;
+                        break;
+                    }
+                }
+                if (label) {
+                    tooltip.innerHTML = '<div style="font-weight:bold;color:' + color + ';margin-bottom:4px;">' + label + '</div><div style="color:rgba(255,255,255,0.8);">' + (value || '') + '</div>';
+                    tooltip.style.left = (e.clientX + 15) + 'px';
+                    tooltip.style.top = (e.clientY + 15) + 'px';
+                    tooltip.style.display = 'block';
+                }
+            }
+        };
+        
+        // Mouseout handler
+        this._tooltipOutHandler = (e) => {
+            if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.decode-section')) {
+                tooltip.style.display = 'none';
+            }
+        };
+        
+        textElement.addEventListener('mouseover', this._tooltipHandler);
+        textElement.addEventListener('mouseout', this._tooltipOutHandler);
+    }
+    
+    escapeAttr(text) {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     }
 }
 

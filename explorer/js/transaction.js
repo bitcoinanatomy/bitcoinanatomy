@@ -1672,7 +1672,7 @@ class BitcoinTransactionExplorer {
         // Set bytes per line from URL if provided
         if (this.urlBytesPerLine) {
             const bytesDropdown = document.getElementById('bytes-per-line');
-            const validValues = ['16', '32', '64', '128', '256'];
+            const validValues = ['16', '32', '64', '128', '256', '512'];
             if (validValues.includes(this.urlBytesPerLine)) {
                 bytesDropdown.value = this.urlBytesPerLine;
             }
@@ -1847,7 +1847,9 @@ class BitcoinTransactionExplorer {
         // ASCII = 2x hex, Binary gets progressively smaller at higher bytes/line
         const isAscii = this.rawViewMode === 'ascii';
         const isBinary = this.rawViewMode === 'binary';
-        if (bytesPerLine >= 256) {
+        if (bytesPerLine >= 512) {
+            textElement.style.fontSize = isAscii ? '0.12vw' : isBinary ? '0.015vw' : '0.06vw';
+        } else if (bytesPerLine >= 256) {
             textElement.style.fontSize = isAscii ? '0.24vw' : isBinary ? '0.03vw' : '0.12vw';
         } else if (bytesPerLine >= 128) {
             textElement.style.fontSize = isAscii ? '0.6vw' : isBinary ? '0.07vw' : '0.3vw';

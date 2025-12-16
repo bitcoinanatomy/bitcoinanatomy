@@ -1811,16 +1811,33 @@ body.raw-data-open .navigation-controls {
     color: #444;
 }
 
+/* When highlight is active, dim all non-highlighted content */
+#raw-data-text.has-highlight {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+#raw-data-text.has-highlight .decode-section:not(.tx-highlight-decode) {
+    opacity: 0.3;
+}
+
+/* Highlighted transaction stays fully visible */
 #raw-data-text .tx-highlight {
     color: #fff;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
     cursor: pointer;
-    transition: background 0.15s ease;
 }
 
 #raw-data-text .tx-highlight:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Highlight in decode mode - keeps decode colors at full opacity */
+#raw-data-text .tx-highlight-decode {
+    opacity: 1 !important;
+    cursor: pointer;
+}
+
+#raw-data-text .tx-highlight-decode:hover {
+    filter: brightness(1.2);
 }
 
 .raw-data-content {

@@ -126,8 +126,10 @@
                                 <option value="64">64</option>
                                 <option value="128">128</option>
                                 <option value="256">256</option>
+                                <option value="512">512</option>
                             </select>
                         </div>
+                        <button id="toggle-decode" class="raw-data-btn decode-btn" title="Color-code block parts">Decode</button>
                     </div>
                 </div>
                 <div class="raw-data-find-control">
@@ -142,6 +144,17 @@
             </div>
             <div class="raw-data-content">
                 <pre id="raw-data-text"></pre>
+            </div>
+            <div id="decode-legend" class="decode-legend" style="display: none;">
+                <span class="legend-item"><span class="legend-color" style="background: #fff;"></span>Version</span>
+                <span class="legend-item"><span class="legend-color" style="background: #888;"></span>Prev Hash</span>
+                <span class="legend-item"><span class="legend-color" style="background: #aaa;"></span>Merkle Root</span>
+                <span class="legend-item"><span class="legend-color" style="background: #eee;"></span>Time/Bits/Nonce</span>
+                <span class="legend-item"><span class="legend-color" style="background: #E01919;"></span>Input TXID</span>
+                <span class="legend-item"><span class="legend-color" style="background: #860B0B;"></span>Input Data</span>
+                <span class="legend-item"><span class="legend-color" style="background: #07BC03;"></span>Output Value</span>
+                <span class="legend-item"><span class="legend-color" style="background: #608A64;"></span>Output Script</span>
+                <span class="legend-item"><span class="legend-color" style="background: #694040;"></span>Witness</span>
             </div>
         </div>
     </div>
