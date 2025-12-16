@@ -112,7 +112,7 @@ body:not(.homepage) {
 .nav-menu {
     display: flex;
     list-style: none;
-    gap: 10px;
+    gap: 4px;
 }
 
 .nav-link {
@@ -735,7 +735,7 @@ button:active {
 /* ================================
    RESPONSIVE DESIGN
    ================================ */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
     /* Navigation */
     .navbar {
         padding: 0 10px;
