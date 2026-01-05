@@ -42,6 +42,8 @@ class BitcoinTransactionExplorer {
             this.rawViewMode = 'ascii';
         } else if (this.urlViewMode === 'binary') {
             this.rawViewMode = 'binary';
+        } else if (this.urlViewMode === 'dump') {
+            this.rawViewMode = 'dump';
         }
         
         this.init();
@@ -62,6 +64,8 @@ class BitcoinTransactionExplorer {
         this.cylinderGradientTexture = this.createVerticalGradientTexture('#000000', '#cccccccc');
         // Prepare mirrored gradient for output cylinders
         this.outputCylinderGradientTexture = this.createVerticalGradientTexture('#cccccc33', '#ffffff00');
+        // Gradient for coinbase tube: grey 0.2 opacity to white 0.8 opacity (along tube length)
+        this.coinbaseTubeGradientTexture = this.createHorizontalGradientTexture('#88888833', '#ffffffcc');
         this.setupThreeJS();
         this.setupMouseControls();
         this.createScene();
@@ -161,20 +165,36 @@ class BitcoinTransactionExplorer {
                 
                 if (userData.type === 'input') {
                     const input = userData.data;
-                    const amount = input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown';
-                    const scriptType = input.prevout?.scriptpubkey_type || 'Unknown';
                     
-                    tooltipContent = `
-                        <strong>Input ${userData.index + 1}</strong><br>
-                        Amount: ${amount} BTC<br>
-                        Script Type: ${scriptType}<br>
-                        ${input.prevout?.scriptpubkey_address ? `Address: ${input.prevout.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
-                        <br>
-                        <strong>From Transaction:</strong><br>
-                        TXID: ${input.txid ? input.txid.substring(0, 16) + '...' : 'Unknown'}<br>
-                        Output Index: ${input.vout !== undefined ? input.vout : 'Unknown'}<br>
-                        <em>Double-click to view source transaction</em>
-                    `;
+                    // Check if this is a coinbase input
+                    if (userData.isCoinbase) {
+                        const amount = userData.coinbaseAmount ? (userData.coinbaseAmount / 100000000).toFixed(8) : 'Unknown';
+                        const coinbaseHex = input.coinbase ? input.coinbase.substring(0, 32) + '...' : '';
+                        
+                        tooltipContent = `
+                            <strong>Coinbase (Block Reward)</strong><br>
+                            Amount: ${amount} BTC<br>
+                            <br>
+                            <strong>Coinbase Data:</strong><br>
+                            ${coinbaseHex}<br>
+                            <em>Newly minted bitcoins</em>
+                        `;
+                    } else {
+                        const amount = input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown';
+                        const scriptType = input.prevout?.scriptpubkey_type || 'Unknown';
+                        
+                        tooltipContent = `
+                            <strong>Input ${userData.index + 1}</strong><br>
+                            Amount: ${amount} BTC<br>
+                            Script Type: ${scriptType}<br>
+                            ${input.prevout?.scriptpubkey_address ? `Address: ${input.prevout.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                            <br>
+                            <strong>From Transaction:</strong><br>
+                            TXID: ${input.txid ? input.txid.substring(0, 16) + '...' : 'Unknown'}<br>
+                            Output Index: ${input.vout !== undefined ? input.vout : 'Unknown'}<br>
+                            <em>Double-click to view source transaction</em>
+                        `;
+                    }
                 } else if (userData.type === 'output') {
                     const output = userData.data;
                     const amount = (output.value / 100000000).toFixed(8);
@@ -203,15 +223,26 @@ class BitcoinTransactionExplorer {
                     }
                 } else if (userData.type === 'input-tube') {
                     const input = userData.data;
-                    const address = input.prevout?.scriptpubkey_address;
                     
-                    if (address) {
+                    // Check if this is a coinbase tube
+                    if (userData.isCoinbase) {
+                        const amount = userData.coinbaseAmount ? (userData.coinbaseAmount / 100000000).toFixed(8) : 'Unknown';
                         tooltipContent = `
-                            <strong>Connection from Address</strong><br>
-                            Address: ${address.substring(0, 16)}...<br>
-                            Amount: ${input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown'} BTC<br>
-                            <em>Double-click to view address details</em>
+                            <strong>Coinbase Connection</strong><br>
+                            Block Reward: ${amount} BTC<br>
+                            <em>Newly minted bitcoins from mining</em>
                         `;
+                    } else {
+                        const address = input.prevout?.scriptpubkey_address;
+                        
+                        if (address) {
+                            tooltipContent = `
+                                <strong>Connection from Address</strong><br>
+                                Address: ${address.substring(0, 16)}...<br>
+                                Amount: ${input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown'} BTC<br>
+                                <em>Double-click to view address details</em>
+                            `;
+                        }
                     }
                 } else if (userData.type === 'output-tube') {
                     const output = userData.data;
@@ -502,12 +533,20 @@ class BitcoinTransactionExplorer {
                 const userData = intersectedObject.userData;
                 
                 if (userData.type === 'input') {
+                    // Don't navigate for coinbase inputs (no source transaction)
+                    if (userData.isCoinbase) {
+                        return;
+                    }
                     // Navigate to source transaction
                     const txid = userData.data.txid;
-                    if (txid) {
+                    if (txid && txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
                         window.location.href = `transaction.html?txid=${txid}`;
                     }
                 } else if (userData.type === 'input-tube') {
+                    // Don't navigate for coinbase tubes
+                    if (userData.isCoinbase) {
+                        return;
+                    }
                     // Navigate to address page
                     const address = userData.data.prevout?.scriptpubkey_address;
                     if (address) {
@@ -660,7 +699,7 @@ class BitcoinTransactionExplorer {
         });
     }
 
-    // Create a simple vertical gradient texture (top to bottom)
+    // Create a simple vertical gradient texture (top to bottom) - for cylinders
     createVerticalGradientTexture(topColor, bottomColor) {
         const size = 256;
         const canvas = document.createElement('canvas');
@@ -676,6 +715,25 @@ class BitcoinTransactionExplorer {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(1, 1);
+        texture.needsUpdate = true;
+        return texture;
+    }
+
+    // Create a horizontal gradient texture (left to right) - for tubes (U coordinate goes along tube length)
+    createHorizontalGradientTexture(startColor, endColor) {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = 1;
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, size, 0);
+        gradient.addColorStop(0, startColor);
+        gradient.addColorStop(1, endColor);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, 1);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.needsUpdate = true;
         return texture;
     }
@@ -850,7 +908,11 @@ class BitcoinTransactionExplorer {
         document.getElementById('tx-status').textContent = data.status?.confirmed ? 'Confirmed' : 'Unconfirmed';
         document.getElementById('tx-block-height').textContent = data.status?.block_height ? data.status.block_height.toString() : 'Unconfirmed';
         document.getElementById('tx-block-hash').textContent = data.status?.block_hash ? data.status.block_hash.substring(0, 16) + '...' : 'N/A';
-        document.getElementById('tx-inputs').textContent = data.vin ? data.vin.length.toString() : 'N/A';
+        // Check if coinbase transaction
+        const isCoinbaseTx = data.vin && data.vin.length > 0 && 
+            (data.vin[0].coinbase !== undefined || 
+             data.vin[0].txid === '0000000000000000000000000000000000000000000000000000000000000000');
+        document.getElementById('tx-inputs').textContent = isCoinbaseTx ? 'Coinbase' : (data.vin ? data.vin.length.toString() : 'N/A');
         document.getElementById('tx-outputs').textContent = data.vout ? data.vout.length.toString() : 'N/A';
         document.getElementById('tx-size').textContent = data.size ? `${data.size} bytes` : 'N/A';
         document.getElementById('tx-weight').textContent = data.weight ? `${data.weight} WU` : 'N/A';
@@ -897,15 +959,23 @@ class BitcoinTransactionExplorer {
     createInputOutputVisualization() {
         const inputs = this.transactionData.vin || [];
         const outputs = this.transactionData.vout || [];
+        
+        // Check if this is a coinbase transaction
+        const isCoinbase = inputs.length > 0 && (inputs[0].coinbase !== undefined || 
+            (inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000'));
+        
+        // For coinbase, calculate total output as the "input" amount (block reward + fees)
+        const totalOutputValue = outputs.reduce((sum, out) => sum + (out.value || 0), 0);
 
         // Precompute input radii and vertical positions to avoid overlaps and align with tubes
         const inputParams = inputs.map((input, index) => {
-            const amount = input.prevout?.value || 0;
+            // For coinbase transactions, use total output value as the amount
+            const amount = isCoinbase ? totalOutputValue : (input.prevout?.value || 0);
             const amountBTC = amount / 100000000;
             const logValue = Math.log10(amountBTC + 1);
             const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
             const radius = 1 * sizeScale;
-            return { index, input, radius };
+            return { index, input, radius, isCoinbase, coinbaseAmount: isCoinbase ? amount : null };
         });
 
         const yPositions = [];
@@ -992,39 +1062,75 @@ class BitcoinTransactionExplorer {
             }
         }
 
-        // Create input cylinders on the left
+        // Create input cylinders on the left (or hemisphere for coinbase)
         inputParams.forEach((param, index) => {
-            const { input, radius: cylinderRadius } = param;
-            const cylinderHeight = 120; // Much taller for strong presence
-            
-            const geometry = new THREE.CylinderGeometry(cylinderRadius, cylinderRadius, cylinderHeight, 16, 1, true);
-            const material = new THREE.MeshLambertMaterial({ 
-                color: 0x444444, // Match input connection color
-                transparent: true,
-                opacity: 0.75,
-                side: THREE.DoubleSide,
-                depthWrite: false, // Match input tube depth behavior
-                depthTest: true,
-                map: this.cylinderGradientTexture
-            });
-            const cylinder = new THREE.Mesh(geometry, material);
-            cylinder.renderOrder = 1; // Render after other objects
-            
-            // Rotate cylinder 90 degrees around Z-axis to make it horizontal
-            cylinder.rotation.z = Math.PI / 2;
-            
-            // Position cylinder so its top (positive X end) aligns with the connection line start point
-            // The connection line starts at (-35, y, 0) and the cylinder top should be at that point
-            // Since cylinder is rotated 90° around Z, its length extends in the -X direction
-            const cylinderLength = cylinderHeight; // Height becomes length when rotated
-            const topOffset = cylinderLength / 2; // Half the cylinder length
+            const { input, radius: inputRadius, isCoinbase: inputIsCoinbase, coinbaseAmount } = param;
             const y = yPositions[index] ?? ((inputs.length - 1) - index * 2);
-            cylinder.position.set(-35 - topOffset, y, 0);
             
-            // Store the radius for spacing calculations
-            cylinder.userData.radius = cylinderRadius;
-            cylinder.userData = { type: 'input', index, data: input, originalColor: 0x444444 };
-            this.scene.add(cylinder);
+            if (inputIsCoinbase) {
+                // Create hemisphere for coinbase (like unspent outputs, but on input side)
+                const geometry = new THREE.SphereGeometry(inputRadius, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                const material = new THREE.MeshLambertMaterial({ 
+                    color: 0x888888, // Grey color for coinbase
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide,
+                    depthWrite: true,
+                    depthTest: true
+                });
+                const hemisphere = new THREE.Mesh(geometry, material);
+                hemisphere.renderOrder = 1;
+                
+                // Rotate hemisphere so its opening faces inward (toward +X / the transaction)
+                hemisphere.rotation.z = Math.PI / 2;
+                
+                hemisphere.position.set(-35, y, 0);
+                hemisphere.userData = { 
+                    type: 'input', 
+                    index, 
+                    data: input, 
+                    radius: inputRadius,
+                    originalColor: 0x888888,
+                    originalOpacity: 0.5,
+                    isCoinbase: true,
+                    coinbaseAmount: coinbaseAmount
+                };
+                this.scene.add(hemisphere);
+            } else {
+                // Regular input: cylinder
+                const cylinderHeight = 120;
+                const geometry = new THREE.CylinderGeometry(inputRadius, inputRadius, cylinderHeight, 16, 1, true);
+                const material = new THREE.MeshLambertMaterial({ 
+                    color: 0x444444,
+                    transparent: true,
+                    opacity: 0.75,
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                    depthTest: true,
+                    map: this.cylinderGradientTexture
+                });
+                const cylinder = new THREE.Mesh(geometry, material);
+                cylinder.renderOrder = 1;
+                
+                // Rotate cylinder 90 degrees around Z-axis to make it horizontal
+                cylinder.rotation.z = Math.PI / 2;
+                
+                // Position cylinder so its top aligns with the connection line start point
+                const cylinderLength = cylinderHeight;
+                const topOffset = cylinderLength / 2;
+                cylinder.position.set(-35 - topOffset, y, 0);
+                
+                cylinder.userData = { 
+                    type: 'input', 
+                    index, 
+                    data: input, 
+                    radius: inputRadius,
+                    originalColor: 0x444444,
+                    isCoinbase: false,
+                    coinbaseAmount: null
+                };
+                this.scene.add(cylinder);
+            }
         });
 
 
@@ -1113,30 +1219,56 @@ class BitcoinTransactionExplorer {
             const endPoint = new THREE.Vector3(-1, 0, 0); // End at left side of cuboid (width = 2)
             
             // Create control points for smooth curve
-            const controlPoint1 = new THREE.Vector3(-15, y + 1, 0);
-            const controlPoint2 = new THREE.Vector3(-8, 0.5, 0);
+            // If start and end Y are the same (or very close), make a straight line
+            const yDiff = Math.abs(y - 0);
+            const curveAmount = yDiff < 0.1 ? 0 : 1; // No curve if essentially same Y
+            const controlPoint1 = new THREE.Vector3(-15, y + curveAmount, 0);
+            const controlPoint2 = new THREE.Vector3(-8, curveAmount * 0.5, 0);
             
             const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
             
             // Calculate tube radius based on input cylinder size (logarithmic scaling)
-            const amount = input.prevout?.value || 0;
+            // For coinbase, use total output value
+            const amount = isCoinbase ? totalOutputValue : (input.prevout?.value || 0);
             const amountBTC = amount / 100000000;
             const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
             const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
             const tubeRadius = 1 * sizeScale;
             
             const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 16, false);
-            const material = new THREE.MeshLambertMaterial({ 
-                color: 0x222222, // Dark gray color
-                opacity: 0.8,
-                transparent: true,
-                side: THREE.DoubleSide,
-                depthWrite: false,
-                depthTest: true
-            });
+            let material;
+            if (isCoinbase) {
+                // Coinbase tube: gradient from grey 0.5 opacity to white 0.8 opacity
+                material = new THREE.MeshLambertMaterial({ 
+                    color: 0xffffff,
+                    map: this.coinbaseTubeGradientTexture,
+                    opacity: 1.0, // Opacity controlled by texture alpha
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                    depthTest: true
+                });
+            } else {
+                // Regular input tube: dark gray
+                material = new THREE.MeshLambertMaterial({ 
+                    color: 0x222222,
+                    opacity: 0.8,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                    depthTest: true
+                });
+            }
             const tube = new THREE.Mesh(tubeGeometry, material);
             tube.renderOrder = 0; // Render before circles
-            tube.userData = { type: 'input-tube', index: index, data: input, originalColor: 0x444444 };
+            tube.userData = { 
+                type: 'input-tube', 
+                index: index, 
+                data: input, 
+                originalColor: isCoinbase ? 0xffffff : 0x222222,
+                isCoinbase: isCoinbase,
+                coinbaseAmount: isCoinbase ? totalOutputValue : null
+            };
             this.scene.add(tube);
         });
 
@@ -1146,8 +1278,11 @@ class BitcoinTransactionExplorer {
             const endPoint = new THREE.Vector3(35, y, 0);
             
             // Create control points for smooth curve
-            const controlPoint1 = new THREE.Vector3(15, 0.5, 0); // Adjusted for new start point
-            const controlPoint2 = new THREE.Vector3(8, y + 1, 0);
+            // If start and end Y are the same (or very close), make a straight line
+            const yDiff = Math.abs(y - 0);
+            const curveAmount = yDiff < 0.1 ? 0 : 1; // No curve if essentially same Y
+            const controlPoint1 = new THREE.Vector3(15, curveAmount * 0.5, 0);
+            const controlPoint2 = new THREE.Vector3(8, y + curveAmount, 0);
             
             const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
             
@@ -1222,12 +1357,16 @@ class BitcoinTransactionExplorer {
             
             if (tube) {
                 // Update tube start and end points to match new cylinder position
-                const startPoint = new THREE.Vector3(-35, cylinder.position.y, 0);
+                const y = cylinder.position.y;
+                const startPoint = new THREE.Vector3(-35, y, 0);
                 const endPoint = new THREE.Vector3(-1, 0, 0); // -width/2 where width = 2
                 
                 // Create control points for smooth curve
-                const controlPoint1 = new THREE.Vector3(-15, cylinder.position.y + 1, 0);
-                const controlPoint2 = new THREE.Vector3(-8, 0.5, 0);
+                // If start and end Y are the same (or very close), make a straight line
+                const yDiff = Math.abs(y - 0);
+                const curveAmount = yDiff < 0.1 ? 0 : 1;
+                const controlPoint1 = new THREE.Vector3(-15, y + curveAmount, 0);
+                const controlPoint2 = new THREE.Vector3(-8, curveAmount * 0.5, 0);
                 
                 const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
                 
@@ -1683,6 +1822,7 @@ class BitcoinTransactionExplorer {
             if (this.rawViewMode !== 'hex') {
                 this.rawViewMode = 'hex';
                 this.updateViewToggleButtons();
+                document.getElementById('bytes-per-line').disabled = false;
                 this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
                 
                 // Update URL with view parameter
@@ -1696,6 +1836,7 @@ class BitcoinTransactionExplorer {
             if (this.rawViewMode !== 'ascii') {
                 this.rawViewMode = 'ascii';
                 this.updateViewToggleButtons();
+                document.getElementById('bytes-per-line').disabled = false;
                 this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
                 
                 // Update URL with view parameter
@@ -1714,6 +1855,20 @@ class BitcoinTransactionExplorer {
                 // Update URL with view parameter
                 const url = new URL(window.location);
                 url.searchParams.set('view', 'binary');
+                window.history.pushState({}, '', url);
+            }
+        });
+        
+        document.getElementById('view-dump').addEventListener('click', () => {
+            if (this.rawViewMode !== 'dump') {
+                this.rawViewMode = 'dump';
+                this.updateViewToggleButtons();
+                document.getElementById('bytes-per-line').disabled = true;
+                this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
+                
+                // Update URL with view parameter
+                const url = new URL(window.location);
+                url.searchParams.set('view', 'dump');
                 window.history.pushState({}, '', url);
             }
         });
@@ -1861,7 +2016,11 @@ class BitcoinTransactionExplorer {
         
         // If decode mode is active, render with colored sections
         if (this.decodeMode && this.decodedSections) {
-            this.renderDecodedData(bytesPerLine);
+            if (this.rawViewMode === 'dump') {
+                await this.renderDecodedDump();
+            } else {
+                this.renderDecodedData(bytesPerLine);
+            }
             return;
         }
         
@@ -1878,6 +2037,11 @@ class BitcoinTransactionExplorer {
             const regex = new RegExp(`.{1,${charsPerLine}}`, 'g');
             const formatted = binaryString.match(regex)?.join('\n') || binaryString;
             textElement.textContent = formatted;
+        } else if (this.rawViewMode === 'dump') {
+            // Hex dump view - classic format with offset, hex, and ASCII
+            // Use HTML rendering to match decoded dump structure
+            textElement.style.fontSize = '11px';
+            this.renderDumpPlain();
         } else {
             // Hex view
             const charsPerLine = bytesPerLine * 2;
@@ -1974,6 +2138,156 @@ class BitcoinTransactionExplorer {
         textElement.innerHTML = html;
         
         // Set up tooltip handlers
+        this.setupDecodeTooltips();
+    }
+    
+    renderDumpPlain() {
+        const textElement = document.getElementById('raw-data-text');
+        const bytes = this.rawTxData.bytes;
+        const bytesPerLine = 16;
+        
+        let html = '';
+        
+        for (let i = 0; i < bytes.length; i += bytesPerLine) {
+            // Offset (using span for consistency with decoded view)
+            const offset = i.toString(16).padStart(8, '0');
+            html += `<span class="dump-offset">${offset}</span>  `;
+            
+            // Hex bytes (each wrapped in span for consistent spacing)
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const hexByte = byte.toString(16).padStart(2, '0');
+                    html += `<span class="dump-byte">${hexByte}</span> `;
+                } else {
+                    html += '   ';
+                }
+                if (j === 7) html += ' ';
+            }
+            
+            html += '|';
+            
+            // ASCII (each wrapped in span for consistency)
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const char = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                    html += `<span class="dump-ascii">${this.escapeHtml(char)}</span>`;
+                } else {
+                    html += ' ';
+                }
+            }
+            
+            html += '|\n';
+        }
+        
+        textElement.innerHTML = html.trimEnd();
+    }
+    
+    async renderDecodedDump(highlightByteStart = null, highlightByteEnd = null) {
+        const textElement = document.getElementById('raw-data-text');
+        const bytes = this.rawTxData.bytes;
+        const bytesPerLine = 16; // Standard dump format
+        
+        // Set consistent font size for dump view
+        textElement.style.fontSize = '11px';
+        
+        // Show loading for large transactions
+        if (bytes.length > 50000) {
+            textElement.innerHTML = 'Decoding dump view...';
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        
+        // Create a map of byte position to section for quick lookup
+        const byteToSection = new Map();
+        for (const section of this.decodedSections) {
+            for (let i = section.start; i < section.end; i++) {
+                byteToSection.set(i, section);
+            }
+        }
+        
+        // Helper to check if byte is in highlight range
+        const isHighlighted = (byteIndex) => {
+            return highlightByteStart !== null && 
+                   byteIndex >= highlightByteStart && 
+                   byteIndex < highlightByteEnd;
+        };
+        
+        let html = '';
+        
+        for (let i = 0; i < bytes.length; i += bytesPerLine) {
+            // Offset (using span for consistency)
+            const offset = i.toString(16).padStart(8, '0');
+            html += `<span class="dump-offset">${offset}</span>  `;
+            
+            // Hex bytes (always wrapped in span for consistent spacing)
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const hexByte = byte.toString(16).padStart(2, '0');
+                    const section = byteToSection.get(byteIndex);
+                    const highlighted = isHighlighted(byteIndex);
+                    
+                    let classes = 'dump-byte';
+                    let dataAttrs = '';
+                    
+                    if (section) {
+                        classes += ` decode-section ${section.cssClass}`;
+                        dataAttrs = ` data-label="${this.escapeAttr(section.label)}" data-value="${this.escapeAttr(String(section.value))}"`;
+                    }
+                    if (highlighted) {
+                        classes += section ? ' tx-highlight-decode' : ' tx-highlight';
+                    }
+                    
+                    html += `<span class="${classes}"${dataAttrs}>${hexByte}</span> `;
+                } else {
+                    html += '   ';
+                }
+                // Extra space between the two groups of 8
+                if (j === 7) html += ' ';
+            }
+            
+            html += '|';
+            
+            // ASCII representation (always wrapped in span for consistency)
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const char = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                    const escapedChar = this.escapeHtml(char);
+                    const section = byteToSection.get(byteIndex);
+                    const highlighted = isHighlighted(byteIndex);
+                    
+                    let classes = 'dump-ascii';
+                    let dataAttrs = '';
+                    
+                    if (section) {
+                        classes += ` decode-section ${section.cssClass}`;
+                        dataAttrs = ` data-label="${this.escapeAttr(section.label)}" data-value="${this.escapeAttr(String(section.value))}"`;
+                    }
+                    if (highlighted) {
+                        classes += section ? ' tx-highlight-decode' : ' tx-highlight';
+                    }
+                    
+                    html += `<span class="${classes}"${dataAttrs}>${escapedChar}</span>`;
+                } else {
+                    html += ' ';
+                }
+            }
+            
+            html += '|\n';
+        }
+        
+        textElement.innerHTML = html.trimEnd();
+        
+        if (highlightByteStart !== null) {
+            textElement.classList.add('has-highlight');
+        }
+        
         this.setupDecodeTooltips();
     }
     
@@ -2109,6 +2423,39 @@ class BitcoinTransactionExplorer {
             result += bytes[i].toString(2).padStart(8, '0');
         }
         return result;
+    }
+    
+    bytesToDump(bytes) {
+        // Classic hex dump format: offset | hex bytes | ASCII
+        let result = '';
+        const bytesPerLine = 16;
+        
+        for (let i = 0; i < bytes.length; i += bytesPerLine) {
+            // Offset (8 hex chars)
+            const offset = i.toString(16).padStart(8, '0');
+            
+            // Hex bytes (two groups of 8 bytes)
+            let hexPart = '';
+            let asciiPart = '';
+            
+            for (let j = 0; j < bytesPerLine; j++) {
+                if (i + j < bytes.length) {
+                    const byte = bytes[i + j];
+                    hexPart += byte.toString(16).padStart(2, '0') + ' ';
+                    // ASCII: printable range 32-126, else '.'
+                    asciiPart += (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                } else {
+                    hexPart += '   ';
+                    asciiPart += ' ';
+                }
+                // Add extra space between the two groups of 8
+                if (j === 7) hexPart += ' ';
+            }
+            
+            result += `${offset}  ${hexPart} |${asciiPart}|\n`;
+        }
+        
+        return result.trimEnd();
     }
     
     // Parse a Bitcoin transaction and return sections with byte ranges
@@ -2877,17 +3224,26 @@ class BitcoinTransactionExplorer {
         const hexBtn = document.getElementById('view-hex');
         const binaryBtn = document.getElementById('view-binary');
         const asciiBtn = document.getElementById('view-ascii');
+        const dumpBtn = document.getElementById('view-dump');
+        const bytesSelect = document.getElementById('bytes-per-line');
         
         hexBtn.classList.remove('active');
         binaryBtn.classList.remove('active');
         asciiBtn.classList.remove('active');
+        dumpBtn.classList.remove('active');
         
         if (this.rawViewMode === 'hex') {
             hexBtn.classList.add('active');
+            bytesSelect.disabled = false;
         } else if (this.rawViewMode === 'binary') {
             binaryBtn.classList.add('active');
+            bytesSelect.disabled = false;
+        } else if (this.rawViewMode === 'dump') {
+            dumpBtn.classList.add('active');
+            bytesSelect.disabled = true;
         } else {
             asciiBtn.classList.add('active');
+            bytesSelect.disabled = false;
         }
     }
     

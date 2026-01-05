@@ -19,6 +19,17 @@ class BitcoinDifficultyExplorer {
         this.animationTimeouts = [];
         this.currentAnimationBlock = 0;
         
+        // Audio context for block sounds
+        this.audioContext = null;
+        this.isSoundEnabled = false; // Block sound OFF by default
+        this.isMetronomeEnabled = false; // Metronome OFF by default
+        this.metronomeIntervalId = null; // Store metronome interval ID
+        
+        // Time display animation
+        this.animationStartTimestamp = 0; // First block's timestamp
+        this.animationElapsedSeconds = 0; // Elapsed "real" seconds in animation
+        this.timeDisplayIntervalId = null; // Interval for updating time display
+        
         // Get adjustment index from URL parameter, default to epoch 0
         const urlParams = new URLSearchParams(window.location.search);
         this.selectedAdjustment = urlParams.get('adjustment') || '0';
@@ -510,8 +521,29 @@ class BitcoinDifficultyExplorer {
                 const percentage = parseInt(e.target.value);
                 blockVisibilityValue.textContent = `${percentage}%`;
                 this.updateBlockVisibility(percentage);
+                
+                // Update date display based on highest visible block
+                this.updateBlockTimeDisplay(percentage);
             });
         }
+        
+        // Block sound toggle
+        document.getElementById('toggle-sound').addEventListener('click', () => {
+            this.isSoundEnabled = !this.isSoundEnabled;
+            const button = document.getElementById('toggle-sound');
+            button.textContent = this.isSoundEnabled ? 'Blocks: On' : 'Blocks: Off';
+            button.style.background = this.isSoundEnabled ? '#555' : '#333';
+            if (this.isSoundEnabled) this.initAudio();
+        });
+        
+        // Metronome toggle
+        document.getElementById('toggle-metronome').addEventListener('click', () => {
+            this.isMetronomeEnabled = !this.isMetronomeEnabled;
+            const button = document.getElementById('toggle-metronome');
+            button.textContent = this.isMetronomeEnabled ? '10min: On' : '10min: Off';
+            button.style.background = this.isMetronomeEnabled ? '#555' : '#333';
+            if (this.isMetronomeEnabled) this.initAudio();
+        });
     }
     
     toggleCameraView() {
@@ -1284,6 +1316,9 @@ class BitcoinDifficultyExplorer {
                     nextExpected.textContent = `${this.formatTimeFromSeconds(maxTimeDiff)}`;
                 }
             }
+            
+            // Initialize the date display with the last block's date
+            this.updateBlockTimeDisplay(100);
         }
     }
 
@@ -1544,6 +1579,48 @@ class BitcoinDifficultyExplorer {
         
         console.log(`Showing ${blocksToShow} of ${totalBlocks} blocks (${percentage}%)`);
     }
+    
+    updateBlockTimeDisplay(percentage) {
+        const currentBlockTimeElement = document.getElementById('current-block-time');
+        if (!currentBlockTimeElement || !this.blockData || !this.blockData[0] || this.blockData[0].length === 0) return;
+        
+        const totalBlocks = this.blockData[0].length;
+        const blocksToShow = Math.max(1, Math.floor(totalBlocks * (percentage / 100)));
+        
+        const highestVisibleIndex = blocksToShow - 1;
+        if (this.blockData[0][highestVisibleIndex]) {
+            const blockTimestamp = this.blockData[0][highestVisibleIndex][1]?.time;
+            if (blockTimestamp) {
+                const date = new Date(blockTimestamp * 1000);
+                const options = { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+                currentBlockTimeElement.textContent = date.toLocaleDateString('en-US', options);
+            }
+        }
+    }
+    
+    updateAnimatedTimeDisplay() {
+        const currentBlockTimeElement = document.getElementById('current-block-time');
+        if (!currentBlockTimeElement) return;
+        
+        const currentTimestamp = this.animationStartTimestamp + this.animationElapsedSeconds;
+        const date = new Date(currentTimestamp * 1000);
+        const options = { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        currentBlockTimeElement.textContent = date.toLocaleDateString('en-US', options);
+    }
 
     startBlockAnimation(speed = 1000) {
         if (this.isAnimating) {
@@ -1557,6 +1634,79 @@ class BitcoinDifficultyExplorer {
         this.isAnimating = true;
         this.currentAnimationBlock = 0;
         this.animationSpeed = speed; // Store current speed
+        
+        // Initialize audio if either sound is enabled
+        if (this.isSoundEnabled || this.isMetronomeEnabled) {
+            this.initAudio();
+        }
+        
+        // Start metronome interval - plays at fixed intervals representing ideal 10-min blocks
+        // Clear any existing interval first
+        if (this.metronomeIntervalId) {
+            clearInterval(this.metronomeIntervalId);
+            this.metronomeIntervalId = null;
+        }
+        
+        if (this.isMetronomeEnabled) {
+            // Calculate interval based on speed: 600 seconds (10 min) / speed factor
+            // At 1000x: 600s becomes 600ms
+            // At 10000x: 600s becomes 60ms
+            // At 100000x: 600s becomes 6ms
+            let intervalMs;
+            if (speed === 100000) {
+                intervalMs = 6; // 600 / 100 = 6ms
+            } else if (speed === 10000) {
+                intervalMs = 60; // 600 / 10 = 60ms
+            } else { // speed === 1000
+                intervalMs = 600; // 600 / 1 = 600ms
+            }
+            
+            console.log(`Starting metronome at ${intervalMs}ms interval (${speed}x speed)`);
+            
+            // Play initial tick
+            this.playMetronomeTick();
+            
+            // Start interval for subsequent ticks
+            this.metronomeIntervalId = setInterval(() => {
+                if (this.isAnimating && this.isMetronomeEnabled) {
+                    this.playMetronomeTick();
+                }
+            }, intervalMs);
+        }
+        
+        // Start time display animation - updates every 10 minutes (scaled by speed)
+        // Clear any existing interval first
+        if (this.timeDisplayIntervalId) {
+            clearInterval(this.timeDisplayIntervalId);
+            this.timeDisplayIntervalId = null;
+        }
+        
+        // Get first block's timestamp as starting point
+        if (this.blockData && this.blockData[0] && this.blockData[0][0]) {
+            this.animationStartTimestamp = this.blockData[0][0][1]?.time || 0;
+            this.animationElapsedSeconds = 0;
+            
+            // Update time display immediately with first block's time
+            this.updateAnimatedTimeDisplay();
+            
+            // Calculate interval based on speed: 600 seconds (10 min) / speed factor
+            let timeIntervalMs;
+            if (speed === 100000) {
+                timeIntervalMs = 6; // 600 / 100 = 6ms
+            } else if (speed === 10000) {
+                timeIntervalMs = 60; // 600 / 10 = 60ms
+            } else { // speed === 1000
+                timeIntervalMs = 600; // 600 / 1 = 600ms
+            }
+            
+            // Start interval - add 600 seconds every tick (10 min intervals)
+            this.timeDisplayIntervalId = setInterval(() => {
+                if (this.isAnimating) {
+                    this.animationElapsedSeconds += 600; // Add 10 minutes
+                    this.updateAnimatedTimeDisplay();
+                }
+            }, timeIntervalMs);
+        }
         
         // Update button states
         const button1000x = document.getElementById('animate-1000x');
@@ -1613,6 +1763,18 @@ class BitcoinDifficultyExplorer {
         this.animationTimeouts.forEach(timeout => clearTimeout(timeout));
         this.animationTimeouts = [];
         
+        // Clear metronome interval
+        if (this.metronomeIntervalId) {
+            clearInterval(this.metronomeIntervalId);
+            this.metronomeIntervalId = null;
+        }
+        
+        // Clear time display interval
+        if (this.timeDisplayIntervalId) {
+            clearInterval(this.timeDisplayIntervalId);
+            this.timeDisplayIntervalId = null;
+        }
+        
         // Update button text
         const button1000x = document.getElementById('animate-1000x');
         const button10000x = document.getElementById('animate-10000x');
@@ -1648,6 +1810,9 @@ class BitcoinDifficultyExplorer {
             const lastBlockHeight = this.blockData[0][lastBlockIndex][0]?.height || this.blockData[0].length;
             highestVisibleBlockElement.textContent = lastBlockHeight.toLocaleString();
         }
+        
+        // Update date display to show last block's date
+        this.updateBlockTimeDisplay(100);
     }
     
     animateNextBlock(speed = 1000) {
@@ -1661,6 +1826,9 @@ class BitcoinDifficultyExplorer {
         const currentBlock = this.blocks[this.currentAnimationBlock];
         if (currentBlock) {
             currentBlock.visible = true;
+            
+            // Play block sound when block appears
+            this.playBlockSound();
             
             // Update slider to reflect current progress
             const progress = ((this.currentAnimationBlock + 1) / this.blocks.length) * 100;
@@ -1682,17 +1850,14 @@ class BitcoinDifficultyExplorer {
             console.log(`Showing block ${this.currentAnimationBlock + 1}/${this.blocks.length}`);
         }
         
-        // Calculate delay for next block based on time difference
+        // Calculate delay for next block based on the NEXT block's time difference
+        // time_difference represents how long it took for that block to be found
         let delayMs = 600; // Default 10 minutes in seconds
         
-        if (this.blockData && this.blockData[0] && this.blockData[0][this.currentAnimationBlock]) {
-            const blockData = this.blockData[0][this.currentAnimationBlock];
-            let timeDifference = blockData[8]?.time_difference || 600;
-            
-            // Force time difference to 0 for block 0 (genesis block)
-            if (this.currentAnimationBlock === 0) {
-                timeDifference = 0;
-            }
+        const nextBlockIndex = this.currentAnimationBlock + 1;
+        if (this.blockData && this.blockData[0] && this.blockData[0][nextBlockIndex]) {
+            const nextBlockData = this.blockData[0][nextBlockIndex];
+            let timeDifference = nextBlockData[8]?.time_difference || 600;
             
             // Handle negative time differences (treat as small positive value)
             if (timeDifference < 0) {
@@ -1709,7 +1874,7 @@ class BitcoinDifficultyExplorer {
             }
         }
         
-        console.log(`Next block delay: ${delayMs}ms (${speed}x speed)`);
+        console.log(`Next block delay: ${delayMs}ms (block ${nextBlockIndex}'s time diff, ${speed}x speed)`);
         
         // Move to next block
         this.currentAnimationBlock++;
@@ -1720,6 +1885,54 @@ class BitcoinDifficultyExplorer {
         }, delayMs);
         
         this.animationTimeouts.push(timeout);
+    }
+    
+    // Audio methods
+    initAudio() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+    }
+    
+    playBlockSound() {
+        if (!this.isSoundEnabled || !this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+        
+        gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.1);
+        
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + 0.1);
+    }
+    
+    playMetronomeTick() {
+        if (!this.isMetronomeEnabled || !this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(400, this.audioContext.currentTime); // Lower pitch
+        
+        gainNode.gain.setValueAtTime(0.05, this.audioContext.currentTime); // Lower volume
+        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.05); // Shorter
+        
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + 0.05);
     }
 }
 

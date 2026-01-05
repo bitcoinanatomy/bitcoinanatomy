@@ -1710,6 +1710,11 @@ body.raw-data-open .navigation-controls {
     border-color: rgba(255, 255, 255, 0.5);
 }
 
+.raw-data-bytes-control select:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 .raw-data-top-row {
     display: flex;
     align-items: center;

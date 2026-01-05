@@ -46,6 +46,8 @@ class BitcoinBlockExplorer {
             this.rawViewMode = 'ascii';
         } else if (this.urlViewMode === 'binary') {
             this.rawViewMode = 'binary';
+        } else if (this.urlViewMode === 'dump') {
+            this.rawViewMode = 'dump';
         }
         
         this.init();
@@ -432,6 +434,7 @@ class BitcoinBlockExplorer {
             if (this.rawViewMode !== 'hex') {
                 this.rawViewMode = 'hex';
                 this.updateViewToggleButtons();
+                document.getElementById('bytes-per-line').disabled = false;
                 this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
                 
                 // Update URL with view parameter
@@ -445,6 +448,7 @@ class BitcoinBlockExplorer {
             if (this.rawViewMode !== 'ascii') {
                 this.rawViewMode = 'ascii';
                 this.updateViewToggleButtons();
+                document.getElementById('bytes-per-line').disabled = false;
                 this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
                 
                 // Update URL with view parameter
@@ -458,11 +462,26 @@ class BitcoinBlockExplorer {
             if (this.rawViewMode !== 'binary') {
                 this.rawViewMode = 'binary';
                 this.updateViewToggleButtons();
+                document.getElementById('bytes-per-line').disabled = false;
                 this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
                 
                 // Update URL with view parameter
                 const url = new URL(window.location);
                 url.searchParams.set('view', 'binary');
+                window.history.pushState({}, '', url);
+            }
+        });
+        
+        document.getElementById('view-dump').addEventListener('click', () => {
+            if (this.rawViewMode !== 'dump') {
+                this.rawViewMode = 'dump';
+                this.updateViewToggleButtons();
+                document.getElementById('bytes-per-line').disabled = true;
+                this.reformatRawData(parseInt(document.getElementById('bytes-per-line').value) || 32);
+                
+                // Update URL with view parameter
+                const url = new URL(window.location);
+                url.searchParams.set('view', 'dump');
                 window.history.pushState({}, '', url);
             }
         });
@@ -1257,7 +1276,7 @@ class BitcoinBlockExplorer {
         const startTime = Date.now();
         
         // Calculate the original cuboid height (before scaling)
-        const originalHeight = 0.07; // CUBOID_HEIGHT from geometry creation
+        const originalHeight = 0.03; // CUBOID_HEIGHT from geometry creation
         
         const animate = () => {
             const elapsed = Date.now() - startTime;
@@ -1530,7 +1549,8 @@ class BitcoinBlockExplorer {
         
         // Create block header representation (80 bytes)
         // Using same scale as transactions: width spans tx grid, height = max(0.1, 80/1000) = 0.1
-        const HEADER_WIDTH = 2.5;  // Spans the transaction grid (10 cols * 0.25 spacing)
+        // Width = 9 spaces between 10 cols (9 * 0.25 = 2.25) + cuboid length (0.21) = 2.46
+        const HEADER_WIDTH = 2.46;  // Aligns with first and last transaction edges
         const HEADER_HEIGHT = 0.01;  // Thin slice representing 80 bytes
         const HEADER_DEPTH = 0.01;  // Same depth as transaction cuboids
         
@@ -1717,11 +1737,14 @@ class BitcoinBlockExplorer {
             return;
         }
         
-        // Update subtitle with block height and hash
-        const subtitle = data.height ? 
-            `Height ${data.height.toLocaleString()} • ${data.id ? data.id.substring(0, 6) + '...' + data.id.substring(data.id.length - 6) : 'Hash not available'}` : 
-            'Not Found';
-        document.getElementById('block-subtitle').textContent = subtitle;
+        // Update subtitle with block height and hash on separate lines
+        // Use data.height != null to handle genesis block (height 0) correctly
+        const subtitleEl = document.getElementById('block-subtitle');
+        if (data.height != null) {
+            subtitleEl.innerHTML = `Height ${data.height.toLocaleString()}<br>${data.id || 'Hash not available'}`;
+        } else {
+            subtitleEl.textContent = 'Not Found';
+        }
         
         document.getElementById('block-height').textContent = data.height?.toLocaleString() || 'N/A';
         document.getElementById('block-hash').textContent = data.id?.substring(0, 16) + '...' || 'N/A';
@@ -1765,14 +1788,14 @@ class BitcoinBlockExplorer {
             const row = Math.floor(positionInLayer / transactionsPerRow);
             const col = positionInLayer % transactionsPerRow;
             
-            // Calculate position with proper centering
-            const x = (col - (transactionsPerRow - 1) / 2) * spacingX;
+            // Calculate position with proper centering (left to right order)
+            const x = ((transactionsPerRow - 1) / 2 - col) * spacingX;
             const z = (row - 4.5) * spacingZ; // Center around 10 rows (0-9, so -4.5 to +4.5)
             const y = 1.21 - layer * spacingY; // Move all transactions up 10 units, then stack layers downward
             
             // Create cuboid geometry (reduced to half scale)
             const CUBOID_WIDTH = 0.01;   // Width (was 0.07)
-            const CUBOID_HEIGHT = 0.07;   // Height (was 0.14)
+            const CUBOID_HEIGHT = 0.03;   // Height - shorter default before loading
             const CUBOID_LENGTH = 0.21;   // Length (was 0.56)
             const geometry = new THREE.BoxGeometry(CUBOID_LENGTH, CUBOID_HEIGHT, CUBOID_WIDTH);
             const material = new THREE.MeshBasicMaterial({
@@ -2546,7 +2569,10 @@ class BitcoinBlockExplorer {
         // Set appropriate font size based on bytes per line and view mode
         const isAscii = this.rawViewMode === 'ascii';
         const isBinary = this.rawViewMode === 'binary';
-        if (bytesPerLine >= 512) {
+        const isDump = this.rawViewMode === 'dump';
+        if (isDump) {
+            textElement.style.fontSize = '11px';
+        } else if (bytesPerLine >= 512) {
             textElement.style.fontSize = isAscii ? '0.12vw' : isBinary ? '0.015vw' : '0.06vw';
         } else if (bytesPerLine >= 256) {
             textElement.style.fontSize = isAscii ? '0.24vw' : isBinary ? '0.03vw' : '0.12vw';
@@ -2562,6 +2588,16 @@ class BitcoinBlockExplorer {
         const highlightByteStart = Math.floor(hexStartPos / 2);
         const highlightByteEnd = highlightByteStart + Math.floor(hexLength / 2);
         this.highlightRange = { start: highlightByteStart, end: highlightByteEnd };
+        
+        // Handle dump mode separately
+        if (isDump) {
+            if (this.decodeMode && this.decodedSections) {
+                this.renderDecodedDump(highlightByteStart, highlightByteEnd);
+            } else {
+                this.renderDumpWithHighlight(highlightByteStart, highlightByteEnd);
+            }
+            return;
+        }
         
         // If decode mode is active, render with decode colors AND highlight
         if (this.decodeMode && this.decodedSections) {
@@ -2919,7 +2955,11 @@ class BitcoinBlockExplorer {
         
         // If decode mode is active, render decoded view
         if (this.decodeMode && this.decodedSections) {
-            await this.renderDecodedData(bytesPerLine);
+            if (this.rawViewMode === 'dump') {
+                await this.renderDecodedDump();
+            } else {
+                await this.renderDecodedData(bytesPerLine);
+            }
             return;
         }
         
@@ -2951,6 +2991,11 @@ class BitcoinBlockExplorer {
                 const formatted = binaryString.match(regex)?.join('\n') || binaryString;
                 textElement.textContent = formatted;
             }
+        } else if (this.rawViewMode === 'dump') {
+            // Hex dump view - classic format with offset, hex, and ASCII
+            // Use HTML rendering to match decoded dump structure
+            textElement.style.fontSize = '11px';
+            this.renderDumpPlain();
         } else {
             // Hex view
             const charsPerLine = bytesPerLine * 2; // 2 hex chars per byte
@@ -2988,21 +3033,63 @@ class BitcoinBlockExplorer {
         return result;
     }
     
+    bytesToDump(bytes) {
+        // Classic hex dump format: offset | hex bytes | ASCII
+        let result = '';
+        const bytesPerLine = 16;
+        
+        for (let i = 0; i < bytes.length; i += bytesPerLine) {
+            // Offset (8 hex chars)
+            const offset = i.toString(16).padStart(8, '0');
+            
+            // Hex bytes (two groups of 8 bytes)
+            let hexPart = '';
+            let asciiPart = '';
+            
+            for (let j = 0; j < bytesPerLine; j++) {
+                if (i + j < bytes.length) {
+                    const byte = bytes[i + j];
+                    hexPart += byte.toString(16).padStart(2, '0') + ' ';
+                    // ASCII: printable range 32-126, else '.'
+                    asciiPart += (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                } else {
+                    hexPart += '   ';
+                    asciiPart += ' ';
+                }
+                // Add extra space between the two groups of 8
+                if (j === 7) hexPart += ' ';
+            }
+            
+            result += `${offset}  ${hexPart} |${asciiPart}|\n`;
+        }
+        
+        return result.trimEnd();
+    }
+    
     updateViewToggleButtons() {
         const hexBtn = document.getElementById('view-hex');
         const binaryBtn = document.getElementById('view-binary');
         const asciiBtn = document.getElementById('view-ascii');
+        const dumpBtn = document.getElementById('view-dump');
+        const bytesSelect = document.getElementById('bytes-per-line');
         
         hexBtn.classList.remove('active');
         binaryBtn.classList.remove('active');
         asciiBtn.classList.remove('active');
+        dumpBtn.classList.remove('active');
         
         if (this.rawViewMode === 'hex') {
             hexBtn.classList.add('active');
+            bytesSelect.disabled = false;
         } else if (this.rawViewMode === 'binary') {
             binaryBtn.classList.add('active');
+            bytesSelect.disabled = false;
+        } else if (this.rawViewMode === 'dump') {
+            dumpBtn.classList.add('active');
+            bytesSelect.disabled = true;
         } else {
             asciiBtn.classList.add('active');
+            bytesSelect.disabled = false;
         }
     }
     
@@ -3773,6 +3860,221 @@ class BitcoinBlockExplorer {
         
         textElement.innerHTML = html;
         this.setupDecodeTooltips();
+    }
+    
+    async renderDecodedDump(highlightByteStart = null, highlightByteEnd = null) {
+        const textElement = document.getElementById('raw-data-text');
+        const bytes = this.rawBlockData.bytes;
+        const bytesPerLine = 16; // Standard dump format
+        
+        // Set consistent font size for dump view
+        textElement.style.fontSize = '11px';
+        
+        // Show loading for large blocks
+        if (bytes.length > 50000) {
+            textElement.innerHTML = 'Decoding dump view...';
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        
+        // Create a map of byte position to section for quick lookup
+        const byteToSection = new Map();
+        for (const section of this.decodedSections) {
+            for (let i = section.start; i < section.end; i++) {
+                byteToSection.set(i, section);
+            }
+        }
+        
+        // Helper to check if byte is in highlight range
+        const isHighlighted = (byteIndex) => {
+            return highlightByteStart !== null && 
+                   byteIndex >= highlightByteStart && 
+                   byteIndex < highlightByteEnd;
+        };
+        
+        let html = '';
+        
+        for (let i = 0; i < bytes.length; i += bytesPerLine) {
+            // Offset (using span for consistency)
+            const offset = i.toString(16).padStart(8, '0');
+            html += `<span class="dump-offset">${offset}</span>  `;
+            
+            // Hex bytes (always wrapped in span for consistent spacing)
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const hexByte = byte.toString(16).padStart(2, '0');
+                    const section = byteToSection.get(byteIndex);
+                    const highlighted = isHighlighted(byteIndex);
+                    
+                    let classes = 'dump-byte';
+                    let dataAttrs = '';
+                    
+                    if (section) {
+                        classes += ` decode-section ${section.cssClass}`;
+                        dataAttrs = ` data-label="${this.escapeAttr(section.label)}" data-value="${this.escapeAttr(String(section.value))}"`;
+                    }
+                    if (highlighted) {
+                        classes += section ? ' tx-highlight-decode' : ' tx-highlight';
+                    }
+                    
+                    html += `<span class="${classes}"${dataAttrs}>${hexByte}</span> `;
+                } else {
+                    html += '   ';
+                }
+                // Extra space between the two groups of 8
+                if (j === 7) html += ' ';
+            }
+            
+            html += '|';
+            
+            // ASCII representation (always wrapped in span for consistency)
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const char = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                    const escapedChar = this.escapeHtml(char);
+                    const section = byteToSection.get(byteIndex);
+                    const highlighted = isHighlighted(byteIndex);
+                    
+                    let classes = 'dump-ascii';
+                    let dataAttrs = '';
+                    
+                    if (section) {
+                        classes += ` decode-section ${section.cssClass}`;
+                        dataAttrs = ` data-label="${this.escapeAttr(section.label)}" data-value="${this.escapeAttr(String(section.value))}"`;
+                    }
+                    if (highlighted) {
+                        classes += section ? ' tx-highlight-decode' : ' tx-highlight';
+                    }
+                    
+                    html += `<span class="${classes}"${dataAttrs}>${escapedChar}</span>`;
+                } else {
+                    html += ' ';
+                }
+            }
+            
+            html += '|\n';
+        }
+        
+        textElement.innerHTML = html.trimEnd();
+        
+        if (highlightByteStart !== null) {
+            textElement.classList.add('has-highlight');
+            this.addHighlightClickHandlers();
+        }
+        
+        this.setupDecodeTooltips();
+    }
+    
+    renderDumpPlain() {
+        const textElement = document.getElementById('raw-data-text');
+        const bytes = this.rawBlockData.bytes;
+        const bytesPerLine = 16;
+        
+        let html = '';
+        
+        for (let i = 0; i < bytes.length; i += bytesPerLine) {
+            // Offset (using span for consistency with decoded view)
+            const offset = i.toString(16).padStart(8, '0');
+            html += `<span class="dump-offset">${offset}</span>  `;
+            
+            // Hex bytes (each wrapped in span for consistent spacing)
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const hexByte = byte.toString(16).padStart(2, '0');
+                    html += `<span class="dump-byte">${hexByte}</span> `;
+                } else {
+                    html += '   ';
+                }
+                if (j === 7) html += ' ';
+            }
+            
+            html += '|';
+            
+            // ASCII (each wrapped in span for consistency)
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const char = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                    html += `<span class="dump-ascii">${this.escapeHtml(char)}</span>`;
+                } else {
+                    html += ' ';
+                }
+            }
+            
+            html += '|\n';
+        }
+        
+        textElement.innerHTML = html.trimEnd();
+    }
+    
+    renderDumpWithHighlight(highlightByteStart, highlightByteEnd) {
+        const textElement = document.getElementById('raw-data-text');
+        const bytes = this.rawBlockData.bytes;
+        const bytesPerLine = 16;
+        
+        // Set consistent font size for dump view
+        textElement.style.fontSize = '11px';
+        
+        let html = '';
+        
+        for (let i = 0; i < bytes.length; i += bytesPerLine) {
+            // Offset (using span for consistency)
+            const offset = i.toString(16).padStart(8, '0');
+            html += `<span class="dump-offset">${offset}</span>  `;
+            
+            // Hex bytes
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const hexByte = byte.toString(16).padStart(2, '0');
+                    const highlighted = byteIndex >= highlightByteStart && byteIndex < highlightByteEnd;
+                    
+                    if (highlighted) {
+                        html += `<span class="dump-byte tx-highlight">${hexByte}</span>`;
+                    } else {
+                        html += `<span class="dump-byte">${hexByte}</span>`;
+                    }
+                    html += ' ';
+                } else {
+                    html += '   ';
+                }
+                if (j === 7) html += ' ';
+            }
+            
+            html += '|';
+            
+            // ASCII
+            for (let j = 0; j < bytesPerLine; j++) {
+                const byteIndex = i + j;
+                if (byteIndex < bytes.length) {
+                    const byte = bytes[byteIndex];
+                    const char = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                    const escapedChar = this.escapeHtml(char);
+                    const highlighted = byteIndex >= highlightByteStart && byteIndex < highlightByteEnd;
+                    
+                    if (highlighted) {
+                        html += `<span class="dump-ascii tx-highlight">${escapedChar}</span>`;
+                    } else {
+                        html += `<span class="dump-ascii">${escapedChar}</span>`;
+                    }
+                } else {
+                    html += ' ';
+                }
+            }
+            
+            html += '|\n';
+        }
+        
+        textElement.innerHTML = html.trimEnd();
+        textElement.classList.add('has-highlight');
+        this.addHighlightClickHandlers();
     }
     
     escapeHtml(text) {
