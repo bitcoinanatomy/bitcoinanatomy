@@ -1249,9 +1249,9 @@ class BitcoinTransactionExplorer {
                     depthTest: true
                 });
             } else {
-                // Regular input tube: dark gray
+                // Regular input tube: medium gray
                 material = new THREE.MeshLambertMaterial({ 
-                    color: 0x222222,
+                    color: 0x555555,
                     opacity: 0.8,
                     transparent: true,
                     side: THREE.DoubleSide,
@@ -1265,7 +1265,7 @@ class BitcoinTransactionExplorer {
                 type: 'input-tube', 
                 index: index, 
                 data: input, 
-                originalColor: isCoinbase ? 0xffffff : 0x222222,
+                originalColor: isCoinbase ? 0xffffff : 0x555555,
                 isCoinbase: isCoinbase,
                 coinbaseAmount: isCoinbase ? totalOutputValue : null
             };
