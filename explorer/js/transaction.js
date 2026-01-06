@@ -133,14 +133,14 @@ class BitcoinTransactionExplorer {
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, this.camera);
 
-            // Reset hover states: colors and opacities for inputs/outputs and tubes
+            // Reset hover states: colors and opacities for inputs/outputs
             this.scene.children.forEach(child => {
-                if (child.userData.type === 'input' || child.userData.type === 'input-tube') {
+                if (child.userData.type === 'input' || child.userData.type === 'input-cap') {
                     if (child.userData.originalColor) {
                         child.material.color.setHex(child.userData.originalColor);
                     }
                 }
-                if (child.userData.type === 'output' || child.userData.type === 'output-tube') {
+                if (child.userData.type === 'output' || child.userData.type === 'output-cap') {
                     if (typeof child.userData.originalOpacity === 'number') {
                         child.material.opacity = child.userData.originalOpacity;
                     }
@@ -192,7 +192,7 @@ class BitcoinTransactionExplorer {
                             <strong>From Transaction:</strong><br>
                             TXID: ${input.txid ? input.txid.substring(0, 16) + '...' : 'Unknown'}<br>
                             Output Index: ${input.vout !== undefined ? input.vout : 'Unknown'}<br>
-                            <em>Double-click to view source transaction</em>
+                            <em>Double-click → source tx | Shift+double-click → address</em>
                         `;
                     }
                 } else if (userData.type === 'output') {
@@ -211,51 +211,36 @@ class BitcoinTransactionExplorer {
                             <strong>Spent by:</strong><br>
                             TXID: ${userData.spendingData.txid.substring(0, 16)}...<br>
                             Block: ${userData.spendingData.block_height || 'Unconfirmed'}<br>
-                            <em>Double-click to view spending transaction</em>
+                            <em>Double-click → spending tx | Shift+double-click → address</em>
                         `;
                     } else {
                         tooltipContent = `
-                            <strong>Output ${userData.index + 1}</strong><br>
+                            <strong>Output ${userData.index + 1} (Unspent)</strong><br>
                             Amount: ${amount} BTC<br>
                             Script Type: ${scriptType}<br>
-                            ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}
+                            ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                            <em>Shift+double-click → address</em>
                         `;
                     }
-                } else if (userData.type === 'input-tube') {
+                } else if (userData.type === 'input-cap') {
+                    // Coinbase hemisphere cap
                     const input = userData.data;
-                    
-                    // Check if this is a coinbase tube
-                    if (userData.isCoinbase) {
-                        const amount = userData.coinbaseAmount ? (userData.coinbaseAmount / 100000000).toFixed(8) : 'Unknown';
-                        tooltipContent = `
-                            <strong>Coinbase Connection</strong><br>
-                            Block Reward: ${amount} BTC<br>
-                            <em>Newly minted bitcoins from mining</em>
-                        `;
-                    } else {
-                        const address = input.prevout?.scriptpubkey_address;
-                        
-                        if (address) {
-                            tooltipContent = `
-                                <strong>Connection from Address</strong><br>
-                                Address: ${address.substring(0, 16)}...<br>
-                                Amount: ${input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown'} BTC<br>
-                                <em>Double-click to view address details</em>
-                            `;
-                        }
-                    }
-                } else if (userData.type === 'output-tube') {
+                    const amount = userData.coinbaseAmount ? (userData.coinbaseAmount / 100000000).toFixed(8) : 'Unknown';
+                    tooltipContent = `
+                        <strong>Coinbase (Block Reward)</strong><br>
+                        Amount: ${amount} BTC<br>
+                        <em>Newly minted bitcoins</em>
+                    `;
+                } else if (userData.type === 'output-cap') {
+                    // Unspent output hemisphere cap
                     const output = userData.data;
-                    const address = output.scriptpubkey_address;
-                    
-                    if (address) {
-                        tooltipContent = `
-                            <strong>Connection to Address</strong><br>
-                            Address: ${address.substring(0, 16)}...<br>
-                            Amount: ${(output.value / 100000000).toFixed(8)} BTC<br>
-                            <em>Double-click to view address details</em>
-                        `;
-                    }
+                    const amount = (output.value / 100000000).toFixed(8);
+                    tooltipContent = `
+                        <strong>Unspent Output ${userData.index + 1}</strong><br>
+                        Amount: ${amount} BTC<br>
+                        ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                        <em>Shift+double-click → address</em>
+                    `;
                 } else if (userData.type === 'transaction') {
                     const tx = userData.data;
                     const totalInput = tx.vin ? tx.vin.reduce((sum, input) => sum + (input.prevout?.value || 0), 0) : 0;
@@ -278,14 +263,14 @@ class BitcoinTransactionExplorer {
                     tooltip.style.top = e.clientY - 10 + 'px';
                     
                     // Softer highlight for inputs: medium gray
-                    if (userData.type === 'input' || userData.type === 'input-tube') {
+                    if (userData.type === 'input' || userData.type === 'input-cap') {
                         const highlightColor = 0x999999;
                         intersectedObject.material.color.setHex(highlightColor);
                         
-                        // Apply to both the input cylinder and its connection tube
+                        // Apply to both the input tube and its cap
                         const index = userData.index;
                         this.scene.children.forEach(child => {
-                            if ((child.userData.type === 'input' || child.userData.type === 'input-tube') && 
+                            if ((child.userData.type === 'input' || child.userData.type === 'input-cap') && 
                                 child.userData.index === index) {
                                 child.material.color.setHex(highlightColor);
                             }
@@ -293,10 +278,10 @@ class BitcoinTransactionExplorer {
                     }
 
                     // Stronger highlight for outputs: increase opacity more and tint brighter
-                    if (userData.type === 'output' || userData.type === 'output-tube') {
+                    if (userData.type === 'output' || userData.type === 'output-cap') {
                         const index = userData.index;
                         this.scene.children.forEach(child => {
-                            if ((child.userData.type === 'output' || child.userData.type === 'output-tube') &&
+                            if ((child.userData.type === 'output' || child.userData.type === 'output-cap') &&
                                 child.userData.index === index) {
                                 // Bump opacity more aggressively (cap at 1.0)
                                 const newOpacity = Math.min(1.0, (child.userData.originalOpacity ?? child.material.opacity) + 1.0);
@@ -310,14 +295,6 @@ class BitcoinTransactionExplorer {
                                 else if (child.material.color) {
                                     child.material.color.setHex(0xffffff);
                                 }
-                                // Change gradient texture to a brighter version for cylinders
-                                if (child.material.map && child.userData.type === 'output') {
-                                    // Create a bright hover gradient for output cylinders
-                                    const hoverGradient = this.createVerticalGradientTexture('#ffffff', '#00000000');
-                                    child.material.map = hoverGradient;
-                                    child.material.color.setHex(0x000000);
-                                    child.material.needsUpdate = true;
-                                }
                             }
                         });
                     }
@@ -327,10 +304,10 @@ class BitcoinTransactionExplorer {
                 // Reset all hover effects when not hovering over anything
                 this.scene.children.forEach(child => {
                     if (child.userData) {
-                        if ((child.userData.type === 'input' || child.userData.type === 'input-tube') && typeof child.userData.originalColor === 'number' && child.material?.color) {
+                        if ((child.userData.type === 'input' || child.userData.type === 'input-cap') && typeof child.userData.originalColor === 'number' && child.material?.color) {
                             child.material.color.setHex(child.userData.originalColor);
                         }
-                        if (child.userData.type === 'output' || child.userData.type === 'output-tube') {
+                        if (child.userData.type === 'output' || child.userData.type === 'output-cap') {
                             if (typeof child.userData.originalOpacity === 'number') {
                                 child.material.opacity = child.userData.originalOpacity;
                             }
@@ -340,11 +317,6 @@ class BitcoinTransactionExplorer {
                             }
                             if (typeof child.userData.originalColor === 'number' && child.material?.color) {
                                 child.material.color.setHex(child.userData.originalColor);
-                            }
-                            // Reset gradient texture to original for output cylinders
-                            if (child.material.map && child.userData.type === 'output' && child.userData.originalGradient) {
-                                child.material.map = child.userData.originalGradient;
-                                child.material.needsUpdate = true;
                             }
                         }
                     }
@@ -378,10 +350,10 @@ class BitcoinTransactionExplorer {
             // Reset all hover effects on mouse leave
             this.scene.children.forEach(child => {
                 if (child.userData) {
-                    if ((child.userData.type === 'input' || child.userData.type === 'input-tube') && typeof child.userData.originalColor === 'number' && child.material?.color) {
+                    if ((child.userData.type === 'input' || child.userData.type === 'input-cap') && typeof child.userData.originalColor === 'number' && child.material?.color) {
                         child.material.color.setHex(child.userData.originalColor);
                     }
-                    if (child.userData.type === 'output' || child.userData.type === 'output-tube') {
+                    if (child.userData.type === 'output' || child.userData.type === 'output-cap') {
                         if (typeof child.userData.originalOpacity === 'number') {
                             child.material.opacity = child.userData.originalOpacity;
                         }
@@ -391,11 +363,6 @@ class BitcoinTransactionExplorer {
                         }
                         if (typeof child.userData.originalColor === 'number' && child.material?.color) {
                             child.material.color.setHex(child.userData.originalColor);
-                        }
-                        // Reset gradient texture to original for output cylinders
-                        if (child.material.map && child.userData.type === 'output' && child.userData.originalGradient) {
-                            child.material.map = child.userData.originalGradient;
-                            child.material.needsUpdate = true;
                         }
                     }
                 }
@@ -531,35 +498,39 @@ class BitcoinTransactionExplorer {
             if (intersects.length > 0) {
                 const intersectedObject = intersects[0].object;
                 const userData = intersectedObject.userData;
+                const isShiftClick = event.shiftKey;
                 
-                if (userData.type === 'input') {
+                if (userData.type === 'input' || userData.type === 'input-cap') {
                     // Don't navigate for coinbase inputs (no source transaction)
                     if (userData.isCoinbase) {
                         return;
                     }
-                    // Navigate to source transaction
-                    const txid = userData.data.txid;
-                    if (txid && txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
-                        window.location.href = `transaction.html?txid=${txid}`;
+                    
+                    if (isShiftClick) {
+                        // Shift+double-click: go to address
+                        const address = userData.data.prevout?.scriptpubkey_address;
+                        if (address) {
+                            window.location.href = `address.html?address=${address}`;
+                        }
+                    } else {
+                        // Double-click: go to source transaction
+                        const txid = userData.data.txid;
+                        if (txid && txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
+                            window.location.href = `transaction.html?txid=${txid}`;
+                        }
                     }
-                } else if (userData.type === 'input-tube') {
-                    // Don't navigate for coinbase tubes
-                    if (userData.isCoinbase) {
-                        return;
-                    }
-                    // Navigate to address page
-                    const address = userData.data.prevout?.scriptpubkey_address;
-                    if (address) {
-                        window.location.href = `address.html?address=${address}`;
-                    }
-                } else if (userData.type === 'output' && userData.spendingData) {
-                    // Navigate to spending transaction
-                    window.location.href = `transaction.html?txid=${userData.spendingData.txid}`;
-                } else if (userData.type === 'output-tube') {
-                    // Navigate to address page
-                    const address = userData.data.scriptpubkey_address;
-                    if (address) {
-                        window.location.href = `address.html?address=${address}`;
+                } else if (userData.type === 'output' || userData.type === 'output-cap') {
+                    if (isShiftClick) {
+                        // Shift+double-click: go to address
+                        const address = userData.data.scriptpubkey_address;
+                        if (address) {
+                            window.location.href = `address.html?address=${address}`;
+                        }
+                    } else {
+                        // Double-click: go to spending transaction (if spent)
+                        if (userData.spendingData?.txid) {
+                            window.location.href = `transaction.html?txid=${userData.spendingData.txid}`;
+                        }
                     }
                 }
             }
@@ -1062,13 +1033,13 @@ class BitcoinTransactionExplorer {
             }
         }
 
-        // Create input cylinders on the left (or hemisphere for coinbase)
+        // Create hemisphere caps for coinbase inputs only (tubes are created later as unified objects)
         inputParams.forEach((param, index) => {
             const { input, radius: inputRadius, isCoinbase: inputIsCoinbase, coinbaseAmount } = param;
             const y = yPositions[index] ?? ((inputs.length - 1) - index * 2);
             
             if (inputIsCoinbase) {
-                // Create hemisphere for coinbase (like unspent outputs, but on input side)
+                // Create hemisphere cap for coinbase (at the far end of the tube)
                 const geometry = new THREE.SphereGeometry(inputRadius, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
                 const material = new THREE.MeshLambertMaterial({ 
                     color: 0x888888, // Grey color for coinbase
@@ -1084,80 +1055,28 @@ class BitcoinTransactionExplorer {
                 // Rotate hemisphere so its opening faces inward (toward +X / the transaction)
                 hemisphere.rotation.z = Math.PI / 2;
                 
-                hemisphere.position.set(-35, y, 0);
+                // Position at the far end of the tube (shorter for coinbase)
+                const coinbaseStraightLength = 15;
+                hemisphere.position.set(-35 - coinbaseStraightLength, y, 0);
                 hemisphere.userData = { 
-                    type: 'input', 
+                    type: 'input-cap', 
                     index, 
                     data: input, 
                     radius: inputRadius,
                     originalColor: 0x888888,
-                    originalOpacity: 0.5,
+                    originalOpacity: 0.3,
                     isCoinbase: true,
                     coinbaseAmount: coinbaseAmount
                 };
                 this.scene.add(hemisphere);
-            } else {
-                // Regular input: cylinder
-                const cylinderHeight = 120;
-                const geometry = new THREE.CylinderGeometry(inputRadius, inputRadius, cylinderHeight, 16, 1, true);
-                const material = new THREE.MeshLambertMaterial({ 
-                    color: 0x444444,
-                    transparent: true,
-                    opacity: 0.75,
-                    side: THREE.DoubleSide,
-                    depthWrite: false,
-                    depthTest: true,
-                    map: this.cylinderGradientTexture
-                });
-                const cylinder = new THREE.Mesh(geometry, material);
-                cylinder.renderOrder = 1;
-                
-                // Rotate cylinder 90 degrees around Z-axis to make it horizontal
-                cylinder.rotation.z = Math.PI / 2;
-                
-                // Position cylinder so its top aligns with the connection line start point
-                const cylinderLength = cylinderHeight;
-                const topOffset = cylinderLength / 2;
-                cylinder.position.set(-35 - topOffset, y, 0);
-                
-                cylinder.userData = { 
-                    type: 'input', 
-                    index, 
-                    data: input, 
-                    radius: inputRadius,
-                    originalColor: 0x444444,
-                    isCoinbase: false,
-                    coinbaseAmount: null
-                };
-                this.scene.add(cylinder);
             }
         });
 
 
-        // Create output spheres on the right with precomputed spacing
-        outputParams.forEach((param, index) => {
-            const { output, radius: sphereRadius } = param;
-            
-            const geometry = new THREE.SphereGeometry(sphereRadius, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2); // Open hemisphere
-            const material = new THREE.MeshLambertMaterial({ 
-                color: 0xffffff, // White color
-                transparent: true,
-                opacity: 0.9, // High opacity but not fully opaque
-                side: THREE.DoubleSide,
-                depthWrite: true,
-                depthTest: true
-            });
-            const sphere = new THREE.Mesh(geometry, material);
-            sphere.renderOrder = 1; // Render after other objects
-            
-            // Rotate hemisphere so its opening faces outward (toward +X)
-            sphere.rotation.z = -Math.PI / 2;
-            
-            const y = yPositionsOutputs[index] ?? ((outputs.length - 1) - index * 2);
-            sphere.position.set(35, y, 0);
-            sphere.userData = { type: 'output', index, data: output, radius: sphereRadius, originalOpacity: material.opacity, originalEmissive: material.emissive ? material.emissive.getHex() : 0x000000, originalColor: material.color ? material.color.getHex() : 0xffffff };
-            this.scene.add(sphere);
-        });
+        // Output hemisphere caps will be added by checkOutputSpendingStatus for unspent outputs
+        // Store output params for later use
+        this.outputParams = outputParams;
+        this.yPositionsOutputs = yPositionsOutputs;
 
         // Create central transaction cuboid
         const width = 2; // Fixed width
@@ -1212,174 +1131,145 @@ class BitcoinTransactionExplorer {
         spanRing.renderOrder = 1;
         this.scene.add(spanRing);
 
-        // Create connection curves
+        // Create unified input tubes (straight section + curved connection as one object)
         inputs.forEach((input, index) => {
             const y = yPositions[index] ?? ((inputs.length - 1) - index * 2);
-            const startPoint = new THREE.Vector3(-35, y, 0);
-            const endPoint = new THREE.Vector3(-1, 0, 0); // End at left side of cuboid (width = 2)
+            const inputIsCoinbase = isCoinbase && index === 0;
             
-            // Create control points for smooth curve
-            // If start and end Y are the same (or very close), make a straight line
-            const yDiff = Math.abs(y - 0);
-            const curveAmount = yDiff < 0.1 ? 0 : 1; // No curve if essentially same Y
-            const controlPoint1 = new THREE.Vector3(-15, y + curveAmount, 0);
-            const controlPoint2 = new THREE.Vector3(-8, curveAmount * 0.5, 0);
-            
-            const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
-            
-            // Calculate tube radius based on input cylinder size (logarithmic scaling)
-            // For coinbase, use total output value
-            const amount = isCoinbase ? totalOutputValue : (input.prevout?.value || 0);
+            // Calculate tube radius based on input value (logarithmic scaling)
+            const amount = inputIsCoinbase ? totalOutputValue : (input.prevout?.value || 0);
             const amountBTC = amount / 100000000;
-            const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
-            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
+            const logValue = Math.log10(amountBTC + 1);
+            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
             const tubeRadius = 1 * sizeScale;
             
-            const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 16, false);
+            // Create a combined path: straight section + curved section
+            // Coinbase inputs have shorter straight section (they originate from block reward)
+            const straightLength = inputIsCoinbase ? 15 : 120;
+            const farPoint = new THREE.Vector3(-35 - straightLength, y, 0); // Far end
+            const connectionPoint = new THREE.Vector3(-35, y, 0); // Where straight meets curve
+            const endPoint = new THREE.Vector3(-1, 0, 0); // At the transaction
+            
+            // Combine curves into one path
+            const curvePath = new THREE.CurvePath();
+            
+            // Straight section (from far end to connection point)
+            const straightCurve = new THREE.LineCurve3(farPoint, connectionPoint);
+            curvePath.add(straightCurve);
+            
+            // Curved section (from connection point to transaction)
+            const yDiff = Math.abs(y - 0);
+            const curveAmount = yDiff < 0.1 ? 0 : 1;
+            const controlPoint1 = new THREE.Vector3(-15, y + curveAmount, 0);
+            const controlPoint2 = new THREE.Vector3(-8, curveAmount * 0.5, 0);
+            const bezierCurve = new THREE.CubicBezierCurve3(connectionPoint, controlPoint1, controlPoint2, endPoint);
+            curvePath.add(bezierCurve);
+            
+            // Create tube geometry from the combined path
+            const tubeGeometry = new THREE.TubeGeometry(curvePath, 128, tubeRadius, 16, false);
+            
             let material;
-            if (isCoinbase) {
-                // Coinbase tube: gradient from grey 0.5 opacity to white 0.8 opacity
+            if (inputIsCoinbase) {
+                // Coinbase tube: gradient from grey to white along the length
                 material = new THREE.MeshLambertMaterial({ 
                     color: 0xffffff,
                     map: this.coinbaseTubeGradientTexture,
-                    opacity: 1.0, // Opacity controlled by texture alpha
+                    opacity: 1.0,
                     transparent: true,
                     side: THREE.DoubleSide,
                     depthWrite: false,
                     depthTest: true
                 });
             } else {
-                // Regular input tube: medium gray
+                // Regular input tube: gradient from dark to light
                 material = new THREE.MeshLambertMaterial({ 
-                    color: 0x555555,
-                    opacity: 0.8,
+                    color: 0xffffff,
+                    map: this.createHorizontalGradientTexture('#22222200', '#aaaaaacc'),
+                    opacity: 1.0,
                     transparent: true,
                     side: THREE.DoubleSide,
                     depthWrite: false,
                     depthTest: true
                 });
             }
+            
             const tube = new THREE.Mesh(tubeGeometry, material);
-            tube.renderOrder = 0; // Render before circles
+            tube.renderOrder = 0;
             tube.userData = { 
-                type: 'input-tube', 
+                type: 'input', 
                 index: index, 
                 data: input, 
-                originalColor: isCoinbase ? 0xffffff : 0x555555,
-                isCoinbase: isCoinbase,
-                coinbaseAmount: isCoinbase ? totalOutputValue : null
+                radius: tubeRadius,
+                originalColor: inputIsCoinbase ? 0xffffff : 0x555555,
+                isCoinbase: inputIsCoinbase,
+                coinbaseAmount: inputIsCoinbase ? totalOutputValue : null
             };
             this.scene.add(tube);
         });
 
+        // Create unified output tubes (curved connection + straight section as one object)
         outputs.forEach((output, index) => {
             const y = yPositionsOutputs[index] ?? ((outputs.length - 1) - index * 2);
-            const startPoint = new THREE.Vector3(1, 0, 0); // Start from right side of cuboid (width/2 where width=2)
-            const endPoint = new THREE.Vector3(35, y, 0);
             
-            // Create control points for smooth curve
-            // If start and end Y are the same (or very close), make a straight line
-            const yDiff = Math.abs(y - 0);
-            const curveAmount = yDiff < 0.1 ? 0 : 1; // No curve if essentially same Y
-            const controlPoint1 = new THREE.Vector3(15, curveAmount * 0.5, 0);
-            const controlPoint2 = new THREE.Vector3(8, y + curveAmount, 0);
-            
-            const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
-            
-            // Calculate tube radius based on output sphere size (logarithmic scaling)
+            // Calculate tube radius based on output value (logarithmic scaling)
             const amount = output.value || 0;
             const amountBTC = amount / 100000000;
-            const logValue = Math.log10(amountBTC + 1); // +1 to handle 0 values
-            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
+            const logValue = Math.log10(amountBTC + 1);
+            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
             const tubeRadius = 1 * sizeScale;
             
-            const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 16, false);
+            // Create a combined path: curved section + straight section
+            const straightLength = 120; // Length of the straight portion
+            const startPoint = new THREE.Vector3(1, 0, 0); // At the transaction
+            const connectionPoint = new THREE.Vector3(35, y, 0); // Where curve meets straight
+            const farPoint = new THREE.Vector3(35 + straightLength, y, 0); // Far end
+            
+            // Combine curves into one path
+            const curvePath = new THREE.CurvePath();
+            
+            // Curved section (from transaction to connection point)
+            const yDiff = Math.abs(y - 0);
+            const curveAmount = yDiff < 0.1 ? 0 : 1;
+            const controlPoint1 = new THREE.Vector3(8, curveAmount * 0.5, 0);
+            const controlPoint2 = new THREE.Vector3(15, y + curveAmount, 0);
+            const bezierCurve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, connectionPoint);
+            curvePath.add(bezierCurve);
+            
+            // Straight section (from connection point to far end)
+            const straightCurve = new THREE.LineCurve3(connectionPoint, farPoint);
+            curvePath.add(straightCurve);
+            
+            // Create tube geometry from the combined path
+            const tubeGeometry = new THREE.TubeGeometry(curvePath, 128, tubeRadius, 16, false);
+            
+            // Output tube: gradient from white to transparent along the length
             const material = new THREE.MeshLambertMaterial({ 
-                color: 0xffffff, // White color
-                opacity: 0.6, 
+                color: 0xffffff,
+                map: this.createHorizontalGradientTexture('#ffffffcc', '#ffffff00'),
+                opacity: 1.0,
                 transparent: true,
                 side: THREE.DoubleSide,
                 depthWrite: false,
                 depthTest: true
             });
+            
             const tube = new THREE.Mesh(tubeGeometry, material);
-            tube.renderOrder = 0; // Render before circles
-            tube.userData = { type: 'output-tube', index: index, data: output, originalOpacity: material.opacity, originalEmissive: material.emissive ? material.emissive.getHex() : 0x000000, originalColor: material.color ? material.color.getHex() : 0xffffff };
+            tube.renderOrder = 0;
+            tube.userData = { 
+                type: 'output', 
+                index: index, 
+                data: output, 
+                radius: tubeRadius,
+                originalOpacity: 1.0, 
+                originalEmissive: 0x000000, 
+                originalColor: 0xffffff 
+            };
             this.scene.add(tube);
         });
     }
     
-    repositionInputCylinders() {
-        // Get all input cylinders
-        const inputCylinders = this.scene.children.filter(child => child.userData.type === 'input');
-        
-        if (inputCylinders.length === 0) return;
-        
-        // Sort by index to maintain order
-        inputCylinders.sort((a, b) => a.userData.index - b.userData.index);
-        
-        // Calculate positions with proper spacing
-        let currentY = (inputCylinders.length - 1) * 2; // Start position
-        const minSpacing = 0.5; // Minimum spacing between cylinders
-        
-        inputCylinders.forEach((cylinder, index) => {
-            const radius = cylinder.userData.radius || 1;
-            
-            // Calculate spacing based on radius of current and previous cylinder
-            let spacing = minSpacing;
-            if (index > 0) {
-                const prevRadius = inputCylinders[index - 1].userData.radius || 1;
-                spacing = Math.max(minSpacing, radius + prevRadius + 0.5); // Add buffer
-            }
-            
-            // Update Y position
-            if (index === 0) {
-                // First cylinder stays at top
-                cylinder.position.y = currentY;
-            } else {
-                // Subsequent cylinders are positioned with proper spacing
-                currentY -= spacing;
-                cylinder.position.y = currentY;
-            }
-        });
-        
-        // Update connection tube positions to match new cylinder positions
-        this.updateInputTubePositions();
-    }
-    
-    updateInputTubePositions() {
-        const inputCylinders = this.scene.children.filter(child => child.userData.type === 'input');
-        const inputTubes = this.scene.children.filter(child => child.userData.type === 'input-tube');
-        
-        inputCylinders.forEach(cylinder => {
-            const index = cylinder.userData.index;
-            const tube = inputTubes.find(t => t.userData.index === index);
-            
-            if (tube) {
-                // Update tube start and end points to match new cylinder position
-                const y = cylinder.position.y;
-                const startPoint = new THREE.Vector3(-35, y, 0);
-                const endPoint = new THREE.Vector3(-1, 0, 0); // -width/2 where width = 2
-                
-                // Create control points for smooth curve
-                // If start and end Y are the same (or very close), make a straight line
-                const yDiff = Math.abs(y - 0);
-                const curveAmount = yDiff < 0.1 ? 0 : 1;
-                const controlPoint1 = new THREE.Vector3(-15, y + curveAmount, 0);
-                const controlPoint2 = new THREE.Vector3(-8, curveAmount * 0.5, 0);
-                
-                const curve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, endPoint);
-                
-                // Update tube geometry
-                const tubeRadius = cylinder.userData.radius || 1;
-                const newTubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 8, false);
-                
-                // Replace the tube geometry
-                tube.geometry.dispose();
-                tube.geometry = newTubeGeometry;
-            }
-        });
-    }
+    // Note: Input tubes are now unified objects (straight + curved as one)
+    // Repositioning is handled during creation based on input radii
 
     animate() {
         requestAnimationFrame(() => this.animate());
@@ -1397,16 +1287,8 @@ class BitcoinTransactionExplorer {
         
         console.log('\n=== CHECKING OUTPUT SPENDING STATUS ===');
         
-        // Get all output spheres and tubes from the scene
-        const outputSpheres = [];
-        const outputTubes = [];
-        this.scene.children.forEach(child => {
-            if (child.userData.type === 'output') {
-                outputSpheres.push(child);
-            } else if (child.userData.type === 'output-tube') {
-                outputTubes.push(child);
-            }
-        });
+        // Get all output tubes from the scene (now unified objects)
+        const outputTubes = this.scene.children.filter(child => child.userData.type === 'output');
         
         // Check each output's spending status
         for (let i = 0; i < this.transactionData.vout.length; i++) {
@@ -1417,66 +1299,91 @@ class BitcoinTransactionExplorer {
                     const spendingData = await response.json();
                     console.log(`Output ${i} spending status:`, spendingData);
                     
-                    // Find the corresponding sphere and tube
-                    const sphere = outputSpheres.find(s => s.userData.index === i);
+                    // Find the corresponding tube
                     const tube = outputTubes.find(t => t.userData.index === i);
                     
-                    if (sphere) {
+                    if (tube) {
+                        const tubeRadius = tube.userData.radius || 1;
+                        const y = this.yPositionsOutputs?.[i] ?? ((this.transactionData.vout.length - 1) - i * 2);
+                        
+                        // Store spending data on the tube
+                        tube.userData.spendingData = spendingData;
+                        
                         if (spendingData.spent) {
-                            // Replace sphere with a cylinder for spent outputs
-                            const y = sphere.position.y;
-                            const sphereRadius = sphere.userData.radius || 1;
-                            const cylinderHeight = 120; // Much taller to match inputs
-                            
-                            const geometry = new THREE.CylinderGeometry(sphereRadius, sphereRadius, cylinderHeight, 16, 1, true);
-                            const material = new THREE.MeshLambertMaterial({ 
-                                color: 0xffffff, // Match spent output tube color
-                                transparent: true,
-                                opacity: 1,
-                                side: THREE.DoubleSide,
-                                depthWrite: false, // Match tube depth behavior
-                                depthTest: true,
-                                map: this.outputCylinderGradientTexture
-                            });
-                            const cylinder = new THREE.Mesh(geometry, material);
-                            cylinder.renderOrder = 1;
-                            
-                            // Rotate to horizontal and align base (negative X end) with connection end point at x=35
-                            cylinder.rotation.z = Math.PI / 2;
-                            const topOffset = cylinderHeight / 2;
-                            cylinder.position.set(35 + topOffset, y, 0);
-                            
-                            // Preserve user data, original material state, and add spending info
-                            cylinder.userData = {
-                                type: 'output',
-                                index: i,
-                                data: this.transactionData.vout[i],
-                                radius: sphereRadius,
-                                spendingData,
-                                originalOpacity: material.opacity,
-                                originalEmissive: material.emissive ? material.emissive.getHex() : 0x000000,
-                                originalColor: material.color ? material.color.getHex() : 0xffffff,
-                                originalGradient: this.outputCylinderGradientTexture
-                            };
-                            
-                            // Replace in scene
-                            this.scene.remove(sphere);
-                            this.scene.add(cylinder);
-                            
-                            // Grey out corresponding tube and store spending info, and set its originalColor to grey for proper hover-out
-                            if (tube) {
-                                tube.material.color.setHex(0x666666);
-                                tube.userData.spendingData = spendingData;
-                                if (tube.userData) {
-                                    tube.userData.originalColor = 0x666666;
-                                }
-                            }
-                            console.log(`Output ${i} is SPENT - replaced with cylinder`);
+                            // Spent output: grey out the tube (keeps long length)
+                            tube.material.color.setHex(0x666666);
+                            tube.userData.originalColor = 0x666666;
+                            console.log(`Output ${i} is SPENT - greyed out`);
                         } else {
-                            // Keep unspent outputs white
-                            sphere.material.color.setHex(0xffffff);
-                            if (tube) tube.material.color.setHex(0xffffff);
-                            console.log(`Output ${i} is UNSPENT - kept white`);
+                            // Unspent output: shorter straight section + hemisphere cap
+                            const unspentStraightLength = 15;
+                            const farEndX = 35 + unspentStraightLength;
+                            
+                            // Recreate tube with shorter path
+                            const startPoint = new THREE.Vector3(1, 0, 0);
+                            const connectionPoint = new THREE.Vector3(35, y, 0);
+                            const farPoint = new THREE.Vector3(farEndX, y, 0);
+                            
+                            const curvePath = new THREE.CurvePath();
+                            const yDiff = Math.abs(y - 0);
+                            const curveAmount = yDiff < 0.1 ? 0 : 1;
+                            const controlPoint1 = new THREE.Vector3(8, curveAmount * 0.5, 0);
+                            const controlPoint2 = new THREE.Vector3(15, y + curveAmount, 0);
+                            const bezierCurve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, connectionPoint);
+                            curvePath.add(bezierCurve);
+                            const straightCurve = new THREE.LineCurve3(connectionPoint, farPoint);
+                            curvePath.add(straightCurve);
+                            
+                            // Replace tube geometry
+                            const newGeometry = new THREE.TubeGeometry(curvePath, 128, tubeRadius, 16, false);
+                            tube.geometry.dispose();
+                            tube.geometry = newGeometry;
+                            
+                            // Change to solid white color with strong emission (like hover state)
+                            tube.material.map = null;
+                            tube.material.color.setHex(0xffffff);
+                            tube.material.opacity = 1.0;
+                            tube.material.emissive = new THREE.Color(0xffffff);
+                            tube.material.emissiveIntensity = 0.6;
+                            tube.material.needsUpdate = true;
+                            tube.userData.originalColor = 0xffffff;
+                            tube.userData.originalOpacity = 1.0;
+                            tube.userData.originalEmissive = 0xffffff;
+                            tube.userData.originalEmissiveIntensity = 0.6;
+                            
+                            // Add hemisphere cap at the far end with strong emission
+                            const capGeometry = new THREE.SphereGeometry(tubeRadius, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                            const capMaterial = new THREE.MeshLambertMaterial({ 
+                                color: 0xffffff,
+                                transparent: true,
+                                opacity: 1.0,
+                                emissive: 0xffffff,
+                                emissiveIntensity: 0.6,
+                                side: THREE.DoubleSide,
+                                depthWrite: true,
+                                depthTest: true
+                            });
+                            const hemisphere = new THREE.Mesh(capGeometry, capMaterial);
+                            hemisphere.renderOrder = 1;
+                            
+                            // Rotate hemisphere so its opening faces inward (toward -X / the transaction)
+                            hemisphere.rotation.z = -Math.PI / 2;
+                            
+                            // Position at the far end of the shorter tube
+                            hemisphere.position.set(farEndX, y, 0);
+                            hemisphere.userData = { 
+                                type: 'output-cap', 
+                                index: i, 
+                                data: this.transactionData.vout[i],
+                                radius: tubeRadius,
+                                originalOpacity: 1.0,
+                                originalColor: 0xffffff,
+                                originalEmissive: 0xffffff,
+                                originalEmissiveIntensity: 0.6
+                            };
+                            this.scene.add(hemisphere);
+                            
+                            console.log(`Output ${i} is UNSPENT - shortened tube + added hemisphere cap`);
                         }
                     }
                 } else {
