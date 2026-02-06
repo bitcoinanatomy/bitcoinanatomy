@@ -45,6 +45,7 @@ class BitcoinBlockExplorer {
         this.urlViewMode = urlParams.get('view'); // View mode for raw data (hex/ascii/binary)
         this.urlDecodeMode = urlParams.get('decode') === 'on'; // Decode mode from URL
         this.urlRawDataOpen = urlParams.get('rawdata') === 'open'; // Whether raw data panel should be open
+        this.urlMerkleTree = urlParams.get('merkle') === 'true' || urlParams.get('merkleTree') === 'true'; // Auto-load merkle tree
         
         // Set initial view mode from URL
         if (this.urlViewMode === 'ascii') {
@@ -97,6 +98,17 @@ class BitcoinBlockExplorer {
                 if (this.blockData && this.blockData.id) {
                     clearInterval(waitForBlockData);
                     this.fetchRawBlockData();
+                }
+            }, 100);
+        }
+        
+        // Auto-load merkle tree if URL parameter is set
+        if (this.urlMerkleTree) {
+            // Wait for block data and transactions to load first
+            const waitForMerkleTree = setInterval(() => {
+                if (this.blockData && this.blockData.id && this.transactions.length > 0) {
+                    clearInterval(waitForMerkleTree);
+                    this.showMerkleTree();
                 }
             }, 100);
         }
@@ -1747,7 +1759,6 @@ class BitcoinBlockExplorer {
     updateUI(data) {
         if (!data || Object.keys(data).length === 0) {
             document.getElementById('block-height').textContent = 'Loading...';
-            document.getElementById('block-hash').textContent = 'Loading...';
             document.getElementById('block-size').textContent = 'Loading...';
             document.getElementById('block-tx-count').textContent = 'Loading...';
             document.getElementById('block-time').textContent = 'Loading...';
@@ -1767,7 +1778,6 @@ class BitcoinBlockExplorer {
         }
         
         document.getElementById('block-height').textContent = data.height?.toLocaleString() || 'N/A';
-        document.getElementById('block-hash').textContent = data.id?.substring(0, 16) + '...' || 'N/A';
         document.getElementById('block-size').textContent = data.size ? `${(data.size / 1024).toFixed(1)} KB` : 'N/A';
         document.getElementById('block-tx-count').textContent = data.tx_count?.toLocaleString() || 'N/A';
         
@@ -4526,6 +4536,11 @@ class BitcoinBlockExplorer {
                 button.textContent = 'Hide Merkle Tree';
             }
             
+            // Update URL with merkle parameter
+            const url = new URL(window.location);
+            url.searchParams.set('merkle', 'true');
+            window.history.replaceState({}, '', url);
+            
             this.updateLoadingProgress('Rendering visualization...', 70);
             
             // Animate tree growth progressively
@@ -4792,6 +4807,12 @@ class BitcoinBlockExplorer {
             if (button) {
                 button.textContent = 'Merkle Tree';
             }
+            
+            // Update URL - remove merkle parameter
+            const url = new URL(window.location);
+            url.searchParams.delete('merkle');
+            url.searchParams.delete('merkleTree');
+            window.history.replaceState({}, '', url);
         }
     }
     
