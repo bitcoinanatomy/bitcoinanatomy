@@ -32,6 +32,11 @@ class BitcoinBlockExplorer {
         this.decodeTooltip = null;
         this.highlightRange = null; // Track highlighted transaction byte range
         
+        // Merkle tree properties
+        this.merkleTreeLines = []; // Store all merkle tree line objects
+        this.merkleTreeVisible = false; // Track if merkle tree is currently visible
+        this.merkleTreeNodes = []; // Store merkle tree node positions
+        
         // Get block height and transaction ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         this.blockHeight = urlParams.get('height');
@@ -399,6 +404,15 @@ class BitcoinBlockExplorer {
                 this.hideRawDataModal();
             } else {
                 this.fetchRawBlockData();
+            }
+        });
+        
+        // Merkle tree button
+        document.getElementById('show-merkle-tree').addEventListener('click', () => {
+            if (this.merkleTreeVisible) {
+                this.hideMerkleTree();
+            } else {
+                this.showMerkleTree();
             }
         });
         
@@ -1020,7 +1034,7 @@ class BitcoinBlockExplorer {
             if (this.shouldStopLoadingAll) break;
             
             const layer = cuboid.userData.layer;
-            const baseAlignedY = 2;
+            const baseAlignedY = 1.0; // Reduced from 2 to keep inside block cube
             const spacingY = 0.3;
             const alignedY = baseAlignedY - layer * spacingY;
             
@@ -1215,7 +1229,8 @@ class BitcoinBlockExplorer {
             this.animateCuboidHeightTopAligned(cuboid, height, 100);
             
             // Move loaded transactions maintaining their layer spacing
-            const baseAlignedY = 2; // Base Y position for layer 0 loaded transactions
+            // Reduced distance: start at 0.8, move to 1.0 (only 0.2 units instead of 1.2)
+            const baseAlignedY = 1.0; // Reduced from 2 to minimize animation distance
             const layer = cuboid.userData.layer;
             const spacingY = 0.3; // Same spacing as used in original grid
             const alignedY = baseAlignedY - layer * spacingY; // Maintain layer spacing
@@ -1561,7 +1576,12 @@ class BitcoinBlockExplorer {
             opacity: 0.8
         });
         this.headerMesh = new THREE.Mesh(headerGeometry, headerMaterial);
-        this.headerMesh.position.set(0, 1.4, -1.125); // Position at front of block, aligned with first transaction row
+        // Calculate Z position to align with first row of transactions (row 0)
+        // Use same spacing as transactions: spacingZ = 0.25
+        const spacingZ = 0.25;
+        const firstRow = 0; // First row index
+        const firstRowZ = Math.max(-1.4, Math.min(1.4, (firstRow - 4.5) * spacingZ));
+        this.headerMesh.position.set(0, 1.0, firstRowZ); // Aligned with first row of transactions
         this.headerMesh.renderOrder = 0;
         this.headerMesh.userData = { type: 'header', description: 'Block Header (80 bytes)' };
         this.scene.add(this.headerMesh);
@@ -1789,9 +1809,11 @@ class BitcoinBlockExplorer {
             const col = positionInLayer % transactionsPerRow;
             
             // Calculate position with proper centering (left to right order)
+            // Keep inside block cube (3x3x3 centered at 0,0,0, so -1.5 to +1.5 in all dimensions)
             const x = ((transactionsPerRow - 1) / 2 - col) * spacingX;
             const z = (row - 4.5) * spacingZ; // Center around 10 rows (0-9, so -4.5 to +4.5)
-            const y = 1.21 - layer * spacingY; // Move all transactions up 10 units, then stack layers downward
+            const zClamped = Math.max(-1.4, Math.min(1.4, z)); // Clamp Z to stay inside block
+            const y = 0.8 - layer * spacingY; // Reduced Y to keep inside block (was 1.21)
             
             // Create cuboid geometry (reduced to half scale)
             const CUBOID_WIDTH = 0.01;   // Width (was 0.07)
@@ -1805,7 +1827,7 @@ class BitcoinBlockExplorer {
             });
             
             const cuboid = new THREE.Mesh(geometry, material);
-            cuboid.position.set(x, y, z);
+            cuboid.position.set(x, y, zClamped);
             cuboid.renderOrder = 0;  // Render before block (lower number = earlier)
             
             // Store transaction data (no velocity/animation)
@@ -2031,14 +2053,14 @@ class BitcoinBlockExplorer {
         document.body.appendChild(popup);
     }
 
-    showLoadingModal(message) {
+    showLoadingModal(message, nonModal = false) {
         // Remove existing loading modal if any
         const existingModal = document.querySelector('.loading-modal');
         if (existingModal) {
             existingModal.remove();
         }
         
-        // Create loading modal
+        // Create loading indicator
         const modal = document.createElement('div');
         modal.className = 'loading-modal';
         modal.innerHTML = `
@@ -2054,7 +2076,83 @@ class BitcoinBlockExplorer {
             </div>
         `;
         
-        // Add styles
+        if (nonModal) {
+            // Non-modal overlay - positioned in bottom-right corner, above controls, doesn't block view
+            modal.style.cssText = `
+                position: fixed;
+                bottom: 120px;
+                right: 20px;
+                width: 320px;
+                background: rgba(0, 0, 0, 0.85);
+                border: 1px solid #333;
+                border-radius: 8px;
+                padding: 20px;
+                z-index: 1000;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(10px);
+            `;
+            
+            const content = modal.querySelector('.loading-content');
+            content.style.cssText = `
+                text-align: left;
+                color: white;
+            `;
+            
+            const spinner = modal.querySelector('.loading-spinner');
+            spinner.style.cssText = `
+                width: 24px;
+                height: 24px;
+                border: 2px solid #333;
+                border-top: 2px solid #ffffff;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-bottom: 12px;
+                display: inline-block;
+                vertical-align: middle;
+                margin-right: 10px;
+            `;
+            
+            const text = modal.querySelector('.loading-text');
+            text.style.cssText = `
+                font-size: 14px;
+                margin-bottom: 12px;
+                color: #fff;
+                display: inline-block;
+                vertical-align: middle;
+            `;
+            
+            const progress = modal.querySelector('.loading-progress');
+            progress.style.cssText = `
+                margin-top: 12px;
+            `;
+            
+            const progressBar = modal.querySelector('.progress-bar');
+            progressBar.style.cssText = `
+                width: 100%;
+                height: 6px;
+                background: #333;
+                border-radius: 3px;
+                overflow: hidden;
+                margin-bottom: 6px;
+            `;
+            
+            const progressFill = modal.querySelector('.progress-fill');
+            progressFill.style.cssText = `
+                height: 100%;
+                background: #ffffff;
+                width: 0%;
+                transition: width 0.3s ease;
+            `;
+            
+            const progressText = modal.querySelector('.progress-text');
+            progressText.style.cssText = `
+                font-size: 11px;
+                color: #aaa;
+                text-align: center;
+            `;
+        } else {
+            // Original modal style (full screen overlay)
         modal.style.cssText = `
             position: fixed;
             top: 0;
@@ -2127,9 +2225,12 @@ class BitcoinBlockExplorer {
             font-size: 12px;
             color: #999;
         `;
+        }
         
         // Add CSS animation
         const style = document.createElement('style');
+        if (!document.getElementById('loading-spinner-animation')) {
+            style.id = 'loading-spinner-animation';
         style.textContent = `
             @keyframes spin {
                 0% { transform: rotate(0deg); }
@@ -2137,6 +2238,7 @@ class BitcoinBlockExplorer {
             }
         `;
         document.head.appendChild(style);
+        }
         
         this.loadingModal = modal;
         document.body.appendChild(modal);
@@ -4188,6 +4290,514 @@ class BitcoinBlockExplorer {
             .replace(/'/g, '&#39;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
+    }
+    
+    // Convert hex string to Uint8Array
+    hexToBytes(hex) {
+        const bytes = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < hex.length; i += 2) {
+            bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+        }
+        return bytes;
+    }
+    
+    // Convert Uint8Array to hex string
+    bytesToHex(bytes) {
+        return Array.from(bytes)
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+    }
+    
+    // Double SHA256 hash (Bitcoin's hash function)
+    async doubleSha256(data) {
+        // First SHA256
+        const hash1 = await crypto.subtle.digest('SHA-256', data);
+        // Second SHA256
+        const hash2 = await crypto.subtle.digest('SHA-256', hash1);
+        return new Uint8Array(hash2);
+    }
+    
+    // Calculate merkle root from transaction IDs
+    async calculateMerkleTree(txids) {
+        if (txids.length === 0) return [];
+        
+        // Convert txids from hex strings to bytes
+        // Bitcoin txids are displayed in big-endian (normal hex), but stored in little-endian
+        // For merkle tree calculation, we need to reverse the hex string to get the actual bytes
+        const totalSteps = txids.length + Math.ceil(Math.log2(txids.length)); // Approximate total steps
+        let currentStep = 0;
+        
+        const leaves = await Promise.all(txids.map(async (txid, index) => {
+            // Reverse hex pairs to convert from display format to byte format
+            const reversedTxid = txid.match(/.{2}/g).reverse().join('');
+            const bytes = this.hexToBytes(reversedTxid);
+            
+            // Update progress
+            currentStep++;
+            const progress = 5 + Math.floor((currentStep / txids.length) * 35); // 5-40% for leaf hashing
+            this.updateLoadingProgress(`Hashing transaction ${currentStep}/${txids.length}...`, progress);
+            
+            return {
+                hash: bytes,
+                hashHex: this.bytesToHex(bytes),
+                txid: txid,
+                level: 0,
+                index: index
+            };
+        }));
+        
+        const tree = [leaves]; // Start with leaves
+        let currentLevel = leaves;
+        let levelNum = 0;
+        
+        // Build tree level by level
+        while (currentLevel.length > 1) {
+            levelNum++;
+            const nextLevel = [];
+            const levelProgressStart = 40 + (levelNum - 1) * 5; // Start progress for this level
+            const levelProgressRange = 5; // Progress range for this level
+            
+            for (let i = 0; i < currentLevel.length; i += 2) {
+                if (i + 1 < currentLevel.length) {
+                    // Pair exists - hash them together
+                    const left = currentLevel[i];
+                    const right = currentLevel[i + 1];
+                    const combined = new Uint8Array([...left.hash, ...right.hash]);
+                    const hash = await this.doubleSha256(combined);
+                    
+                    nextLevel.push({
+                        hash: hash,
+                        hashHex: this.bytesToHex(hash),
+                        left: left,
+                        right: right,
+                        level: currentLevel[0].level + 1,
+                        index: Math.floor(i / 2)
+                    });
+                } else {
+                    // Odd number - duplicate the last one (Bitcoin's behavior)
+                    const last = currentLevel[i];
+                    const combined = new Uint8Array([...last.hash, ...last.hash]);
+                    const hash = await this.doubleSha256(combined);
+                    
+                    nextLevel.push({
+                        hash: hash,
+                        hashHex: this.bytesToHex(hash),
+                        left: last,
+                        right: last,
+                        level: currentLevel[0].level + 1,
+                        index: Math.floor(i / 2)
+                    });
+                }
+                
+                // Update progress for this level
+                const pairProgress = (i / 2 + 1) / Math.ceil(currentLevel.length / 2);
+                const progress = levelProgressStart + Math.floor(pairProgress * levelProgressRange);
+                this.updateLoadingProgress(`Building tree level ${levelNum}...`, Math.min(progress, 45));
+            }
+            
+            tree.push(nextLevel);
+            currentLevel = nextLevel;
+        }
+        
+        return tree;
+    }
+    
+    // Show merkle tree visualization
+    async showMerkleTree() {
+        if (this.transactions.length === 0) {
+            console.log('No transactions to visualize merkle tree');
+            return;
+        }
+        
+        // Get transaction IDs
+        const txids = this.transactions
+            .map(tx => tx.userData.txid)
+            .filter(txid => txid && !txid.startsWith('dummy_tx_'));
+        
+        if (txids.length === 0) {
+            console.log('No valid transaction IDs found');
+            return;
+        }
+        
+        console.log(`Calculating merkle tree for ${txids.length} transactions...`);
+        
+        try {
+            // Show loading indicator (non-modal so animation is visible)
+            this.showLoadingModal('Calculating Merkle Tree...', true);
+            this.updateLoadingProgress('Preparing transaction hashes...', 5);
+            
+            // Calculate merkle tree with progress updates
+            const tree = await this.calculateMerkleTree(txids);
+            
+            this.updateLoadingProgress('Calculating node positions...', 50);
+            
+            // Store node positions
+            this.merkleTreeNodes = [];
+            const nodePositions = new Map(); // Map from node to position
+            
+            // Calculate positions for leaf nodes (transactions)
+            // Only use transactions that have valid txids
+            // IMPORTANT: Define validTransactions first before using it
+            let validTransactions = [];
+            validTransactions = this.transactions.filter(tx => {
+                const txid = tx.userData.txid;
+                return txid && !txid.startsWith('dummy_tx_') && txids.includes(txid);
+            });
+            
+            // First, create vertical lines from each transaction
+            // Leaf nodes start at transaction position (with small offset for transaction height)
+            // Tree grows DOWNWARD from leaves to root (root at bottom)
+            const validTxCount = validTransactions.length;
+            const leafYOffset = 0.05; // Small offset to account for transaction height
+            const levelSpacing = validTxCount > 500 ? 0.8 : 1.2; // Reduced spacing between levels (shorter tree)
+            
+            const txCount = validTransactions.length;
+            const positionUpdateInterval = txCount > 100 ? Math.max(50, Math.floor(txCount / 20)) : 10;
+            
+            for (let i = 0; i < validTransactions.length; i++) {
+                const tx = validTransactions[i];
+                const txPos = tx.position.clone();
+                // Leaf node starts at transaction position (with small offset for height)
+                const leafY = txPos.y + leafYOffset;
+                
+                const leafNode = {
+                    position: new THREE.Vector3(txPos.x, leafY, txPos.z),
+                    level: 0,
+                    index: i,
+                    node: tree[0][i]
+                };
+                
+                nodePositions.set(tree[0][i], leafNode.position);
+                this.merkleTreeNodes.push(leafNode);
+                
+                // Update progress during position calculation
+                if (i % positionUpdateInterval === 0 || i === validTransactions.length - 1) {
+                    const progress = 50 + Math.floor((i / validTransactions.length) * 15); // 50-65%
+                    this.updateLoadingProgress(`Calculating positions ${i + 1}/${validTransactions.length}...`, progress);
+                    // Yield to allow UI updates
+                    if (i % (positionUpdateInterval * 2) === 0) {
+                        await this.sleep(1);
+                    }
+                }
+            }
+            
+            // Calculate positions for intermediate nodes
+            this.updateLoadingProgress('Calculating tree node positions...', 65);
+            for (let level = 1; level < tree.length; level++) {
+                const levelNodes = tree[level];
+                const parentLevel = tree[level - 1];
+                
+                for (let i = 0; i < levelNodes.length; i++) {
+                    const node = levelNodes[i];
+                    const leftPos = nodePositions.get(node.left);
+                    const rightPos = nodePositions.get(node.right);
+                    
+                    // Position parent node between its children
+                    // Tree grows DOWNWARD: parent is below children (negative Y direction)
+                    const parentX = (leftPos.x + rightPos.x) / 2;
+                    const parentY = leftPos.y - levelSpacing; // Negative to go downward
+                    const parentZ = (leftPos.z + rightPos.z) / 2;
+                    
+                    const parentPos = new THREE.Vector3(parentX, parentY, parentZ);
+                    nodePositions.set(node, parentPos);
+                    
+                    this.merkleTreeNodes.push({
+                        position: parentPos,
+                        level: level,
+                        index: i,
+                        node: node
+                    });
+                }
+            }
+            
+            // Clear any existing merkle tree lines first (without updating button or flag)
+            this.merkleTreeLines.forEach(line => {
+                this.scene.remove(line);
+                line.geometry.dispose();
+                line.material.dispose();
+            });
+            this.merkleTreeLines = [];
+            this.merkleTreeNodes = [];
+            
+            // Now create and animate the lines
+            this.merkleTreeVisible = true;
+            const button = document.getElementById('show-merkle-tree');
+            if (button) {
+                button.textContent = 'Hide Merkle Tree';
+            }
+            
+            this.updateLoadingProgress('Rendering visualization...', 70);
+            
+            // Animate tree growth progressively
+            await this.animateMerkleTreeGrowth(tree, nodePositions, levelSpacing, txids);
+            
+            // Hide loading modal when complete
+            this.hideLoadingModal();
+        } catch (error) {
+            console.error('Error creating merkle tree visualization:', error);
+            this.hideLoadingModal();
+            alert('Error creating merkle tree visualization. Please try again.');
+        }
+    }
+    
+    // Animate merkle tree growth from leaves to root
+    async animateMerkleTreeGrowth(tree, nodePositions, levelSpacing, txids) {
+        // Get valid transactions (matching the ones used for tree calculation)
+        const validTransactions = this.transactions.filter(tx => {
+            const txid = tx.userData.txid;
+            return txid && !txid.startsWith('dummy_tx_') && txids.includes(txid);
+        });
+        
+        // Adaptive animation speed based on transaction count
+        const txCount = validTransactions.length;
+        const isLargeSet = txCount > 100;
+        const animationDelay = isLargeSet ? 10 : 100; // Much faster for large sets
+        const lineAnimationDuration = isLargeSet ? 50 : 300; // Much faster animation for large sets
+        const progressUpdateInterval = isLargeSet ? Math.max(10, Math.floor(txCount / 50)) : 1; // Update every N lines for large sets
+        
+        // Calculate total animation steps for progress tracking
+        const totalVerticalLines = validTransactions.length;
+        const totalTreeLines = tree.reduce((sum, level, idx) => {
+            if (idx === 0) return sum; // Skip leaf level
+            return sum + level.length * 2; // Each node has 2 lines (left and right)
+        }, 0);
+        const totalSteps = totalVerticalLines + totalTreeLines;
+        let currentStep = 0;
+        
+        // Initial progress update
+        this.updateLoadingProgress(`Creating ${totalSteps} lines...`, 71);
+        
+        console.log(`Starting merkle tree visualization: ${totalVerticalLines} vertical lines, ${totalTreeLines} tree lines`);
+        console.log(`Transaction positions range:`, validTransactions.length > 0 ? {
+            first: validTransactions[0].position,
+            last: validTransactions[validTransactions.length - 1].position
+        } : 'none');
+        
+        // First, animate vertical lines from transactions to leaf nodes
+        for (let i = 0; i < validTransactions.length; i++) {
+            const tx = validTransactions[i];
+            const txPos = tx.position.clone();
+            const leafNode = this.merkleTreeNodes.find(n => n.level === 0 && n.index === i);
+            
+            if (leafNode) {
+                const startPos = new THREE.Vector3(txPos.x, txPos.y, txPos.z);
+                const endPos = leafNode.position.clone();
+                
+                // Debug first few lines
+                if (i < 3) {
+                    console.log(`Line ${i}: from (${startPos.x.toFixed(2)}, ${startPos.y.toFixed(2)}, ${startPos.z.toFixed(2)}) to (${endPos.x.toFixed(2)}, ${endPos.y.toFixed(2)}, ${endPos.z.toFixed(2)})`);
+                }
+                
+                // Create line from transaction to leaf node (start with just start position)
+                const geometry = new THREE.BufferGeometry().setFromPoints([startPos, startPos]);
+                const material = new THREE.LineBasicMaterial({ 
+                    color: 0xffffff, 
+                    transparent: true,
+                    opacity: 0.25,
+                    linecap: 'round',
+                    linejoin: 'round'
+                });
+                const line = new THREE.Line(geometry, material);
+                line.userData.merkleTree = true;
+                line.renderOrder = 10; // Render after other objects
+                
+                // Add to scene first so it can be rendered during animation
+                this.scene.add(line);
+                this.merkleTreeLines.push(line);
+                
+                // Animate line growth (or skip animation for very large sets)
+                if (isLargeSet && txCount > 500) {
+                    // For very large sets, just create the line instantly
+                    // Need to properly update geometry
+                    const positions = line.geometry.attributes.position;
+                    if (positions) {
+                        positions.setXYZ(0, startPos.x, startPos.y, startPos.z);
+                        positions.setXYZ(1, endPos.x, endPos.y, endPos.z);
+                        positions.needsUpdate = true;
+                    } else {
+                        line.geometry.setFromPoints([startPos, endPos]);
+                        line.geometry.attributes.position.needsUpdate = true;
+                    }
+                    line.geometry.computeBoundingSphere();
+                } else {
+                    await this.animateLineGrowth(line, startPos, endPos, lineAnimationDuration);
+                }
+                
+                // Debug first line
+                if (i === 0) {
+                    const pos = line.geometry.attributes.position;
+                    console.log(`First vertical line: start=(${pos.getX(0).toFixed(2)}, ${pos.getY(0).toFixed(2)}, ${pos.getZ(0).toFixed(2)}), end=(${pos.getX(1).toFixed(2)}, ${pos.getY(1).toFixed(2)}, ${pos.getZ(1).toFixed(2)})`);
+                }
+                
+                // Update progress (only every N lines for large sets to avoid UI lag)
+                currentStep++;
+                if (currentStep % progressUpdateInterval === 0 || currentStep === totalSteps) {
+                    const progress = 70 + Math.floor((currentStep / totalSteps) * 25); // 70-95% for animation
+                    this.updateLoadingProgress(`Drawing lines ${currentStep}/${totalSteps}...`, progress);
+                }
+            }
+            
+            // Only add delay if not a very large set
+            if (!isLargeSet || txCount <= 500) {
+                await this.sleep(animationDelay);
+            } else if (i % 50 === 0) {
+                // For very large sets, yield every 50 lines to keep UI responsive
+                await this.sleep(10);
+            }
+        }
+        
+        // Then animate tree levels from bottom to top
+        for (let level = 1; level < tree.length; level++) {
+            const levelNodes = tree[level];
+            
+            for (let i = 0; i < levelNodes.length; i++) {
+                const node = levelNodes[i];
+                const leftPos = nodePositions.get(node.left);
+                const rightPos = nodePositions.get(node.right);
+                const parentPos = nodePositions.get(node);
+                
+                // Create lines from children to parent (start with just start positions)
+                const leftLine = this.createLine(leftPos, leftPos, 0xffffff);
+                const rightLine = this.createLine(rightPos, rightPos, 0xffffff);
+                
+                // Add to scene first so they can be rendered during animation
+                this.scene.add(leftLine);
+                this.scene.add(rightLine);
+                this.merkleTreeLines.push(leftLine, rightLine);
+                
+                // Animate both lines (or skip animation for very large sets)
+                if (isLargeSet && txCount > 500) {
+                    // For very large sets, just create the lines instantly
+                    const leftPositions = leftLine.geometry.attributes.position;
+                    const rightPositions = rightLine.geometry.attributes.position;
+                    if (leftPositions && rightPositions) {
+                        leftPositions.setXYZ(0, leftPos.x, leftPos.y, leftPos.z);
+                        leftPositions.setXYZ(1, parentPos.x, parentPos.y, parentPos.z);
+                        rightPositions.setXYZ(0, rightPos.x, rightPos.y, rightPos.z);
+                        rightPositions.setXYZ(1, parentPos.x, parentPos.y, parentPos.z);
+                        leftPositions.needsUpdate = true;
+                        rightPositions.needsUpdate = true;
+                    } else {
+                        leftLine.geometry.setFromPoints([leftPos, parentPos]);
+                        rightLine.geometry.setFromPoints([rightPos, parentPos]);
+                        leftLine.geometry.attributes.position.needsUpdate = true;
+                        rightLine.geometry.attributes.position.needsUpdate = true;
+                    }
+                    leftLine.geometry.computeBoundingSphere();
+                    rightLine.geometry.computeBoundingSphere();
+                } else {
+                    await Promise.all([
+                        this.animateLineGrowth(leftLine, leftPos, parentPos, lineAnimationDuration),
+                        this.animateLineGrowth(rightLine, rightPos, parentPos, lineAnimationDuration)
+                    ]);
+                }
+                
+                // Update progress (each node adds 2 lines)
+                currentStep += 2;
+                if (currentStep % progressUpdateInterval === 0 || currentStep === totalSteps) {
+                    const progress = 70 + Math.floor((currentStep / totalSteps) * 25); // 70-95% for animation
+                    this.updateLoadingProgress(`Drawing lines ${currentStep}/${totalSteps}...`, progress);
+                }
+                
+                // Only add delay if not a very large set
+                if (!isLargeSet || txCount <= 500) {
+                    await this.sleep(animationDelay);
+                } else if (i % 20 === 0) {
+                    // For very large sets, yield every 20 nodes to keep UI responsive
+                    await this.sleep(10);
+                }
+            }
+        }
+        
+        // Final progress update - ensure we show 100%
+        if (currentStep < totalSteps) {
+            currentStep = totalSteps; // Ensure we're at 100%
+        }
+        this.updateLoadingProgress('Complete!', 100);
+        await this.sleep(300); // Brief pause to show 100%
+        
+        console.log(`Merkle tree visualization complete: ${this.merkleTreeLines.length} lines created`);
+        console.log(`Lines in scene:`, this.scene.children.filter(child => child.userData.merkleTree).length);
+        
+        // Force a render to ensure lines are visible
+        this.renderer.render(this.scene, this.camera);
+    }
+    
+    // Create a line between two points
+    createLine(start, end, color) {
+        const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+        const material = new THREE.LineBasicMaterial({ 
+            color: 0xffffff, 
+            transparent: true,
+            opacity: 0.25,
+            linecap: 'round',
+            linejoin: 'round'
+        });
+        const line = new THREE.Line(geometry, material);
+        line.userData.merkleTree = true;
+        line.renderOrder = 10; // Render after other objects
+        return line;
+    }
+    
+    // Animate line growth from start to end
+    async animateLineGrowth(line, start, end, duration) {
+        return new Promise((resolve) => {
+            const startTime = Date.now();
+            const distance = start.distanceTo(end);
+            
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing function for smooth animation
+                const eased = 1 - Math.pow(1 - progress, 3);
+                
+                const currentPos = new THREE.Vector3().lerpVectors(start, end, eased);
+                line.geometry.setFromPoints([start, currentPos]);
+                line.geometry.attributes.position.needsUpdate = true;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Ensure final position is exact
+                    line.geometry.setFromPoints([start, end]);
+                    line.geometry.attributes.position.needsUpdate = true;
+                    resolve();
+                }
+            };
+            
+            animate();
+        });
+    }
+    
+    // Hide merkle tree visualization
+    hideMerkleTree(updateButton = true) {
+        // Remove all merkle tree lines
+        this.merkleTreeLines.forEach(line => {
+            this.scene.remove(line);
+            line.geometry.dispose();
+            line.material.dispose();
+        });
+        this.merkleTreeLines = [];
+        this.merkleTreeNodes = [];
+        this.merkleTreeVisible = false;
+        
+        // Force render to update the scene
+        if (this.renderer && this.scene && this.camera) {
+            this.renderer.render(this.scene, this.camera);
+        }
+        
+        if (updateButton) {
+            const button = document.getElementById('show-merkle-tree');
+            if (button) {
+                button.textContent = 'Merkle Tree';
+            }
+        }
+    }
+    
+    // Sleep utility for delays
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 
