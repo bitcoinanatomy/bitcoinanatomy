@@ -690,12 +690,11 @@ button:active {
 
 /* About & Data Sources */
 .about, .data-sources {
-
     border-radius: 8px;
     padding: 2rem 0;
-    
     max-width: 600px;
-    
+    margin: 0 auto;
+    text-align: center;
 }
 
 .about {
@@ -727,20 +726,18 @@ button:active {
 .data-sources ul {
     list-style: none;
     color: #fff;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+    display: inline-block;
 }
 
 .data-sources li {
     margin-bottom: 0.5rem;
-    padding-left: 1rem;
+    padding-left: 0;
     position: relative;
-    color: #fff;
-}
-
-.data-sources li:before {
-    content: "â†’";
-    color: #fff;
-    position: absolute;
-    left: 0;
+    color: #cccccc;
+    line-height: 1.8em;
 }
 
 .footer {
