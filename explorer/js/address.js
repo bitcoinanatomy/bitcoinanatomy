@@ -1225,12 +1225,14 @@ class BitcoinAddressExplorer {
             }
         });
 
-        // Famous addresses functionality
+        // Famous addresses functionality - immediately navigate on click
         famousAddresses.forEach(button => {
             button.addEventListener('click', () => {
                 const address = button.getAttribute('data-address');
-                addressInput.value = address;
-                addressInput.focus();
+                // Immediately navigate to the new address
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('address', address);
+                window.location.href = currentUrl.toString();
             });
         });
 

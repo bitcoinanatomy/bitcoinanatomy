@@ -35,105 +35,132 @@
         </ul>
     </nav>
 
-    <div class="container">
-        <div class="header">
+    <div class="hero-section">
+        <div class="hero-slideshow">
+            <div class="hero-slide active" style="background-image: url('imgs/network.png');"></div>
+            <div class="hero-slide" style="background-image: url('imgs/blockchain.png');"></div>
+            <div class="hero-slide" style="background-image: url('imgs/transaction.png');"></div>
+            <div class="hero-slide" style="background-image: url('imgs/address.png');"></div>
+            <div class="hero-slide" style="background-image: url('imgs/difficulty.png');"></div>
+            <div class="hero-slide" style="background-image: url('imgs/mempool.png');"></div>
+        </div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
             <h1>Anatomy of Bitcoin Explorer</h1>
             <p>Interactive 3D visualization of Bitcoin's blockchain, transactions, and network architecture. Explore the inner workings of the world's first decentralized digital currency through immersive visualizations.</p>
         </div>
-        
+    </div>
+
+    <div class="container">
         <div class="sections">
             <a href="network.html" class="section-card">
-                <canvas class="card-3d" data-type="network"></canvas>
-                <h3>Network</h3>
-                <p>Explore the Bitcoin network topology and node distribution in 3D space.</p>
-                <ul class="features">
-                    <li>Real-time data</li>
-                    <li>Geographic mapping</li>
-                    <li>Topology analysis</li>
-                </ul>
+                <img src="imgs/network.png" alt="Network visualization" class="card-image">
+                <div class="card-content">
+                    <h3>Network</h3>
+                    <p>Explore the Bitcoin network topology and node distribution in 3D space.</p>
+                    <ul class="features">
+                        <li>Real-time data</li>
+                        <li>Geographic mapping</li>
+                        <li>Topology analysis</li>
+                    </ul>
+                </div>
             </a>
             
             <a href="node.html" class="section-card">
-                <canvas class="card-3d" data-type="node"></canvas>
-                <h3>Node Explorer</h3>
-                <p>Explore individual Bitcoin nodes and their features in 3D visualization.</p>
-                <ul class="features">
-                    <li>BIP features</li>
-                    <li>Network connections</li>
-                    <li>Blockchain integration</li>
-                </ul>
+                <img src="imgs/node.png" alt="Node Explorer visualization" class="card-image">
+                <div class="card-content">
+                    <h3>Node Explorer</h3>
+                    <p>Explore individual Bitcoin nodes and their features in 3D visualization.</p>
+                    <ul class="features">
+                        <li>BIP features</li>
+                        <li>Network connections</li>
+                        <li>Blockchain integration</li>
+                    </ul>
+                </div>
             </a>
             
             <a href="blockchain.html" class="section-card">
-                <canvas class="card-3d" data-type="blockchain"></canvas>
-                <h3>Blockchain</h3>
-                <p>Visualize the complete Bitcoin blockchain as a 3D helix structure with historical data.</p>
-                <ul class="features">
-                    <li>Helix structure</li>
-                    <li>Historical data</li>
-                    <li>Mempool integration</li>
-                    <li>Timeline exploration</li>
-                </ul>
+                <img src="imgs/blockchain.png" alt="Blockchain visualization" class="card-image">
+                <div class="card-content">
+                    <h3>Blockchain</h3>
+                    <p>Visualize the complete Bitcoin blockchain as a 3D helix structure with historical data.</p>
+                    <ul class="features">
+                        <li>Helix structure</li>
+                        <li>Historical data</li>
+                        <li>Mempool integration</li>
+                        <li>Timeline exploration</li>
+                    </ul>
+                </div>
             </a>
             
             <a href="difficulty.html" class="section-card">
-                <canvas class="card-3d" data-type="difficulty"></canvas>
-                <h3>Difficulty</h3>
-                <p>Explore Bitcoin's difficulty adjustment mechanism through 3D spiral visualization.</p>
-                <ul class="features">
-                    <li>2016 blocks spiral epochs</li>
-                    <li>Block time analysis</li>
-                    <li>Difficulty adjustment</li>
-                    <li>Historical data</li>
-                </ul>
+                <img src="imgs/difficulty.png" alt="Difficulty visualization" class="card-image">
+                <div class="card-content">
+                    <h3>Difficulty</h3>
+                    <p>Explore Bitcoin's difficulty adjustment mechanism through 3D spiral visualization.</p>
+                    <ul class="features">
+                        <li>2016 blocks spiral epochs</li>
+                        <li>Block time analysis</li>
+                        <li>Difficulty adjustment</li>
+                        <li>Historical data</li>
+                    </ul>
+                </div>
             </a>
             
             <a href="block.html" class="section-card">
-                <canvas class="card-3d" data-type="block"></canvas>
-                <h3>Block</h3>
-                <p>Explore individual Bitcoin blocks in 3D, with detailed transaction data and visual representations of block structure.</p>
-                <ul class="features">
-                    <li>Block visualization with transaction sizes</li>
-                    <li>Real-time data from mempool.space</li>
-                    <li>Interactive transaction loading</li>
-                    <li>Blockchain timeline</li>
-                </ul>
+                <img src="imgs/block.png" alt="Block visualization" class="card-image">
+                <div class="card-content">
+                    <h3>Block</h3>
+                    <p>Explore individual Bitcoin blocks in 3D, with detailed transaction data and visual representations of block structure.</p>
+                    <ul class="features">
+                        <li>Block visualization with transaction sizes</li>
+                        <li>Real-time data from mempool.space</li>
+                        <li>Interactive transaction loading</li>
+                        <li>Blockchain timeline</li>
+                    </ul>
+                </div>
             </a>
             
             <a href="transaction.html" class="section-card">
-                <canvas class="card-3d" data-type="transaction"></canvas>
-                <h3>Transaction</h3>
-                <p>Visualize Bitcoin transactions in 3D, showing input/output relationships and spending patterns.</p>
-                <ul class="features">
-                    <li>Transaction flow</li>
-                    <li>Input/output spheres</li>
-                    <li>Spending status</li>
-                    <li>Address navigation</li>
-                </ul>
+                <img src="imgs/transaction.png" alt="Transaction visualization" class="card-image">
+                <div class="card-content">
+                    <h3>Transaction</h3>
+                    <p>Visualize Bitcoin transactions in 3D, showing input/output relationships and spending patterns.</p>
+                    <ul class="features">
+                        <li>Transaction flow</li>
+                        <li>Input/output spheres</li>
+                        <li>Spending status</li>
+                        <li>Address navigation</li>
+                    </ul>
+                </div>
             </a>
             
             <a href="address.html" class="section-card">
-                <canvas class="card-3d" data-type="address"></canvas>
-                <h3>Address</h3>
-                <p>Explore Bitcoin addresses with 3D visualizations of UTXOs and transaction history.</p>
-                <ul class="features">
-                    <li>Central balance sphere</li>
-                    <li>UTXO distribution</li>
-                    <li>Transaction history</li>
-                    <li>Real-time data</li>
-                </ul>
+                <img src="imgs/address.png" alt="Address visualization" class="card-image">
+                <div class="card-content">
+                    <h3>Address</h3>
+                    <p>Explore Bitcoin addresses with 3D visualizations of UTXOs and transaction history.</p>
+                    <ul class="features">
+                        <li>Central balance sphere</li>
+                        <li>UTXO distribution</li>
+                        <li>Transaction history</li>
+                        <li>Real-time data</li>
+                    </ul>
+                </div>
             </a>
             
             <a href="mempool.html" class="section-card">
-                <canvas class="card-3d" data-type="mempool"></canvas>
-                <h3>Mempool</h3>
-                <p>Visualize the Bitcoin mempool - pending transactions waiting to be included in blocks.</p>
-                <ul class="features">
-                    <li>3D transaction visualization</li>
-                    <li>Fee rate analysis</li>
-                    <li>Transaction prioritization</li>
-                    <li>Real-time data</li>
-                </ul>
+                <img src="imgs/mempool.png" alt="Mempool visualization" class="card-image">
+                <div class="card-content">
+                    <h3>Mempool</h3>
+                    <p>Visualize the Bitcoin mempool - pending transactions waiting to be included in blocks.</p>
+                    <ul class="features">
+                        <li>3D transaction visualization</li>
+                        <li>Fee rate analysis</li>
+                        <li>Transaction prioritization</li>
+                        <li>Real-time data</li>
+                    </ul>
+                </div>
             </a>
         </div>
         
@@ -542,21 +569,21 @@
             }
         }
         
-        // Initialize 3D objects for all cards
+        // 3D card initialization removed - using static images instead
+        
+        // Hero slideshow animation
         document.addEventListener('DOMContentLoaded', () => {
-            const canvases = document.querySelectorAll('.card-3d');
-            const cardObjects = [];
+            const slides = document.querySelectorAll('.hero-slide');
+            let currentSlide = 0;
             
-            canvases.forEach(canvas => {
-                const type = canvas.getAttribute('data-type');
-                const cardObject = new Card3DObject(canvas, type);
-                cardObjects.push(cardObject);
-            });
+            function nextSlide() {
+                slides[currentSlide].classList.remove('active');
+                currentSlide = (currentSlide + 1) % slides.length;
+                slides[currentSlide].classList.add('active');
+            }
             
-            // Cleanup on page unload
-            window.addEventListener('beforeunload', () => {
-                cardObjects.forEach(obj => obj.destroy());
-            });
+            // Change slide every 5 seconds
+            setInterval(nextSlide, 5000);
         });
     </script>
 </body>

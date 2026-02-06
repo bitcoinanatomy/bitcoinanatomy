@@ -75,6 +75,7 @@
                     <button id="toggle-flow">Show Flow</button>
                     <button id="change-transaction">Load Transaction</button>
                     <button id="show-raw-data">Raw Data</button>
+                    <button id="show-treemap">Treemap</button>
                     <button id="back-to-block" style="display: none;">Back to Block</button>
                 </div>
                 <div class="navigation-controls">
@@ -211,6 +212,29 @@
             </div>
         </div>
     </div>
+
+    <!-- Voronoi Treemap Containers -->
+    <div id="treemap-container" class="treemap-container" style="display: none;">
+        <div class="treemap-header">
+            <h3>Input/Output Distribution</h3>
+            <button id="close-treemap" class="treemap-close">&times;</button>
+        </div>
+        <div class="treemap-content">
+            <div class="treemap-panel">
+                <h4>Inputs</h4>
+                <div id="input-treemap" class="treemap-svg"></div>
+            </div>
+            <div class="treemap-panel">
+                <h4>Outputs</h4>
+                <div id="output-treemap" class="treemap-svg"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Voronoi.js for Voronoi Treemaps -->
+    <script src="js/voronoijs.min.js"></script>
 
     <!-- Three.js from CDN (ES Modules) -->
     <script type="module">

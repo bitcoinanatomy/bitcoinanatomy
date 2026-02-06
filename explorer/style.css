@@ -60,7 +60,7 @@ body:not(.homepage) {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
-    padding-top: 120px;
+    padding-top: 0;
 }
 
 /* ================================
@@ -71,7 +71,7 @@ body:not(.homepage) {
     top: 0;
     left: 0;
     right: 0;
-    background: rgba(0, 0, 0, 0.95);
+    background: rgb(0 0 0 / 18%);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 23000;
@@ -190,6 +190,102 @@ body:not(.homepage) {
     height: calc(100% - 60px);
     pointer-events: none;
     z-index: 1500;
+}
+
+/* Hero Section */
+.hero-section {
+    position: relative;
+    width: 100%;
+    height: 60vh;
+    min-height: 500px;
+    max-height: 800px;
+    overflow: hidden;
+}
+
+.hero-slideshow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.hero-slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 2s ease-in-out;
+}
+
+.hero-slide.active {
+    opacity: 1;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgb(0 0 0 / 0%), rgb(0 0 0 / 100%));
+    z-index: 2;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 2rem;
+    text-align: center;
+    pointer-events: none;
+}
+
+.hero-content h1 {
+    font-size: 3.5rem;
+    font-weight: 300;
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    font-family: "BureauGrotesque", sans-serif;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.hero-content p {
+    font-size: 1.2rem;
+    color: #cccccc;
+    max-width: 800px;
+    line-height: 1.6;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.8);
+}
+
+/* Hero section responsive */
+@media (max-width: 768px) {
+    .hero-section {
+        height: 50vh;
+        min-height: 400px;
+        max-height: 600px;
+    }
+    
+    .hero-content h1 {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .hero-content p {
+        font-size: 1rem;
+        padding: 0 1rem;
+    }
 }
 
 /* Headers */
@@ -357,10 +453,12 @@ body:not(.homepage) {
 }
 
 .panel-header h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: .8rem;
+    font-weight: 200;
     margin: 0;
-    color: #ffffff;
+    color: #797979;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
 }
 
 .panel-toggle {
@@ -396,9 +494,14 @@ body:not(.homepage) {
 }
 
 .panel div {
-    margin-bottom: 8px;
-    font-size: 0.9rem;
+    margin-bottom: 0px;
+    font-size: 0.8rem;
     color: #cccccc;
+    line-height: 1.8em;
+}
+
+.panel-content.minimized div {
+    margin-bottom: 0px;
 }
 
 .panel span {
@@ -491,20 +594,25 @@ button:active {
 .sections {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
+    gap: 0;
     margin-bottom: 4rem;
+    padding: 10px;
 }
 
 .section-card {
     background: #000000;
-    border: 1px solid #111111;
-    border-radius: 3px;
-    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0;
+    padding: 0;
+    padding-bottom: 2rem;
     transition: all 0.3s ease;
     text-decoration: none;
     color: #fff;
     display: block;
     position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5),
+                0 1px 3px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .card-3d {
@@ -516,19 +624,36 @@ button:active {
     margin-bottom: 1rem;
 }
 
+.card-image {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+    display: block;
+    border-bottom: 1px solid #161616;
+}
+
+.card-content {
+    padding: 2rem;
+}
+
 .section-card:hover {
-    border-color: #ffffff;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255 , 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8),
+                0 4px 12px rgba(255, 255, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .section-card h3 {
-    color: #fff;
+    font-size: 2rem;
+    font-weight: 200;
     margin-bottom: 1rem;
-    font-size: 1.5rem;
+    color: #ffffff;
     font-family: "BureauGrotesque", sans-serif;
     text-transform: uppercase;
-    letter-spacing: 0.01rem;
 }
 
 .section-card p {
@@ -554,10 +679,13 @@ button:active {
 }
 
 .section-card .features li:before {
-    content: "â€¢";
-    color: #fff;
+    content: "•";
+    color: #ffffff;
     position: absolute;
     left: 0;
+    font-weight: bold;
+    font-size: 1.2em;
+    line-height: 1;
 }
 
 /* About & Data Sources */
@@ -892,10 +1020,12 @@ button:active {
 }
 
 .modal-header h3 {
+    font-size: .8rem;
+    font-weight: 200;
     margin: 0;
-    color: #ffffff;
-    font-size: 1.2rem;
-    font-weight: 500;
+    color: #797979;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
 }
 
 .modal-close {
@@ -1478,10 +1608,12 @@ body.raw-data-open .navigation-controls {
 }
 
 .raw-data-header h3 {
+    font-size: .8rem;
+    font-weight: 200;
     margin: 0;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #fff;
+    color: #797979;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
 }
 
 .raw-data-actions {
@@ -1936,10 +2068,6 @@ body.raw-data-open .navigation-controls {
         padding: 10px 12px;
     }
     
-    .raw-data-header h3 {
-        font-size: 0.9rem;
-    }
-    
     .raw-data-btn {
         padding: 5px 10px;
         font-size: 11px;
@@ -1973,6 +2101,255 @@ body.raw-data-open .navigation-controls {
     }
     
     .raw-data-modal {
+        width: 55%;
+    }
+}
+
+/* ================================
+   VORONOI TREEMAP STYLES
+   ================================ */
+/* When treemap panel is open, shrink the main container */
+body.treemap-open #container {
+    width: 50%;
+}
+
+/* Keep navbar full width */
+body.treemap-open #container .navbar {
+    width: 100vw;
+}
+
+body.treemap-open .sidebar {
+    display: none;
+}
+
+body.treemap-open .controls {
+    right: auto;
+    left: 10px;
+    flex-wrap: wrap;
+}
+
+body.treemap-open .controls-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+body.treemap-open .navigation-controls {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 8px;
+}
+
+.treemap-container {
+    position: fixed;
+    top: 60px;
+    right: 0;
+    width: 50%;
+    height: calc(100% - 60px);
+    background: #0a0a0a;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 40000;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.treemap-container[style*="flex"] {
+    display: flex !important;
+}
+
+.treemap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.treemap-header h3 {
+    font-size: .8rem;
+    font-weight: 200;
+    margin: 0;
+    color: #797979;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+}
+
+.treemap-close {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 4px 10px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.treemap-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.treemap-content {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    overflow: auto;
+}
+
+.treemap-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    max-width: 350px;
+}
+
+.treemap-panel h4 {
+    font-size: .8rem;
+    font-weight: 200;
+    color: #797979;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+}
+
+.treemap-svg {
+    width: 100%;
+    aspect-ratio: 1;
+    max-width: 300px;
+    max-height: 300px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.treemap-svg svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Treemap cell styles */
+.treemap-cell {
+    stroke: #000;
+    stroke-width: 0.5px;
+    transition: opacity 0.2s, stroke-width 0.2s;
+    cursor: pointer;
+}
+
+.treemap-cell:hover {
+    stroke-width: 1px;
+    opacity: 0.85;
+}
+
+.treemap-label {
+    font-size: 10px;
+    fill: #fff;
+    text-anchor: middle;
+    pointer-events: none;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.treemap-label-small {
+    font-size: 8px;
+}
+
+/* Treemap tooltip */
+.treemap-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #fff;
+    pointer-events: none;
+    z-index: 36000;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    line-height: 1.4;
+}
+
+.treemap-tooltip strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+}
+
+.treemap-tooltip .amount {
+    color: #4ade80;
+    font-weight: bold;
+}
+
+.treemap-tooltip .address {
+    color: #94a3b8;
+    font-size: 11px;
+    word-break: break-all;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    body.treemap-open #container {
+        width: 100%;
+        height: 40%;
+    }
+    
+    body.treemap-open .controls {
+        display: none;
+    }
+    
+    .treemap-container {
+        width: 100%;
+        top: auto;
+        bottom: 0;
+        height: 60%;
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .treemap-header {
+        padding: 10px 12px;
+    }
+    
+    .treemap-close {
+        padding: 3px 8px;
+        font-size: 16px;
+    }
+    
+    .treemap-content {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .treemap-panel {
+        max-width: 250px;
+    }
+    
+    .treemap-svg {
+        max-width: 220px;
+        max-height: 220px;
+    }
+}
+
+/* Tablet - adjust split ratio */
+@media (min-width: 769px) and (max-width: 1200px) {
+    body.treemap-open #container {
+        width: 45%;
+    }
+    
+    /* Keep navbar full width on tablet */
+    body.treemap-open #container .navbar {
+        width: 100vw;
+    }
+    
+    .treemap-container {
         width: 55%;
     }
 }

@@ -180,20 +180,20 @@ class BitcoinTransactionExplorer {
                             <em>Newly minted bitcoins</em>
                         `;
                     } else {
-                        const amount = input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown';
-                        const scriptType = input.prevout?.scriptpubkey_type || 'Unknown';
-                        
-                        tooltipContent = `
-                            <strong>Input ${userData.index + 1}</strong><br>
-                            Amount: ${amount} BTC<br>
-                            Script Type: ${scriptType}<br>
-                            ${input.prevout?.scriptpubkey_address ? `Address: ${input.prevout.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
-                            <br>
-                            <strong>From Transaction:</strong><br>
-                            TXID: ${input.txid ? input.txid.substring(0, 16) + '...' : 'Unknown'}<br>
-                            Output Index: ${input.vout !== undefined ? input.vout : 'Unknown'}<br>
+                    const amount = input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown';
+                    const scriptType = input.prevout?.scriptpubkey_type || 'Unknown';
+                    
+                    tooltipContent = `
+                        <strong>Input ${userData.index + 1}</strong><br>
+                        Amount: ${amount} BTC<br>
+                        Script Type: ${scriptType}<br>
+                        ${input.prevout?.scriptpubkey_address ? `Address: ${input.prevout.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                        <br>
+                        <strong>From Transaction:</strong><br>
+                        TXID: ${input.txid ? input.txid.substring(0, 16) + '...' : 'Unknown'}<br>
+                        Output Index: ${input.vout !== undefined ? input.vout : 'Unknown'}<br>
                             <em>Double-click → source tx | Shift+double-click → address</em>
-                        `;
+                    `;
                     }
                 } else if (userData.type === 'output') {
                     const output = userData.data;
@@ -226,7 +226,7 @@ class BitcoinTransactionExplorer {
                     // Coinbase hemisphere cap
                     const input = userData.data;
                     const amount = userData.coinbaseAmount ? (userData.coinbaseAmount / 100000000).toFixed(8) : 'Unknown';
-                    tooltipContent = `
+                        tooltipContent = `
                         <strong>Coinbase (Block Reward)</strong><br>
                         Amount: ${amount} BTC<br>
                         <em>Newly minted bitcoins</em>
@@ -235,7 +235,7 @@ class BitcoinTransactionExplorer {
                     // Unspent output hemisphere cap
                     const output = userData.data;
                     const amount = (output.value / 100000000).toFixed(8);
-                    tooltipContent = `
+                        tooltipContent = `
                         <strong>Unspent Output ${userData.index + 1}</strong><br>
                         Amount: ${amount} BTC<br>
                         ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
@@ -483,6 +483,9 @@ class BitcoinTransactionExplorer {
         // Raw data functionality
         this.setupRawDataPanel();
         
+        // Treemap functionality
+        this.setupTreemapPanel();
+        
         // Add double-click functionality
         this.renderer.domElement.addEventListener('dblclick', (event) => {
             const rect = this.renderer.domElement.getBoundingClientRect();
@@ -508,10 +511,10 @@ class BitcoinTransactionExplorer {
                     
                     if (isShiftClick) {
                         // Shift+double-click: go to address
-                        const address = userData.data.prevout?.scriptpubkey_address;
-                        if (address) {
-                            window.location.href = `address.html?address=${address}`;
-                        }
+                    const address = userData.data.prevout?.scriptpubkey_address;
+                    if (address) {
+                        window.location.href = `address.html?address=${address}`;
+                    }
                     } else {
                         // Double-click: go to source transaction
                         const txid = userData.data.txid;
@@ -522,9 +525,9 @@ class BitcoinTransactionExplorer {
                 } else if (userData.type === 'output' || userData.type === 'output-cap') {
                     if (isShiftClick) {
                         // Shift+double-click: go to address
-                        const address = userData.data.scriptpubkey_address;
-                        if (address) {
-                            window.location.href = `address.html?address=${address}`;
+                    const address = userData.data.scriptpubkey_address;
+                    if (address) {
+                        window.location.href = `address.html?address=${address}`;
                         }
                     } else {
                         // Double-click: go to spending transaction (if spent)
@@ -1041,14 +1044,14 @@ class BitcoinTransactionExplorer {
             if (inputIsCoinbase) {
                 // Create hemisphere cap for coinbase (at the far end of the tube)
                 const geometry = new THREE.SphereGeometry(inputRadius, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-                const material = new THREE.MeshLambertMaterial({ 
+            const material = new THREE.MeshLambertMaterial({ 
                     color: 0x888888, // Grey color for coinbase
-                    transparent: true,
+                transparent: true,
                     opacity: 0.3,
-                    side: THREE.DoubleSide,
-                    depthWrite: true,
-                    depthTest: true
-                });
+                side: THREE.DoubleSide,
+                depthWrite: true,
+                depthTest: true
+            });
                 const hemisphere = new THREE.Mesh(geometry, material);
                 hemisphere.renderOrder = 1;
                 
@@ -1175,11 +1178,11 @@ class BitcoinTransactionExplorer {
                     color: 0xffffff,
                     map: this.coinbaseTubeGradientTexture,
                     opacity: 1.0,
-                    transparent: true,
-                    side: THREE.DoubleSide,
-                    depthWrite: false,
-                    depthTest: true
-                });
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+                depthTest: true
+            });
             } else {
                 // Regular input tube: gradient from dark to light
                 material = new THREE.MeshLambertMaterial({ 
@@ -1373,7 +1376,7 @@ class BitcoinTransactionExplorer {
                             hemisphere.position.set(farEndX, y, 0);
                             hemisphere.userData = { 
                                 type: 'output-cap', 
-                                index: i, 
+                                index: i,
                                 data: this.transactionData.vout[i],
                                 radius: tubeRadius,
                                 originalOpacity: 1.0,
@@ -1817,6 +1820,533 @@ class BitcoinTransactionExplorer {
         }
     }
     
+    // Voronoi Treemap methods
+    setupTreemapPanel() {
+        // Treemap button - toggle panel
+        document.getElementById('show-treemap')?.addEventListener('click', () => {
+            const container = document.getElementById('treemap-container');
+            if (container.style.display === 'none' || container.style.display === '') {
+                this.showTreemap();
+            } else {
+                this.hideTreemap();
+            }
+        });
+        
+        // Close treemap
+        document.getElementById('close-treemap')?.addEventListener('click', () => {
+            this.hideTreemap();
+        });
+        
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const container = document.getElementById('treemap-container');
+                if (container && container.style.display !== 'none') {
+                    this.hideTreemap();
+                }
+            }
+        });
+    }
+    
+    showTreemap() {
+        const container = document.getElementById('treemap-container');
+        if (!container) return;
+        
+        container.style.display = 'flex';
+        document.body.classList.add('treemap-open');
+        this.renderTreemaps();
+        
+        // Trigger resize to update camera
+        this.onWindowResize();
+        setTimeout(() => {
+            this.onWindowResize();
+        }, 350);
+    }
+    
+    hideTreemap() {
+        const container = document.getElementById('treemap-container');
+        if (container) {
+            container.style.display = 'none';
+        }
+        
+        document.body.classList.remove('treemap-open');
+        
+        // Clean up update intervals
+        if (this.inputTreemapUpdateInterval) {
+            clearInterval(this.inputTreemapUpdateInterval);
+            this.inputTreemapUpdateInterval = null;
+        }
+        if (this.outputTreemapUpdateInterval) {
+            clearInterval(this.outputTreemapUpdateInterval);
+            this.outputTreemapUpdateInterval = null;
+        }
+        
+        // Trigger resize to update camera
+        this.onWindowResize();
+        setTimeout(() => {
+            this.onWindowResize();
+        }, 350);
+    }
+    
+    async renderTreemaps() {
+        if (!this.transactionData) return;
+        
+        // Wait for Voronoi.js to load (library exposes as window.voronoi, lowercase)
+        if (typeof voronoi === 'undefined' || !voronoi.Treemap) {
+            const container = document.getElementById('treemap-container');
+            if (container) {
+                container.querySelector('.treemap-content').innerHTML = 
+                    '<div style="color: #fff; padding: 40px; text-align: center;">Loading Voronoi.js library...<br><small>If this message persists, the library may have failed to load.</small></div>';
+            }
+            
+            // Try again after a short delay
+            setTimeout(() => {
+                if (typeof voronoi !== 'undefined' && voronoi.Treemap) {
+                    this.renderTreemaps();
+                } else {
+                    const container = document.getElementById('treemap-container');
+                    if (container) {
+                        container.querySelector('.treemap-content').innerHTML = 
+                            '<div style="color: #f44; padding: 40px; text-align: center;">Error: Voronoi.js library failed to load.<br><small>Please check your internet connection and refresh the page.</small></div>';
+                    }
+                }
+            }, 1000);
+            return;
+        }
+        
+        // Prepare input data
+        const inputs = this.transactionData.vin || [];
+        const outputs = this.transactionData.vout || [];
+        
+        // Check if coinbase
+        const isCoinbase = inputs.length > 0 && (
+            inputs[0].coinbase !== undefined || 
+            inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000'
+        );
+        
+        // Calculate total output value for coinbase
+        const totalOutputValue = outputs.reduce((sum, out) => sum + (out.value || 0), 0);
+        
+        // Build input hierarchy
+        const inputData = {
+            name: 'inputs',
+            children: inputs.map((input, i) => {
+                const value = isCoinbase ? totalOutputValue : (input.prevout?.value || 1);
+                const address = input.prevout?.scriptpubkey_address || (isCoinbase ? 'Coinbase' : 'Unknown');
+                return {
+                    name: address.length > 12 ? address.substring(0, 6) + '...' + address.slice(-4) : address,
+                    fullAddress: address,
+                    value: value,
+                    index: i,
+                    isCoinbase: isCoinbase && i === 0,
+                    txid: input.txid
+                };
+            })
+        };
+        
+        // Build output hierarchy - check spending status
+        const outputData = {
+            name: 'outputs',
+            children: await Promise.all(outputs.map(async (output, i) => {
+                const value = output.value || 1;
+                const address = output.scriptpubkey_address || 'Unknown';
+                
+                // Check spending status
+                let isSpent = false;
+                try {
+                    const response = await fetch(`https://mempool.space/api/tx/${this.txid}/outspend/${i}`);
+                    if (response.ok) {
+                        const spendingData = await response.json();
+                        isSpent = spendingData.spent || false;
+                    }
+                } catch (error) {
+                    console.error(`Error checking spending status for output ${i}:`, error);
+                }
+                
+                return {
+                    name: address.length > 12 ? address.substring(0, 6) + '...' + address.slice(-4) : address,
+                    fullAddress: address,
+                    value: value,
+                    index: i,
+                    scriptType: output.scriptpubkey_type,
+                    scriptpubkey: output.scriptpubkey,
+                    scriptpubkey_asm: output.scriptpubkey_asm,
+                    value_hex: output.value_hex,
+                    output: output, // Store full output object for tooltip
+                    isSpent: isSpent
+                };
+            }))
+        };
+        
+        // Render treemaps
+        this.renderVoronoiTreemap('#input-treemap', inputData, 'input');
+        this.renderVoronoiTreemap('#output-treemap', outputData, 'output');
+    }
+    
+    renderVoronoiTreemap(selector, data, type) {
+        const container = document.querySelector(selector);
+        if (!container) return;
+        
+        // Check if Voronoi.js is loaded (library exposes as window.voronoi, lowercase)
+        if (typeof voronoi === 'undefined' || !voronoi.Treemap) {
+            console.error('Voronoi.js library not loaded');
+            container.innerHTML = '<div style="color: #fff; padding: 20px; text-align: center;">Error: Voronoi.js library failed to load. Please check your internet connection and try again.</div>';
+            return;
+        }
+        
+        // Clear previous
+        container.innerHTML = '';
+        
+        // Get dimensions
+        const width = container.clientWidth || 400;
+        const height = container.clientHeight || 400;
+        const radius = Math.min(width, height) / 2 - 5;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        
+        // Create SVG
+        const svg = d3.select(selector)
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height);
+        
+        // Get leaves data
+        const leaves = data.children || [];
+        if (leaves.length === 0) return;
+        
+        // Calculate total value
+        const totalValue = leaves.reduce((sum, d) => sum + (d.value || 0), 0);
+        
+        // Color scales - black and white theme
+        // Generate grayscale colors from light to dark
+        const grayscaleColors = [];
+        for (let i = 0; i < 20; i++) {
+            // Range from #ffffff (white) to #000000 (black)
+            const intensity = Math.floor(255 - (i / 19) * 255);
+            const hex = '#' + intensity.toString(16).padStart(2, '0').repeat(3);
+            grayscaleColors.push(hex);
+        }
+        
+        const inputColors = d3.scaleOrdinal()
+            .domain(d3.range(20))
+            .range(grayscaleColors);
+        
+        const outputColors = d3.scaleOrdinal()
+            .domain(d3.range(20))
+            .range(grayscaleColors);
+        
+        const colorScale = type === 'input' ? inputColors : outputColors;
+        
+        // Create circular clipping polygon (64 sides for smooth circle)
+        const clipPolygon = this.createCircularPolygon(centerX, centerY, radius, 64);
+        
+        // Create circular clipping path
+        const clipId = `clip-${type}-${Date.now()}`;
+        svg.append('defs')
+            .append('clipPath')
+            .attr('id', clipId)
+            .append('circle')
+            .attr('cx', centerX)
+            .attr('cy', centerY)
+            .attr('r', radius);
+        
+        // Prepare data structure for Voronoi treemap
+        // The library expects a hierarchy with children that have values
+        // Sort by value (largest first) for consistent ordering
+        const sortedLeaves = [...leaves].sort((a, b) => (b.value || 0) - (a.value || 0));
+        
+        const treemapData = {
+            children: sortedLeaves.map((leaf, i) => {
+                // Set deterministic initial positions using spiral layout
+                // Larger values start closer to center
+                const value = leaf.value || 1;
+                const weight = Math.sqrt(value / totalValue);
+                const angle = i * 2.399963229728653; // Golden angle for even distribution
+                const distance = radius * (0.2 + 0.5 * (1 - weight)); // Larger values closer to center
+                
+                return {
+                    value: value,
+                    originalData: leaf, // Store original data for later access
+                    x: centerX + distance * Math.cos(angle), // Set initial x position
+                    y: centerY + distance * Math.sin(angle)  // Set initial y position
+                };
+            })
+        };
+        
+        // Create Voronoi treemap
+        const treemap = new voronoi.Treemap(treemapData, clipPolygon, width, height);
+        
+        // Compute the treemap iteratively for convergence
+        let iterations = 0;
+        const maxIterations = 50;
+        const updateInterval = setInterval(() => {
+            treemap.compute();
+            iterations++;
+            
+            // Update rendering
+            this.renderTreemapCells(svg, treemap, colorScale, type, totalValue, radius, centerX, centerY, clipId);
+            
+            if (iterations >= maxIterations) {
+                clearInterval(updateInterval);
+            }
+        }, 10);
+        
+        // Initial render
+        this.renderTreemapCells(svg, treemap, colorScale, type, totalValue, radius, centerX, centerY, clipId);
+        
+        // Store treemap for continuous updates
+        this[`${type}Treemap`] = treemap;
+        this[`${type}TreemapUpdateInterval`] = updateInterval;
+    }
+    
+    renderTreemapCells(svg, treemap, colorScale, type, totalValue, radius, centerX, centerY, clipId) {
+        // Get polygons and sites
+        const polygons = treemap.getPolygons();
+        const sites = treemap.getSites();
+        
+        if (!polygons || polygons.length === 0) return;
+        
+        // Remove old cells
+        svg.selectAll('.treemap-cell').remove();
+        svg.selectAll('.treemap-label').remove();
+        
+        // Draw Voronoi cells
+        let cellGroup = svg.select('g.treemap-cell-group');
+        if (cellGroup.empty()) {
+            cellGroup = svg.append('g')
+                .attr('class', 'treemap-cell-group')
+                .attr('clip-path', `url(#${clipId})`);
+        }
+        
+        const cells = cellGroup
+            .selectAll('path.treemap-cell')
+            .data(polygons);
+        
+        cells.enter()
+            .append('path')
+            .attr('class', 'treemap-cell')
+            .merge(cells)
+            .attr('d', (d) => {
+                if (!d || d.length < 3) return '';
+                return 'M' + d.map(p => `${p.x},${p.y}`).join('L') + 'Z';
+            })
+            .attr('fill', (d, i) => {
+                const siteData = sites[i]?.originalData;
+                
+                if (type === 'input') {
+                    // Inputs: dark gray
+                    if (siteData?.isCoinbase) {
+                        return '#666666'; // Dark gray for coinbase
+                    }
+                    return '#333333'; // Dark gray for regular inputs
+                } else {
+                    // Outputs: white for unspent, gray tones for spent
+                    if (siteData?.isSpent === false) {
+                        return '#ffffff'; // White for unspent outputs
+                    } else {
+                        // Spent outputs: use gray tones based on index
+                        const grayLevels = ['#999999', '#888888', '#777777', '#666666', '#555555', '#444444'];
+                        return grayLevels[i % grayLevels.length];
+                    }
+                }
+            })
+            .attr('fill-opacity', (d, i) => {
+                const siteData = sites[i]?.originalData;
+                // Full opacity for white (unspent) outputs, slightly transparent for others
+                if (type === 'output' && siteData?.isSpent === false) {
+                    return 1.0; // Fully opaque for white backgrounds
+                }
+                return 0.85; // Slightly transparent for gray backgrounds
+            })
+            .attr('stroke', (d, i) => {
+                const siteData = sites[i]?.originalData;
+                // Darker stroke for white (unspent) outputs
+                if (type === 'output' && siteData?.isSpent === false) {
+                    return '#333333'; // Dark gray stroke for white cells
+                }
+                return '#000000'; // Black stroke for gray cells
+            })
+            .attr('stroke-width', 0.5)
+            .on('mouseover', (event, d, i) => {
+                const siteData = sites[i]?.originalData;
+                if (siteData) this.showTreemapTooltip(event, siteData, type);
+            })
+            .on('mousemove', (event) => this.moveTreemapTooltip(event))
+            .on('mouseout', () => this.hideTreemapTooltip())
+            .on('click', (event, d, i) => {
+                const siteData = sites[i]?.originalData;
+                if (siteData) this.handleTreemapClick(event, siteData, type);
+            });
+        
+        cells.exit().remove();
+        
+        // Add labels for larger cells
+        svg.selectAll('.treemap-label').remove();
+        sites.forEach((site, i) => {
+            if (!site || !site.originalData) return;
+            const siteData = site.originalData;
+            const value = siteData.value || 0;
+            const area = (value / totalValue) * Math.PI * radius * radius;
+            
+            if (area > 2000 && site.x && site.y) {
+                // Determine text color: black for white (unspent outputs), white for gray (inputs and spent outputs)
+                let textColor = '#ffffff'; // Default white
+                if (type === 'output' && siteData.isSpent === false) {
+                    textColor = '#000000'; // Black text for white (unspent) outputs
+                }
+                
+                svg.append('text')
+                    .attr('class', area > 5000 ? 'treemap-label' : 'treemap-label treemap-label-small')
+                    .attr('x', site.x)
+                    .attr('y', site.y)
+                    .attr('dy', '0.35em')
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', textColor)
+                    .text(siteData.name);
+            }
+        });
+        
+        // Draw circle border (only once)
+        if (svg.select('circle.treemap-border').empty()) {
+            svg.append('circle')
+                .attr('class', 'treemap-border')
+                .attr('cx', centerX)
+                .attr('cy', centerY)
+                .attr('r', radius)
+                .attr('fill', 'none')
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 1);
+        }
+    }
+    
+    createCircularPolygon(centerX, centerY, radius, sides) {
+        const polygon = [];
+        for (let i = 0; i < sides; i++) {
+            const angle = (i / sides) * 2 * Math.PI;
+            polygon.push({
+                x: centerX + radius * Math.cos(angle),
+                y: centerY + radius * Math.sin(angle)
+            });
+        }
+        return polygon;
+    }
+    
+    
+    showTreemapTooltip(event, d, type) {
+        // Remove existing tooltip
+        d3.select('.treemap-tooltip').remove();
+        
+        const data = d.data || d;
+        const amount = (data.value / 100000000).toFixed(8);
+        const amountSats = data.value.toLocaleString();
+        
+        let content = `<strong>${type === 'input' ? 'Input' : 'Output'} ${data.index + 1}</strong>`;
+        content += `<br><span class="amount">${amount} BTC</span>`;
+        content += `<br><span style="color: #94a3b8; font-size: 10px;">${amountSats} satoshis</span>`;
+        
+        // Calculate percentage of total
+        if (this.transactionData) {
+            let totalValue;
+            if (type === 'input') {
+                // For inputs, calculate total based on the same logic used in renderTreemaps
+                const inputs = this.transactionData.vin || [];
+                const isCoinbase = inputs.length > 0 && (
+                    inputs[0].coinbase !== undefined || 
+                    inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000'
+                );
+                const totalOutputValue = (this.transactionData.vout || []).reduce((sum, out) => sum + (out.value || 0), 0);
+                
+                totalValue = inputs.reduce((sum, input, i) => {
+                    const isInputCoinbase = isCoinbase && i === 0;
+                    return sum + (isInputCoinbase ? totalOutputValue : (input.prevout?.value || 0));
+                }, 0);
+            } else {
+                // For outputs, sum all output values
+                totalValue = (this.transactionData.vout || []).reduce((sum, output) => sum + (output.value || 0), 0);
+            }
+            
+            if (totalValue > 0) {
+                const percentage = ((data.value / totalValue) * 100).toFixed(2);
+                content += `<br><span style="color: #94a3b8; font-size: 10px;">${percentage}% of total</span>`;
+            }
+        }
+        
+        if (data.isCoinbase) {
+            content += `<br><em style="color: #ffffff;">Coinbase (Block Reward)</em>`;
+        } else if (data.fullAddress && data.fullAddress !== 'Unknown') {
+            content += `<br><span class="address">${data.fullAddress}</span>`;
+        }
+        
+        if (data.scriptType) {
+            content += `<br><span style="color: #94a3b8; font-size: 10px;">Script Type: ${data.scriptType}</span>`;
+        }
+        
+        // Add more details for outputs
+        if (type === 'output' && data.output) {
+            const output = data.output;
+            
+            // ScriptPubKey (truncated)
+            if (output.scriptpubkey) {
+                const scriptPreview = output.scriptpubkey.length > 32 
+                    ? output.scriptpubkey.substring(0, 32) + '...' 
+                    : output.scriptpubkey;
+                content += `<br><span style="color: #94a3b8; font-size: 9px; font-family: monospace;">Script: ${scriptPreview}</span>`;
+            }
+            
+            // ScriptPubKey ASM (if available, truncated)
+            if (output.scriptpubkey_asm) {
+                const asmPreview = output.scriptpubkey_asm.length > 40 
+                    ? output.scriptpubkey_asm.substring(0, 40) + '...' 
+                    : output.scriptpubkey_asm;
+                content += `<br><span style="color: #94a3b8; font-size: 9px; font-family: monospace;">ASM: ${asmPreview}</span>`;
+            }
+            
+            // Value in hex
+            if (output.value_hex) {
+                content += `<br><span style="color: #94a3b8; font-size: 9px; font-family: monospace;">Value (hex): ${output.value_hex}</span>`;
+            }
+        }
+        
+        // Add input details
+        if (type === 'input' && !data.isCoinbase && data.txid) {
+            content += `<br><span style="color: #94a3b8; font-size: 9px; font-family: monospace;">Source TX: ${data.txid.substring(0, 16)}...</span>`;
+        }
+        
+        d3.select('body')
+            .append('div')
+            .attr('class', 'treemap-tooltip')
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 10) + 'px')
+            .html(content);
+    }
+    
+    moveTreemapTooltip(event) {
+        d3.select('.treemap-tooltip')
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 10) + 'px');
+    }
+    
+    hideTreemapTooltip() {
+        d3.select('.treemap-tooltip').remove();
+    }
+    
+    handleTreemapClick(event, d, type) {
+        const data = d.data || d;
+        
+        if (event.shiftKey) {
+            // Shift+click: go to address
+            const address = data.fullAddress;
+            if (address && address !== 'Unknown' && address !== 'Coinbase') {
+                window.location.href = `address.html?address=${address}`;
+            }
+        } else {
+            // Click: go to transaction
+            if (type === 'input' && !data.isCoinbase && data.txid) {
+                window.location.href = `transaction.html?txid=${data.txid}`;
+            }
+        }
+    }
+    
     async fetchRawTxData() {
         if (!this.txid) {
             console.error('No transaction ID available');
@@ -1926,7 +2456,7 @@ class BitcoinTransactionExplorer {
             if (this.rawViewMode === 'dump') {
                 await this.renderDecodedDump();
             } else {
-                this.renderDecodedData(bytesPerLine);
+            this.renderDecodedData(bytesPerLine);
             }
             return;
         }
