@@ -314,6 +314,25 @@ body:not(.homepage) {
     word-break: break-all;
 }
 
+.difficulty-epoch-link,
+.back-to-block-link,
+.back-to-blockchain-link {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-decoration: none;
+    font-weight: 300;
+    transition: color 0.2s ease;
+    display: inline-block;
+    margin-top: 4px;
+}
+
+.difficulty-epoch-link:hover,
+.back-to-block-link:hover,
+.back-to-blockchain-link:hover {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: underline;
+}
+
 /* Snapshot navigation buttons */
 .snapshot-navigation {
     display: flex;
@@ -530,6 +549,29 @@ button:hover {
 }
 
 button:active {
+    transform: translateY(1px);
+}
+
+.button-link {
+    background: rgb(0 0 0 / 11%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    text-decoration: none;
+    display: inline-block;
+}
+
+.button-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.button-link:active {
     transform: translateY(1px);
 }
 

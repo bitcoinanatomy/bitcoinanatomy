@@ -11,6 +11,10 @@ class BitcoinBlockchainExplorer {
         this.showLabels = false;
         this.clock = new THREE.Clock();
         
+        // Get adjustment index from URL parameter for highlighting
+        const urlParams = new URLSearchParams(window.location.search);
+        this.highlightAdjustment = urlParams.get('adjustment') ? parseInt(urlParams.get('adjustment')) : null;
+        
         this.init();
     }
 
@@ -313,6 +317,28 @@ class BitcoinBlockchainExplorer {
                 block.material.opacity = 0.9;
             }
         });
+    }
+    
+    highlightDiscByAdjustment(adjustmentIndex) {
+        // Find the disc with the matching adjustment index
+        const discToHighlight = this.blocks.find(block => 
+            !block.userData.special && 
+            !block.userData.isMempool &&
+            block.userData.index === adjustmentIndex
+        );
+        
+        if (discToHighlight) {
+            this.highlightDisc(discToHighlight);
+            
+            // Center camera on the highlighted disc
+            const discPos = discToHighlight.position.clone();
+            this.controls.target.set(discPos.x, discPos.y, discPos.z);
+            this.controls.update();
+            
+            console.log(`Highlighted disc for adjustment ${adjustmentIndex}`);
+        } else {
+            console.warn(`Disc for adjustment ${adjustmentIndex} not found`);
+        }
     }
 
     resetDiscAppearance(disc) {
@@ -878,6 +904,11 @@ class BitcoinBlockchainExplorer {
         
         // Recreate helix with difficulty adjustments count
         this.createBlockchainVisualization();
+        
+        // Highlight disc if adjustment parameter is provided
+        if (this.highlightAdjustment !== null) {
+            this.highlightDiscByAdjustment(this.highlightAdjustment);
+        }
         
         console.log(`Updated visualization with ${this.difficultyAdjustments} discs (each representing 2016 blocks)`);
     }

@@ -33,6 +33,7 @@ class BitcoinDifficultyExplorer {
         // Get adjustment index from URL parameter, default to epoch 0
         const urlParams = new URLSearchParams(window.location.search);
         this.selectedAdjustment = urlParams.get('adjustment') || '0';
+        this.highlightBlockHeight = urlParams.get('blockHeight') ? parseInt(urlParams.get('blockHeight')) : null;
         
         this.init();
     }
@@ -733,6 +734,74 @@ class BitcoinDifficultyExplorer {
         
         // Add 5 discs above the spiral
         this.createDiscs();
+        
+        // Highlight block if blockHeight parameter is provided
+        if (this.highlightBlockHeight !== null) {
+            this.highlightBlockByHeight(this.highlightBlockHeight);
+        }
+    }
+    
+    highlightBlockByHeight(blockHeight) {
+        // Find the block with the specified height
+        const blockToHighlight = this.blocks.find(block => 
+            block.userData && 
+            block.userData.blockInfo && 
+            block.userData.blockInfo.height === blockHeight
+        );
+        
+        if (blockToHighlight) {
+            // Store original material properties for restoration if needed
+            const originalColor = blockToHighlight.material.color.clone();
+            const originalOpacity = blockToHighlight.material.opacity;
+            
+            // Highlight the block by making it bright white with high opacity
+            // This makes it stand out from the grayscale blocks
+            blockToHighlight.material = new THREE.MeshBasicMaterial({
+                color: 0xffffff, // Pure white
+                transparent: true,
+                opacity: 1.0
+            });
+            
+            // Scale it up to make it stand out
+            blockToHighlight.scale.set(1.5, 1.5, 1.5);
+            
+            // Store reference for later cleanup if needed
+            blockToHighlight.userData.isHighlighted = true;
+            blockToHighlight.userData.originalColor = originalColor;
+            blockToHighlight.userData.originalOpacity = originalOpacity;
+            
+            // Create a circle/ring around the highlighted block
+            const BLOCK_SIZE = 5; // Match the block size used in createBlockSpiral
+            const ringInnerRadius = BLOCK_SIZE / 3 + 0.01; // Slightly larger than scaled block
+            const ringOuterRadius = ringInnerRadius + 0.08; // Very thin ring
+            const ringGeometry = new THREE.RingGeometry(ringInnerRadius, ringOuterRadius, 32);
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffff, // White circle
+                transparent: true,
+                opacity: 0.8,
+                side: THREE.DoubleSide
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            
+            // Position the ring at the same location as the block, slightly above to avoid z-fighting
+            const blockPos = blockToHighlight.position.clone();
+            ring.position.set(blockPos.x, blockPos.y + 0.1, blockPos.z);
+            
+            // Store reference to the ring for cleanup and billboard effect
+            blockToHighlight.userData.highlightRing = ring;
+            ring.userData.isBillboard = true; // Flag for animate loop to update rotation
+            
+            this.scene.add(ring);
+            
+            console.log(`Highlighted block ${blockHeight} in difficulty adjustment visualization`);
+            
+            // Center camera on the highlighted block
+            const currentTarget = this.controls.target.clone();
+            this.controls.target.set(blockPos.x, currentTarget.y, blockPos.z);
+            this.controls.update();
+        } else {
+            console.warn(`Block height ${blockHeight} not found in current difficulty adjustment period`);
+        }
     }
     
     createDiscs() {
@@ -1238,9 +1307,10 @@ class BitcoinDifficultyExplorer {
             const startBlock = epochNumber * 2016;
             const endBlock = startBlock + 2015;
             
-            // Update subtitle with adjustment period and block range
-            const subtitle = `Adjustment ${this.selectedAdjustment} • Blocks ${startBlock.toLocaleString()} - ${endBlock.toLocaleString()}`;
-            document.getElementById('difficulty-subtitle').textContent = subtitle;
+            // Update subtitle with adjustment period and block range, plus "Back to Blockchain" link
+            const subtitleEl = document.getElementById('difficulty-subtitle');
+            const backToBlockchainLink = `<br><a href="blockchain.html?adjustment=${epochNumber}" class="back-to-blockchain-link">Back to Blockchain</a>`;
+            subtitleEl.innerHTML = `Adjustment ${this.selectedAdjustment} • Blocks ${startBlock.toLocaleString()} - ${endBlock.toLocaleString()}${backToBlockchainLink}`;
             
             // Update elements in the consolidated panel
             const adjustmentPeriod = document.getElementById('adjustment-period');
@@ -1330,6 +1400,15 @@ class BitcoinDifficultyExplorer {
         if (this.isRotating) {
             this.scene.rotation.y = elapsedTime * 0.1;
         }
+        
+        // Update ring rotations to always face camera (billboard effect)
+        this.blocks.forEach(block => {
+            if (block.userData && block.userData.highlightRing && block.userData.highlightRing.userData.isBillboard) {
+                const ring = block.userData.highlightRing;
+                // Make ring face camera
+                ring.lookAt(this.camera.position);
+            }
+        });
         
         // Update disc opacity based on camera angle
         this.updateDiscOpacity();
