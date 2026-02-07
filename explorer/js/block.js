@@ -243,7 +243,7 @@ class BitcoinBlockExplorer {
             } else {
                 // Orthographic camera zoom
                 const zoomSpeed = 0.1;
-                this.orthographicZoom -= e.deltaY * zoomSpeed; // Inverted: was +=, now -=
+                this.orthographicZoom += e.deltaY * zoomSpeed; // Correct: increasing zoom value = zooming out
                 this.orthographicZoom = Math.max(1, Math.min(50, this.orthographicZoom)); // Allow much closer zoom
                 
                 const aspect = window.innerWidth / window.innerHeight;
@@ -442,6 +442,13 @@ class BitcoinBlockExplorer {
             } else {
                 this.showMerkleTree();
             }
+        });
+        
+        // UI toggle button
+        document.getElementById('toggle-ui').addEventListener('click', () => {
+            document.body.classList.toggle('ui-hidden');
+            const button = document.getElementById('toggle-ui');
+            button.textContent = document.body.classList.contains('ui-hidden') ? 'Show UI' : 'Hide UI';
         });
         
         // Raw data panel controls
@@ -2473,9 +2480,23 @@ class BitcoinBlockExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.distance -= 2;
-        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-        this.controls.update();
+        
+        if (this.isPerspective) {
+            this.controls.distance -= 2;
+            this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+            this.controls.update();
+        } else {
+            // Orthographic camera: decrease zoom value to zoom in
+            this.orthographicZoom -= 2;
+            this.orthographicZoom = Math.max(1, Math.min(50, this.orthographicZoom));
+            
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
     }
     
     zoomOut() {
@@ -2484,9 +2505,23 @@ class BitcoinBlockExplorer {
         if (button) {
             button.textContent = 'Start Rotation';
         }
-        this.controls.distance += 2;
-        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-        this.controls.update();
+        
+        if (this.isPerspective) {
+            this.controls.distance += 2;
+            this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+            this.controls.update();
+        } else {
+            // Orthographic camera: increase zoom value to zoom out
+            this.orthographicZoom += 2;
+            this.orthographicZoom = Math.max(1, Math.min(50, this.orthographicZoom));
+            
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
     }
     
     // Raw block data methods
@@ -4591,9 +4626,10 @@ class BitcoinBlockExplorer {
                     
                     // Position parent node between its children
                     // Tree grows DOWNWARD: parent is below children (negative Y direction)
-                    // Move parent node up a bit (reduce spacing by 20% to make meeting point higher)
+                    // Progressive spacing: level 1 = 0.3, level 2 = 0.4, level 3 = 0.5, etc.
+                    const levelSpacingProgressive = 0.25 + (level - 1) * 0.1;
                     const parentX = (leftPos.x + rightPos.x) / 2;
-                    const parentY = leftPos.y - (levelSpacing * 0.8); // Reduced spacing to move meeting point up
+                    const parentY = leftPos.y - levelSpacingProgressive; // Progressive spacing per level
                     const parentZ = (leftPos.z + rightPos.z) / 2;
                     
                     const parentPos = new THREE.Vector3(parentX, parentY, parentZ);

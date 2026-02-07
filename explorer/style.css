@@ -2350,3 +2350,18 @@ body.treemap-open .navigation-controls {
         width: 55%;
     }
 }
+
+/* ================================
+   UI HIDE/TOGGLE STYLES
+   ================================ */
+body.ui-hidden .navbar,
+body.ui-hidden #ui {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+body.ui-hidden .navbar:hover,
+body.ui-hidden #ui:hover {
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+}
