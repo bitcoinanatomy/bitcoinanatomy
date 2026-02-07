@@ -31,9 +31,36 @@ class BitcoinTransactionExplorer {
         
         // Get transaction ID and other params from URL
         const urlParams = new URLSearchParams(window.location.search);
-        this.txid = urlParams.get('txid') || 'ce6b90e54ee8bc231f694e2abfac140e8c7a0900e4726088f0ed3ea54a0f3d10';
-        this.urlViewMode = urlParams.get('view'); // View mode for raw data (hex/ascii/binary)
-        this.urlBytesPerLine = urlParams.get('bytes'); // Bytes per line for raw data display
+        
+        // Validate transaction ID parameter
+        const txidParam = urlParams.get('txid');
+        const defaultTxid = 'ce6b90e54ee8bc231f694e2abfac140e8c7a0900e4726088f0ed3ea54a0f3d10';
+        if (txidParam && /^[a-fA-F0-9]{64}$/.test(txidParam)) {
+            this.txid = txidParam;
+        } else if (txidParam) {
+            console.warn('Invalid transaction ID parameter:', txidParam);
+            this.txid = defaultTxid;
+        } else {
+            this.txid = defaultTxid;
+        }
+        
+        // Validate view mode parameter
+        const viewModeParam = urlParams.get('view');
+        if (viewModeParam === 'ascii' || viewModeParam === 'binary' || viewModeParam === 'dump') {
+            this.urlViewMode = viewModeParam;
+        } else {
+            this.urlViewMode = null;
+        }
+        
+        // Validate bytes per line parameter
+        const bytesParam = urlParams.get('bytes');
+        const validBytesValues = ['16', '32', '64', '128', '256', '512'];
+        if (bytesParam && validBytesValues.includes(bytesParam)) {
+            this.urlBytesPerLine = bytesParam;
+        } else {
+            this.urlBytesPerLine = null;
+        }
+        
         this.urlRawDataOpen = urlParams.get('rawdata') === 'open'; // Whether raw data panel should be open
         this.urlDecodeMode = urlParams.get('decode') === 'on'; // Whether decode mode should be active
         
@@ -171,27 +198,38 @@ class BitcoinTransactionExplorer {
                         const amount = userData.coinbaseAmount ? (userData.coinbaseAmount / 100000000).toFixed(8) : 'Unknown';
                         const coinbaseHex = input.coinbase ? input.coinbase.substring(0, 32) + '...' : '';
                         
+                        // Escape all dynamic data
+                        const escapedAmount = this.escapeHtml(amount);
+                        const escapedCoinbaseHex = this.escapeHtml(coinbaseHex);
+                        
                         tooltipContent = `
                             <strong>Coinbase (Block Reward)</strong><br>
-                            Amount: ${amount} BTC<br>
+                            Amount: ${escapedAmount} BTC<br>
                             <br>
                             <strong>Coinbase Data:</strong><br>
-                            ${coinbaseHex}<br>
+                            ${escapedCoinbaseHex}<br>
                             <em>Newly minted bitcoins</em>
                         `;
                     } else {
                     const amount = input.prevout?.value ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown';
                     const scriptType = input.prevout?.scriptpubkey_type || 'Unknown';
                     
+                    // Escape all dynamic data
+                    const escapedAmount = this.escapeHtml(amount);
+                    const escapedScriptType = this.escapeHtml(scriptType);
+                    const escapedAddress = input.prevout?.scriptpubkey_address ? this.escapeHtml(input.prevout.scriptpubkey_address.substring(0, 16) + '...') : '';
+                    const escapedTxid = input.txid ? this.escapeHtml(input.txid.substring(0, 16) + '...') : 'Unknown';
+                    const escapedVout = input.vout !== undefined ? this.escapeHtml(String(input.vout)) : 'Unknown';
+                    
                     tooltipContent = `
                         <strong>Input ${userData.index + 1}</strong><br>
-                        Amount: ${amount} BTC<br>
-                        Script Type: ${scriptType}<br>
-                        ${input.prevout?.scriptpubkey_address ? `Address: ${input.prevout.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                        Amount: ${escapedAmount} BTC<br>
+                        Script Type: ${escapedScriptType}<br>
+                        ${escapedAddress ? `Address: ${escapedAddress}<br>` : ''}
                         <br>
                         <strong>From Transaction:</strong><br>
-                        TXID: ${input.txid ? input.txid.substring(0, 16) + '...' : 'Unknown'}<br>
-                        Output Index: ${input.vout !== undefined ? input.vout : 'Unknown'}<br>
+                        TXID: ${escapedTxid}<br>
+                        Output Index: ${escapedVout}<br>
                             <em>Double-click → source tx | Shift+double-click → address</em>
                     `;
                     }
@@ -202,23 +240,35 @@ class BitcoinTransactionExplorer {
                     
                     // Check if this output is spent and show spending transaction data
                     if (userData.spendingData) {
+                        // Escape all dynamic data
+                        const escapedAmount = this.escapeHtml(amount);
+                        const escapedScriptType = this.escapeHtml(scriptType);
+                        const escapedAddress = output.scriptpubkey_address ? this.escapeHtml(output.scriptpubkey_address.substring(0, 16) + '...') : '';
+                        const escapedTxid = userData.spendingData.txid ? this.escapeHtml(userData.spendingData.txid.substring(0, 16) + '...') : 'Unknown';
+                        const escapedBlockHeight = userData.spendingData.block_height ? this.escapeHtml(String(userData.spendingData.block_height)) : 'Unconfirmed';
+                        
                         tooltipContent = `
                             <strong>Output ${userData.index + 1} (SPENT)</strong><br>
-                            Amount: ${amount} BTC<br>
-                            Script Type: ${scriptType}<br>
-                            ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                            Amount: ${escapedAmount} BTC<br>
+                            Script Type: ${escapedScriptType}<br>
+                            ${escapedAddress ? `Address: ${escapedAddress}<br>` : ''}
                             <br>
                             <strong>Spent by:</strong><br>
-                            TXID: ${userData.spendingData.txid.substring(0, 16)}...<br>
-                            Block: ${userData.spendingData.block_height || 'Unconfirmed'}<br>
+                            TXID: ${escapedTxid}<br>
+                            Block: ${escapedBlockHeight}<br>
                             <em>Double-click → spending tx | Shift+double-click → address</em>
                         `;
                     } else {
+                        // Escape all dynamic data
+                        const escapedAmount = this.escapeHtml(amount);
+                        const escapedScriptType = this.escapeHtml(scriptType);
+                        const escapedAddress = output.scriptpubkey_address ? this.escapeHtml(output.scriptpubkey_address.substring(0, 16) + '...') : '';
+                        
                         tooltipContent = `
                             <strong>Output ${userData.index + 1} (Unspent)</strong><br>
-                            Amount: ${amount} BTC<br>
-                            Script Type: ${scriptType}<br>
-                            ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                            Amount: ${escapedAmount} BTC<br>
+                            Script Type: ${escapedScriptType}<br>
+                            ${escapedAddress ? `Address: ${escapedAddress}<br>` : ''}
                             <em>Shift+double-click → address</em>
                         `;
                     }
@@ -226,19 +276,28 @@ class BitcoinTransactionExplorer {
                     // Coinbase hemisphere cap
                     const input = userData.data;
                     const amount = userData.coinbaseAmount ? (userData.coinbaseAmount / 100000000).toFixed(8) : 'Unknown';
-                        tooltipContent = `
+                    
+                    // Escape all dynamic data
+                    const escapedAmount = this.escapeHtml(amount);
+                    
+                    tooltipContent = `
                         <strong>Coinbase (Block Reward)</strong><br>
-                        Amount: ${amount} BTC<br>
+                        Amount: ${escapedAmount} BTC<br>
                         <em>Newly minted bitcoins</em>
                     `;
                 } else if (userData.type === 'output-cap') {
                     // Unspent output hemisphere cap
                     const output = userData.data;
                     const amount = (output.value / 100000000).toFixed(8);
-                        tooltipContent = `
+                    
+                    // Escape all dynamic data
+                    const escapedAmount = this.escapeHtml(amount);
+                    const escapedAddress = output.scriptpubkey_address ? this.escapeHtml(output.scriptpubkey_address.substring(0, 16) + '...') : '';
+                    
+                    tooltipContent = `
                         <strong>Unspent Output ${userData.index + 1}</strong><br>
-                        Amount: ${amount} BTC<br>
-                        ${output.scriptpubkey_address ? `Address: ${output.scriptpubkey_address.substring(0, 16)}...` : ''}<br>
+                        Amount: ${escapedAmount} BTC<br>
+                        ${escapedAddress ? `${escapedAddress}<br>` : ''}
                         <em>Shift+double-click → address</em>
                     `;
                 } else if (userData.type === 'transaction') {
@@ -247,12 +306,17 @@ class BitcoinTransactionExplorer {
                     const totalOutput = tx.vout ? tx.vout.reduce((sum, output) => sum + output.value, 0) : 0;
                     const fee = totalInput - totalOutput;
                     
+                    // Escape all dynamic data
+                    const escapedSize = this.escapeHtml(String(tx.size || 0));
+                    const escapedFee = this.escapeHtml((fee / 100000000).toFixed(8));
+                    const escapedInputCount = this.escapeHtml(String(tx.vin?.length || 0));
+                    const escapedOutputCount = this.escapeHtml(String(tx.vout?.length || 0));
                     tooltipContent = `
                         <strong>Transaction</strong><br>
-                        Size: ${tx.size} bytes<br>
-                        Fee: ${(fee / 100000000).toFixed(8)} BTC<br>
-                        Inputs: ${tx.vin?.length || 0}<br>
-                        Outputs: ${tx.vout?.length || 0}
+                        Size: ${escapedSize} bytes<br>
+                        Fee: ${escapedFee} BTC<br>
+                        Inputs: ${escapedInputCount}<br>
+                        Outputs: ${escapedOutputCount}
                     `;
                 }
                 
@@ -768,6 +832,17 @@ class BitcoinTransactionExplorer {
             }
             
             this.transactionData = await response.json();
+            
+            // Validate API response
+            if (!this.transactionData || typeof this.transactionData !== 'object') {
+                throw new Error('Invalid transaction data received');
+            }
+            if (this.transactionData.txid && (typeof this.transactionData.txid !== 'string' || !/^[a-fA-F0-9]{64}$/.test(this.transactionData.txid))) {
+                throw new Error('Invalid transaction ID in response');
+            }
+            if (typeof this.transactionData.size !== 'number' || this.transactionData.size < 0) {
+                throw new Error('Invalid transaction size in response');
+            }
             
             // Log all available transaction data
             console.log('=== TRANSACTION DATA ===');
@@ -2819,7 +2894,9 @@ class BitcoinTransactionExplorer {
                     }
                 }
                 if (label) {
-                    tooltip.innerHTML = '<div style="font-weight:bold;color:' + color + ';margin-bottom:4px;">' + label + '</div><div style="color:rgba(255,255,255,0.8);">' + (value || '') + '</div>';
+                    const escapedLabel = this.escapeHtml(label);
+                    const escapedValue = this.escapeHtml(value || '');
+                    tooltip.innerHTML = '<div style="font-weight:bold;color:' + this.escapeAttr(color) + ';margin-bottom:4px;">' + escapedLabel + '</div><div style="color:rgba(255,255,255,0.8);">' + escapedValue + '</div>';
                     tooltip.style.left = (e.clientX + 15) + 'px';
                     tooltip.style.top = (e.clientY + 15) + 'px';
                     tooltip.style.display = 'block';

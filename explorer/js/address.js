@@ -23,7 +23,39 @@ class BitcoinAddressExplorer {
         
         // Get address from URL parameter, default to 1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv if none provided
         const urlParams = new URLSearchParams(window.location.search);
-        this.address = urlParams.get('address') || '1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv';
+        const addressParam = urlParams.get('address');
+        const defaultAddress = '1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv';
+        
+        // Validate Bitcoin address format
+        const isValidBitcoinAddress = (address) => {
+            if (!address || typeof address !== 'string') return false;
+            // Legacy addresses (P2PKH): 1 + 25-34 characters
+            if (address.startsWith('1') && address.length >= 26 && address.length <= 35) {
+                return true;
+            }
+            // SegWit addresses (P2SH): 3 + 25-34 characters
+            if (address.startsWith('3') && address.length >= 26 && address.length <= 35) {
+                return true;
+            }
+            // Native SegWit addresses (P2WPKH/P2WSH): bc1 + variable length
+            if (address.startsWith('bc1') && address.length >= 42 && address.length <= 62) {
+                return true;
+            }
+            // Taproot addresses (P2TR): bc1p + variable length
+            if (address.startsWith('bc1p') && address.length >= 62 && address.length <= 90) {
+                return true;
+            }
+            return false;
+        };
+        
+        if (addressParam && isValidBitcoinAddress(addressParam)) {
+            this.address = addressParam;
+        } else if (addressParam) {
+            console.warn('Invalid Bitcoin address parameter:', addressParam);
+            this.address = defaultAddress;
+        } else {
+            this.address = defaultAddress;
+        }
         
         this.init();
     }
@@ -124,12 +156,17 @@ class BitcoinAddressExplorer {
                         const date = new Date(tx.status.block_time * 1000);
                         dateStr = this.formatDate(date);
                     }
+                    // Escape all dynamic data
+                    const escapedTxid = this.escapeHtml(tx.txid.substring(0, 16) + '...');
+                    const escapedAmount = this.escapeHtml((tx.value / 100000000).toFixed(8));
+                    const escapedSize = this.escapeHtml(String(tx.size));
+                    const escapedDate = this.escapeHtml(dateStr);
                     tooltipContent = `
                         <strong>Transaction</strong><br>
-                        TXID: ${tx.txid.substring(0, 16)}...<br>
-                        Amount: ${(tx.value / 100000000).toFixed(8)} BTC<br>
-                        Size: ${tx.size} bytes<br>
-                        Date: ${dateStr}<br>
+                        TXID: ${escapedTxid}<br>
+                        Amount: ${escapedAmount} BTC<br>
+                        Size: ${escapedSize} bytes<br>
+                        Date: ${escapedDate}<br>
                         <em>Double-click to view transaction</em>
                     `;
                 } else if (userData.type === 'address') {
@@ -648,6 +685,11 @@ class BitcoinAddressExplorer {
             }
             
             this.addressData = await response.json();
+            
+            // Validate API response
+            if (!this.addressData || typeof this.addressData !== 'object') {
+                throw new Error('Invalid address data received');
+            }
             
             console.log('=== ADDRESS DATA ===');
             console.log('Address:', this.address);
@@ -1775,6 +1817,21 @@ class BitcoinAddressExplorer {
         }, 10000);
         
         document.body.appendChild(popup);
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    escapeAttr(text) {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     }
 }
 

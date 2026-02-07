@@ -40,10 +40,49 @@ class BitcoinBlockExplorer {
         
         // Get block height and transaction ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        this.blockHeight = urlParams.get('height');
-        this.focusTxid = urlParams.get('txid'); // Transaction to highlight on load
-        this.bytesPerLine = urlParams.get('bytes'); // Bytes per line for raw data display
-        this.urlViewMode = urlParams.get('view'); // View mode for raw data (hex/ascii/binary)
+        
+        // Validate block height parameter
+        const heightParam = urlParams.get('height');
+        if (heightParam) {
+            const height = parseInt(heightParam, 10);
+            if (!isNaN(height) && height >= 0 && height <= 100000000) {
+                this.blockHeight = height;
+            } else {
+                this.blockHeight = null;
+                console.warn('Invalid block height parameter:', heightParam);
+            }
+        } else {
+            this.blockHeight = null;
+        }
+        
+        // Validate transaction ID parameter
+        const txidParam = urlParams.get('txid');
+        if (txidParam && /^[a-fA-F0-9]{64}$/.test(txidParam)) {
+            this.focusTxid = txidParam;
+        } else if (txidParam) {
+            this.focusTxid = null;
+            console.warn('Invalid transaction ID parameter:', txidParam);
+        } else {
+            this.focusTxid = null;
+        }
+        
+        // Validate bytes per line parameter
+        const bytesParam = urlParams.get('bytes');
+        const validBytesValues = ['16', '32', '64', '128', '256', '512'];
+        if (bytesParam && validBytesValues.includes(bytesParam)) {
+            this.bytesPerLine = bytesParam;
+        } else {
+            this.bytesPerLine = null;
+        }
+        
+        // Validate view mode parameter
+        const viewModeParam = urlParams.get('view');
+        if (viewModeParam === 'ascii' || viewModeParam === 'binary' || viewModeParam === 'dump') {
+            this.urlViewMode = viewModeParam;
+        } else {
+            this.urlViewMode = null;
+        }
+        
         this.urlDecodeMode = urlParams.get('decode') === 'on'; // Decode mode from URL
         this.urlRawDataOpen = urlParams.get('rawdata') === 'open'; // Whether raw data panel should be open
         this.urlMerkleTree = urlParams.get('merkle') === 'true' || urlParams.get('merkleTree') === 'true'; // Auto-load merkle tree
@@ -705,10 +744,11 @@ class BitcoinBlockExplorer {
                             tooltipContent = this.transactionCache.get(txid);
                             tooltip.style.pointerEvents = 'auto'; // Enable close button
                         } else {
-                            // Use basic content
+                            // Use basic content - escape all user data
+                            const escapedTxid = txid ? this.escapeHtml(txid.substring(0, 16) + '...') : 'Loading...';
                             tooltipContent = `
                                 <strong>Transaction ${txData.index + 1}</strong><br>
-                                TXID: ${txid ? txid.substring(0, 16) + '...' : 'Loading...'}<br>
+                                TXID: ${escapedTxid}<br>
                                 <em style="color:#888;font-size:10px">Shift+Click: Find in raw data</em>
                             `;
                             tooltip.style.pointerEvents = 'none'; // No interaction needed
@@ -762,7 +802,8 @@ class BitcoinBlockExplorer {
                             `;
                             
                             if (this.blockHeaderData) {
-                                tooltipContent += `<br><br><em>Hex: ${this.blockHeaderData.substring(0, 24)}...</em>`;
+                                const escapedHex = this.escapeHtml(this.blockHeaderData.substring(0, 24) + '...');
+                                tooltipContent += `<br><br><em>Hex: ${escapedHex}</em>`;
                             }
                             
                             tooltip.innerHTML = tooltipContent;
@@ -793,15 +834,17 @@ class BitcoinBlockExplorer {
                             
                             let tooltipContent;
                             if (blockIndex === 0) {
+                                const escapedHeight = this.escapeHtml(String(currentHeight));
                                 tooltipContent = `
                                     <strong>Current Block</strong><br>
-                                    Height: ${currentHeight}<br>
+                                    Height: ${escapedHeight}<br>
                                     <em>Double-click to stay on this block</em>
                                 `;
                             } else {
+                                const escapedHeight = this.escapeHtml(String(targetHeight));
                                 tooltipContent = `
                                     <strong>Block</strong><br>
-                                    Height: ${targetHeight}<br>
+                                    Height: ${escapedHeight}<br>
                                     <em>Double-click to view this block</em>
                                 `;
                             }
@@ -1534,10 +1577,11 @@ class BitcoinBlockExplorer {
         }
         
         try {
-            // Show loading state in existing tooltip
+            // Show loading state in existing tooltip - escape txid
+            const escapedTxidShort = this.escapeHtml(txid.substring(0, 16) + '...');
             tooltip.innerHTML = `
                 <strong>Loading Transaction Details...</strong><br>
-                TXID: ${txid.substring(0, 16)}...
+                TXID: ${escapedTxidShort}
             `;
             // Keep current position and visibility
             
@@ -1550,23 +1594,30 @@ class BitcoinBlockExplorer {
             
             const txData = await response.json();
             
-            // Format inputs
+            // Validate API response
+            if (!txData || typeof txData !== 'object') {
+                throw new Error('Invalid transaction data received');
+            }
+            
+            // Format inputs - escape all user data
             const inputsHtml = txData.vin.slice(0, 3).map((input, index) => {
                 const amount = input.prevout ? (input.prevout.value / 100000000).toFixed(8) : 'Unknown';
                 const address = input.prevout ? (input.prevout.scriptpubkey_address || 'Unknown') : 'Unknown';
-                return `Input ${index + 1}: ${amount} BTC (${address.substring(0, 12)}...)`;
+                const escapedAddress = this.escapeHtml(address.substring(0, 12) + '...');
+                return `Input ${index + 1}: ${this.escapeHtml(amount)} BTC (${escapedAddress})`;
             }).join('<br>');
             
-            const moreInputs = txData.vin.length > 3 ? `<br>+${txData.vin.length - 3} more inputs` : '';
+            const moreInputs = txData.vin.length > 3 ? `<br>+${this.escapeHtml(String(txData.vin.length - 3))} more inputs` : '';
             
-            // Format outputs
+            // Format outputs - escape all user data
             const outputsHtml = txData.vout.slice(0, 3).map((output, index) => {
                 const amount = (output.value / 100000000).toFixed(8);
                 const address = output.scriptpubkey_address || 'Unknown';
-                return `Output ${index + 1}: ${amount} BTC (${address.substring(0, 12)}...)`;
+                const escapedAddress = this.escapeHtml(address.substring(0, 12) + '...');
+                return `Output ${index + 1}: ${this.escapeHtml(amount)} BTC (${escapedAddress})`;
             }).join('<br>');
             
-            const moreOutputs = txData.vout.length > 3 ? `<br>+${txData.vout.length - 3} more outputs` : '';
+            const moreOutputs = txData.vout.length > 3 ? `<br>+${this.escapeHtml(String(txData.vout.length - 3))} more outputs` : '';
             
             // Calculate total input and output amounts
             const totalInput = txData.vin.reduce((sum, input) => {
@@ -1579,20 +1630,21 @@ class BitcoinBlockExplorer {
             
             const fee = (txData.fee / 100000000).toFixed(8);
             
-            // Update tooltip with detailed transaction information
+            // Update tooltip with detailed transaction information - escape all dynamic data
+            const escapedTxidShort2 = this.escapeHtml(txid.substring(0, 16) + '...');
             const tooltipContent = `
                 <strong>Transaction Details</strong><br>
-                <strong>TXID:</strong> ${txid.substring(0, 16)}...<br>
-                <strong>Size:</strong> ${txData.size} bytes<br>
-                <strong>Fee:</strong> ${fee} BTC<br>
+                <strong>TXID:</strong> ${escapedTxidShort2}<br>
+                <strong>Size:</strong> ${this.escapeHtml(String(txData.size || 0))} bytes<br>
+                <strong>Fee:</strong> ${this.escapeHtml(fee)} BTC<br>
                 <br>
-                <strong>Inputs (${txData.vin.length}):</strong><br>
+                <strong>Inputs (${this.escapeHtml(String(txData.vin.length))}):</strong><br>
                 ${inputsHtml}${moreInputs}<br>
-                <strong>Total Input:</strong> ${totalInput.toFixed(8)} BTC<br>
+                <strong>Total Input:</strong> ${this.escapeHtml(totalInput.toFixed(8))} BTC<br>
                 <br>
-                <strong>Outputs (${txData.vout.length}):</strong><br>
+                <strong>Outputs (${this.escapeHtml(String(txData.vout.length))}):</strong><br>
                 ${outputsHtml}${moreOutputs}<br>
-                <strong>Total Output:</strong> ${totalOutput.toFixed(8)} BTC<br>
+                <strong>Total Output:</strong> ${this.escapeHtml(totalOutput.toFixed(8))} BTC<br>
                 <br>
                 <em>Double-click to view full transaction</em>
             `;
@@ -1608,9 +1660,10 @@ class BitcoinBlockExplorer {
             
         } catch (error) {
             console.error('Error fetching transaction details:', error);
+            const escapedTxidShort = this.escapeHtml(txid.substring(0, 16) + '...');
             tooltip.innerHTML = `
                 <strong>Error Loading Transaction</strong><br>
-                TXID: ${txid.substring(0, 16)}...<br>
+                TXID: ${escapedTxidShort}<br>
                 <em>Failed to fetch transaction data</em>
             `;
             tooltip.style.display = 'block';
@@ -1949,6 +2002,17 @@ class BitcoinBlockExplorer {
             
             this.blockData = await blockResponse.json();
             
+            // Validate block data
+            if (!this.blockData || typeof this.blockData !== 'object') {
+                throw new Error('Invalid block data received');
+            }
+            if (typeof this.blockData.height !== 'number' || this.blockData.height < 0) {
+                throw new Error('Invalid block height in response');
+            }
+            if (this.blockData.id && (typeof this.blockData.id !== 'string' || this.blockData.id.length > 64)) {
+                throw new Error('Invalid block hash in response');
+            }
+            
             this.updateLoadingProgress('Fetching transaction IDs...', 60);
             // Fetch transaction IDs for this block
             const txidsResponse = await fetch(`https://mempool.space/api/block/${blockHash}/txids`);
@@ -1960,8 +2024,18 @@ class BitcoinBlockExplorer {
             }
             
             if (txidsResponse.ok) {
-                this.transactionIds = await txidsResponse.json();
+                const txids = await txidsResponse.json();
+                // Validate transaction IDs array
+                if (Array.isArray(txids)) {
+                    // Validate each transaction ID format
+                    this.transactionIds = txids.filter(txid => 
+                        typeof txid === 'string' && /^[a-fA-F0-9]{64}$/.test(txid)
+                    );
                 console.log(`Fetched ${this.transactionIds.length} transaction IDs for block ${this.blockHeight}`);
+                } else {
+                    console.warn('Invalid transaction IDs format received');
+                    this.transactionIds = [];
+                }
             } else {
                 console.warn('Could not fetch transaction IDs, using fallback visualization');
                 this.transactionIds = [];
@@ -2020,7 +2094,8 @@ class BitcoinBlockExplorer {
             // Calculate difficulty adjustment period (every 2016 blocks)
             const adjustmentPeriod = Math.floor(data.height / 2016);
             const difficultyLink = `<br><a href="difficulty.html?adjustment=${adjustmentPeriod}&blockHeight=${data.height}" class="difficulty-epoch-link">Back to Difficulty Epoch</a>`;
-            subtitleEl.innerHTML = `Height ${data.height.toLocaleString()}<br>${data.id || 'Hash not available'}${difficultyLink}`;
+            const escapedHash = this.escapeHtml(data.id || 'Hash not available');
+            subtitleEl.innerHTML = `Height ${data.height.toLocaleString()}<br>${escapedHash}${difficultyLink}`;
         } else {
             subtitleEl.textContent = 'Not Found';
         }
@@ -4550,7 +4625,9 @@ class BitcoinBlockExplorer {
                     }
                 }
                 if (label) {
-                    tooltip.innerHTML = '<div style="font-weight:bold;color:' + color + ';margin-bottom:4px;">' + label + '</div><div style="color:rgba(255,255,255,0.8);">' + (value || '') + '</div>';
+                    const escapedLabel = this.escapeHtml(label);
+                    const escapedValue = this.escapeHtml(value || '');
+                    tooltip.innerHTML = '<div style="font-weight:bold;color:' + this.escapeAttr(color) + ';margin-bottom:4px;">' + escapedLabel + '</div><div style="color:rgba(255,255,255,0.8);">' + escapedValue + '</div>';
                     tooltip.style.left = (e.clientX + 15) + 'px';
                     tooltip.style.top = (e.clientY + 15) + 'px';
                     tooltip.style.display = 'block';
