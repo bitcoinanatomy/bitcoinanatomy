@@ -89,7 +89,7 @@ class BitcoinBlockExplorer {
         // Fetch chain tip height before creating scene
         await this.fetchChainTipHeight();
         
-        this.createScene();
+        await this.createScene();
         this.animate();
         this.fetchData();
         
@@ -1626,7 +1626,7 @@ class BitcoinBlockExplorer {
         }
     }
 
-    createScene() {
+    async createScene() {
         const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
         this.scene.add(ambientLight);
         
@@ -1642,10 +1642,10 @@ class BitcoinBlockExplorer {
         
         // Removed grid helper for cleaner visualization
         
-        this.createBlockVisualization();
+        await this.createBlockVisualization();
     }
 
-    createBlockVisualization() {
+    async createBlockVisualization() {
         // Get current height for both future and past block calculations
         const currentHeight = parseInt(this.blockHeight) || 0;
         
@@ -1693,12 +1693,106 @@ class BitcoinBlockExplorer {
         this.headerMesh.userData = { type: 'header', description: 'Block Header (80 bytes)' };
         this.scene.add(this.headerMesh);
         
+        // Fetch block timestamps for time-based spacing
+        // Use smaller factor than difficulty.js since blocks are in linear arrangement, not spiral
+        const FACTOR_BLOCK_DISTANCE = 0.02; // Slightly larger spacing for better visibility
+        
+        // Get current block timestamp - always fetch it to ensure we have the correct value
+        let currentTimestamp = 0;
+        try {
+            const currentHashResponse = await fetch(`https://mempool.space/api/block-height/${currentHeight}`);
+            if (currentHashResponse.ok) {
+                const currentHash = await currentHashResponse.text();
+                const currentBlockResponse = await fetch(`https://mempool.space/api/v1/block/${currentHash}`);
+                if (currentBlockResponse.ok) {
+                    const currentBlockData = await currentBlockResponse.json();
+                    currentTimestamp = currentBlockData.timestamp || 0;
+                }
+            }
+        } catch (error) {
+            console.warn(`Failed to fetch timestamp for current block ${currentHeight}:`, error);
+            // Fallback to blockData if available
+            currentTimestamp = this.blockData?.timestamp || 0;
+        }
+        
+        // Validate timestamp is reasonable (between 2009 and 2100)
+        const MIN_TIMESTAMP = 1231006500; // Jan 3, 2009 (Bitcoin genesis)
+        const MAX_TIMESTAMP = 4102444800; // Jan 1, 2100
+        if (currentTimestamp < MIN_TIMESTAMP || currentTimestamp > MAX_TIMESTAMP) {
+            console.warn(`Invalid current timestamp: ${currentTimestamp}, will use default time differences`);
+            currentTimestamp = 0; // Will use default time difference for all calculations
+        }
+        
+        console.log(`Current block ${currentHeight} timestamp: ${currentTimestamp} (${currentTimestamp > 0 ? new Date(currentTimestamp * 1000).toISOString() : 'invalid'})`);
+        
         // Create past blocks in front of the current block (only if current height allows)
         const maxPastBlocks = Math.min(5, currentHeight); // Don't show more past blocks than available
         
+        let cumulativeZPast = 0;
+        // Only use currentTimestamp if it's valid, otherwise start with 0 and use defaults
+        let lastTimestamp = (currentTimestamp >= MIN_TIMESTAMP && currentTimestamp <= MAX_TIMESTAMP) ? currentTimestamp : 0;
         for (let i = 1; i <= maxPastBlocks; i++) {
+            const prevHeight = currentHeight - i;
+            
+            // Fetch timestamp for previous block and calculate time difference
+            // Same approach as difficulty.js: time_difference represents how long it took for that block to be found
+            let timeDifference = 600; // Default 10 minutes
+            try {
+                const prevHashResponse = await fetch(`https://mempool.space/api/block-height/${prevHeight}`);
+                if (prevHashResponse.ok) {
+                    const prevHash = await prevHashResponse.text();
+                    const prevBlockResponse = await fetch(`https://mempool.space/api/v1/block/${prevHash}`);
+                    if (prevBlockResponse.ok) {
+                        const prevBlockData = await prevBlockResponse.json();
+                        const prevTimestamp = prevBlockData.timestamp || 0;
+                        
+                        console.log(`Block ${prevHeight}: prevTimestamp=${prevTimestamp}, lastTimestamp=${lastTimestamp}`);
+                        
+                        // Only calculate time difference if both timestamps are valid
+                        if (lastTimestamp > 0 && prevTimestamp > 0 && prevTimestamp <= lastTimestamp) {
+                            // Calculate time difference: last block time - previous block time
+                            // This represents how long it took for the previous block to be found
+                            timeDifference = lastTimestamp - prevTimestamp;
+                            // Clamp to reasonable bounds (0 to 2 hours)
+                            if (timeDifference > 7200) {
+                                console.warn(`Time difference too large: ${timeDifference}s (${timeDifference/3600}h), using default`);
+                                timeDifference = 600; // Use default if unreasonably large
+                            }
+                        } else if (lastTimestamp === 0) {
+                            // If we don't have a valid lastTimestamp, use default
+                            console.warn(`Invalid lastTimestamp (0) for block ${prevHeight}, using default time difference`);
+                            timeDifference = 600;
+                        } else if (prevTimestamp > lastTimestamp) {
+                            // Clock irregularity - previous block is newer than last block
+                            console.warn(`Clock irregularity detected: prevTimestamp ${prevTimestamp} > lastTimestamp ${lastTimestamp}, using default`);
+                            timeDifference = 600;
+                        } else if (prevTimestamp === 0) {
+                            // Invalid previous timestamp
+                            console.warn(`Invalid prevTimestamp (0) for block ${prevHeight}, using default time difference`);
+                            timeDifference = 600;
+                        }
+                        lastTimestamp = prevTimestamp;
+                    }
+                }
+            } catch (error) {
+                console.warn(`Failed to fetch timestamp for block ${prevHeight}:`, error);
+            }
+            
+            // Final safety check: if timeDifference is still unreasonably large, use default
+            if (timeDifference > 7200) {
+                console.warn(`Final safety check: timeDifference ${timeDifference}s is too large, using default 600s`);
+                timeDifference = 600;
+            }
+            
+            // Calculate spacing based on time difference (exactly like difficulty.js)
+            // block_distance = timeDifference (for non-edge blocks)
+            const blockDistance = timeDifference * FACTOR_BLOCK_DISTANCE;
+            cumulativeZPast += blockDistance;
+            
+            console.log(`Past block ${i}: height=${prevHeight}, timeDiff=${timeDifference}s, distance=${blockDistance.toFixed(2)}, cumulativeZ=${cumulativeZPast.toFixed(2)}`);
+            
             const prevBlock = new THREE.Mesh(blockGeometry, blockMaterial.clone());
-            prevBlock.position.set(0, 0, i * 4); // Position each block 4 units in front of the previous
+            prevBlock.position.set(0, 0, cumulativeZPast); // Position based on cumulative time difference
             prevBlock.castShadow = true;
             prevBlock.renderOrder = 1;
             
@@ -1716,9 +1810,65 @@ class BitcoinBlockExplorer {
         console.log(`Current height: ${currentHeight}, Chain tip: ${this.chainTipHeight}, Future blocks to show: ${futureBlocksToShow}`);
         console.log(`Example behavior: ?height=${currentHeight} with chain tip ${this.chainTipHeight}: Shows ${futureBlocksToShow} future blocks`);
         
+        let cumulativeZFuture = 0;
+        // Only use currentTimestamp if it's valid, otherwise start with 0 and use defaults
+        let nextLastTimestamp = (currentTimestamp >= MIN_TIMESTAMP && currentTimestamp <= MAX_TIMESTAMP) ? currentTimestamp : 0;
         for (let i = 1; i <= futureBlocksToShow; i++) {
+            const nextHeight = currentHeight + i;
+            
+            // Fetch timestamp for next block and calculate time difference
+            // Same approach as difficulty.js: time_difference represents how long it took for that block to be found
+            let timeDifference = 600; // Default 10 minutes
+            try {
+                const nextHashResponse = await fetch(`https://mempool.space/api/block-height/${nextHeight}`);
+                if (nextHashResponse.ok) {
+                    const nextHash = await nextHashResponse.text();
+                    const nextBlockResponse = await fetch(`https://mempool.space/api/v1/block/${nextHash}`);
+                    if (nextBlockResponse.ok) {
+                        const nextBlockData = await nextBlockResponse.json();
+                        const nextTimestamp = nextBlockData.timestamp || 0;
+                        
+                        // Only calculate time difference if both timestamps are valid
+                        if (nextLastTimestamp > 0 && nextTimestamp > 0 && nextTimestamp >= nextLastTimestamp) {
+                            // Calculate time difference: next block time - last block time
+                            // This represents how long it took for the next block to be found
+                            timeDifference = nextTimestamp - nextLastTimestamp;
+                            // Clamp to reasonable bounds (0 to 2 hours)
+                            if (timeDifference > 7200) {
+                                console.warn(`Time difference too large: ${timeDifference}s, using default`);
+                                timeDifference = 600; // Use default if unreasonably large
+                            }
+                        } else if (nextLastTimestamp === 0) {
+                            // If we don't have a valid nextLastTimestamp, use default
+                            console.warn(`Invalid nextLastTimestamp for block ${nextHeight}, using default time difference`);
+                            timeDifference = 600;
+                        } else if (nextTimestamp < nextLastTimestamp) {
+                            // Clock irregularity - next block is older than last block
+                            console.warn(`Clock irregularity detected: nextTimestamp ${nextTimestamp} < nextLastTimestamp ${nextLastTimestamp}, using default`);
+                            timeDifference = 600;
+                        }
+                        nextLastTimestamp = nextTimestamp;
+                    }
+                }
+            } catch (error) {
+                console.warn(`Failed to fetch timestamp for block ${nextHeight}:`, error);
+            }
+            
+            // Final safety check: if timeDifference is still unreasonably large, use default
+            if (timeDifference > 7200) {
+                console.warn(`Final safety check: timeDifference ${timeDifference}s is too large, using default 600s`);
+                timeDifference = 600;
+            }
+            
+            // Calculate spacing based on time difference (exactly like difficulty.js)
+            // block_distance = timeDifference (for non-edge blocks)
+            const blockDistance = timeDifference * FACTOR_BLOCK_DISTANCE;
+            cumulativeZFuture += blockDistance;
+            
+            console.log(`Future block ${i}: height=${nextHeight}, timeDiff=${timeDifference}s, distance=${blockDistance.toFixed(2)}, cumulativeZ=${-cumulativeZFuture.toFixed(2)}`);
+            
             const nextBlock = new THREE.Mesh(blockGeometry, blockMaterial.clone());
-            nextBlock.position.set(0, 0, -i * 4); // Position each block 4 units behind the previous
+            nextBlock.position.set(0, 0, -cumulativeZFuture); // Position based on cumulative time difference (negative Z)
             nextBlock.castShadow = true;
             nextBlock.renderOrder = 1;
             
@@ -2482,9 +2632,9 @@ class BitcoinBlockExplorer {
         }
         
         if (this.isPerspective) {
-            this.controls.distance -= 2;
-            this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-            this.controls.update();
+        this.controls.distance -= 2;
+        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+        this.controls.update();
         } else {
             // Orthographic camera: decrease zoom value to zoom in
             this.orthographicZoom -= 2;
@@ -2507,9 +2657,9 @@ class BitcoinBlockExplorer {
         }
         
         if (this.isPerspective) {
-            this.controls.distance += 2;
-            this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
-            this.controls.update();
+        this.controls.distance += 2;
+        this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+        this.controls.update();
         } else {
             // Orthographic camera: increase zoom value to zoom out
             this.orthographicZoom += 2;
