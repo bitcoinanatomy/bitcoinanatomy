@@ -859,9 +859,17 @@ class BitcoinTransactionExplorer {
         const totalOutput = data.vout ? data.vout.reduce((sum, output) => sum + output.value, 0) : 0;
         const fee = data.fee || 0;
 
-        // Update title hash to show full transaction ID
+        // Update title hash to show full transaction ID with optional "Back to Block" link
         const titleHash = data.txid ? data.txid : 'Not Found';
-        document.getElementById('tx-title-hash').textContent = titleHash;
+        const subtitleEl = document.getElementById('tx-title-hash');
+        
+        // Add "Back to Block" link if transaction is confirmed
+        if (data.status?.block_height) {
+            const backToBlockLink = `<br><a href="block.html?height=${data.status.block_height}" class="back-to-block-link">Back to Block</a>`;
+            subtitleEl.innerHTML = titleHash + backToBlockLink;
+        } else {
+            subtitleEl.textContent = titleHash;
+        }
         
         document.getElementById('tx-hash').textContent = data.txid ? data.txid.substring(0, 16) + '...' : 'N/A';
         
@@ -892,17 +900,6 @@ class BitcoinTransactionExplorer {
         document.getElementById('tx-weight').textContent = data.weight ? `${data.weight} WU` : 'N/A';
         document.getElementById('tx-sigops').textContent = data.sigops ? data.sigops.toString() : 'N/A';
         document.getElementById('tx-confirmations').textContent = data.status?.block_height ? 'Confirmed' : '0';
-
-        // Show/hide "Back to Block" button based on confirmation status
-        const backToBlockButton = document.getElementById('back-to-block');
-        if (data.status?.block_height) {
-            backToBlockButton.style.display = 'inline-block';
-            backToBlockButton.onclick = () => {
-                window.location.href = `block.html?height=${data.status.block_height}`;
-            };
-        } else {
-            backToBlockButton.style.display = 'none';
-        }
     }
 
     createTransactionVisualization() {

@@ -1695,7 +1695,7 @@ class BitcoinBlockExplorer {
         
         // Fetch block timestamps for time-based spacing
         // Use smaller factor than difficulty.js since blocks are in linear arrangement, not spiral
-        const FACTOR_BLOCK_DISTANCE = 0.02; // Slightly larger spacing for better visibility
+        const FACTOR_BLOCK_DISTANCE = 0.008; // Reduced for closer block spacing
         
         // Get current block timestamp - always fetch it to ensure we have the correct value
         let currentTimestamp = 0;
@@ -2017,7 +2017,10 @@ class BitcoinBlockExplorer {
         // Use data.height != null to handle genesis block (height 0) correctly
         const subtitleEl = document.getElementById('block-subtitle');
         if (data.height != null) {
-            subtitleEl.innerHTML = `Height ${data.height.toLocaleString()}<br>${data.id || 'Hash not available'}`;
+            // Calculate difficulty adjustment period (every 2016 blocks)
+            const adjustmentPeriod = Math.floor(data.height / 2016);
+            const difficultyLink = `<br><a href="difficulty.html?adjustment=${adjustmentPeriod}&blockHeight=${data.height}" class="difficulty-epoch-link">Back to Difficulty Epoch</a>`;
+            subtitleEl.innerHTML = `Height ${data.height.toLocaleString()}<br>${data.id || 'Hash not available'}${difficultyLink}`;
         } else {
             subtitleEl.textContent = 'Not Found';
         }
