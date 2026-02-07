@@ -36,6 +36,7 @@ class BitcoinBlockExplorer {
         this.merkleTreeLines = []; // Store all merkle tree line objects
         this.merkleTreeVisible = false; // Track if merkle tree is currently visible
         this.merkleTreeNodes = []; // Store merkle tree node positions
+        this.merkleTreeLineMap = new Map(); // Map txid -> vertical line for direct lookup
         
         // Get block height and transaction ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -46,6 +47,7 @@ class BitcoinBlockExplorer {
         this.urlDecodeMode = urlParams.get('decode') === 'on'; // Decode mode from URL
         this.urlRawDataOpen = urlParams.get('rawdata') === 'open'; // Whether raw data panel should be open
         this.urlMerkleTree = urlParams.get('merkle') === 'true' || urlParams.get('merkleTree') === 'true'; // Auto-load merkle tree
+        this.urlLoadAll = urlParams.get('loadAll') === 'true' || urlParams.get('loadall') === 'true'; // Auto-load all transactions
         
         // Set initial view mode from URL
         if (this.urlViewMode === 'ascii') {
@@ -98,6 +100,20 @@ class BitcoinBlockExplorer {
                 if (this.blockData && this.blockData.id) {
                     clearInterval(waitForBlockData);
                     this.fetchRawBlockData();
+                }
+            }, 100);
+        }
+        
+        // Auto-load all transactions if URL parameter is set
+        if (this.urlLoadAll) {
+            // Wait for block data and transactions to be created first
+            const waitForLoadAll = setInterval(() => {
+                if (this.blockData && this.blockData.id && this.transactions.length > 0) {
+                    clearInterval(waitForLoadAll);
+                    // Small delay to ensure transactions are fully initialized
+                    setTimeout(() => {
+                        this.loadAllTransactions();
+                    }, 500);
                 }
             }, 100);
         }
@@ -1011,6 +1027,11 @@ class BitcoinBlockExplorer {
         loadTransactionsButton.disabled = true;
         this.isLoadingAll = true;
         
+        // Update URL with loadAll parameter
+        const url = new URL(window.location);
+        url.searchParams.set('loadAll', 'true');
+        window.history.replaceState({}, '', url);
+        
         // Calculate total transactions to load and filter out already loaded ones
         const transactionsWithData = this.transactions.filter(tx => 
             tx.userData.txid && !tx.userData.txid.startsWith('dummy_tx_')
@@ -1050,6 +1071,24 @@ class BitcoinBlockExplorer {
             const spacingY = 0.3;
             const alignedY = baseAlignedY - layer * spacingY;
             
+            // Animate merkle tree line's first point if merkle tree is visible
+            // Start this BEFORE the cuboid animation so it can track from the beginning
+            console.log('[LoadTransactionData] About to animate merkle line', {
+                merkleTreeVisible: this.merkleTreeVisible,
+                hasTxid: !!cuboid.userData.txid,
+                txid: cuboid.userData.txid?.substring(0, 16),
+                currentCuboidY: cuboid.position.y,
+                alignedY: alignedY
+            });
+            
+            if (this.merkleTreeVisible && cuboid.userData.txid) {
+                this.animateMerkleTreeLineOrigin(cuboid, alignedY, 500);
+            }
+            
+            console.log('[LoadTransactionData] About to animate cuboid position', {
+                currentY: cuboid.position.y,
+                targetY: alignedY
+            });
             this.animateCuboidPosition(cuboid, alignedY, 500);
             cuboid.userData.sizeOnlyLoaded = false;
             
@@ -1087,6 +1126,19 @@ class BitcoinBlockExplorer {
                 // Update loaded transaction count
                 this.loadedTransactionCount = Math.max(this.loadedTransactionCount, txData.index + 1);
                 
+                // Refresh merkle tree every 100 transactions if visible
+                if (this.merkleTreeVisible && loadedCount % 100 === 0) {
+                    console.log(`[MerkleTree] Refreshing merkle tree after ${loadedCount} transactions loaded`);
+                    // Hide and show to rebuild with updated transaction positions
+                    this.hideMerkleTree(false, true); // Don't update button, skip flag update
+                    // Small delay to ensure hide completes
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    // Show will set the flag back to true
+                    await this.showMerkleTree();
+                }
+                
+                // Merkle tree line origins are now animated individually with each transaction
+                
                 //console.log(`Loaded transaction ${loadedCount}/${totalToLoad}: ${txData.txid.substring(0, 16)}...`);
                 
             } catch (error) {
@@ -1110,6 +1162,11 @@ class BitcoinBlockExplorer {
             button.textContent = `Loaded All (${errorCount} failed)`;
         } else {
             button.textContent = 'All Loaded';
+            // Update URL - remove loadAll parameter when all transactions are loaded
+            const url = new URL(window.location);
+            url.searchParams.delete('loadAll');
+            url.searchParams.delete('loadall');
+            window.history.replaceState({}, '', url);
         }
         
         // Update the regular load button
@@ -1195,6 +1252,19 @@ class BitcoinBlockExplorer {
             const successfulLoads = results.filter(r => r.status === 'fulfilled').length;
             this.loadedTransactionCount += successfulLoads;
             
+            // Refresh merkle tree every 100 transactions if visible
+            if (this.merkleTreeVisible && this.loadedTransactionCount % 100 === 0) {
+                console.log(`[MerkleTree] Refreshing merkle tree after ${this.loadedTransactionCount} transactions loaded`);
+                // Hide and show to rebuild with updated transaction positions
+                this.hideMerkleTree(false, true); // Don't update button, skip flag update
+                // Small delay to ensure hide completes
+                await new Promise(resolve => setTimeout(resolve, 100));
+                // Show will set the flag back to true
+                await this.showMerkleTree();
+            }
+            
+            // Merkle tree line origins are now animated individually with each transaction
+            
             console.log(`Completed batch: ${loadedCount} loaded, ${errorCount} failed (${startIndex + 1}-${endIndex} out of ${this.transactions.length} total)`);
             
             // Update button text based on remaining transactions
@@ -1247,7 +1317,25 @@ class BitcoinBlockExplorer {
             const spacingY = 0.3; // Same spacing as used in original grid
             const alignedY = baseAlignedY - layer * spacingY; // Maintain layer spacing
             
+            // Animate merkle tree line's first point if merkle tree is visible
+            // Start this BEFORE the cuboid animation so it can track from the beginning
+            console.log('[LoadSingle] About to animate merkle line', {
+                merkleTreeVisible: this.merkleTreeVisible,
+                hasTxid: !!cuboid.userData.txid,
+                txid: cuboid.userData.txid?.substring(0, 16),
+                currentCuboidY: cuboid.position.y,
+                alignedY: alignedY
+            });
+            
+            if (this.merkleTreeVisible && cuboid.userData.txid) {
+                this.animateMerkleTreeLineOrigin(cuboid, alignedY, 500);
+            }
+            
             // Animate only the Y position upward to the aligned level
+            console.log('[LoadSingle] About to animate cuboid position', {
+                currentY: cuboid.position.y,
+                targetY: alignedY
+            });
             this.animateCuboidPosition(cuboid, alignedY, 500);
             
             // Animate header up with the first transaction (layer 0)
@@ -4455,10 +4543,9 @@ class BitcoinBlockExplorer {
             });
             
             // First, create vertical lines from each transaction
-            // Leaf nodes start at transaction position (with small offset for transaction height)
+            // Leaf nodes start at transaction center position (aligned with cuboid center)
             // Tree grows DOWNWARD from leaves to root (root at bottom)
             const validTxCount = validTransactions.length;
-            const leafYOffset = 0.05; // Small offset to account for transaction height
             const levelSpacing = validTxCount > 500 ? 0.8 : 1.2; // Reduced spacing between levels (shorter tree)
             
             const txCount = validTransactions.length;
@@ -4467,8 +4554,8 @@ class BitcoinBlockExplorer {
             for (let i = 0; i < validTransactions.length; i++) {
                 const tx = validTransactions[i];
                 const txPos = tx.position.clone();
-                // Leaf node starts at transaction position (with small offset for height)
-                const leafY = txPos.y + leafYOffset;
+                // Leaf node starts at transaction center position (cuboid position is at center)
+                const leafY = txPos.y;
                 
                 const leafNode = {
                     position: new THREE.Vector3(txPos.x, leafY, txPos.z),
@@ -4504,8 +4591,9 @@ class BitcoinBlockExplorer {
                     
                     // Position parent node between its children
                     // Tree grows DOWNWARD: parent is below children (negative Y direction)
+                    // Move parent node up a bit (reduce spacing by 20% to make meeting point higher)
                     const parentX = (leftPos.x + rightPos.x) / 2;
-                    const parentY = leftPos.y - levelSpacing; // Negative to go downward
+                    const parentY = leftPos.y - (levelSpacing * 0.8); // Reduced spacing to move meeting point up
                     const parentZ = (leftPos.z + rightPos.z) / 2;
                     
                     const parentPos = new THREE.Vector3(parentX, parentY, parentZ);
@@ -4528,6 +4616,7 @@ class BitcoinBlockExplorer {
             });
             this.merkleTreeLines = [];
             this.merkleTreeNodes = [];
+            this.merkleTreeLineMap.clear(); // Clear the map
             
             // Now create and animate the lines
             this.merkleTreeVisible = true;
@@ -4588,6 +4677,15 @@ class BitcoinBlockExplorer {
             last: validTransactions[validTransactions.length - 1].position
         } : 'none');
         
+        // Debug: log first few transactions and their txids
+        if (validTransactions.length > 0) {
+            console.log('[MerkleTree] Sample transactions:', validTransactions.slice(0, 3).map(tx => ({
+                txid: tx.userData.txid?.substring(0, 16),
+                hasTxid: !!tx.userData.txid,
+                position: tx.position
+            })));
+        }
+        
         // First, animate vertical lines from transactions to leaf nodes
         for (let i = 0; i < validTransactions.length; i++) {
             const tx = validTransactions[i];
@@ -4595,6 +4693,7 @@ class BitcoinBlockExplorer {
             const leafNode = this.merkleTreeNodes.find(n => n.level === 0 && n.index === i);
             
             if (leafNode) {
+                // Start line at transaction center position (aligned with cuboid center)
                 const startPos = new THREE.Vector3(txPos.x, txPos.y, txPos.z);
                 const endPos = leafNode.position.clone();
                 
@@ -4614,11 +4713,45 @@ class BitcoinBlockExplorer {
                 });
                 const line = new THREE.Line(geometry, material);
                 line.userData.merkleTree = true;
+                line.userData.isVerticalLine = true; // Mark as vertical line from transaction
+                line.userData.transactionIndex = i; // Store transaction index for reconnection
+                
+                // Store txid - verify it exists
+                const txid = tx.userData.txid;
+                if (!txid) {
+                    console.warn(`[MerkleTree] Transaction ${i} has no txid!`, tx.userData);
+                }
+                line.userData.txid = txid; // Store txid for finding transaction after loading
                 line.renderOrder = 10; // Render after other objects
+                
+                // Debug: log first few lines to verify txid is stored
+                if (i < 3) {
+                    console.log(`[MerkleTree] Created vertical line ${i}`, {
+                        txid: txid?.substring(0, 16),
+                        hasTxid: !!txid,
+                        txUserData: tx.userData,
+                        lineUserDataBeforeAdd: JSON.parse(JSON.stringify(line.userData))
+                    });
+                }
                 
                 // Add to scene first so it can be rendered during animation
                 this.scene.add(line);
                 this.merkleTreeLines.push(line);
+                
+                // Store line in map for direct lookup by txid
+                if (txid) {
+                    this.merkleTreeLineMap.set(txid, line);
+                }
+                
+                // Verify properties are still there after adding
+                if (i < 3) {
+                    console.log(`[MerkleTree] After push - line ${i} userData:`, {
+                        merkleTree: line.userData.merkleTree,
+                        isVerticalLine: line.userData.isVerticalLine,
+                        txid: line.userData.txid?.substring(0, 16),
+                        transactionIndex: line.userData.transactionIndex
+                    });
+                }
                 
                 // Animate line growth (or skip animation for very large sets)
                 if (isLargeSet && txCount > 500) {
@@ -4734,6 +4867,18 @@ class BitcoinBlockExplorer {
         console.log(`Merkle tree visualization complete: ${this.merkleTreeLines.length} lines created`);
         console.log(`Lines in scene:`, this.scene.children.filter(child => child.userData.merkleTree).length);
         
+        // Debug: Check first few lines to verify properties
+        const verticalLinesCreated = this.merkleTreeLines.filter(l => l.userData?.isVerticalLine);
+        console.log(`[MerkleTree] Vertical lines created: ${verticalLinesCreated.length}`);
+        if (verticalLinesCreated.length > 0) {
+            console.log(`[MerkleTree] First vertical line userData:`, verticalLinesCreated[0].userData);
+        } else {
+            console.log(`[MerkleTree] NO VERTICAL LINES FOUND! Checking first 5 lines:`);
+            for (let i = 0; i < Math.min(5, this.merkleTreeLines.length); i++) {
+                console.log(`[MerkleTree] Line ${i}:`, this.merkleTreeLines[i].userData);
+            }
+        }
+        
         // Force a render to ensure lines are visible
         this.renderer.render(this.scene, this.camera);
     }
@@ -4785,8 +4930,294 @@ class BitcoinBlockExplorer {
         });
     }
     
+    // Animate merkle tree line's first point to follow transaction position
+    animateMerkleTreeLineOrigin(cuboid, targetY, duration) {
+        console.log('[MerkleLine] animateMerkleTreeLineOrigin called', {
+            merkleTreeVisible: this.merkleTreeVisible,
+            hasTxid: !!cuboid.userData.txid,
+            txid: cuboid.userData.txid?.substring(0, 16),
+            cuboidPosition: cuboid.position,
+            targetY: targetY,
+            duration: duration,
+            totalMerkleLines: this.merkleTreeLines.length
+        });
+        
+        if (!this.merkleTreeVisible) {
+            console.log('[MerkleLine] Skipping: merkle tree not visible');
+            return;
+        }
+        
+        if (!cuboid.userData.txid) {
+            console.log('[MerkleLine] Skipping: no txid on cuboid');
+            return;
+        }
+        
+        // Find the vertical line for this transaction
+        const txid = cuboid.userData.txid;
+        
+        // Try to use cached reference first
+        let verticalLine = cuboid.userData.merkleLine;
+        
+        if (!verticalLine) {
+            // Use direct map lookup - much faster and more reliable!
+            verticalLine = this.merkleTreeLineMap.get(txid);
+            
+            if (verticalLine) {
+                console.log('[MerkleLine] Found line via map lookup for txid:', txid.substring(0, 16));
+                // Cache the reference for faster lookup
+                cuboid.userData.merkleLine = verticalLine;
+            } else {
+                console.log('[MerkleLine] Line not found in map for txid:', txid.substring(0, 16));
+                console.log('[MerkleLine] Map size:', this.merkleTreeLineMap.size);
+                console.log('[MerkleLine] Total merkle lines:', this.merkleTreeLines.length);
+                
+                // Fallback: try to find in array (shouldn't be needed if map is working)
+                const txIndex = cuboid.userData.index;
+                if (txIndex !== undefined) {
+                    verticalLine = this.merkleTreeLines.find(line => 
+                        line.userData && 
+                        line.userData.merkleTree && 
+                        line.userData.transactionIndex === txIndex
+                    );
+                    if (verticalLine) {
+                        console.log('[MerkleLine] Found line via fallback search by transactionIndex');
+                        cuboid.userData.merkleLine = verticalLine;
+                        // Add to map for future lookups
+                        if (txid) {
+                            this.merkleTreeLineMap.set(txid, verticalLine);
+                        }
+                    }
+                }
+            }
+            
+            if (!verticalLine) {
+                console.log('[MerkleLine] Line not found! Checking available lines...');
+                const linesWithTxid = this.merkleTreeLines.filter(l => 
+                    l.userData && l.userData.txid
+                );
+                const linesWithMerkleTree = this.merkleTreeLines.filter(l => 
+                    l.userData && l.userData.merkleTree
+                );
+                const verticalLines = this.merkleTreeLines.filter(l => 
+                    l.userData && l.userData.merkleTree && l.userData.isVerticalLine
+                );
+                
+                console.log('[MerkleLine] Total merkle lines:', this.merkleTreeLines.length);
+                console.log('[MerkleLine] Lines with merkleTree flag:', linesWithMerkleTree.length);
+                console.log('[MerkleLine] Vertical lines:', verticalLines.length);
+                console.log('[MerkleLine] Lines with txid:', linesWithTxid.length);
+                
+                if (linesWithTxid.length > 0) {
+                    console.log('[MerkleLine] Sample line txid:', linesWithTxid[0].userData.txid?.substring(0, 16));
+                    console.log('[MerkleLine] Looking for txid:', txid.substring(0, 16));
+                    console.log('[MerkleLine] Match?', linesWithTxid[0].userData.txid === txid);
+                    
+                    // Check if any line has this exact txid
+                    const matchingLine = this.merkleTreeLines.find(l => 
+                        l.userData && l.userData.txid === txid
+                    );
+                    console.log('[MerkleLine] Found matching line?', !!matchingLine);
+                } else {
+                    // Check what userData the lines actually have
+                    if (this.merkleTreeLines.length > 0) {
+                        console.log('[MerkleLine] Sample line userData:', this.merkleTreeLines[0].userData);
+                        console.log('[MerkleLine] First few lines userData:', 
+                            this.merkleTreeLines.slice(0, 10).map((l, idx) => ({
+                                index: idx,
+                                hasUserData: !!l.userData,
+                                merkleTree: l.userData?.merkleTree,
+                                isVerticalLine: l.userData?.isVerticalLine,
+                                txid: l.userData?.txid?.substring(0, 16),
+                                transactionIndex: l.userData?.transactionIndex,
+                                allKeys: l.userData ? Object.keys(l.userData) : []
+                            }))
+                        );
+                        
+                        // Check if ANY line has isVerticalLine
+                        const anyVertical = this.merkleTreeLines.find(l => l.userData?.isVerticalLine);
+                        console.log('[MerkleLine] Found ANY vertical line?', !!anyVertical);
+                        if (anyVertical) {
+                            console.log('[MerkleLine] First vertical line found at index:', this.merkleTreeLines.indexOf(anyVertical));
+                            console.log('[MerkleLine] That line userData:', anyVertical.userData);
+                        }
+                    }
+                }
+            }
+        } else {
+            console.log('[MerkleLine] Using cached line reference');
+        }
+        
+        if (!verticalLine) {
+            console.log('[MerkleLine] No line found for transaction, skipping animation');
+            // Line might not exist if transaction wasn't included in merkle tree
+            // (e.g., coinbase transaction or filtered transactions)
+            return;
+        }
+        
+        const positions = verticalLine.geometry.attributes.position;
+        if (!positions || positions.count < 2) {
+            console.log('[MerkleLine] Invalid positions:', { hasPositions: !!positions, count: positions?.count });
+            return;
+        }
+        
+        // Get end position (leaf node - keep unchanged)
+        const endX = positions.getX(1);
+        const endY = positions.getY(1);
+        const endZ = positions.getZ(1);
+        
+        const startX = positions.getX(0);
+        const startY = positions.getY(0);
+        const startZ = positions.getZ(0);
+        
+        console.log('[MerkleLine] Starting animation', {
+            startPos: { x: startX, y: startY, z: startZ },
+            endPos: { x: endX, y: endY, z: endZ },
+            cuboidStartPos: { x: cuboid.position.x, y: cuboid.position.y, z: cuboid.position.z },
+            targetY: targetY
+        });
+        
+        const startTime = Date.now();
+        let frameCount = 0;
+        
+        // Store animation state on the line for tracking
+        verticalLine.userData.animating = true;
+        verticalLine.userData.cuboid = cuboid;
+        verticalLine.userData.endPos = new THREE.Vector3(endX, endY, endZ);
+        
+        const animate = () => {
+            frameCount++;
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Track the transaction's current position in real-time (it's animating)
+            const currentTxX = cuboid.position.x;
+            const currentTxY = cuboid.position.y;
+            const currentTxZ = cuboid.position.z;
+            
+            // Log first few frames
+            if (frameCount <= 3 || frameCount % 30 === 0) {
+                console.log(`[MerkleLine] Frame ${frameCount}:`, {
+                    elapsed: elapsed,
+                    progress: progress.toFixed(3),
+                    cuboidPos: { x: currentTxX.toFixed(3), y: currentTxY.toFixed(3), z: currentTxZ.toFixed(3) },
+                    lineStartBefore: { x: positions.getX(0).toFixed(3), y: positions.getY(0).toFixed(3), z: positions.getZ(0).toFixed(3) }
+                });
+            }
+            
+            // Update first point to match transaction's current position exactly
+            // This makes the line follow the transaction as it moves
+            positions.setXYZ(0, currentTxX, currentTxY, currentTxZ);
+            positions.setXYZ(1, endX, endY, endZ);
+            positions.needsUpdate = true;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Final update to ensure we're exactly at the transaction position
+                positions.setXYZ(0, currentTxX, currentTxY, currentTxZ);
+                positions.setXYZ(1, endX, endY, endZ);
+                positions.needsUpdate = true;
+                verticalLine.userData.animating = false;
+                console.log(`[MerkleLine] Animation complete after ${frameCount} frames`, {
+                    finalCuboidPos: { x: currentTxX.toFixed(3), y: currentTxY.toFixed(3), z: currentTxZ.toFixed(3) },
+                    finalLinePos: { x: positions.getX(0).toFixed(3), y: positions.getY(0).toFixed(3), z: positions.getZ(0).toFixed(3) }
+                });
+            }
+        };
+        
+        console.log('[MerkleLine] Starting animation loop');
+        animate();
+    }
+    
+    // Update merkle tree line origins to reconnect to transaction positions after loading
+    updateMerkleTreeLineOrigins() {
+        if (!this.merkleTreeVisible || this.merkleTreeLines.length === 0) {
+            console.log('Merkle tree update skipped:', {
+                visible: this.merkleTreeVisible,
+                lines: this.merkleTreeLines.length
+            });
+            return;
+        }
+        
+        // Find all vertical lines (from transactions to leaf nodes)
+        // First, let's check what we have
+        const linesWithUserData = this.merkleTreeLines.filter(l => l.userData);
+        const linesWithMerkleTree = linesWithUserData.filter(l => l.userData.merkleTree);
+        const verticalLines = linesWithMerkleTree.filter(l => l.userData.isVerticalLine);
+        
+        console.log(`Updating ${verticalLines.length} merkle tree line origins (total lines: ${this.merkleTreeLines.length})...`);
+        
+        // Debug: check what userData the lines have
+        if (verticalLines.length === 0 && this.merkleTreeLines.length > 0) {
+            console.log('Debug: Total lines:', this.merkleTreeLines.length);
+            console.log('Debug: Lines with userData:', linesWithUserData.length);
+            console.log('Debug: Lines with merkleTree flag:', linesWithMerkleTree.length);
+            console.log('Debug: Lines with isVerticalLine flag:', verticalLines.length);
+            if (this.merkleTreeLines[0]) {
+                console.log('Debug: First line userData:', this.merkleTreeLines[0].userData);
+                console.log('Debug: First line type:', this.merkleTreeLines[0].constructor.name);
+            }
+            // Check a few lines to see their structure
+            for (let i = 0; i < Math.min(5, this.merkleTreeLines.length); i++) {
+                const line = this.merkleTreeLines[i];
+                console.log(`Debug: Line ${i} - has userData: ${!!line.userData}, merkleTree: ${line.userData?.merkleTree}, isVerticalLine: ${line.userData?.isVerticalLine}, txid: ${line.userData?.txid?.substring(0, 16)}`);
+            }
+        }
+        
+        let updatedCount = 0;
+        
+        // Update each vertical line's start position to match current transaction position
+        verticalLines.forEach(line => {
+            const txid = line.userData.txid;
+            if (txid) {
+                // Find the transaction cuboid by txid
+                const tx = this.transactions.find(t => 
+                    t.userData.txid === txid && 
+                    !t.userData.txid.startsWith('dummy_tx_')
+                );
+                
+                if (tx) {
+                    const txPos = tx.position.clone();
+                    
+                    // Get the end position (leaf node) - keep it unchanged
+                    const positions = line.geometry.attributes.position;
+                    if (positions && positions.count >= 2) {
+                        const oldStartX = positions.getX(0);
+                        const oldStartY = positions.getY(0);
+                        const oldStartZ = positions.getZ(0);
+                        
+                        const endX = positions.getX(1);
+                        const endY = positions.getY(1);
+                        const endZ = positions.getZ(1);
+                        
+                        // Update start position to match current transaction position
+                        positions.setXYZ(0, txPos.x, txPos.y, txPos.z);
+                        positions.setXYZ(1, endX, endY, endZ);
+                        positions.needsUpdate = true;
+                        
+                        updatedCount++;
+                        
+                        // Debug first few updates
+                        if (updatedCount <= 3) {
+                            console.log(`Updated line ${updatedCount}: txid=${txid.substring(0, 16)}..., from (${oldStartX.toFixed(2)}, ${oldStartY.toFixed(2)}, ${oldStartZ.toFixed(2)}) to (${txPos.x.toFixed(2)}, ${txPos.y.toFixed(2)}, ${txPos.z.toFixed(2)})`);
+                        }
+                    }
+                } else {
+                    console.warn(`Transaction not found for txid: ${txid.substring(0, 16)}...`);
+                }
+            }
+        });
+        
+        console.log(`Updated ${updatedCount}/${verticalLines.length} merkle tree line origins`);
+        
+        // Force render to update the scene
+        if (this.renderer && this.scene && this.camera) {
+            this.renderer.render(this.scene, this.camera);
+        }
+    }
+    
     // Hide merkle tree visualization
-    hideMerkleTree(updateButton = true) {
+    hideMerkleTree(updateButton = true, skipFlagUpdate = false) {
         // Remove all merkle tree lines
         this.merkleTreeLines.forEach(line => {
             this.scene.remove(line);
@@ -4795,7 +5226,12 @@ class BitcoinBlockExplorer {
         });
         this.merkleTreeLines = [];
         this.merkleTreeNodes = [];
-        this.merkleTreeVisible = false;
+        this.merkleTreeLineMap.clear(); // Clear the map
+        
+        // Only update flag if not skipping (for refresh operations)
+        if (!skipFlagUpdate) {
+            this.merkleTreeVisible = false;
+        }
         
         // Force render to update the scene
         if (this.renderer && this.scene && this.camera) {
