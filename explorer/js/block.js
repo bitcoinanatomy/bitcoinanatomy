@@ -448,10 +448,6 @@ class BitcoinBlockExplorer {
         
 
         
-        document.getElementById('load-transactions').addEventListener('click', () => {
-            this.loadTransactionData();
-        });
-        
         document.getElementById('load-all-transactions').addEventListener('click', () => {
             if (this.isLoadingAll) {
                 this.stopLoadingAll();
@@ -826,14 +822,16 @@ class BitcoinBlockExplorer {
                             intersectedObject.geometry.parameters.width === 3 &&
                             (!intersectedObject.userData || intersectedObject.userData.type !== 'header')) {
                             
-                            // Calculate which block this is based on its Z position
-                            // Past blocks are at positive Z, future blocks are at negative Z
-                            const blockIndex = Math.round(intersectedObject.position.z / 4);
+                            // Use stored block height from userData (accurate); fallback to Z-based for legacy
                             const currentHeight = parseInt(this.blockHeight) || 0;
-                            const targetHeight = currentHeight - blockIndex; // Negative for past, positive for future
+                            const storedHeight = intersectedObject.userData && intersectedObject.userData.blockHeight !== undefined
+                                ? intersectedObject.userData.blockHeight
+                                : null;
+                            const isCurrentBlock = intersectedObject.userData && intersectedObject.userData.type === 'currentBlock';
+                            const targetHeight = storedHeight !== null ? storedHeight : (currentHeight - Math.round(intersectedObject.position.z / 4));
                             
                             let tooltipContent;
-                            if (blockIndex === 0) {
+                            if (isCurrentBlock || (storedHeight === null && Math.round(intersectedObject.position.z / 4) === 0)) {
                                 const escapedHeight = this.escapeHtml(String(currentHeight));
                                 tooltipContent = `
                                     <strong>Current Block</strong><br>
@@ -973,18 +971,20 @@ class BitcoinBlockExplorer {
                     if (intersectedObject.geometry.type === 'BoxGeometry' && 
                         intersectedObject.geometry.parameters.width === 3) {
                         
-                        // Calculate which block was clicked based on its Z position
-                        // Past blocks are at positive Z, future blocks are at negative Z
+                        // Use stored block height from userData for accurate navigation
+                        const currentHeight = parseInt(this.blockHeight) || 0;
+                        const isCurrentBlock = intersectedObject.userData && intersectedObject.userData.type === 'currentBlock';
+                        const storedHeight = intersectedObject.userData && intersectedObject.userData.blockHeight !== undefined
+                            ? intersectedObject.userData.blockHeight
+                            : null;
                         const blockIndex = Math.round(intersectedObject.position.z / 4);
+                        const targetHeight = storedHeight !== null ? storedHeight : (currentHeight - blockIndex);
                         
-                        if (blockIndex === 0) {
+                        if (isCurrentBlock || (storedHeight === null && blockIndex === 0)) {
                             // Current block - stay on same page
                             console.log('Current block clicked');
                         } else {
                             // Past or future block - navigate to that block's height
-                            const currentHeight = parseInt(this.blockHeight) || 0;
-                            const targetHeight = currentHeight - blockIndex; // Negative for past, positive for future
-                            
                             console.log(`Navigating to block height: ${targetHeight}`);
                             window.location.href = `block.html?height=${targetHeight}`;
                         }
@@ -1069,12 +1069,10 @@ class BitcoinBlockExplorer {
         this.shouldStopLoadingAll = false;
         
         const button = document.getElementById('load-all-transactions');
-        const loadTransactionsButton = document.getElementById('load-transactions');
         const originalText = button.textContent;
         
         // Update button to show it can be clicked to stop
         button.textContent = 'Stop Loading';
-        loadTransactionsButton.disabled = true;
         this.isLoadingAll = true;
         
         // Update URL with loadAll parameter
@@ -1107,7 +1105,6 @@ class BitcoinBlockExplorer {
             console.log('All transactions already loaded');
             button.textContent = 'All Loaded';
             button.disabled = true;
-            loadTransactionsButton.disabled = true;
             this.isLoadingAll = false;
             return;
         }
@@ -1219,16 +1216,6 @@ class BitcoinBlockExplorer {
             window.history.replaceState({}, '', url);
         }
         
-        // Update the regular load button
-        const remainingTransactions = this.transactions.length - this.loadedTransactionCount;
-        if (remainingTransactions > 0) {
-            loadTransactionsButton.textContent = `Load Next ${Math.min(20, remainingTransactions)}`;
-            loadTransactionsButton.disabled = false;
-        } else {
-            loadTransactionsButton.textContent = 'All Loaded';
-            loadTransactionsButton.disabled = true;
-        }
-        
         console.log(`Load all completed: ${loadedCount} loaded, ${errorCount} failed`);
     }
     
@@ -1238,107 +1225,6 @@ class BitcoinBlockExplorer {
         
         const button = document.getElementById('load-all-transactions');
         button.textContent = 'Stopping...';
-    }
-    
-    async loadTransactionData() {
-        if (this.transactions.length === 0) {
-            console.log('No transactions to load');
-            return;
-        }
-        
-        const button = document.getElementById('load-transactions');
-        const originalText = button.textContent;
-        button.textContent = 'Loading...';
-        button.disabled = true;
-        
-        // Calculate the next batch of transactions to load
-        const batchSize = 20;
-        const startIndex = this.loadedTransactionCount;
-        const endIndex = Math.min(startIndex + batchSize, this.transactions.length);
-        const transactionsToLoad = endIndex - startIndex;
-        
-        if (transactionsToLoad === 0) {
-            console.log('All transactions have been loaded');
-            button.textContent = 'All Loaded';
-            button.disabled = true;
-            return;
-        }
-        
-        console.log(`Loading transaction data for ${transactionsToLoad} transactions (${startIndex + 1}-${endIndex} out of ${this.transactions.length} total)`);
-        
-        let loadedCount = 0;
-        let errorCount = 0;
-        
-        try {
-            // Process the next batch of transactions
-            const promises = [];
-            
-            for (let i = startIndex; i < endIndex; i++) {
-                const cuboid = this.transactions[i];
-                const txData = cuboid.userData;
-                
-                // Skip dummy transactions
-                if (txData.txid && !txData.txid.startsWith('dummy_tx_')) {
-                    promises.push(this.loadSingleTransaction(cuboid, txData.txid, i, i - startIndex));
-                } else {
-                    loadedCount++;
-                }
-            }
-            
-            // Wait for all transactions to complete and handle individual errors
-            const results = await Promise.allSettled(promises);
-            
-            // Count successful loads and errors
-            results.forEach(result => {
-                if (result.status === 'fulfilled') {
-                    loadedCount++;
-                } else {
-                    errorCount++;
-                    console.warn('Transaction load failed:', result.reason);
-                }
-            });
-            
-            // Update progress - only count successful loads for loadedTransactionCount
-            const successfulLoads = results.filter(r => r.status === 'fulfilled').length;
-            this.loadedTransactionCount += successfulLoads;
-            
-            // Refresh merkle tree every 100 transactions if visible
-            if (this.merkleTreeVisible && this.loadedTransactionCount % 100 === 0) {
-                console.log(`[MerkleTree] Refreshing merkle tree after ${this.loadedTransactionCount} transactions loaded`);
-                // Hide and show to rebuild with updated transaction positions
-                this.hideMerkleTree(false, true); // Don't update button, skip flag update
-                // Small delay to ensure hide completes
-                await new Promise(resolve => setTimeout(resolve, 100));
-                // Show will set the flag back to true
-                await this.showMerkleTree();
-            }
-            
-            // Merkle tree line origins are now animated individually with each transaction
-            
-            console.log(`Completed batch: ${loadedCount} loaded, ${errorCount} failed (${startIndex + 1}-${endIndex} out of ${this.transactions.length} total)`);
-            
-            // Update button text based on remaining transactions
-            const remainingTransactions = this.transactions.length - this.loadedTransactionCount;
-            if (remainingTransactions > 0) {
-                if (errorCount > 0) {
-                    button.textContent = `Load Next ${Math.min(batchSize, remainingTransactions)} (${errorCount} failed)`;
-                } else {
-                    button.textContent = `Load Next ${Math.min(batchSize, remainingTransactions)}`;
-                }
-            } else {
-                button.textContent = 'All Loaded';
-                button.disabled = true;
-            }
-            
-        } catch (error) {
-            console.error('Error in transaction loading batch:', error);
-            button.textContent = originalText;
-        } finally {
-            // Always re-enable the button unless all transactions are loaded
-            if (this.loadedTransactionCount < this.transactions.length) {
-                button.disabled = false;
-            }
-        }
     }
     
     async loadSingleTransaction(cuboid, txid, globalIndex, batchIndex) {
@@ -1717,6 +1603,7 @@ class BitcoinBlockExplorer {
         block.position.set(0, 0, 0);
         block.castShadow = true;
         block.renderOrder = 1;  // Render after transactions (higher number = later)
+        block.userData = { type: 'currentBlock', blockHeight: currentHeight };
         this.scene.add(block);
         
         // Store block reference for later use
@@ -1748,7 +1635,7 @@ class BitcoinBlockExplorer {
         
         // Fetch block timestamps for time-based spacing
         // Use smaller factor than difficulty.js since blocks are in linear arrangement, not spiral
-        const FACTOR_BLOCK_DISTANCE = 0.008; // Reduced for closer block spacing
+        const FACTOR_BLOCK_DISTANCE = 0.016; // Spacing between past/future blocks (time-based)
         
         // Get current block timestamp - always fetch it to ensure we have the correct value
         let currentTimestamp = 0;
@@ -1848,6 +1735,7 @@ class BitcoinBlockExplorer {
             prevBlock.position.set(0, 0, cumulativeZPast); // Position based on cumulative time difference
             prevBlock.castShadow = true;
             prevBlock.renderOrder = 1;
+            prevBlock.userData = { type: 'pastBlock', blockHeight: prevHeight };
             
             // Incrementally decrease opacity (increase transparency) as blocks get further away
             const opacity = 0.1 - (i * 0.02); // Start at 0.1, decrease by 0.02 for each block
@@ -1924,6 +1812,7 @@ class BitcoinBlockExplorer {
             nextBlock.position.set(0, 0, -cumulativeZFuture); // Position based on cumulative time difference (negative Z)
             nextBlock.castShadow = true;
             nextBlock.renderOrder = 1;
+            nextBlock.userData = { type: 'futureBlock', blockHeight: nextHeight };
             
             // Incrementally decrease opacity (increase transparency) as blocks get further away
             const opacity = 0.1 - (i * 0.02); // Start at 0.1, decrease by 0.02 for each block
