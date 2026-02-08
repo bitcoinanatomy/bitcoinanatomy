@@ -224,7 +224,10 @@ class BitcoinBlockExplorer {
             this.isRotating = false;
             const button = document.getElementById('toggle-rotation');
             if (button) {
-                button.textContent = 'Start Rotation';
+                const icon = document.getElementById('toggle-rotation-icon');
+                if (icon) icon.src = 'imgs/icons/play.svg';
+                button.title = 'Start rotation';
+                button.setAttribute('aria-label', button.title);
             }
         });
         
@@ -270,7 +273,10 @@ class BitcoinBlockExplorer {
             this.isRotating = false;
             const button = document.getElementById('toggle-rotation');
             if (button) {
-                button.textContent = 'Start Rotation';
+                const icon = document.getElementById('toggle-rotation-icon');
+                if (icon) icon.src = 'imgs/icons/play.svg';
+                button.title = 'Start rotation';
+                button.setAttribute('aria-label', button.title);
             }
             
             // Zoom in/out with inverted scroll direction
@@ -313,7 +319,10 @@ class BitcoinBlockExplorer {
             this.isRotating = false;
             const button = document.getElementById('toggle-rotation');
             if (button) {
-                button.textContent = 'Start Rotation';
+                const icon = document.getElementById('toggle-rotation-icon');
+                if (icon) icon.src = 'imgs/icons/play.svg';
+                button.title = 'Start rotation';
+                button.setAttribute('aria-label', button.title);
             }
 
             if (e.touches.length === 1) {
@@ -443,7 +452,10 @@ class BitcoinBlockExplorer {
         document.getElementById('toggle-rotation').addEventListener('click', () => {
             this.isRotating = !this.isRotating;
             const button = document.getElementById('toggle-rotation');
-            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = this.isRotating ? 'imgs/icons/pause.svg' : 'imgs/icons/play.svg';
+            button.title = this.isRotating ? 'Pause rotation' : 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         });
         
 
@@ -458,6 +470,10 @@ class BitcoinBlockExplorer {
         
         document.getElementById('toggle-view').addEventListener('click', () => {
             this.toggleCameraView();
+        });
+        
+        document.getElementById('reset-camera').addEventListener('click', () => {
+            this.resetCameraPosition();
         });
         
         // Raw data button - toggle panel
@@ -479,13 +495,65 @@ class BitcoinBlockExplorer {
             }
         });
         
-        // UI toggle button
-        document.getElementById('toggle-ui').addEventListener('click', () => {
-            document.body.classList.toggle('ui-hidden');
-            const button = document.getElementById('toggle-ui');
-            button.textContent = document.body.classList.contains('ui-hidden') ? 'Show UI' : 'Hide UI';
+        // Go to block modal
+        const blockModal = document.getElementById('block-modal');
+        const goToBlockBtn = document.getElementById('go-to-block');
+        const newBlockHeightInput = document.getElementById('new-block-height');
+        const blockForm = document.getElementById('block-form');
+        if (goToBlockBtn && blockModal) {
+            goToBlockBtn.addEventListener('click', () => {
+                blockModal.style.display = 'block';
+                if (newBlockHeightInput) {
+                    newBlockHeightInput.value = this.blockHeight || '';
+                    newBlockHeightInput.focus();
+                }
+            });
+        }
+        const blockModalClose = document.querySelector('.block-modal-close');
+        const blockModalCancel = document.getElementById('block-modal-cancel');
+        if (blockModalClose) {
+            blockModalClose.addEventListener('click', () => { blockModal.style.display = 'none'; });
+        }
+        if (blockModalCancel) {
+            blockModalCancel.addEventListener('click', () => { blockModal.style.display = 'none'; });
+        }
+        if (blockModal) {
+            blockModal.addEventListener('click', (e) => {
+                if (e.target === blockModal) {
+                    blockModal.style.display = 'none';
+                }
+            });
+        }
+        if (blockForm) {
+            blockForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const height = newBlockHeightInput?.value?.trim();
+                if (height !== undefined && height !== '') {
+                    const h = parseInt(height, 10);
+                    if (!isNaN(h) && h >= 0) {
+                        blockModal.style.display = 'none';
+                        window.location.href = `block.html?height=${h}`;
+                    }
+                }
+            });
+        }
+        document.querySelectorAll('.go-to-block-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const height = btn.getAttribute('data-height');
+                if (height !== null) {
+                    blockModal.style.display = 'none';
+                    window.location.href = `block.html?height=${height}`;
+                }
+            });
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && blockModal && blockModal.style.display === 'block') {
+                blockModal.style.display = 'none';
+            }
         });
         
+        // UI toggle and nav-reveal on hover are handled by controls-camera.js component on all pages.
+
         // Raw data panel controls
         document.getElementById('close-raw-data').addEventListener('click', () => {
             this.hideRawDataModal();
@@ -1049,9 +1117,31 @@ class BitcoinBlockExplorer {
         this.controls.target.copy(currentTarget);
         this.camera.lookAt(this.controls.target);
         
-        // Update the button text
+        // Update the button icon and title
         const button = document.getElementById('toggle-view');
-        button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
+        const icon = document.getElementById('toggle-view-icon');
+        if (icon) icon.src = this.isPerspective ? 'imgs/icons/orthographic.svg' : 'imgs/icons/perspective.svg';
+        button.title = this.isPerspective ? 'Switch to orthographic' : 'Switch to perspective';
+        button.setAttribute('aria-label', button.title);
+    }
+    
+    resetCameraPosition() {
+        this.controls.target.set(0, 2, 0);
+        this.controls.distance = 20;
+        this.controls.phi = Math.PI / 3;
+        this.controls.theta = 0;
+        if (this.controls.panX !== undefined) this.controls.panX = 0;
+        if (this.controls.panY !== undefined) this.controls.panY = 0;
+        this.controls.update();
+        if (!this.isPerspective) {
+            this.orthographicZoom = 20;
+            const aspect = window.innerWidth / window.innerHeight;
+            this.camera.left = -this.orthographicZoom * aspect / 2;
+            this.camera.right = this.orthographicZoom * aspect / 2;
+            this.camera.top = this.orthographicZoom / 2;
+            this.camera.bottom = -this.orthographicZoom / 2;
+            this.camera.updateProjectionMatrix();
+        }
     }
     
     async loadAllTransactions() {
@@ -1842,8 +1932,8 @@ class BitcoinBlockExplorer {
             this.chainTipHeight = parseInt(await tipResponse.text());
             console.log(`Fetched chain tip height: ${this.chainTipHeight}`);
             
-            // If no block height provided, use chain tip
-            if (!this.blockHeight) {
+            // If no block height provided, use chain tip (allow height 0 for genesis)
+            if (this.blockHeight == null) {
                 this.blockHeight = this.chainTipHeight.toString();
                 console.log(`Using chain tip as block height: ${this.blockHeight}`);
             }
@@ -2513,7 +2603,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         this.controls.theta -= 0.2;
         this.controls.update();
@@ -2523,7 +2616,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         this.controls.theta += 0.2;
         this.controls.update();
@@ -2533,7 +2629,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         this.controls.phi -= 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
@@ -2544,7 +2643,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         this.controls.phi += 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
@@ -2555,7 +2657,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         this.controls.panX -= 0.5;
         this.controls.update();
@@ -2565,7 +2670,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         this.controls.panX += 0.5;
         this.controls.update();
@@ -2575,7 +2683,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         this.controls.panY += 0.5;
         this.controls.update();
@@ -2585,7 +2696,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         this.controls.panY -= 0.5;
         this.controls.update();
@@ -2595,7 +2709,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         
         if (this.isPerspective) {
@@ -2620,7 +2737,10 @@ class BitcoinBlockExplorer {
         this.isRotating = false;
         const button = document.getElementById('toggle-rotation');
         if (button) {
-            button.textContent = 'Start Rotation';
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = 'imgs/icons/play.svg';
+            button.title = 'Start rotation';
+            button.setAttribute('aria-label', button.title);
         }
         
         if (this.isPerspective) {

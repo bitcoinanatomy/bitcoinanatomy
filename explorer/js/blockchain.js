@@ -94,10 +94,7 @@ class BitcoinBlockchainExplorer {
             
             // Stop automatic rotation when user starts interacting
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            this.updateRotationButtonState();
         });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
@@ -140,10 +137,7 @@ class BitcoinBlockchainExplorer {
         this.renderer.domElement.addEventListener('wheel', (e) => {
             // Stop automatic rotation when user starts zooming
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            this.updateRotationButtonState();
             
             // Zoom in/out with inverted scroll direction
             if (this.isPerspective) {
@@ -384,10 +378,7 @@ class BitcoinBlockchainExplorer {
             e.preventDefault();
             
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            this.updateRotationButtonState();
 
             if (e.touches.length === 1) {
                 // Single touch - rotation/panning
@@ -533,11 +524,20 @@ class BitcoinBlockchainExplorer {
         }
     }
 
+    updateRotationButtonState() {
+        const button = document.getElementById('toggle-rotation');
+        const icon = document.getElementById('toggle-rotation-icon');
+        if (button && icon) {
+            icon.src = this.isRotating ? 'imgs/icons/pause.svg' : 'imgs/icons/play.svg';
+            button.title = this.isRotating ? 'Pause rotation' : 'Start rotation';
+            button.setAttribute('aria-label', button.title);
+        }
+    }
+
     setupControls() {
         document.getElementById('toggle-rotation').addEventListener('click', () => {
             this.isRotating = !this.isRotating;
-            const button = document.getElementById('toggle-rotation');
-            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+            this.updateRotationButtonState();
         });
         
         document.getElementById('reset-camera').addEventListener('click', () => {
@@ -671,11 +671,7 @@ class BitcoinBlockchainExplorer {
     rotateLeft() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Rotate left by adjusting theta
         this.controls.theta -= 0.2; // Rotate left
         this.controls.update();
@@ -684,11 +680,7 @@ class BitcoinBlockchainExplorer {
     rotateRight() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Rotate right by adjusting theta
         this.controls.theta += 0.2; // Rotate right
         this.controls.update();
@@ -697,11 +689,7 @@ class BitcoinBlockchainExplorer {
     rotateUp() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Rotate up by adjusting phi
         this.controls.phi -= 0.2; // Rotate up
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
@@ -711,11 +699,7 @@ class BitcoinBlockchainExplorer {
     rotateDown() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Rotate down by adjusting phi
         this.controls.phi += 0.2; // Rotate down
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
@@ -725,11 +709,7 @@ class BitcoinBlockchainExplorer {
     panLeft() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Pan left by moving target
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
@@ -741,11 +721,7 @@ class BitcoinBlockchainExplorer {
     panRight() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Pan right by moving target
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
@@ -757,11 +733,7 @@ class BitcoinBlockchainExplorer {
     panUp() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Pan up by moving target
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
@@ -772,11 +744,7 @@ class BitcoinBlockchainExplorer {
     panDown() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Pan down by moving target
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
@@ -787,11 +755,7 @@ class BitcoinBlockchainExplorer {
     zoomIn() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Zoom in
         if (this.isPerspective) {
             this.controls.distance -= 2;
@@ -813,11 +777,7 @@ class BitcoinBlockchainExplorer {
     zoomOut() {
         // Stop automatic rotation
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
-        
+        this.updateRotationButtonState();
         // Zoom out
         if (this.isPerspective) {
             this.controls.distance += 2;
@@ -1118,11 +1078,21 @@ class BitcoinBlockchainExplorer {
             const height = await response.text();
             const numDiscs = Math.floor(parseInt(height) / 2016) + 1; // Add 1 to include current period in progress
             
+            let tipHash = null;
+            try {
+                const hashResponse = await fetch(`https://mempool.space/api/block-height/${height}`);
+                if (hashResponse.ok) {
+                    tipHash = await hashResponse.text();
+                }
+            } catch (e) {
+                console.warn('Could not fetch tip block hash:', e);
+            }
+            
             console.log('Current height:', height);
             console.log('Difficulty adjustments:', numDiscs);
             
             this.updateLoadingProgress('Creating visualization...', 90);
-            this.updateUI({ height: height, numDiscs: numDiscs });
+            this.updateUI({ height: height, numDiscs: numDiscs, hash: tipHash });
             this.updateVisualization();
             
             this.updateLoadingProgress('Complete!', 100);
@@ -1318,7 +1288,12 @@ class BitcoinBlockchainExplorer {
         document.getElementById('chain-hashrate').textContent = '450 EH/s';
         
         // Display difficulty adjustment information
-        document.getElementById('last-block').textContent = data.hash?.substring(0, 16) + '...' || '0000...abcd';
+        const lastBlockEl = document.getElementById('last-block');
+        if (data.hash && typeof data.hash === 'string') {
+            lastBlockEl.textContent = data.hash.substring(0, 16) + '...';
+        } else {
+            lastBlockEl.textContent = 'N/A';
+        }
         document.getElementById('avg-block-time').textContent = '10.2 min';
         document.getElementById('total-transactions').textContent = data.numDiscs?.toLocaleString() || '0';
         document.getElementById('chain-work').textContent = '1.2 Z';

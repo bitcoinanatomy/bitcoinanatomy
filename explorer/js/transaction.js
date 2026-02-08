@@ -898,7 +898,18 @@ class BitcoinTransactionExplorer {
             
             console.log('=== END TRANSACTION DATA ===\n');
             
-            this.updateUI(this.transactionData);
+            let tipHeight = null;
+            if (this.transactionData.status?.block_height) {
+                try {
+                    const tipResponse = await fetch('https://mempool.space/api/blocks/tip/height');
+                    if (tipResponse.ok) {
+                        tipHeight = parseInt(await tipResponse.text(), 10);
+                    }
+                } catch (e) {
+                    console.warn('Could not fetch chain tip for confirmations:', e);
+                }
+            }
+            this.updateUI(this.transactionData, tipHeight);
             this.createTransactionVisualization();
             
             // Check spending status of outputs
@@ -910,7 +921,7 @@ class BitcoinTransactionExplorer {
         }
     }
 
-    updateUI(data) {
+    updateUI(data, chainTipHeight) {
         if (!data || Object.keys(data).length === 0) {
             document.getElementById('tx-hash').textContent = 'Loading...';
             document.getElementById('tx-date').textContent = 'Loading...';
@@ -974,7 +985,17 @@ class BitcoinTransactionExplorer {
         document.getElementById('tx-size').textContent = data.size ? `${data.size} bytes` : 'N/A';
         document.getElementById('tx-weight').textContent = data.weight ? `${data.weight} WU` : 'N/A';
         document.getElementById('tx-sigops').textContent = data.sigops ? data.sigops.toString() : 'N/A';
-        document.getElementById('tx-confirmations').textContent = data.status?.block_height ? 'Confirmed' : '0';
+        const blockHeight = data.status?.block_height;
+        let confirmationsText;
+        if (!blockHeight) {
+            confirmationsText = 'Not confirmed';
+        } else if (chainTipHeight != null && !isNaN(chainTipHeight)) {
+            const count = Math.max(0, chainTipHeight - blockHeight + 1);
+            confirmationsText = count.toString();
+        } else {
+            confirmationsText = 'Confirmed';
+        }
+        document.getElementById('tx-confirmations').textContent = confirmationsText;
     }
 
     createTransactionVisualization() {

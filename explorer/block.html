@@ -61,40 +61,12 @@
             
             <div class="controls">
                 <div class="controls-main">
-                    <button id="toggle-rotation">Pause Rotation</button>
-                    <button id="load-all-transactions">Load All</button>
-                    <button id="toggle-view">Orthographic</button>
+                    <button id="load-all-transactions">Load TXs</button>
                     <button id="show-raw-data">Raw Data</button>
                     <button id="show-merkle-tree">Merkle Tree</button>
-                    <button id="toggle-ui" title="Hide/Show UI">Hide UI</button>
+                    <button id="go-to-block">Go to</button>
                 </div>
-                <div class="navigation-controls">
-                    <div class="control-group">
-                        <div class="control-label">Rotate</div>
-                        <div class="control-buttons">
-                            <button id="rotate-left">←</button>
-                            <button id="rotate-right">→</button>
-                            <button id="rotate-up">↑</button>
-                            <button id="rotate-down">↓</button>
-                        </div>
-                    </div>
-                    <div class="control-group">
-                        <div class="control-label">Pan</div>
-                        <div class="control-buttons">
-                            <button id="pan-left">←</button>
-                            <button id="pan-right">→</button>
-                            <button id="pan-up">↑</button>
-                            <button id="pan-down">↓</button>
-                        </div>
-                    </div>
-                    <div class="control-group">
-                        <div class="control-label">Zoom</div>
-                        <div class="control-buttons">
-                            <button id="zoom-in">+</button>
-                            <button id="zoom-out">−</button>
-                        </div>
-                    </div>
-                </div>
+                <div id="controls-camera-root" class="controls-camera"></div>
             </div>
         </div>
     </div>
@@ -164,11 +136,64 @@
         Data sources: Mempool.space
     </div>
 
+    <!-- Go to Block Modal -->
+    <div id="block-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Go to Block</h3>
+                <span class="block-modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="block-form">
+                    <label for="new-block-height">Block height:</label>
+                    <div class="input-group">
+                        <input type="number" id="new-block-height" name="height" min="0" placeholder="e.g. 0 or 210000" required>
+                    </div>
+                    <div class="famous-transactions">
+                        <h4>Interesting blocks:</h4>
+                        <div class="transaction-list">
+                            <button type="button" class="famous-transaction go-to-block-btn" data-height="0">
+                                <span class="transaction-name">Genesis Block</span>
+                                <span class="transaction-hash">Height 0</span>
+                            </button>
+                            <button type="button" class="famous-transaction go-to-block-btn" data-height="2016">
+                                <span class="transaction-name">First difficulty adjustment</span>
+                                <span class="transaction-hash">Height 2,016</span>
+                            </button>
+                            <button type="button" class="famous-transaction go-to-block-btn" data-height="210000">
+                                <span class="transaction-name">Halving 1</span>
+                                <span class="transaction-hash">Height 210,000</span>
+                            </button>
+                            <button type="button" class="famous-transaction go-to-block-btn" data-height="420000">
+                                <span class="transaction-name">Halving 2</span>
+                                <span class="transaction-hash">Height 420,000</span>
+                            </button>
+                            <button type="button" class="famous-transaction go-to-block-btn" data-height="630000">
+                                <span class="transaction-name">Halving 3</span>
+                                <span class="transaction-hash">Height 630,000</span>
+                            </button>
+                            <button type="button" class="famous-transaction go-to-block-btn" data-height="840000">
+                                <span class="transaction-name">Halving 4</span>
+                                <span class="transaction-hash">Height 840,000</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="button" id="block-modal-cancel">Cancel</button>
+                        <button type="submit" id="block-modal-submit">Go to Block</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Three.js from CDN (ES Modules) -->
     <script type="module">
         import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
         window.THREE = THREE;
     </script>
+    <script src="js/controls-camera.js"></script>
+    <script>ControlsCamera(document.getElementById('controls-camera-root'), { viewGroup: true });</script>
     <script src="js/block.js"></script>
     <script>
         // Hamburger menu functionality
