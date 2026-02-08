@@ -1031,29 +1031,35 @@ button:active {
 }
 
 /* ================================
-   MODAL STYLES
+   MODAL STYLES (on-brand: panel + navbar)
    ================================ */
 .modal {
     display: none;
     position: fixed;
-    z-index: 2000;
+    z-index: 45000;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(5px);
+    background-color: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px);
+    overflow-y: auto;
+    padding: 1rem;
+    box-sizing: border-box;
 }
 
 .modal-content {
-    background-color: #1a1a1a;
-    margin: 15% auto;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    margin: 1rem auto;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
     width: 90%;
-    max-width: 510px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    max-width: 520px;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
     animation: modalSlideIn 0.3s ease-out;
 }
 
@@ -1072,125 +1078,145 @@ button:active {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 25px;
+    padding: 16px 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
 }
 
 .modal-header h3 {
-    font-size: .8rem;
-    font-weight: 200;
+    font-size: 0.9rem;
+    font-weight: 500;
     margin: 0;
-    color: #797979;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     text-transform: uppercase;
-    letter-spacing: 0.05rem;
+    letter-spacing: 0.04em;
 }
 
-.modal-close {
-    color: #aaa;
-    font-size: 28px;
+.modal-close,
+.block-modal-close {
+    color: #cccccc;
+    font-size: 22px;
     font-weight: bold;
     cursor: pointer;
     line-height: 1;
+    padding: 0;
+    background: none;
+    border: none;
     transition: color 0.2s;
 }
 
 .modal-close:hover,
-.modal-close:focus {
+.modal-close:focus,
+.block-modal-close:hover,
+.block-modal-close:focus {
     color: #ffffff;
 }
 
 .modal-body {
-    padding: 25px;
+    padding: 20px;
+    padding-bottom: 24px;
 }
 
 .modal-body label {
     display: block;
-    margin-bottom: 8px;
-    color: #ffffff;
+    margin-bottom: 6px;
+    color: #cccccc;
+    font-size: 0.8rem;
     font-weight: 500;
 }
 
-.modal-body input[type="text"] {
+.modal-body input[type="text"],
+.modal-body input[type="number"] {
     width: 100%;
-    padding: 12px 16px;
-    margin-bottom: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    background-color: rgba(255, 255, 255, 0.05);
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
     color: #ffffff;
-    font-size: 14px;
+    font-size: 13px;
     font-family: monospace;
     transition: border-color 0.2s, background-color 0.2s;
+    box-sizing: border-box;
 }
 
-.modal-body input[type="text"]:focus {
+.modal-body input[type="text"]:focus,
+.modal-body input[type="number"]:focus {
     outline: none;
-    border-color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .modal-body input[type="text"]::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .input-group {
     display: flex;
     gap: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
-.input-group input[type="text"] {
+.input-group input[type="text"],
+.input-group input[type="number"] {
     flex: 1;
     margin-bottom: 0;
 }
 
 #paste-button {
-    padding: 12px 16px;
-    background-color: rgba(255, 255, 255, 0.1);
+    padding: 10px 14px;
+    background: rgb(0 0 0 / 11%);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+    border-radius: 3px;
     color: #ffffff;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
     transition: all 0.2s;
-    min-width: 50px;
+    min-width: 48px;
 }
 
 #paste-button:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 #paste-button:active {
     transform: translateY(1px);
 }
 
+/* Go-to modal: famous transactions / interesting blocks / addresses */
+.famous-transactions,
 .famous-addresses {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
+.famous-transactions h4,
 .famous-addresses h4 {
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 12px;
-    opacity: 0.9;
+    color: #797979;
+    font-size: 0.8rem;
+    font-weight: 200;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
 }
 
+.transaction-list,
 .address-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
+.famous-transaction,
 .famous-address {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    padding: 12px;
-    background-color: rgba(255, 255, 255, 0.05);
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    border-radius: 3px;
     color: #ffffff;
     cursor: pointer;
     transition: all 0.2s;
@@ -1198,174 +1224,126 @@ button:active {
     width: 100%;
 }
 
+.famous-transaction:hover,
 .famous-address:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
+.famous-transaction:active,
 .famous-address:active {
     transform: translateY(1px);
 }
 
+.transaction-name,
 .address-name {
     font-weight: 500;
-    font-size: 13px;
-    margin-bottom: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 2px;
     color: #ffffff;
 }
 
-    .address-hash {
-        font-family: monospace;
-        font-size: 11px;
-        color: rgba(255, 255, 255, 0.7);
-        word-break: break-all;
-    }
-
-    /* Transaction modal specific styles */
-    .famous-transactions {
-        margin-bottom: 20px;
-    }
-
-    .famous-transactions h4 {
-        color: #ffffff;
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 12px;
-        opacity: 0.9;
-    }
-
-    .transaction-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .famous-transaction {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 12px;
-        background-color: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-        color: #ffffff;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-align: left;
-        width: 100%;
-    }
-
-    .famous-transaction:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    .famous-transaction:active {
-        transform: translateY(1px);
-    }
-
-    .transaction-name {
-        font-weight: 500;
-        font-size: 13px;
-        margin-bottom: 4px;
-        color: #ffffff;
-    }
-
-    .transaction-hash {
-        font-family: monospace;
-        font-size: 11px;
-        color: rgba(255, 255, 255, 0.7);
-        word-break: break-all;
-    }
+.transaction-hash,
+.address-hash {
+    font-family: monospace;
+    font-size: 11px;
+    color: #cccccc;
+    word-break: break-all;
+    line-height: 1.3;
+}
 
 .modal-buttons {
     display: flex;
-    gap: 12px;
+    gap: 6px;
     justify-content: flex-end;
 }
 
 .modal-buttons button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    font-size: 14px;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 3px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
-#modal-cancel {
-    background-color: transparent;
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-#modal-cancel:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.5);
-}
-
+.modal-buttons button[type="button"],
+.modal-buttons button[type="submit"],
+#modal-cancel,
 #modal-submit {
-    background-color: #ffffff;
-    color: #000000;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
 }
 
+.modal-buttons button:hover,
+#modal-cancel:hover,
 #modal-submit:hover {
-    background-color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.modal-buttons button:active,
+#modal-cancel:active,
+#modal-submit:active {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* Mobile responsive modal */
 @media (max-width: 768px) {
+    .modal {
+        padding: 0.75rem;
+    }
+
     .modal-content {
-        margin: 10% auto;
+        margin: 0.75rem auto;
         width: 95%;
+        max-height: calc(100vh - 1.5rem);
     }
-    
+
     .modal-header {
-        padding: 15px 20px;
+        padding: 12px 16px;
     }
-    
+
     .modal-body {
-        padding: 20px;
+        padding: 16px;
+        padding-bottom: 20px;
     }
-    
+
     .modal-buttons {
         flex-direction: column;
+        gap: 8px;
     }
-    
+
     .modal-buttons button {
         width: 100%;
     }
-    
+
     .input-group {
         flex-direction: column;
     }
-    
+
     #paste-button {
         width: 100%;
         margin-top: 8px;
     }
-    
-    .famous-address {
-        padding: 10px;
-    }
-    
-    .address-name {
-        font-size: 12px;
-    }
-    
-    .address-hash {
-        font-size: 10px;
-    }
-    
+
+    .famous-address,
     .famous-transaction {
         padding: 10px;
     }
-    
+
+    .address-name,
     .transaction-name {
         font-size: 12px;
     }
-    
+
+    .address-hash,
     .transaction-hash {
         font-size: 10px;
     }

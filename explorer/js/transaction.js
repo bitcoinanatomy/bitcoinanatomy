@@ -143,6 +143,7 @@ class BitcoinTransactionExplorer {
             lastMouseX = e.clientX;
             lastMouseY = e.clientY;
             this.isRotating = false; // Stop auto rotation when user interacts
+            this.updateRotationButtonState();
         });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
@@ -436,11 +437,7 @@ class BitcoinTransactionExplorer {
         this.renderer.domElement.addEventListener('wheel', (e) => {
             // Stop automatic rotation when user starts zooming
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
-            
+            this.updateRotationButtonState();
             // Zoom in/out with inverted scroll direction
             if (this.isPerspective) {
                 // Perspective camera zoom
@@ -468,8 +465,7 @@ class BitcoinTransactionExplorer {
         // Button controls
         document.getElementById('toggle-rotation').addEventListener('click', () => {
             this.isRotating = !this.isRotating;
-            const button = document.getElementById('toggle-rotation');
-            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+            this.updateRotationButtonState();
         });
         
         document.getElementById('reset-camera').addEventListener('click', () => {
@@ -615,13 +611,8 @@ class BitcoinTransactionExplorer {
         // Touch start
         this.renderer.domElement.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
-
+            this.updateRotationButtonState();
             if (e.touches.length === 1) {
                 // Single touch - rotation/panning
                 touchStartX = e.touches[0].clientX;
@@ -1570,6 +1561,16 @@ class BitcoinTransactionExplorer {
         }
     }
 
+    updateRotationButtonState() {
+        const button = document.getElementById('toggle-rotation');
+        const icon = document.getElementById('toggle-rotation-icon');
+        if (button && icon) {
+            icon.src = this.isRotating ? 'imgs/icons/pause.svg' : 'imgs/icons/play.svg';
+            button.title = this.isRotating ? 'Pause rotation' : 'Start rotation';
+            button.setAttribute('aria-label', button.title);
+        }
+    }
+
     setupModal() {
         const modal = document.getElementById('transaction-modal');
         const changeTransactionBtn = document.getElementById('change-transaction');
@@ -1626,12 +1627,15 @@ class BitcoinTransactionExplorer {
             }
         });
 
-        // Famous transactions functionality
+        // Famous transactions: load immediately on click
         famousTransactions.forEach(button => {
             button.addEventListener('click', () => {
                 const txid = button.getAttribute('data-txid');
-                txidInput.value = txid;
-                txidInput.focus();
+                if (!txid) return;
+                modal.style.display = 'none';
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('txid', txid);
+                window.location.href = currentUrl.toString();
             });
         });
 
@@ -1666,30 +1670,21 @@ class BitcoinTransactionExplorer {
     // Navigation methods
     rotateLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.theta -= 0.2;
         this.updateCameraPosition();
     }
     
     rotateRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.theta += 0.2;
         this.updateCameraPosition();
     }
     
     rotateUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.phi -= 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.updateCameraPosition();
@@ -1697,10 +1692,7 @@ class BitcoinTransactionExplorer {
     
     rotateDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.phi += 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.updateCameraPosition();
@@ -1708,50 +1700,35 @@ class BitcoinTransactionExplorer {
     
     panLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.panX -= 0.5;
         this.updateCameraPosition();
     }
     
     panRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.panX += 0.5;
         this.updateCameraPosition();
     }
     
     panUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.panY += 0.5;
         this.updateCameraPosition();
     }
     
     panDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.panY -= 0.5;
         this.updateCameraPosition();
     }
     
     zoomIn() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.distance -= 2;
         this.controls.distance = Math.max(10, Math.min(200, this.controls.distance));
         this.updateCameraPosition();
@@ -1759,10 +1736,7 @@ class BitcoinTransactionExplorer {
     
     zoomOut() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButtonState();
         this.controls.distance += 2;
         this.controls.distance = Math.max(10, Math.min(200, this.controls.distance));
         this.updateCameraPosition();
