@@ -45,7 +45,7 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h3>Block Information</h3>
-                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize" aria-label="Minimize panel"><img class="panel-toggle-icon" src="imgs/icons/chevron-up.svg" alt=""></button>
                     </div>
                     <div id="block-info" class="panel-content">
                         <div>Height: <span id="block-height">Loading...</span></div>
@@ -61,6 +61,7 @@
             
             <div class="controls">
                 <div class="controls-main">
+                    <button id="show-more-blocks">Show more</button>
                     <button id="load-all-transactions">Load TXs</button>
                     <button id="show-raw-data">Raw Data</button>
                     <button id="show-merkle-tree">Merkle Tree</button>
@@ -223,7 +224,10 @@
                 // Start minimized on mobile
                 panelContent.classList.add('minimized');
                 if (toggleButton) {
-                    toggleButton.textContent = '+';
+                    const icon = toggleButton.querySelector('.panel-toggle-icon');
+                    if (icon) icon.src = 'imgs/icons/chevron-down.svg';
+                    toggleButton.title = 'Maximize';
+                    toggleButton.setAttribute('aria-label', 'Maximize panel');
                 }
             }
         });

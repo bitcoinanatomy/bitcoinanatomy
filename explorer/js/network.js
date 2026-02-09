@@ -1517,16 +1517,17 @@ class BitcoinNetworkExplorer {
             toggleBtn.addEventListener('click', () => {
                 const isMinimized = panelContent.classList.contains('minimized');
                 
+                const icon = toggleBtn.querySelector('.panel-toggle-icon');
                 if (isMinimized) {
-                    // Expand panel
                     panelContent.classList.remove('minimized');
-                    toggleBtn.textContent = '−';
+                    if (icon) icon.src = 'imgs/icons/chevron-up.svg';
                     toggleBtn.title = 'Minimize';
+                    toggleBtn.setAttribute('aria-label', 'Minimize panel');
                 } else {
-                    // Minimize panel
                     panelContent.classList.add('minimized');
-                    toggleBtn.textContent = '+';
+                    if (icon) icon.src = 'imgs/icons/chevron-down.svg';
                     toggleBtn.title = 'Maximize';
+                    toggleBtn.setAttribute('aria-label', 'Maximize panel');
                 }
             });
         }

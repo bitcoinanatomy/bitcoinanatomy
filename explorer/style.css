@@ -458,7 +458,7 @@ body:not(.homepage) {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 3px;
-    padding: 20px;
+    padding: 10px;
     margin-bottom: 20px;
     z-index: 2000;
     position: relative;
@@ -484,17 +484,27 @@ body:not(.homepage) {
     background: none;
     border: none;
     color: #ffffff;
-    font-size: 18px;
-    font-weight: bold;
     cursor: pointer;
     padding: 0;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.2s;
+    transition: color 0.2s, background 0.2s;
     border-radius: 2px;
+}
+
+.panel-toggle-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
+    filter: brightness(0) invert(1);
+    opacity: 0.5;
+}
+
+.panel-toggle:hover .panel-toggle-icon {
+    opacity: 0.85;
 }
 
 .panel-toggle:hover {
@@ -1499,7 +1509,10 @@ button:active {
     .panel-toggle {
         width: 32px;
         height: 32px;
-        font-size: 20px;
+    }
+    .panel-toggle .panel-toggle-icon {
+        width: 22px;
+        height: 22px;
     }
     
     /* Mobile sidebar adjustments */

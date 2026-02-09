@@ -45,7 +45,7 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h3>Mempool Information</h3>
-                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize" aria-label="Minimize panel"><img class="panel-toggle-icon" src="imgs/icons/chevron-up.svg" alt=""></button>
                     </div>
                     <div id="mempool-stats" class="panel-content">
                         <div>Total Transactions: <span id="total-transactions">Loading...</span></div>
@@ -110,7 +110,10 @@
                 // Start minimized on mobile
                 panelContent.classList.add('minimized');
                 if (toggleButton) {
-                    toggleButton.textContent = '+';
+                    const icon = toggleButton.querySelector('.panel-toggle-icon');
+                    if (icon) icon.src = 'imgs/icons/chevron-down.svg';
+                    toggleButton.title = 'Maximize';
+                    toggleButton.setAttribute('aria-label', 'Maximize panel');
                 }
             }
         });

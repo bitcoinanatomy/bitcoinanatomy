@@ -38,6 +38,17 @@ class BitcoinBlockExplorer {
         this.merkleTreeNodes = []; // Store merkle tree node positions
         this.merkleTreeLineMap = new Map(); // Map txid -> vertical line for direct lookup
         
+        // Past/future blocks: store refs for "Show more" (header + tx cuboids)
+        this.pastBlockInfos = [];   // { mesh, height, z }
+        this.futureBlockInfos = []; // { mesh, height, z }
+        this.contentPastCount = 0;  // how many past blocks have header+tx loaded (always 5 fading at the end)
+        this.contentFutureCount = 0;
+        this.otherBlocksHeaders = [];
+        this.otherBlocksCuboids = [];
+        this.FACTOR_BLOCK_DISTANCE = 0.016;
+        this.MIN_TIMESTAMP = 1231006500;
+        this.MAX_TIMESTAMP = 4102444800;
+        
         // Get block height and transaction ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         
@@ -460,6 +471,19 @@ class BitcoinBlockExplorer {
         
 
         
+        document.getElementById('show-more-blocks').addEventListener('click', async () => {
+            const btn = document.getElementById('show-more-blocks');
+            btn.textContent = 'Loading...';
+            btn.disabled = true;
+            try {
+                await this.loadOtherBlocksContent();
+            } catch (e) {
+                console.warn('Show more failed:', e);
+            }
+            btn.disabled = false;
+            btn.textContent = 'Show more';
+        });
+
         document.getElementById('load-all-transactions').addEventListener('click', () => {
             if (this.isLoadingAll) {
                 this.stopLoadingAll();
@@ -1683,7 +1707,7 @@ class BitcoinBlockExplorer {
         const blockMaterial = new THREE.MeshLambertMaterial({
             color: 0xffffff,
             transparent: true,
-            opacity: 0.15,
+            opacity: 0.15,  // current block with header and transactions
             depthWrite: false,  // Prevent depth writing issues with transparency
             alphaTest: 0.01     // Helps with transparency sorting
         });
@@ -1832,6 +1856,7 @@ class BitcoinBlockExplorer {
             prevBlock.material.opacity = Math.max(opacity, 0.01); // Cap at 0.05 to maintain some visibility
             
             this.scene.add(prevBlock);
+            this.pastBlockInfos.push({ mesh: prevBlock, height: prevHeight, z: cumulativeZPast });
         }
         
         // Create future blocks behind the current block (limited by chain tip)
@@ -1909,7 +1934,272 @@ class BitcoinBlockExplorer {
             nextBlock.material.opacity = Math.max(opacity, 0.01); // Cap at 0.05 to maintain some visibility
             
             this.scene.add(nextBlock);
+            this.futureBlockInfos.push({ mesh: nextBlock, height: nextHeight, z: -cumulativeZFuture });
         }
+    }
+
+    /**
+     * When "Show more": add 5 more past and 5 more future block cubes (incremental, fading only).
+     * Content (header+tx) is loaded separately for the "inner" blocks; this keeps 5 fading at each end.
+     */
+    async extendBlocksRow() {
+        const currentHeight = parseInt(this.blockHeight) || 0;
+        const countPast = this.pastBlockInfos.length;
+        const countFuture = this.futureBlockInfos.length;
+
+        // Fetch timestamp for the last past block we have so we can compute spacing for the next 5
+        let lastTimestamp = 0;
+        const lastPastHeight = currentHeight - countPast;
+        if (lastPastHeight >= 0 && countPast >= 1) {
+            try {
+                const hashRes = await fetch(`https://mempool.space/api/block-height/${lastPastHeight}`);
+                if (hashRes.ok) {
+                    const hash = (await hashRes.text()).trim();
+                    const blockRes = await fetch(`https://mempool.space/api/v1/block/${hash}`);
+                    if (blockRes.ok) {
+                        const data = await blockRes.json();
+                        lastTimestamp = data.timestamp || 0;
+                    }
+                }
+            } catch (_) { /* ignore */ }
+        }
+        if (lastTimestamp < this.MIN_TIMESTAMP || lastTimestamp > this.MAX_TIMESTAMP) lastTimestamp = 0;
+
+        let cumulativeZPast = countPast > 0 ? this.pastBlockInfos[countPast - 1].z : 0;
+        for (let k = 1; k <= 5; k++) {
+            const i = countPast + k;
+            const prevHeight = currentHeight - i;
+            if (prevHeight < 0) break;
+            let timeDifference = 600;
+            try {
+                const prevHashResponse = await fetch(`https://mempool.space/api/block-height/${prevHeight}`);
+                if (prevHashResponse.ok) {
+                    const prevHash = (await prevHashResponse.text()).trim();
+                    const prevBlockResponse = await fetch(`https://mempool.space/api/v1/block/${prevHash}`);
+                    if (prevBlockResponse.ok) {
+                        const prevBlockData = await prevBlockResponse.json();
+                        const prevTimestamp = prevBlockData.timestamp || 0;
+                        if (lastTimestamp > 0 && prevTimestamp > 0 && prevTimestamp <= lastTimestamp) {
+                            timeDifference = Math.min(7200, lastTimestamp - prevTimestamp);
+                        }
+                        lastTimestamp = prevTimestamp;
+                    }
+                }
+            } catch (_) { /* ignore */ }
+            if (timeDifference > 7200) timeDifference = 600;
+            cumulativeZPast += timeDifference * this.FACTOR_BLOCK_DISTANCE;
+
+            const geom = new THREE.BoxGeometry(3, 3, 3);
+            const mat = new THREE.MeshLambertMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.15,
+                depthWrite: false,
+                alphaTest: 0.01
+            });
+            const prevBlock = new THREE.Mesh(geom, mat);
+            prevBlock.position.set(0, 0, cumulativeZPast);
+            prevBlock.castShadow = true;
+            prevBlock.renderOrder = 1;
+            prevBlock.userData = { type: 'pastBlock', blockHeight: prevHeight };
+            const opacity = Math.max(0.06, 0.1 - (i * 0.02));
+            prevBlock.material.opacity = opacity;
+            this.scene.add(prevBlock);
+            this.pastBlockInfos.push({ mesh: prevBlock, height: prevHeight, z: cumulativeZPast });
+        }
+
+        // Future: fetch timestamp for the last future block we have
+        let nextLastTimestamp = 0;
+        const lastFutureHeight = currentHeight + countFuture;
+        if (countFuture >= 1) {
+            try {
+                const hashRes = await fetch(`https://mempool.space/api/block-height/${lastFutureHeight}`);
+                if (hashRes.ok) {
+                    const hash = (await hashRes.text()).trim();
+                    const blockRes = await fetch(`https://mempool.space/api/v1/block/${hash}`);
+                    if (blockRes.ok) {
+                        const data = await blockRes.json();
+                        nextLastTimestamp = data.timestamp || 0;
+                    }
+                }
+            } catch (_) { /* ignore */ }
+        }
+        if (nextLastTimestamp < this.MIN_TIMESTAMP || nextLastTimestamp > this.MAX_TIMESTAMP) nextLastTimestamp = 0;
+
+        let cumulativeZFuture = countFuture > 0 ? Math.abs(this.futureBlockInfos[countFuture - 1].z) : 0;
+        for (let k = 1; k <= 5; k++) {
+            const i = countFuture + k;
+            const nextHeight = currentHeight + i;
+            if (this.chainTipHeight != null && nextHeight > this.chainTipHeight) break;
+            let timeDifference = 600;
+            try {
+                const nextHashResponse = await fetch(`https://mempool.space/api/block-height/${nextHeight}`);
+                if (nextHashResponse.ok) {
+                    const nextHash = (await nextHashResponse.text()).trim();
+                    const nextBlockResponse = await fetch(`https://mempool.space/api/v1/block/${nextHash}`);
+                    if (nextBlockResponse.ok) {
+                        const nextBlockData = await nextBlockResponse.json();
+                        const nextTimestamp = nextBlockData.timestamp || 0;
+                        if (nextLastTimestamp > 0 && nextTimestamp > 0 && nextTimestamp >= nextLastTimestamp) {
+                            timeDifference = Math.min(7200, nextTimestamp - nextLastTimestamp);
+                        }
+                        nextLastTimestamp = nextTimestamp;
+                    }
+                }
+            } catch (_) { /* ignore */ }
+            if (timeDifference > 7200) timeDifference = 600;
+            cumulativeZFuture += timeDifference * this.FACTOR_BLOCK_DISTANCE;
+
+            const geom = new THREE.BoxGeometry(3, 3, 3);
+            const mat = new THREE.MeshLambertMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.15,
+                depthWrite: false,
+                alphaTest: 0.01
+            });
+            const nextBlock = new THREE.Mesh(geom, mat);
+            nextBlock.position.set(0, 0, -cumulativeZFuture);
+            nextBlock.castShadow = true;
+            nextBlock.renderOrder = 1;
+            nextBlock.userData = { type: 'futureBlock', blockHeight: nextHeight };
+            const opacity = Math.max(0.06, 0.1 - (i * 0.02));
+            nextBlock.material.opacity = opacity;
+            this.scene.add(nextBlock);
+            this.futureBlockInfos.push({ mesh: nextBlock, height: nextHeight, z: -cumulativeZFuture });
+        }
+        console.log(`Show more: ${this.pastBlockInfos.length} past, ${this.futureBlockInfos.length} future blocks`);
+    }
+
+    /**
+     * Create header mesh + transaction cuboids for a block at given z (past/future block).
+     * blockOpacity: matches the block cube so header and cuboids fade with the block.
+     */
+    createHeaderAndCuboidsForBlock(blockZ, txCount, blockOpacity = 0.4) {
+        const HEADER_WIDTH = 2.46;
+        const HEADER_HEIGHT = 0.01;
+        const HEADER_DEPTH = 0.01;
+        const spacingZ = 0.25;
+        const firstRowZ = Math.max(-1.4, Math.min(1.4, (0 - 4.5) * spacingZ));
+        const headerGeometry = new THREE.BoxGeometry(HEADER_WIDTH, HEADER_HEIGHT, HEADER_DEPTH);
+        const headerMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: blockOpacity
+        });
+        const headerMesh = new THREE.Mesh(headerGeometry, headerMaterial);
+        headerMesh.position.set(0, 1.0, blockZ + firstRowZ);
+        headerMesh.renderOrder = 0;
+        this.scene.add(headerMesh);
+
+        const transactionsPerRow = 10;
+        const transactionsPerLayer = 100;
+        const spacingX = 0.25;
+        const spacingY = 0.3;
+        const CUBOID_WIDTH = 0.01;
+        const CUBOID_HEIGHT = 0.03;
+        const CUBOID_LENGTH = 0.21;
+        // Use actual tx count so each block's geometry varies; cap at 1000 for performance (10 blocks × 1000)
+        const n = Math.min(Math.max(0, txCount), 4000);
+        const cuboids = [];
+        for (let i = 0; i < n; i++) {
+            const layer = Math.floor(i / transactionsPerLayer);
+            const positionInLayer = i % transactionsPerLayer;
+            const row = Math.floor(positionInLayer / transactionsPerRow);
+            const col = positionInLayer % transactionsPerRow;
+            const x = ((transactionsPerRow - 1) / 2 - col) * spacingX;
+            const z = (row - 4.5) * spacingZ;
+            const zClamped = Math.max(-1.4, Math.min(1.4, z));
+            const y = 0.8 - layer * spacingY;
+            const geometry = new THREE.BoxGeometry(CUBOID_LENGTH, CUBOID_HEIGHT, CUBOID_WIDTH);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: blockOpacity
+            });
+            const cuboid = new THREE.Mesh(geometry, material);
+            cuboid.position.set(x, y, blockZ + zClamped);
+            cuboid.renderOrder = 0;
+            this.scene.add(cuboid);
+            cuboids.push(cuboid);
+        }
+        return { headerMesh, cuboids };
+    }
+
+    /**
+     * Get actual transaction count for a block by hash (same source as current block on load).
+     * Tries /api/block/:hash (tx_count), then /api/v1/block/:hash, then /api/block/:hash/txids length.
+     */
+    async getBlockTxCount(hash) {
+        const urlBlock = `https://mempool.space/api/block/${hash}`;
+        const urlBlockV1 = `https://mempool.space/api/v1/block/${hash}`;
+        const urlTxids = `https://mempool.space/api/block/${hash}/txids`;
+        try {
+            const res = await fetch(urlBlock);
+            if (res.ok) {
+                const data = await res.json();
+                const n = data.tx_count != null ? parseInt(data.tx_count, 10) : NaN;
+                if (!isNaN(n) && n >= 0) return n;
+            }
+        } catch (_) { /* ignore */ }
+        try {
+            const res = await fetch(urlBlockV1);
+            if (res.ok) {
+                const data = await res.json();
+                const n = data.tx_count != null ? parseInt(data.tx_count, 10) : NaN;
+                if (!isNaN(n) && n >= 0) return n;
+            }
+        } catch (_) { /* ignore */ }
+        try {
+            const res = await fetch(urlTxids);
+            if (res.ok) {
+                const txids = await res.json();
+                return Array.isArray(txids) ? txids.length : 0;
+            }
+        } catch (_) { /* ignore */ }
+        return 0;
+    }
+
+    async loadOtherBlocksContent() {
+        // 1) Add 5 past + 5 future fading blocks (no content)
+        await this.extendBlocksRow();
+        // 2) Load header + tx only for the next 5 past and next 5 future (the "inner" ones that now get content)
+        const pastToLoad = this.pastBlockInfos.slice(this.contentPastCount, this.contentPastCount + 5);
+        const futureToLoad = this.futureBlockInfos.slice(this.contentFutureCount, this.contentFutureCount + 5);
+        const blockOpacity = 0.1; // blocks with loaded transactions match current block
+        for (const info of [...pastToLoad, ...futureToLoad]) {
+            try {
+                const hashRes = await fetch(`https://mempool.space/api/block-height/${info.height}`);
+                if (!hashRes.ok) continue;
+                const hash = (await hashRes.text()).trim();
+                if (!hash) continue;
+                const txCount = await this.getBlockTxCount(hash);
+                console.log(`Block height ${info.height}: ${txCount} transactions added`);
+                info.mesh.material.opacity = blockOpacity;
+                const { headerMesh, cuboids } = this.createHeaderAndCuboidsForBlock(info.z, txCount, blockOpacity);
+                this.otherBlocksHeaders.push(headerMesh);
+                this.otherBlocksCuboids.push(...cuboids);
+            } catch (e) {
+                console.warn(`Failed to load block ${info.height} for Show more:`, e);
+            }
+        }
+        this.contentPastCount += pastToLoad.length;
+        this.contentFutureCount += futureToLoad.length;
+    }
+
+    removeOtherBlocksContent() {
+        this.otherBlocksHeaders.forEach(m => {
+            this.scene.remove(m);
+            if (m.geometry) m.geometry.dispose();
+            if (m.material) m.material.dispose();
+        });
+        this.otherBlocksCuboids.forEach(m => {
+            this.scene.remove(m);
+            if (m.geometry) m.geometry.dispose();
+            if (m.material) m.material.dispose();
+        });
+        this.otherBlocksHeaders = [];
+        this.otherBlocksCuboids = [];
     }
 
     async fetchChainTipHeight() {
@@ -2583,16 +2873,17 @@ class BitcoinBlockExplorer {
             toggleBtn.addEventListener('click', () => {
                 const isMinimized = panelContent.classList.contains('minimized');
                 
+                const icon = toggleBtn.querySelector('.panel-toggle-icon');
                 if (isMinimized) {
-                    // Expand panel
                     panelContent.classList.remove('minimized');
-                    toggleBtn.textContent = '−';
+                    if (icon) icon.src = 'imgs/icons/chevron-up.svg';
                     toggleBtn.title = 'Minimize';
+                    toggleBtn.setAttribute('aria-label', 'Minimize panel');
                 } else {
-                    // Minimize panel
                     panelContent.classList.add('minimized');
-                    toggleBtn.textContent = '+';
+                    if (icon) icon.src = 'imgs/icons/chevron-down.svg';
                     toggleBtn.title = 'Maximize';
+                    toggleBtn.setAttribute('aria-label', 'Maximize panel');
                 }
             });
         }

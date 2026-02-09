@@ -45,7 +45,7 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h3>Transaction Information</h3>
-                        <button id="toggle-panel" class="panel-toggle" title="Minimize/Maximize">−</button>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize" aria-label="Minimize panel"><img class="panel-toggle-icon" src="imgs/icons/chevron-up.svg" alt=""></button>
                     </div>
                     <div id="tx-info" class="panel-content">
                         <div>Tx Hash: <span id="tx-hash">Loading...</span></div>
@@ -172,6 +172,10 @@
                                 <span class="transaction-name">Large Transaction (1000 outputs)</span>
                                 <span class="transaction-hash">23c80e5a8c8a17f31f4c2839982d07e347a5974ee4372a6264c61f0f2471d02f</span>
                             </button>
+                            <button type="button" class="famous-transaction" data-txid="e52092e700e07e44ed1709dcf40254678f65b7516e1ae789652d84c7bcb5ee44">
+                                <span class="transaction-name">White Circle Inscription</span>
+                                <span class="transaction-hash">e52092e700e07e44ed1709dcf40254678f65b7516e1ae789652d84c7bcb5ee44</span>
+                            </button>
                         </div>
                     </div>
                     
@@ -242,7 +246,10 @@
                 // Start minimized on mobile
                 panelContent.classList.add('minimized');
                 if (toggleButton) {
-                    toggleButton.textContent = '+';
+                    const icon = toggleButton.querySelector('.panel-toggle-icon');
+                    if (icon) icon.src = 'imgs/icons/chevron-down.svg';
+                    toggleButton.title = 'Maximize';
+                    toggleButton.setAttribute('aria-label', 'Maximize panel');
                 }
             }
         });
