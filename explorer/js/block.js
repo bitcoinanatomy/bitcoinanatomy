@@ -45,6 +45,11 @@ class BitcoinBlockExplorer {
         this.contentFutureCount = 0;
         this.otherBlocksHeaders = [];
         this.otherBlocksCuboids = [];
+        this.blockUnspentOutputs = []; // unspent outputs created by this block (block approach)
+        this.utxoSpheres = []; // meshes for "Show UTXO" spheres
+        this.utxoSpheresVisible = false;
+        this.isLoadingUtxos = false;
+        this.shouldStopUtxoLoad = false;
         this.FACTOR_BLOCK_DISTANCE = 0.016;
         this.MIN_TIMESTAMP = 1231006500;
         this.MAX_TIMESTAMP = 4102444800;
@@ -518,6 +523,22 @@ class BitcoinBlockExplorer {
                 this.showMerkleTree();
             }
         });
+        document.getElementById('show-utxos').addEventListener('click', () => {
+            const btn = document.getElementById('show-utxos');
+            if (btn && btn.disabled) return;
+            if (this.utxoSpheresVisible) {
+                this.hideUtxoSpheres();
+                if (btn) btn.textContent = 'Show UTXO';
+            } else if (this.isLoadingUtxos) {
+                this.stopUtxoLoad();
+            } else if (this.blockUnspentOutputs && this.blockUnspentOutputs.length > 0) {
+                this.showUtxoSpheres();
+                if (btn) btn.textContent = 'Hide UTXO';
+            } else {
+                if (btn) btn.textContent = 'Stop loading';
+                this.startUnspentOutputsFetch();
+            }
+        });
         
         // Go to block modal
         const blockModal = document.getElementById('block-modal');
@@ -848,6 +869,22 @@ class BitcoinBlockExplorer {
                         tooltip.style.top = event.clientY - 10 + 'px';
                         foundInteraction = true;
                     }
+                    if (!foundInteraction && intersectedObject.userData && intersectedObject.userData.type === 'blockUtxo') {
+                        const utxo = intersectedObject.userData.utxo;
+                        const valueBtc = utxo.value ? (utxo.value / 100000000).toFixed(8) : '0';
+                        const addr = utxo.scriptpubkey_address ? this.escapeHtml(utxo.scriptpubkey_address.substring(0, 20) + '...') : '—';
+                        tooltip.innerHTML = `
+                            <strong>Unspent output</strong><br>
+                            Value: ${valueBtc} BTC<br>
+                            Address: ${addr}<br>
+                            TXID: ${this.escapeHtml((utxo.txid || '').substring(0, 16))}...
+                        `;
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = event.clientX + 10 + 'px';
+                        tooltip.style.top = event.clientY - 10 + 'px';
+                        tooltip.style.pointerEvents = 'none';
+                        foundInteraction = true;
+                    }
                 }
                 
                 // Update hover highlight (only if not in highlight mode)
@@ -1074,10 +1111,8 @@ class BitcoinBlockExplorer {
                         
                         if (isCurrentBlock || (storedHeight === null && blockIndex === 0)) {
                             // Current block - stay on same page
-                            console.log('Current block clicked');
                         } else {
                             // Past or future block - navigate to that block's height
-                            console.log(`Navigating to block height: ${targetHeight}`);
                             window.location.href = `block.html?height=${targetHeight}`;
                         }
                         return; // Exit after handling block
@@ -1170,12 +1205,10 @@ class BitcoinBlockExplorer {
     
     async loadAllTransactions() {
         if (this.transactions.length === 0) {
-            console.log('No transactions to load');
             return;
         }
         
         if (this.isLoadingAll) {
-            console.log('Load all already in progress');
             return;
         }
         
@@ -1183,11 +1216,10 @@ class BitcoinBlockExplorer {
         this.shouldStopLoadingAll = false;
         
         const button = document.getElementById('load-all-transactions');
-        const originalText = button.textContent;
         
-        // Update button to show it can be clicked to stop
-        button.textContent = 'Stop Loading';
+        button.textContent = 'Stop loading';
         this.isLoadingAll = true;
+        this.showLoadingModal('Loading transactions...', true);
         
         // Update URL with loadAll parameter
         const url = new URL(window.location);
@@ -1216,7 +1248,7 @@ class BitcoinBlockExplorer {
         let errorCount = 0;
         
         if (remainingToLoad === 0) {
-            console.log('All transactions already loaded');
+            this.hideLoadingModal();
             button.textContent = 'All Loaded';
             button.disabled = true;
             this.isLoadingAll = false;
@@ -1234,22 +1266,10 @@ class BitcoinBlockExplorer {
             
             // Animate merkle tree line's first point if merkle tree is visible
             // Start this BEFORE the cuboid animation so it can track from the beginning
-            console.log('[LoadTransactionData] About to animate merkle line', {
-                merkleTreeVisible: this.merkleTreeVisible,
-                hasTxid: !!cuboid.userData.txid,
-                txid: cuboid.userData.txid?.substring(0, 16),
-                currentCuboidY: cuboid.position.y,
-                alignedY: alignedY
-            });
-            
             if (this.merkleTreeVisible && cuboid.userData.txid) {
                 this.animateMerkleTreeLineOrigin(cuboid, alignedY, 500);
             }
             
-            console.log('[LoadTransactionData] About to animate cuboid position', {
-                currentY: cuboid.position.y,
-                targetY: alignedY
-            });
             this.animateCuboidPosition(cuboid, alignedY, 500);
             cuboid.userData.sizeOnlyLoaded = false;
             
@@ -1261,16 +1281,13 @@ class BitcoinBlockExplorer {
             }
             
             loadedCount++;
-            button.textContent = `Stop Loading (${loadedCount}/${totalToLoad})`;
+            this.updateLoadingProgress(`Loading ${loadedCount}/${totalToLoad}...`, Math.round(100 * loadedCount / totalToLoad));
         }
-        
-        console.log(`Loading remaining ${unloadedTransactions.length} transactions (${sizeOnlyTransactions.length} position-animated, ${fullyLoaded} fully loaded) with 0.005s delay between requests...`);
         
         // Load transactions one by one with delay (only unloaded ones)
         for (let i = 0; i < unloadedTransactions.length; i++) {
             // Check if user wants to stop
             if (this.shouldStopLoadingAll) {
-                console.log('Load all stopped by user');
                 break;
             }
             
@@ -1280,16 +1297,13 @@ class BitcoinBlockExplorer {
             try {
                 await this.loadSingleTransaction(cuboid, txData.txid, txData.index, 0);
                 loadedCount++;
-                
-                // Update button text with progress (but keep stop functionality)
-                button.textContent = `Stop Loading (${loadedCount}/${totalToLoad})`;
+                this.updateLoadingProgress(`Loading ${loadedCount}/${totalToLoad}...`, Math.round(100 * loadedCount / totalToLoad));
                 
                 // Update loaded transaction count
                 this.loadedTransactionCount = Math.max(this.loadedTransactionCount, txData.index + 1);
                 
                 // Refresh merkle tree every 100 transactions if visible
                 if (this.merkleTreeVisible && loadedCount % 100 === 0) {
-                    console.log(`[MerkleTree] Refreshing merkle tree after ${loadedCount} transactions loaded`);
                     // Hide and show to rebuild with updated transaction positions
                     this.hideMerkleTree(false, true); // Don't update button, skip flag update
                     // Small delay to ensure hide completes
@@ -1300,7 +1314,6 @@ class BitcoinBlockExplorer {
                 
                 // Merkle tree line origins are now animated individually with each transaction
                 
-                //console.log(`Loaded transaction ${loadedCount}/${totalToLoad}: ${txData.txid.substring(0, 16)}...`);
                 
             } catch (error) {
                 errorCount++;
@@ -1313,32 +1326,31 @@ class BitcoinBlockExplorer {
             }
         }
         
-        // Reset button states
         this.isLoadingAll = false;
         this.shouldStopLoadingAll = false;
+        this.hideLoadingModal();
         
-        if (this.shouldStopLoadingAll || loadedCount < totalToLoad) {
-            button.textContent = `Stopped (${loadedCount}/${totalToLoad})`;
+        if (loadedCount < totalToLoad) {
+            button.textContent = 'Load TXs';
         } else if (errorCount > 0) {
-            button.textContent = `Loaded All (${errorCount} failed)`;
+            button.textContent = `Loaded (${errorCount} failed)`;
         } else {
             button.textContent = 'All Loaded';
-            // Update URL - remove loadAll parameter when all transactions are loaded
+            button.disabled = true;
             const url = new URL(window.location);
             url.searchParams.delete('loadAll');
             url.searchParams.delete('loadall');
             window.history.replaceState({}, '', url);
         }
-        
-        console.log(`Load all completed: ${loadedCount} loaded, ${errorCount} failed`);
     }
     
     stopLoadingAll() {
-        console.log('Stopping load all process...');
         this.shouldStopLoadingAll = true;
         
-        const button = document.getElementById('load-all-transactions');
-        button.textContent = 'Stopping...';
+        const url = new URL(window.location);
+        url.searchParams.set('loadAll', 'false');
+        window.history.replaceState({}, '', url);
+        
     }
     
     async loadSingleTransaction(cuboid, txid, globalIndex, batchIndex) {
@@ -1369,23 +1381,11 @@ class BitcoinBlockExplorer {
             
             // Animate merkle tree line's first point if merkle tree is visible
             // Start this BEFORE the cuboid animation so it can track from the beginning
-            console.log('[LoadSingle] About to animate merkle line', {
-                merkleTreeVisible: this.merkleTreeVisible,
-                hasTxid: !!cuboid.userData.txid,
-                txid: cuboid.userData.txid?.substring(0, 16),
-                currentCuboidY: cuboid.position.y,
-                alignedY: alignedY
-            });
-            
             if (this.merkleTreeVisible && cuboid.userData.txid) {
                 this.animateMerkleTreeLineOrigin(cuboid, alignedY, 500);
             }
             
             // Animate only the Y position upward to the aligned level
-            console.log('[LoadSingle] About to animate cuboid position', {
-                currentY: cuboid.position.y,
-                targetY: alignedY
-            });
             this.animateCuboidPosition(cuboid, alignedY, 500);
             
             // Animate header up with the first transaction (layer 0)
@@ -1403,8 +1403,6 @@ class BitcoinBlockExplorer {
             cuboid.userData.transactionData = txData;
             cuboid.userData.size = txSize;
             cuboid.userData.sizeOnlyLoaded = false; // Position has been animated
-            
-            console.log(`Loaded transaction ${globalIndex + 1}: ${txid.substring(0, 16)}... (size: ${txSize} bytes)`);
             
         } catch (error) {
             console.error(`Error loading transaction ${globalIndex + 1} (${txid}):`, error);
@@ -1777,7 +1775,6 @@ class BitcoinBlockExplorer {
             currentTimestamp = 0; // Will use default time difference for all calculations
         }
         
-        console.log(`Current block ${currentHeight} timestamp: ${currentTimestamp} (${currentTimestamp > 0 ? new Date(currentTimestamp * 1000).toISOString() : 'invalid'})`);
         
         // Create past blocks in front of the current block (only if current height allows)
         const maxPastBlocks = Math.min(5, currentHeight); // Don't show more past blocks than available
@@ -1800,7 +1797,6 @@ class BitcoinBlockExplorer {
                         const prevBlockData = await prevBlockResponse.json();
                         const prevTimestamp = prevBlockData.timestamp || 0;
                         
-                        console.log(`Block ${prevHeight}: prevTimestamp=${prevTimestamp}, lastTimestamp=${lastTimestamp}`);
                         
                         // Only calculate time difference if both timestamps are valid
                         if (lastTimestamp > 0 && prevTimestamp > 0 && prevTimestamp <= lastTimestamp) {
@@ -1843,7 +1839,6 @@ class BitcoinBlockExplorer {
             const blockDistance = timeDifference * FACTOR_BLOCK_DISTANCE;
             cumulativeZPast += blockDistance;
             
-            console.log(`Past block ${i}: height=${prevHeight}, timeDiff=${timeDifference}s, distance=${blockDistance.toFixed(2)}, cumulativeZ=${cumulativeZPast.toFixed(2)}`);
             
             const prevBlock = new THREE.Mesh(blockGeometry, blockMaterial.clone());
             prevBlock.position.set(0, 0, cumulativeZPast); // Position based on cumulative time difference
@@ -1863,8 +1858,6 @@ class BitcoinBlockExplorer {
         const maxFutureBlocks = this.chainTipHeight ? Math.max(0, this.chainTipHeight - currentHeight) : 5;
         const futureBlocksToShow = Math.min(5, maxFutureBlocks); // Cap at 5 blocks maximum
         
-        console.log(`Current height: ${currentHeight}, Chain tip: ${this.chainTipHeight}, Future blocks to show: ${futureBlocksToShow}`);
-        console.log(`Example behavior: ?height=${currentHeight} with chain tip ${this.chainTipHeight}: Shows ${futureBlocksToShow} future blocks`);
         
         let cumulativeZFuture = 0;
         // Only use currentTimestamp if it's valid, otherwise start with 0 and use defaults
@@ -1921,7 +1914,6 @@ class BitcoinBlockExplorer {
             const blockDistance = timeDifference * FACTOR_BLOCK_DISTANCE;
             cumulativeZFuture += blockDistance;
             
-            console.log(`Future block ${i}: height=${nextHeight}, timeDiff=${timeDifference}s, distance=${blockDistance.toFixed(2)}, cumulativeZ=${-cumulativeZFuture.toFixed(2)}`);
             
             const nextBlock = new THREE.Mesh(blockGeometry, blockMaterial.clone());
             nextBlock.position.set(0, 0, -cumulativeZFuture); // Position based on cumulative time difference (negative Z)
@@ -2068,7 +2060,6 @@ class BitcoinBlockExplorer {
             this.scene.add(nextBlock);
             this.futureBlockInfos.push({ mesh: nextBlock, height: nextHeight, z: -cumulativeZFuture });
         }
-        console.log(`Show more: ${this.pastBlockInfos.length} past, ${this.futureBlockInfos.length} future blocks`);
     }
 
     /**
@@ -2127,6 +2118,59 @@ class BitcoinBlockExplorer {
     }
 
     /**
+     * Get unspent outputs created by this block (block approach).
+     * Fetches block txids, then for each tx (capped) gets tx + outspends; collects outputs where spent === false.
+     * Uses /api/tx/:txid and /api/tx/:txid/outspends (plural = all outputs in one call).
+     */
+    async getUnspentOutputsForBlock(blockHash, onProgress, onBatch) {
+        const MAX_TXS = 1500;
+        const DELAY_MS = 15;
+        const delay = (ms) => new Promise(r => setTimeout(r, ms));
+        const unspent = [];
+        let txids = [];
+        try {
+            const res = await fetch(`https://mempool.space/api/block/${blockHash}/txids`);
+            if (!res.ok) return [];
+            txids = await res.json();
+            if (!Array.isArray(txids)) return [];
+        } catch (_) { return []; }
+        const toProcess = txids.slice(0, MAX_TXS);
+        for (let i = 0; i < toProcess.length; i++) {
+            if (this.shouldStopUtxoLoad) break;
+            const txid = toProcess[i];
+            const prevLen = unspent.length;
+            try {
+                const [txRes, outspendsRes] = await Promise.all([
+                    fetch(`https://mempool.space/api/tx/${txid}`),
+                    fetch(`https://mempool.space/api/tx/${txid}/outspends`)
+                ]);
+                if (txRes.status === 429 || outspendsRes.status === 429) break;
+                if (!txRes.ok || !outspendsRes.ok) continue;
+                const tx = await txRes.json();
+                const outspends = await outspendsRes.json();
+                const vouts = tx.vout || [];
+                if (!Array.isArray(outspends) || outspends.length < vouts.length) continue;
+                for (let v = 0; v < vouts.length; v++) {
+                    if (!outspends[v] || outspends[v].spent) continue;
+                    unspent.push({
+                        txid,
+                        vout: v,
+                        value: vouts[v].value ?? 0,
+                        scriptpubkey_address: vouts[v].scriptpubkey_address || null,
+                        status: { block_height: this.blockData?.height }
+                    });
+                }
+                await delay(DELAY_MS);
+            } catch (_) { /* skip tx */ }
+            if (typeof onProgress === 'function') onProgress(i + 1, toProcess.length);
+            if (typeof onBatch === 'function' && unspent.length > prevLen) {
+                onBatch(unspent.slice(prevLen));
+            }
+        }
+        return unspent;
+    }
+
+    /**
      * Get actual transaction count for a block by hash (same source as current block on load).
      * Tries /api/block/:hash (tx_count), then /api/v1/block/:hash, then /api/block/:hash/txids length.
      */
@@ -2174,7 +2218,6 @@ class BitcoinBlockExplorer {
                 const hash = (await hashRes.text()).trim();
                 if (!hash) continue;
                 const txCount = await this.getBlockTxCount(hash);
-                console.log(`Block height ${info.height}: ${txCount} transactions added`);
                 info.mesh.material.opacity = blockOpacity;
                 const { headerMesh, cuboids } = this.createHeaderAndCuboidsForBlock(info.z, txCount, blockOpacity);
                 this.otherBlocksHeaders.push(headerMesh);
@@ -2204,7 +2247,6 @@ class BitcoinBlockExplorer {
 
     async fetchChainTipHeight() {
         try {
-            console.log('Fetching chain tip height...');
             const tipResponse = await fetch('https://mempool.space/api/blocks/tip/height');
             
             if (tipResponse.status === 429) {
@@ -2220,12 +2262,10 @@ class BitcoinBlockExplorer {
             }
             
             this.chainTipHeight = parseInt(await tipResponse.text());
-            console.log(`Fetched chain tip height: ${this.chainTipHeight}`);
             
             // If no block height provided, use chain tip (allow height 0 for genesis)
             if (this.blockHeight == null) {
                 this.blockHeight = this.chainTipHeight.toString();
-                console.log(`Using chain tip as block height: ${this.blockHeight}`);
             }
         } catch (error) {
             console.warn('Error fetching chain tip height:', error);
@@ -2300,7 +2340,6 @@ class BitcoinBlockExplorer {
                     this.transactionIds = txids.filter(txid => 
                         typeof txid === 'string' && /^[a-fA-F0-9]{64}$/.test(txid)
                     );
-                console.log(`Fetched ${this.transactionIds.length} transaction IDs for block ${this.blockHeight}`);
                 } else {
                     console.warn('Invalid transaction IDs format received');
                     this.transactionIds = [];
@@ -2316,7 +2355,6 @@ class BitcoinBlockExplorer {
             
             if (headerResponse.ok) {
                 this.blockHeaderData = await headerResponse.text();
-                console.log(`Fetched block header: ${this.blockHeaderData.substring(0, 32)}...`);
             } else {
                 console.warn('Could not fetch block header');
                 this.blockHeaderData = null;
@@ -2353,6 +2391,8 @@ class BitcoinBlockExplorer {
             document.getElementById('merkle-root').textContent = 'Loading...';
             document.getElementById('block-nonce').textContent = 'Loading...';
             document.getElementById('block-difficulty').textContent = 'Loading...';
+            const unspentEl = document.getElementById('block-unspent-count');
+            if (unspentEl) unspentEl.textContent = '—';
             return;
         }
         
@@ -2378,10 +2418,149 @@ class BitcoinBlockExplorer {
         document.getElementById('merkle-root').textContent = data.merkle_root?.substring(0, 16) + '...' || 'N/A';
         document.getElementById('block-nonce').textContent = data.nonce?.toLocaleString() || 'N/A';
         document.getElementById('block-difficulty').textContent = data.difficulty ? `${(data.difficulty / 1e12).toFixed(2)} T` : 'N/A';
+        const unspentEl = document.getElementById('block-unspent-count');
+        if (unspentEl) unspentEl.textContent = '—';
+    }
+
+    /**
+     * Fetch unspent outputs for current block; updates panel and adds spheres incrementally. Returns a promise.
+     */
+    startUnspentOutputsFetch() {
+        if (!this.blockData || !this.blockData.id) return Promise.resolve();
+        const unspentEl = document.getElementById('block-unspent-count');
+        if (unspentEl) unspentEl.textContent = '...';
+        this.showLoadingModal('Loading UTXOs...', true);
+        this.blockUnspentOutputs = [];
+        this.hideUtxoSpheres();
+        this.utxoSpheresVisible = true;
+        this.isLoadingUtxos = true;
+        this.shouldStopUtxoLoad = false;
+        const blockHash = this.blockData.id;
+        const MAX_TXS = 1500;
+        const txCount = this.transactionIds?.length ?? this.blockData.tx_count ?? 0;
+        const onProgress = (current, total) => {
+            this.updateLoadingProgress(`Loading UTXOs ${current}/${total}...`, Math.round(100 * current / total));
+        };
+        const onBatch = (batch) => {
+            this.blockUnspentOutputs.push(...batch);
+            const el = document.getElementById('block-unspent-count');
+            if (el) {
+                const n = this.blockUnspentOutputs.length;
+                el.textContent = txCount > MAX_TXS ? `${n.toLocaleString()} (first ${MAX_TXS} txs)` : n.toLocaleString();
+            }
+            this.addUtxoSpheresForBatch(batch);
+        };
+        return this.getUnspentOutputsForBlock(blockHash, onProgress, onBatch).then(unspent => {
+            this.hideLoadingModal();
+            this.isLoadingUtxos = false;
+            this.shouldStopUtxoLoad = false;
+            const el = document.getElementById('block-unspent-count');
+            if (el) {
+                const capped = txCount > MAX_TXS;
+                el.textContent = capped ? `${unspent.length.toLocaleString()} (first ${MAX_TXS} txs)` : unspent.length.toLocaleString();
+            }
+            const btn = document.getElementById('show-utxos');
+            if (btn) btn.textContent = 'Hide UTXO';
+        }).catch(() => {
+            this.hideLoadingModal();
+            this.isLoadingUtxos = false;
+            this.shouldStopUtxoLoad = false;
+            const el = document.getElementById('block-unspent-count');
+            if (el) el.textContent = '—';
+            const btn = document.getElementById('show-utxos');
+            if (btn) btn.textContent = 'Show UTXO';
+        });
+    }
+
+    stopUtxoLoad() {
+        this.shouldStopUtxoLoad = true;
+    }
+
+    /**
+     * Add spheres for a batch of UTXOs (used when loading incrementally). Uses existing blockUnspentOutputs for value scale.
+     */
+    addUtxoSpheresForBatch(batch) {
+        if (!batch || batch.length === 0 || !this.scene) return;
+        const allValues = (this.blockUnspentOutputs || []).map(u => u.value);
+        const valueMax = allValues.length ? Math.max(...allValues) : 0;
+        const valueMaxLog = Math.log10(valueMax + 1);
+        const MIN_RADIUS = 0.08;
+        const MAX_RADIUS = 0.42;
+        const STACK_OFFSET = 0.08; // vertical offset per sphere when multiple UTXOs share a tx
+        const JITTER = 0.008; // tiny jitter to avoid z-fighting when centered
+        const voutCountByTx = new Map();
+        this.utxoSpheres.forEach(m => {
+            const txid = m.userData?.utxo?.txid;
+            if (txid) voutCountByTx.set(txid, (voutCountByTx.get(txid) || 0) + 1);
+        });
+        for (const utxo of batch) {
+            const cuboid = this.transactions.find(tx => tx.userData && tx.userData.txid === utxo.txid);
+            if (!cuboid) continue;
+            const voutIndex = voutCountByTx.get(utxo.txid) ?? 0;
+            voutCountByTx.set(utxo.txid, voutIndex + 1);
+            const t = valueMaxLog > 0 ? Math.log10(utxo.value + 1) / valueMaxLog : 0.5;
+            const radius = MIN_RADIUS + (MAX_RADIUS - MIN_RADIUS) * (0.15 + 0.85 * t);
+            // Center on cuboid; stack multiple UTXOs from same tx slightly above
+            const jx = (Math.random() - 0.5) * 2 * JITTER;
+            const jy = (Math.random() - 0.5) * 2 * JITTER;
+            const jz = (Math.random() - 0.5) * 2 * JITTER;
+            const x = cuboid.position.x + jx;
+            const y = cuboid.position.y + voutIndex * STACK_OFFSET + jy;
+            const z = cuboid.position.z + jz;
+            const geometry = new THREE.SphereGeometry(radius, 16, 16);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                emissive: 0xffffff,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.6
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.set(x, y, z);
+            sphere.castShadow = true;
+            sphere.renderOrder = 2;
+            sphere.userData = { type: 'blockUtxo', utxo };
+            this.scene.add(sphere);
+            this.utxoSpheres.push(sphere);
+        }
+    }
+
+    /**
+     * Add UTXO spheres: one per unspent output, centered on the transaction cuboid (stacked vertically when multiple per tx).
+     */
+    showUtxoSpheres() {
+        if (!this.blockUnspentOutputs || this.blockUnspentOutputs.length === 0) return;
+        this.hideUtxoSpheres();
+        const values = this.blockUnspentOutputs.map(u => u.value);
+        console.log('UTXO values (sats):', values);
+        this.addUtxoSpheresForBatch(this.blockUnspentOutputs);
+        this.utxoSpheresVisible = true;
+    }
+
+    hideUtxoSpheres() {
+        this.utxoSpheres.forEach(m => {
+            this.scene.remove(m);
+            if (m.geometry) m.geometry.dispose();
+            if (m.material) m.material.dispose();
+        });
+        this.utxoSpheres = [];
+        this.utxoSpheresVisible = false;
     }
     
     updateBlockVisualization() {
         if (!this.blockData) return;
+        
+        this.hideUtxoSpheres();
+        this.blockUnspentOutputs = [];
+        this.isLoadingUtxos = false;
+        this.shouldStopUtxoLoad = false;
+        const unspentEl = document.getElementById('block-unspent-count');
+        if (unspentEl) unspentEl.textContent = '—';
+        const showUtxosBtn = document.getElementById('show-utxos');
+        if (showUtxosBtn) {
+            showUtxosBtn.textContent = 'Show UTXO';
+            showUtxosBtn.disabled = !this.transactionIds || this.transactionIds.length === 0;
+        }
         
         // Clear existing transactions
         this.transactions.forEach(tx => this.scene.remove(tx));
@@ -2393,7 +2572,6 @@ class BitcoinBlockExplorer {
             transactionsToVisualize.length : // Show all transactions
             Math.min(this.blockData.tx_count || 100, 100);
         
-        console.log(`Creating ${txCount} transaction cuboids`);
         
         // Create transaction cuboids in a 3D grid layout with vertical separation
         const transactionsPerRow = 10; // Fixed 10 transactions per row
@@ -2455,7 +2633,6 @@ class BitcoinBlockExplorer {
             this.transactions.push(cuboid);
         }
         
-        console.log(`Created ${this.transactions.length} transaction cuboids`);
     }
 
     animate() {
@@ -5068,7 +5245,6 @@ class BitcoinBlockExplorer {
     // Show merkle tree visualization
     async showMerkleTree() {
         if (this.transactions.length === 0) {
-            console.log('No transactions to visualize merkle tree');
             return;
         }
         
@@ -5078,11 +5254,8 @@ class BitcoinBlockExplorer {
             .filter(txid => txid && !txid.startsWith('dummy_tx_'));
         
         if (txids.length === 0) {
-            console.log('No valid transaction IDs found');
             return;
         }
-        
-        console.log(`Calculating merkle tree for ${txids.length} transactions...`);
         
         try {
             // Show loading indicator (non-modal so animation is visible)
@@ -5237,21 +5410,6 @@ class BitcoinBlockExplorer {
         // Initial progress update
         this.updateLoadingProgress(`Creating ${totalSteps} lines...`, 71);
         
-        console.log(`Starting merkle tree visualization: ${totalVerticalLines} vertical lines, ${totalTreeLines} tree lines`);
-        console.log(`Transaction positions range:`, validTransactions.length > 0 ? {
-            first: validTransactions[0].position,
-            last: validTransactions[validTransactions.length - 1].position
-        } : 'none');
-        
-        // Debug: log first few transactions and their txids
-        if (validTransactions.length > 0) {
-            console.log('[MerkleTree] Sample transactions:', validTransactions.slice(0, 3).map(tx => ({
-                txid: tx.userData.txid?.substring(0, 16),
-                hasTxid: !!tx.userData.txid,
-                position: tx.position
-            })));
-        }
-        
         // First, animate vertical lines from transactions to leaf nodes
         for (let i = 0; i < validTransactions.length; i++) {
             const tx = validTransactions[i];
@@ -5262,11 +5420,6 @@ class BitcoinBlockExplorer {
                 // Start line at transaction center position (aligned with cuboid center)
                 const startPos = new THREE.Vector3(txPos.x, txPos.y, txPos.z);
                 const endPos = leafNode.position.clone();
-                
-                // Debug first few lines
-                if (i < 3) {
-                    console.log(`Line ${i}: from (${startPos.x.toFixed(2)}, ${startPos.y.toFixed(2)}, ${startPos.z.toFixed(2)}) to (${endPos.x.toFixed(2)}, ${endPos.y.toFixed(2)}, ${endPos.z.toFixed(2)})`);
-                }
                 
                 // Create line from transaction to leaf node (start with just start position)
                 const geometry = new THREE.BufferGeometry().setFromPoints([startPos, startPos]);
@@ -5290,16 +5443,6 @@ class BitcoinBlockExplorer {
                 line.userData.txid = txid; // Store txid for finding transaction after loading
                 line.renderOrder = 10; // Render after other objects
                 
-                // Debug: log first few lines to verify txid is stored
-                if (i < 3) {
-                    console.log(`[MerkleTree] Created vertical line ${i}`, {
-                        txid: txid?.substring(0, 16),
-                        hasTxid: !!txid,
-                        txUserData: tx.userData,
-                        lineUserDataBeforeAdd: JSON.parse(JSON.stringify(line.userData))
-                    });
-                }
-                
                 // Add to scene first so it can be rendered during animation
                 this.scene.add(line);
                 this.merkleTreeLines.push(line);
@@ -5307,16 +5450,6 @@ class BitcoinBlockExplorer {
                 // Store line in map for direct lookup by txid
                 if (txid) {
                     this.merkleTreeLineMap.set(txid, line);
-                }
-                
-                // Verify properties are still there after adding
-                if (i < 3) {
-                    console.log(`[MerkleTree] After push - line ${i} userData:`, {
-                        merkleTree: line.userData.merkleTree,
-                        isVerticalLine: line.userData.isVerticalLine,
-                        txid: line.userData.txid?.substring(0, 16),
-                        transactionIndex: line.userData.transactionIndex
-                    });
                 }
                 
                 // Animate line growth (or skip animation for very large sets)
@@ -5335,12 +5468,6 @@ class BitcoinBlockExplorer {
                     line.geometry.computeBoundingSphere();
                 } else {
                     await this.animateLineGrowth(line, startPos, endPos, lineAnimationDuration);
-                }
-                
-                // Debug first line
-                if (i === 0) {
-                    const pos = line.geometry.attributes.position;
-                    console.log(`First vertical line: start=(${pos.getX(0).toFixed(2)}, ${pos.getY(0).toFixed(2)}, ${pos.getZ(0).toFixed(2)}), end=(${pos.getX(1).toFixed(2)}, ${pos.getY(1).toFixed(2)}, ${pos.getZ(1).toFixed(2)})`);
                 }
                 
                 // Update progress (only every N lines for large sets to avoid UI lag)
@@ -5430,21 +5557,6 @@ class BitcoinBlockExplorer {
         this.updateLoadingProgress('Complete!', 100);
         await this.sleep(300); // Brief pause to show 100%
         
-        console.log(`Merkle tree visualization complete: ${this.merkleTreeLines.length} lines created`);
-        console.log(`Lines in scene:`, this.scene.children.filter(child => child.userData.merkleTree).length);
-        
-        // Debug: Check first few lines to verify properties
-        const verticalLinesCreated = this.merkleTreeLines.filter(l => l.userData?.isVerticalLine);
-        console.log(`[MerkleTree] Vertical lines created: ${verticalLinesCreated.length}`);
-        if (verticalLinesCreated.length > 0) {
-            console.log(`[MerkleTree] First vertical line userData:`, verticalLinesCreated[0].userData);
-        } else {
-            console.log(`[MerkleTree] NO VERTICAL LINES FOUND! Checking first 5 lines:`);
-            for (let i = 0; i < Math.min(5, this.merkleTreeLines.length); i++) {
-                console.log(`[MerkleTree] Line ${i}:`, this.merkleTreeLines[i].userData);
-            }
-        }
-        
         // Force a render to ensure lines are visible
         this.renderer.render(this.scene, this.camera);
     }
@@ -5498,25 +5610,8 @@ class BitcoinBlockExplorer {
     
     // Animate merkle tree line's first point to follow transaction position
     animateMerkleTreeLineOrigin(cuboid, targetY, duration) {
-        console.log('[MerkleLine] animateMerkleTreeLineOrigin called', {
-            merkleTreeVisible: this.merkleTreeVisible,
-            hasTxid: !!cuboid.userData.txid,
-            txid: cuboid.userData.txid?.substring(0, 16),
-            cuboidPosition: cuboid.position,
-            targetY: targetY,
-            duration: duration,
-            totalMerkleLines: this.merkleTreeLines.length
-        });
-        
-        if (!this.merkleTreeVisible) {
-            console.log('[MerkleLine] Skipping: merkle tree not visible');
-            return;
-        }
-        
-        if (!cuboid.userData.txid) {
-            console.log('[MerkleLine] Skipping: no txid on cuboid');
-            return;
-        }
+        if (!this.merkleTreeVisible) return;
+        if (!cuboid.userData.txid) return;
         
         // Find the vertical line for this transaction
         const txid = cuboid.userData.txid;
@@ -5529,13 +5624,9 @@ class BitcoinBlockExplorer {
             verticalLine = this.merkleTreeLineMap.get(txid);
             
             if (verticalLine) {
-                console.log('[MerkleLine] Found line via map lookup for txid:', txid.substring(0, 16));
                 // Cache the reference for faster lookup
                 cuboid.userData.merkleLine = verticalLine;
             } else {
-                console.log('[MerkleLine] Line not found in map for txid:', txid.substring(0, 16));
-                console.log('[MerkleLine] Map size:', this.merkleTreeLineMap.size);
-                console.log('[MerkleLine] Total merkle lines:', this.merkleTreeLines.length);
                 
                 // Fallback: try to find in array (shouldn't be needed if map is working)
                 const txIndex = cuboid.userData.index;
@@ -5546,7 +5637,6 @@ class BitcoinBlockExplorer {
                         line.userData.transactionIndex === txIndex
                     );
                     if (verticalLine) {
-                        console.log('[MerkleLine] Found line via fallback search by transactionIndex');
                         cuboid.userData.merkleLine = verticalLine;
                         // Add to map for future lookups
                         if (txid) {
@@ -5557,7 +5647,6 @@ class BitcoinBlockExplorer {
             }
             
             if (!verticalLine) {
-                console.log('[MerkleLine] Line not found! Checking available lines...');
                 const linesWithTxid = this.merkleTreeLines.filter(l => 
                     l.userData && l.userData.txid
                 );
@@ -5567,64 +5656,26 @@ class BitcoinBlockExplorer {
                 const verticalLines = this.merkleTreeLines.filter(l => 
                     l.userData && l.userData.merkleTree && l.userData.isVerticalLine
                 );
-                
-                console.log('[MerkleLine] Total merkle lines:', this.merkleTreeLines.length);
-                console.log('[MerkleLine] Lines with merkleTree flag:', linesWithMerkleTree.length);
-                console.log('[MerkleLine] Vertical lines:', verticalLines.length);
-                console.log('[MerkleLine] Lines with txid:', linesWithTxid.length);
-                
                 if (linesWithTxid.length > 0) {
-                    console.log('[MerkleLine] Sample line txid:', linesWithTxid[0].userData.txid?.substring(0, 16));
-                    console.log('[MerkleLine] Looking for txid:', txid.substring(0, 16));
-                    console.log('[MerkleLine] Match?', linesWithTxid[0].userData.txid === txid);
-                    
-                    // Check if any line has this exact txid
                     const matchingLine = this.merkleTreeLines.find(l => 
                         l.userData && l.userData.txid === txid
                     );
-                    console.log('[MerkleLine] Found matching line?', !!matchingLine);
                 } else {
-                    // Check what userData the lines actually have
                     if (this.merkleTreeLines.length > 0) {
-                        console.log('[MerkleLine] Sample line userData:', this.merkleTreeLines[0].userData);
-                        console.log('[MerkleLine] First few lines userData:', 
-                            this.merkleTreeLines.slice(0, 10).map((l, idx) => ({
-                                index: idx,
-                                hasUserData: !!l.userData,
-                                merkleTree: l.userData?.merkleTree,
-                                isVerticalLine: l.userData?.isVerticalLine,
-                                txid: l.userData?.txid?.substring(0, 16),
-                                transactionIndex: l.userData?.transactionIndex,
-                                allKeys: l.userData ? Object.keys(l.userData) : []
-                            }))
-                        );
-                        
-                        // Check if ANY line has isVerticalLine
                         const anyVertical = this.merkleTreeLines.find(l => l.userData?.isVerticalLine);
-                        console.log('[MerkleLine] Found ANY vertical line?', !!anyVertical);
-                        if (anyVertical) {
-                            console.log('[MerkleLine] First vertical line found at index:', this.merkleTreeLines.indexOf(anyVertical));
-                            console.log('[MerkleLine] That line userData:', anyVertical.userData);
-                        }
                     }
                 }
             }
-        } else {
-            console.log('[MerkleLine] Using cached line reference');
         }
         
         if (!verticalLine) {
-            console.log('[MerkleLine] No line found for transaction, skipping animation');
             // Line might not exist if transaction wasn't included in merkle tree
             // (e.g., coinbase transaction or filtered transactions)
             return;
         }
         
         const positions = verticalLine.geometry.attributes.position;
-        if (!positions || positions.count < 2) {
-            console.log('[MerkleLine] Invalid positions:', { hasPositions: !!positions, count: positions?.count });
-            return;
-        }
+        if (!positions || positions.count < 2) return;
         
         // Get end position (leaf node - keep unchanged)
         const endX = positions.getX(1);
@@ -5634,13 +5685,6 @@ class BitcoinBlockExplorer {
         const startX = positions.getX(0);
         const startY = positions.getY(0);
         const startZ = positions.getZ(0);
-        
-        console.log('[MerkleLine] Starting animation', {
-            startPos: { x: startX, y: startY, z: startZ },
-            endPos: { x: endX, y: endY, z: endZ },
-            cuboidStartPos: { x: cuboid.position.x, y: cuboid.position.y, z: cuboid.position.z },
-            targetY: targetY
-        });
         
         const startTime = Date.now();
         let frameCount = 0;
@@ -5660,16 +5704,6 @@ class BitcoinBlockExplorer {
             const currentTxY = cuboid.position.y;
             const currentTxZ = cuboid.position.z;
             
-            // Log first few frames
-            if (frameCount <= 3 || frameCount % 30 === 0) {
-                console.log(`[MerkleLine] Frame ${frameCount}:`, {
-                    elapsed: elapsed,
-                    progress: progress.toFixed(3),
-                    cuboidPos: { x: currentTxX.toFixed(3), y: currentTxY.toFixed(3), z: currentTxZ.toFixed(3) },
-                    lineStartBefore: { x: positions.getX(0).toFixed(3), y: positions.getY(0).toFixed(3), z: positions.getZ(0).toFixed(3) }
-                });
-            }
-            
             // Update first point to match transaction's current position exactly
             // This makes the line follow the transaction as it moves
             positions.setXYZ(0, currentTxX, currentTxY, currentTxZ);
@@ -5684,51 +5718,20 @@ class BitcoinBlockExplorer {
                 positions.setXYZ(1, endX, endY, endZ);
                 positions.needsUpdate = true;
                 verticalLine.userData.animating = false;
-                console.log(`[MerkleLine] Animation complete after ${frameCount} frames`, {
-                    finalCuboidPos: { x: currentTxX.toFixed(3), y: currentTxY.toFixed(3), z: currentTxZ.toFixed(3) },
-                    finalLinePos: { x: positions.getX(0).toFixed(3), y: positions.getY(0).toFixed(3), z: positions.getZ(0).toFixed(3) }
-                });
             }
         };
-        
-        console.log('[MerkleLine] Starting animation loop');
         animate();
     }
     
     // Update merkle tree line origins to reconnect to transaction positions after loading
     updateMerkleTreeLineOrigins() {
-        if (!this.merkleTreeVisible || this.merkleTreeLines.length === 0) {
-            console.log('Merkle tree update skipped:', {
-                visible: this.merkleTreeVisible,
-                lines: this.merkleTreeLines.length
-            });
-            return;
-        }
+        if (!this.merkleTreeVisible || this.merkleTreeLines.length === 0) return;
         
         // Find all vertical lines (from transactions to leaf nodes)
         // First, let's check what we have
         const linesWithUserData = this.merkleTreeLines.filter(l => l.userData);
         const linesWithMerkleTree = linesWithUserData.filter(l => l.userData.merkleTree);
         const verticalLines = linesWithMerkleTree.filter(l => l.userData.isVerticalLine);
-        
-        console.log(`Updating ${verticalLines.length} merkle tree line origins (total lines: ${this.merkleTreeLines.length})...`);
-        
-        // Debug: check what userData the lines have
-        if (verticalLines.length === 0 && this.merkleTreeLines.length > 0) {
-            console.log('Debug: Total lines:', this.merkleTreeLines.length);
-            console.log('Debug: Lines with userData:', linesWithUserData.length);
-            console.log('Debug: Lines with merkleTree flag:', linesWithMerkleTree.length);
-            console.log('Debug: Lines with isVerticalLine flag:', verticalLines.length);
-            if (this.merkleTreeLines[0]) {
-                console.log('Debug: First line userData:', this.merkleTreeLines[0].userData);
-                console.log('Debug: First line type:', this.merkleTreeLines[0].constructor.name);
-            }
-            // Check a few lines to see their structure
-            for (let i = 0; i < Math.min(5, this.merkleTreeLines.length); i++) {
-                const line = this.merkleTreeLines[i];
-                console.log(`Debug: Line ${i} - has userData: ${!!line.userData}, merkleTree: ${line.userData?.merkleTree}, isVerticalLine: ${line.userData?.isVerticalLine}, txid: ${line.userData?.txid?.substring(0, 16)}`);
-            }
-        }
         
         let updatedCount = 0;
         
@@ -5748,10 +5751,6 @@ class BitcoinBlockExplorer {
                     // Get the end position (leaf node) - keep it unchanged
                     const positions = line.geometry.attributes.position;
                     if (positions && positions.count >= 2) {
-                        const oldStartX = positions.getX(0);
-                        const oldStartY = positions.getY(0);
-                        const oldStartZ = positions.getZ(0);
-                        
                         const endX = positions.getX(1);
                         const endY = positions.getY(1);
                         const endZ = positions.getZ(1);
@@ -5762,19 +5761,12 @@ class BitcoinBlockExplorer {
                         positions.needsUpdate = true;
                         
                         updatedCount++;
-                        
-                        // Debug first few updates
-                        if (updatedCount <= 3) {
-                            console.log(`Updated line ${updatedCount}: txid=${txid.substring(0, 16)}..., from (${oldStartX.toFixed(2)}, ${oldStartY.toFixed(2)}, ${oldStartZ.toFixed(2)}) to (${txPos.x.toFixed(2)}, ${txPos.y.toFixed(2)}, ${txPos.z.toFixed(2)})`);
-                        }
                     }
                 } else {
                     console.warn(`Transaction not found for txid: ${txid.substring(0, 16)}...`);
                 }
             }
         });
-        
-        console.log(`Updated ${updatedCount}/${verticalLines.length} merkle tree line origins`);
         
         // Force render to update the scene
         if (this.renderer && this.scene && this.camera) {

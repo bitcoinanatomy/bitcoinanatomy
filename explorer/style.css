@@ -590,22 +590,29 @@ button:active {
     bottom: 20px;
     left: 20px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: flex-end;
     gap: 10px;
     pointer-events: auto;
 }
 
 .controls-main {
     display: flex;
+    align-items: center;
     gap: 6px;
+    height: 26px;
 }
 
 .controls-main button {
-    padding: 5px 10px;
+    height: 26px;
+    padding: 0 10px;
     font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.85);
+    box-sizing: border-box;
 }
 
 .controls-main button:hover {
@@ -1378,7 +1385,7 @@ button:active {
 /* Camera controls (View, Rotate, Pan, Zoom inline) */
 .controls-camera {
     display: flex;
-    align-items: flex-start;
+    align-items: flex-end;
 }
 
 /* Navigation controls */
@@ -1464,8 +1471,13 @@ button:active {
         gap: 8px;
     }
     
+    .controls-main {
+        height: 28px;
+    }
+    
     .controls-main button {
-        padding: 8px 12px;
+        height: 28px;
+        padding: 0 12px;
         font-size: 0.8rem;
         min-width: 70px;
         flex: 1;
