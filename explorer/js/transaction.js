@@ -940,9 +940,9 @@ class BitcoinTransactionExplorer {
         const titleHash = data.txid ? data.txid : 'Not Found';
         const subtitleEl = document.getElementById('tx-title-hash');
         
-        // Add "Back to Block" link if transaction is confirmed
-        if (data.status?.block_height) {
-            const backToBlockLink = `<br><a href="block.html?height=${data.status.block_height}" class="back-to-block-link">Back to Block</a>`;
+        // Add "Back to Block" link if transaction is confirmed (include txid so block page highlights this transaction)
+        if (data.status?.block_height && data.txid) {
+            const backToBlockLink = `<br><a href="block.html?height=${data.status.block_height}&txid=${encodeURIComponent(data.txid)}" class="back-to-block-link">Back to Block</a>`;
             subtitleEl.innerHTML = titleHash + backToBlockLink;
         } else {
             subtitleEl.textContent = titleHash;

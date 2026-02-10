@@ -25,6 +25,7 @@ class BitcoinBlockExplorer {
         this.headerAnimated = false; // Track if header has been animated up
         this.highlightedCuboid = null; // Track highlighted transaction in 3D
         this.hoveredCuboid = null; // Track hovered transaction for visual feedback
+        this.hoveredUtxoSphere = null; // Track hovered UTXO sphere for full opacity on hover
         
         // Decode mode properties
         this.decodeMode = false;
@@ -173,13 +174,21 @@ class BitcoinBlockExplorer {
             }, 100);
         }
         
-        // Auto-load merkle tree if URL parameter is set
+        // Auto-load merkle tree if URL parameter is set (e.g. ?merkle=true)
         if (this.urlMerkleTree) {
-            // Wait for block data and transactions to load first
+            let elapsed = 0;
+            const timeoutMs = 60000;
             const waitForMerkleTree = setInterval(() => {
-                if (this.blockData && this.blockData.id && this.transactions.length > 0) {
+                elapsed += 100;
+                const ready = this.blockData && this.blockData.id &&
+                    this.transactionIds && this.transactionIds.length > 0 &&
+                    this.transactions.length > 0 &&
+                    this.transactions.some(t => t.userData && t.userData.txid && !String(t.userData.txid).startsWith('dummy_tx_'));
+                if (ready) {
                     clearInterval(waitForMerkleTree);
                     this.showMerkleTree();
+                } else if (elapsed >= timeoutMs) {
+                    clearInterval(waitForMerkleTree);
                 }
             }, 100);
         }
@@ -834,6 +843,7 @@ class BitcoinBlockExplorer {
             if (intersects.length > 0) {
                 // Look for the first interactive object (transaction or block)
                 let foundInteraction = false;
+                let hoveredUtxoSphereThisFrame = null;
                 
                 // Check for transactions first (higher priority)
                 let hoveredTx = null;
@@ -870,6 +880,7 @@ class BitcoinBlockExplorer {
                         foundInteraction = true;
                     }
                     if (!foundInteraction && intersectedObject.userData && intersectedObject.userData.type === 'blockUtxo') {
+                        hoveredUtxoSphereThisFrame = intersectedObject;
                         const utxo = intersectedObject.userData.utxo;
                         const valueBtc = utxo.value ? (utxo.value / 100000000).toFixed(8) : '0';
                         const addr = utxo.scriptpubkey_address ? this.escapeHtml(utxo.scriptpubkey_address.substring(0, 20) + '...') : '—';
@@ -884,6 +895,17 @@ class BitcoinBlockExplorer {
                         tooltip.style.top = event.clientY - 10 + 'px';
                         tooltip.style.pointerEvents = 'none';
                         foundInteraction = true;
+                    }
+                }
+                
+                // Update UTXO sphere hover (full opacity on hover)
+                if (hoveredUtxoSphereThisFrame !== this.hoveredUtxoSphere) {
+                    if (this.hoveredUtxoSphere && this.hoveredUtxoSphere.material) {
+                        this.hoveredUtxoSphere.material.opacity = 0.35;
+                    }
+                    this.hoveredUtxoSphere = hoveredUtxoSphereThisFrame;
+                    if (this.hoveredUtxoSphere && this.hoveredUtxoSphere.material) {
+                        this.hoveredUtxoSphere.material.opacity = 1;
                     }
                 }
                 
@@ -997,6 +1019,11 @@ class BitcoinBlockExplorer {
                         this.hoveredCuboid.scale.z = 1;
                         this.hoveredCuboid = null;
                     }
+                    // Clear UTXO sphere hover
+                    if (this.hoveredUtxoSphere && this.hoveredUtxoSphere.material) {
+                        this.hoveredUtxoSphere.material.opacity = 0.35;
+                        this.hoveredUtxoSphere = null;
+                    }
                 }
             } else {
                 tooltip.style.display = 'none';
@@ -1008,6 +1035,10 @@ class BitcoinBlockExplorer {
                     this.hoveredCuboid.scale.x = 1;
                     this.hoveredCuboid.scale.z = 1;
                     this.hoveredCuboid = null;
+                }
+                if (this.hoveredUtxoSphere && this.hoveredUtxoSphere.material) {
+                    this.hoveredUtxoSphere.material.opacity = 0.35;
+                    this.hoveredUtxoSphere = null;
                 }
             }
         });
@@ -1022,6 +1053,10 @@ class BitcoinBlockExplorer {
                 this.hoveredCuboid.scale.x = 1;
                 this.hoveredCuboid.scale.z = 1;
                 this.hoveredCuboid = null;
+            }
+            if (this.hoveredUtxoSphere && this.hoveredUtxoSphere.material) {
+                this.hoveredUtxoSphere.material.opacity = 0.35;
+                this.hoveredUtxoSphere = null;
             }
         });
         
@@ -1076,11 +1111,17 @@ class BitcoinBlockExplorer {
             const intersects = raycaster.intersectObjects(this.scene.children, true);
 
             if (intersects.length > 0) {
-                // Look for the first interactive object (transaction or block)
+                // Look for the first interactive object (UTXO sphere, transaction, or block)
                 for (let i = 0; i < intersects.length; i++) {
                     const intersectedObject = intersects[i].object;
                     
-                    // Check if it's a transaction first (higher priority)
+                    // Double-click UTXO sphere: go to transaction page
+                    if (intersectedObject.userData?.type === 'blockUtxo' && intersectedObject.userData?.utxo?.txid) {
+                        window.location.href = `transaction.html?txid=${intersectedObject.userData.utxo.txid}`;
+                        return;
+                    }
+                    
+                    // Check if it's a transaction
                     if (this.transactions.includes(intersectedObject)) {
                         const txData = intersectedObject.userData;
                         
@@ -2119,11 +2160,10 @@ class BitcoinBlockExplorer {
 
     /**
      * Get unspent outputs created by this block (block approach).
-     * Fetches block txids, then for each tx (capped) gets tx + outspends; collects outputs where spent === false.
+     * Fetches block txids, then for each tx gets tx + outspends; collects outputs where spent === false.
      * Uses /api/tx/:txid and /api/tx/:txid/outspends (plural = all outputs in one call).
      */
     async getUnspentOutputsForBlock(blockHash, onProgress, onBatch) {
-        const MAX_TXS = 1500;
         const DELAY_MS = 15;
         const delay = (ms) => new Promise(r => setTimeout(r, ms));
         const unspent = [];
@@ -2134,7 +2174,8 @@ class BitcoinBlockExplorer {
             txids = await res.json();
             if (!Array.isArray(txids)) return [];
         } catch (_) { return []; }
-        const toProcess = txids.slice(0, MAX_TXS);
+        const toProcess = txids;
+        if (this.shouldStopUtxoLoad) return unspent;
         for (let i = 0; i < toProcess.length; i++) {
             if (this.shouldStopUtxoLoad) break;
             const txid = toProcess[i];
@@ -2161,6 +2202,7 @@ class BitcoinBlockExplorer {
                     });
                 }
                 await delay(DELAY_MS);
+                if (this.shouldStopUtxoLoad) break;
             } catch (_) { /* skip tx */ }
             if (typeof onProgress === 'function') onProgress(i + 1, toProcess.length);
             if (typeof onBatch === 'function' && unspent.length > prevLen) {
@@ -2436,7 +2478,6 @@ class BitcoinBlockExplorer {
         this.isLoadingUtxos = true;
         this.shouldStopUtxoLoad = false;
         const blockHash = this.blockData.id;
-        const MAX_TXS = 1500;
         const txCount = this.transactionIds?.length ?? this.blockData.tx_count ?? 0;
         const onProgress = (current, total) => {
             this.updateLoadingProgress(`Loading UTXOs ${current}/${total}...`, Math.round(100 * current / total));
@@ -2444,10 +2485,7 @@ class BitcoinBlockExplorer {
         const onBatch = (batch) => {
             this.blockUnspentOutputs.push(...batch);
             const el = document.getElementById('block-unspent-count');
-            if (el) {
-                const n = this.blockUnspentOutputs.length;
-                el.textContent = txCount > MAX_TXS ? `${n.toLocaleString()} (first ${MAX_TXS} txs)` : n.toLocaleString();
-            }
+            if (el) el.textContent = this.blockUnspentOutputs.length.toLocaleString();
             this.addUtxoSpheresForBatch(batch);
         };
         return this.getUnspentOutputsForBlock(blockHash, onProgress, onBatch).then(unspent => {
@@ -2455,10 +2493,7 @@ class BitcoinBlockExplorer {
             this.isLoadingUtxos = false;
             this.shouldStopUtxoLoad = false;
             const el = document.getElementById('block-unspent-count');
-            if (el) {
-                const capped = txCount > MAX_TXS;
-                el.textContent = capped ? `${unspent.length.toLocaleString()} (first ${MAX_TXS} txs)` : unspent.length.toLocaleString();
-            }
+            if (el) el.textContent = unspent.length.toLocaleString();
             const btn = document.getElementById('show-utxos');
             if (btn) btn.textContent = 'Hide UTXO';
         }).catch(() => {
@@ -2513,7 +2548,7 @@ class BitcoinBlockExplorer {
                 emissive: 0xffffff,
                 emissiveIntensity: 0.5,
                 transparent: true,
-                opacity: 0.6
+                opacity: 0.25
             });
             const sphere = new THREE.Mesh(geometry, material);
             sphere.position.set(x, y, z);
@@ -2856,7 +2891,7 @@ class BitcoinBlockExplorer {
         `;
         
         if (nonModal) {
-            // Non-modal overlay - positioned in bottom-right corner, above controls, doesn't block view
+            // Non-modal overlay - positioned in bottom-right corner, above controls and panel, always visible
             modal.style.cssText = `
                 position: fixed;
                 bottom: 120px;
@@ -2866,7 +2901,7 @@ class BitcoinBlockExplorer {
                 border: 1px solid #333;
                 border-radius: 8px;
                 padding: 20px;
-                z-index: 1000;
+                z-index: 35000;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
                 backdrop-filter: blur(10px);
@@ -3061,6 +3096,11 @@ class BitcoinBlockExplorer {
                     if (icon) icon.src = 'imgs/icons/chevron-down.svg';
                     toggleBtn.title = 'Maximize';
                     toggleBtn.setAttribute('aria-label', 'Maximize panel');
+                    // Clear transaction highlight and txid from URL when closing panel
+                    this.clearCuboid3DHighlight();
+                    const url = new URL(window.location);
+                    url.searchParams.delete('txid');
+                    window.history.pushState({}, '', url);
                 }
             });
         }
@@ -4058,9 +4098,12 @@ class BitcoinBlockExplorer {
         modal.classList.remove('active');
         document.body.classList.remove('raw-data-open');
         
-        // Update URL - remove rawdata parameter
+        // Clear transaction highlight and remove txid from URL when closing pane
+        this.clearCuboid3DHighlight();
+        // Update URL - remove rawdata and txid parameters
         const url = new URL(window.location);
         url.searchParams.delete('rawdata');
+        url.searchParams.delete('txid');
         window.history.pushState({}, '', url);
         
         // Trigger resize immediately and after transition completes
@@ -5330,7 +5373,7 @@ class BitcoinBlockExplorer {
                     // Position parent node between its children
                     // Tree grows DOWNWARD: parent is below children (negative Y direction)
                     // Progressive spacing: level 1 = 0.3, level 2 = 0.4, level 3 = 0.5, etc.
-                    const levelSpacingProgressive = 0.25 + (level - 1) * 0.1;
+                    const levelSpacingProgressive = 0.16 + (level - 1) * 0.1;
                     const parentX = (leftPos.x + rightPos.x) / 2;
                     const parentY = leftPos.y - levelSpacingProgressive; // Progressive spacing per level
                     const parentZ = (leftPos.z + rightPos.z) / 2;
@@ -5391,20 +5434,27 @@ class BitcoinBlockExplorer {
             return txid && !txid.startsWith('dummy_tx_') && txids.includes(txid);
         });
         
-        // Adaptive animation speed based on transaction count
+        // Total animation steps (needed to compute constant-time pacing)
         const txCount = validTransactions.length;
-        const isLargeSet = txCount > 100;
-        const animationDelay = isLargeSet ? 10 : 100; // Much faster for large sets
-        const lineAnimationDuration = isLargeSet ? 50 : 300; // Much faster animation for large sets
-        const progressUpdateInterval = isLargeSet ? Math.max(10, Math.floor(txCount / 50)) : 1; // Update every N lines for large sets
-        
-        // Calculate total animation steps for progress tracking
         const totalVerticalLines = validTransactions.length;
         const totalTreeLines = tree.reduce((sum, level, idx) => {
             if (idx === 0) return sum; // Skip leaf level
             return sum + level.length * 2; // Each node has 2 lines (left and right)
         }, 0);
         const totalSteps = totalVerticalLines + totalTreeLines;
+        
+        // Target total animation time (ms): much shorter for blocks with lots of transactions
+        const TARGET_TOTAL_MS = Math.max(80, Math.min(800, 900 - txCount * 0.25)); // ~0.9s at 0 tx, floor 80ms for 3300+ tx
+        const MIN_PER_LINE_MS = 0;      // Allow sub-ms for huge trees (instant path then skips sleep)
+        const MAX_PER_LINE_MS = 40;     // Cap so small trees don't drag
+        const perLineMs = Math.max(MIN_PER_LINE_MS, Math.min(MAX_PER_LINE_MS, TARGET_TOTAL_MS / totalSteps));
+        const lineAnimationDuration = Math.max(1, Math.round(perLineMs * 0.7)); // ≥1ms when animating
+        const animationDelay = Math.round(perLineMs * 0.3);        // 30% delay between lines (single line)
+        const instantStepDelay = Math.round(perLineMs);            // when drawing instantly; 0 for huge trees
+        const treeLevelDelay = Math.round(perLineMs * 1.3);        // after 2 lines in parallel: 2*perLine - lineAnimationDuration
+        const isLargeSet = txCount > 100;
+        const useInstantDraw = txCount > 200;                      // Skip line animation earlier for faster large-block build
+        const progressUpdateInterval = isLargeSet ? Math.max(10, Math.floor(txCount / 50)) : 1; // Update every N lines for large sets
         let currentStep = 0;
         
         // Initial progress update
@@ -5452,10 +5502,9 @@ class BitcoinBlockExplorer {
                     this.merkleTreeLineMap.set(txid, line);
                 }
                 
-                // Animate line growth (or skip animation for very large sets)
-                if (isLargeSet && txCount > 500) {
-                    // For very large sets, just create the line instantly
-                    // Need to properly update geometry
+                // Animate line growth (or skip animation for large sets for speed)
+                if (useInstantDraw) {
+                    // Large blocks: draw line instantly (no animation)
                     const positions = line.geometry.attributes.position;
                     if (positions) {
                         positions.setXYZ(0, startPos.x, startPos.y, startPos.z);
@@ -5466,8 +5515,14 @@ class BitcoinBlockExplorer {
                         line.geometry.attributes.position.needsUpdate = true;
                     }
                     line.geometry.computeBoundingSphere();
+                    if (instantStepDelay > 0) {
+                        await this.sleep(instantStepDelay);
+                    } else if (i % 150 === 0) {
+                        await this.sleep(0); // Yield to UI so large blocks don't freeze
+                    }
                 } else {
                     await this.animateLineGrowth(line, startPos, endPos, lineAnimationDuration);
+                    await this.sleep(animationDelay);
                 }
                 
                 // Update progress (only every N lines for large sets to avoid UI lag)
@@ -5476,14 +5531,6 @@ class BitcoinBlockExplorer {
                     const progress = 70 + Math.floor((currentStep / totalSteps) * 25); // 70-95% for animation
                     this.updateLoadingProgress(`Drawing lines ${currentStep}/${totalSteps}...`, progress);
                 }
-            }
-            
-            // Only add delay if not a very large set
-            if (!isLargeSet || txCount <= 500) {
-                await this.sleep(animationDelay);
-            } else if (i % 50 === 0) {
-                // For very large sets, yield every 50 lines to keep UI responsive
-                await this.sleep(10);
             }
         }
         
@@ -5506,9 +5553,9 @@ class BitcoinBlockExplorer {
                 this.scene.add(rightLine);
                 this.merkleTreeLines.push(leftLine, rightLine);
                 
-                // Animate both lines (or skip animation for very large sets)
-                if (isLargeSet && txCount > 500) {
-                    // For very large sets, just create the lines instantly
+                // Animate both lines (or skip animation for large sets for speed)
+                if (useInstantDraw) {
+                    // Large blocks: draw both lines instantly
                     const leftPositions = leftLine.geometry.attributes.position;
                     const rightPositions = rightLine.geometry.attributes.position;
                     if (leftPositions && rightPositions) {
@@ -5526,11 +5573,17 @@ class BitcoinBlockExplorer {
                     }
                     leftLine.geometry.computeBoundingSphere();
                     rightLine.geometry.computeBoundingSphere();
+                    if (instantStepDelay > 0) {
+                        await this.sleep(instantStepDelay * 2);
+                    } else if (i % 100 === 0) {
+                        await this.sleep(0); // Yield to UI so large blocks don't freeze
+                    }
                 } else {
                     await Promise.all([
                         this.animateLineGrowth(leftLine, leftPos, parentPos, lineAnimationDuration),
                         this.animateLineGrowth(rightLine, rightPos, parentPos, lineAnimationDuration)
                     ]);
+                    await this.sleep(treeLevelDelay); // So 2-line step takes 2*perLineMs total
                 }
                 
                 // Update progress (each node adds 2 lines)
@@ -5538,14 +5591,6 @@ class BitcoinBlockExplorer {
                 if (currentStep % progressUpdateInterval === 0 || currentStep === totalSteps) {
                     const progress = 70 + Math.floor((currentStep / totalSteps) * 25); // 70-95% for animation
                     this.updateLoadingProgress(`Drawing lines ${currentStep}/${totalSteps}...`, progress);
-                }
-                
-                // Only add delay if not a very large set
-                if (!isLargeSet || txCount <= 500) {
-                    await this.sleep(animationDelay);
-                } else if (i % 20 === 0) {
-                    // For very large sets, yield every 20 nodes to keep UI responsive
-                    await this.sleep(10);
                 }
             }
         }
@@ -5555,7 +5600,7 @@ class BitcoinBlockExplorer {
             currentStep = totalSteps; // Ensure we're at 100%
         }
         this.updateLoadingProgress('Complete!', 100);
-        await this.sleep(300); // Brief pause to show 100%
+        await this.sleep(60); // Brief pause to show 100%
         
         // Force a render to ensure lines are visible
         this.renderer.render(this.scene, this.camera);
