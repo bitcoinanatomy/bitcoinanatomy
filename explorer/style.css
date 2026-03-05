@@ -915,6 +915,46 @@ button:active {
     color: #4CAF50;
 }
 
+.implementation-sub-item {
+    padding: 2px 8px 2px 18px;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.35);
+    line-height: 1.6em;
+    margin: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.07);
+    margin-left: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.implementation-sub-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 40%;
+    background: rgba(255, 255, 255, 0.08);
+    width: 0%;
+    transition: width 0.6s ease-out;
+    border-radius: 0 2px 2px 0;
+}
+
+.implementation-sub-item:last-of-type {
+    margin-bottom: 4px;
+}
+
+.implementation-sub-name {
+    color: rgba(255, 255, 255, 0.45);
+    position: relative;
+    z-index: 1;
+}
+
+.implementation-sub-item span:last-child {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+    position: relative;
+    z-index: 1;
+}
+
 /* ================================
    DISCLAIMER
    ================================ */
@@ -2457,3 +2497,397 @@ body.ui-hidden.ui-hover-reveal .disclaimer {
     opacity: 1;
     transition: opacity 0.2s ease-in-out;
 }
+/* ── Node Table Pane ─────────────────────────────────────────────────────── */
+
+/* Shrink the canvas container when the table is open, exactly like raw-data-modal */
+body.table-open #container {
+    width: 50%;
+}
+
+body.table-open #container .navbar {
+    width: 100vw;
+}
+
+body.table-open .sidebar {
+    display: none;
+}
+
+body.table-open .controls {
+    right: auto;
+    left: 10px;
+}
+
+.node-table-pane {
+    position: fixed;
+    top: 60px; /* below navbar */
+    right: 0;
+    width: 50%;
+    height: calc(100vh - 60px);
+    background: #0a0a0a;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 40000;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
+}
+
+.node-table-pane.open {
+    transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+    body.table-open #container {
+        width: 100%;
+    }
+    .node-table-pane {
+        width: 100vw;
+        top: 0;
+        height: 100vh;
+        z-index: 50000;
+    }
+}
+
+.table-pane-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    flex-shrink: 0;
+}
+
+.table-pane-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.table-type-filter {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.table-filter-btn {
+    height: 22px;
+    padding: 0 8px;
+    font-size: 0.65rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    color: rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    white-space: nowrap;
+    font-family: inherit;
+    letter-spacing: 0.03rem;
+}
+
+.table-filter-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.table-filter-btn.active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.22);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.table-pane-title h3 {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 200;
+    color: #797979;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+    white-space: nowrap;
+}
+
+.table-count {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.3);
+    white-space: nowrap;
+}
+
+.table-search {
+    flex: 1;
+    height: 26px;
+    padding: 0 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.72rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+    min-width: 0;
+}
+
+.table-search::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.table-search:focus {
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.close-table-pane {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: 1rem;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    padding: 0;
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+}
+
+.close-table-pane:hover {
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.table-pane-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.table-pane-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.table-pane-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.table-pane-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.table-pane-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.node-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.7rem;
+    table-layout: fixed;
+}
+
+.node-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(10, 10, 12, 0.95);
+}
+
+.node-table th {
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.04rem;
+    font-size: 0.62rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+    cursor: default;
+    user-select: none;
+}
+
+.node-table th.sortable {
+    cursor: pointer;
+}
+
+.node-table th.sortable:hover {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.node-table th.sort-asc .sort-indicator::after { content: '↑'; }
+.node-table th.sort-desc .sort-indicator::after { content: '↓'; }
+.node-table th.sort-asc .sort-indicator,
+.node-table th.sort-desc .sort-indicator { opacity: 1; color: rgba(255,255,255,0.7); }
+.sort-indicator { opacity: 0.3; font-size: 0.65rem; }
+
+.node-table th:nth-child(1) { width: 38%; }
+.node-table th:nth-child(2) { width: 14%; }
+.node-table th:nth-child(3) { width: 18%; }
+.node-table th:nth-child(4) { width: 18%; }
+.node-table th:nth-child(5) { width: 12%; }
+
+.node-table td {
+    padding: 6px 10px;
+    color: rgba(255, 255, 255, 0.65);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.node-table tbody tr {
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.node-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.node-table tbody tr:hover td {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.node-table td.addr-cell {
+    font-family: 'Courier New', monospace;
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.node-table tbody tr:hover td.addr-cell {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.node-table td.height-cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.node-type-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    padding: 1px 5px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.04rem;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.node-type-badge.tor {
+    background: rgba(130, 80, 255, 0.15);
+    color: rgba(160, 120, 255, 0.8);
+    border: 1px solid rgba(130, 80, 255, 0.2);
+}
+
+.table-pane-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+}
+
+.table-pane-footer-left {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.table-page-size-label {
+    font-size: 0.62rem;
+    color: rgba(255, 255, 255, 0.25);
+    white-space: nowrap;
+}
+
+.table-page-size {
+    height: 22px;
+    padding: 0 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.68rem;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+}
+
+.table-page-size:focus {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.table-pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.table-page-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.75rem;
+    width: 24px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.12s, color 0.12s;
+    line-height: 1;
+}
+
+.table-page-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.table-page-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
+.table-page-info {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.35);
+    white-space: nowrap;
+    min-width: 38px;
+    text-align: center;
+}
+
+.table-footer-note {
+    font-size: 0.62rem;
+    color: rgba(255, 255, 255, 0.2);
+    flex: 1;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* No results state */
+.table-no-results {
+    padding: 40px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 0.75rem;
+}
+
+/* Active state for Table button */
+#toggle-table.active {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+

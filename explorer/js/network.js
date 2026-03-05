@@ -1,4 +1,10 @@
 // Bitcoin Explorer - Network Page
+
+function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 class BitcoinNetworkExplorer {
     constructor() {
         console.log('🚀 BitcoinNetworkExplorer constructor called');
@@ -18,6 +24,23 @@ class BitcoinNetworkExplorer {
         this.isPerspective = true;
         this.orthographicZoom = 100;
         this.animateLogged = false;
+        this.is2DMode = false;
+        this.isFocused = false;
+        this.orbitTransition = null;
+        this.nearScalingActive = false;
+        this.earthMesh = null;
+        this.mapPlaneMesh = null;
+        this.connectionsMesh = null;
+        this.proximityMesh = null;
+        this.isEarthVisible = true;
+        this.savedCameraState = null;
+        this.wasRotating2D = false;
+        this.subtitlePrefix = '';
+        this.tableSort = { column: 'country', dir: 1 };
+        this.tableOpen = false;
+        this.tablePage = 0;
+        this.tablePageSize = 500;
+        this.tableFilter = 'all'; // 'all' | 'clearnet' | 'tor'
         
         // Cache configuration
         this.CACHE_KEY = 'bitnodes_data_cache';
@@ -187,10 +210,7 @@ class BitcoinNetworkExplorer {
             
             // Stop automatic rotation when user starts interacting
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            this.updateRotationButton(false);
         });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
@@ -202,25 +222,21 @@ class BitcoinNetworkExplorer {
                 const deltaX = e.clientX - controls.lastMouseX;
                 const deltaY = e.clientY - controls.lastMouseY;
                 
-                if (e.shiftKey) {
-                    // Panning with inverted axes and reduced intensity
-                    const panSpeed = 0.001; // Reduced intensity
+                const wantPan = this.is2DMode ? !e.shiftKey : e.shiftKey;
+
+                if (wantPan) {
+                    // Pan: move the orbit target in camera-right / camera-up directions
+                    const panSpeed = 0.001;
                     const right = new THREE.Vector3();
-                    const up = new THREE.Vector3();
-                    
-                    this.camera.getWorldDirection(new THREE.Vector3());
+                    const up    = new THREE.Vector3();
                     right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
                     up.setFromMatrixColumn(this.camera.matrix, 1);
-                    
-                    const panX = deltaX * panSpeed * controls.distance;
-                    const panY = deltaY * panSpeed * controls.distance; // Inverted: was -deltaY, now deltaY
-                    
-                    controls.target.add(right.multiplyScalar(panX));
-                    controls.target.add(up.multiplyScalar(panY));
+                    controls.target.add(right.multiplyScalar(deltaX * panSpeed * controls.distance));
+                    controls.target.add(up.multiplyScalar(deltaY * panSpeed * controls.distance));
                 } else {
-                    // Rotation with inverted axes and reduced intensity
-                    controls.theta += deltaX * 0.005; // Reduced intensity: was 0.01, now 0.005
-                    controls.phi -= deltaY * 0.005; // Reduced intensity: was 0.01, now 0.005
+                    // Rotate
+                    controls.theta += deltaX * 0.005;
+                    controls.phi -= deltaY * 0.005;
                     controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, controls.phi));
                 }
                 
@@ -233,16 +249,14 @@ class BitcoinNetworkExplorer {
         this.renderer.domElement.addEventListener('wheel', (e) => {
             // Stop automatic rotation when user starts zooming
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            this.updateRotationButton(false);
             
             // Zoom in/out with inverted scroll direction
             if (this.isPerspective) {
                 // Perspective camera zoom
                 controls.distance += e.deltaY * 0.1;
-                controls.distance = Math.max(36, Math.min(200, controls.distance));
+                const { min: wMin, max: wMax } = this.zoomLimits();
+                controls.distance = Math.max(wMin, Math.min(wMax, controls.distance));
                 controls.update();
             } else {
                 // Orthographic camera zoom
@@ -276,10 +290,7 @@ class BitcoinNetworkExplorer {
             e.preventDefault();
             
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            this.updateRotationButton(false);
 
             if (e.touches.length === 1) {
                 // Single touch - rotation/panning
@@ -358,7 +369,8 @@ class BitcoinNetworkExplorer {
                 
                 if (this.isPerspective) {
                     this.controls.distance *= zoomFactor;
-                    this.controls.distance = Math.max(36, Math.min(200, this.controls.distance));
+                    const { min: tMin, max: tMax } = this.zoomLimits();
+                    this.controls.distance = Math.max(tMin, Math.min(tMax, this.controls.distance));
                 } else {
                     this.orthographicZoom *= zoomFactor;
                     this.orthographicZoom = Math.max(10, Math.min(300, this.orthographicZoom));
@@ -399,24 +411,31 @@ class BitcoinNetworkExplorer {
         });
     }
 
+    zoomLimits() {
+        if (this.is2DMode) return { min: 2,   max: 600 };
+        return             { min: 0.5, max: 600 };
+    }
+
+    updateRotationButton(rotating) {
+        const btn = document.getElementById('toggle-rotation');
+        if (!btn) return;
+        const icon = document.getElementById('toggle-rotation-icon');
+        if (icon) icon.src = rotating ? 'imgs/icons/pause.svg' : 'imgs/icons/play.svg';
+        const label = rotating ? 'Pause rotation' : 'Start rotation';
+        btn.title = label;
+        btn.setAttribute('aria-label', label);
+    }
+
     setupControls() {
         // Toggle rotation
         document.getElementById('toggle-rotation').addEventListener('click', () => {
             this.isRotating = !this.isRotating;
-            const button = document.getElementById('toggle-rotation');
-            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+            this.updateRotationButton(this.isRotating);
+            this.syncUrlParams();
         });
         
         // Reset camera
-        document.getElementById('reset-camera').addEventListener('click', () => {
-            this.camera.position.set(-100, 50, 100);
-            this.camera.lookAt(0, 0, 0);
-            this.controls.target.set(0, 0, 0);
-            this.controls.distance = 100;
-            this.controls.phi = Math.PI / 2.5;
-            this.controls.theta = -3.5;
-            this.controls.update();
-        });
+        document.getElementById('reset-camera').addEventListener('click', () => this.resetCamera());
         
         // Show all nodes
         document.getElementById('show-all').addEventListener('click', () => {
@@ -431,6 +450,72 @@ class BitcoinNetworkExplorer {
             });
         }
         
+        // Toggle 2D map view
+        const toggle2DButton = document.getElementById('toggle-2d');
+        if (toggle2DButton) {
+            toggle2DButton.addEventListener('click', () => {
+                this.toggle2DView();
+            });
+        }
+
+        // Toggle earth geography visibility
+        const toggleEarthButton = document.getElementById('toggle-earth');
+        if (toggleEarthButton) {
+            toggleEarthButton.addEventListener('click', () => {
+                this.toggleEarth();
+            });
+        }
+
+        // Toggle random connections between nodes
+        const toggleConnectionsButton = document.getElementById('toggle-connections');
+        if (toggleConnectionsButton) {
+            toggleConnectionsButton.addEventListener('click', () => {
+                this.toggleConnections();
+            });
+        }
+        
+        // Toggle node table pane
+        const toggleTableButton = document.getElementById('toggle-table');
+        if (toggleTableButton) {
+            toggleTableButton.addEventListener('click', () => this.toggleTablePane());
+        }
+        const closeTableButton = document.getElementById('close-table-pane');
+        if (closeTableButton) {
+            closeTableButton.addEventListener('click', () => this.closeTablePane());
+        }
+        const tableSearch = document.getElementById('table-search');
+        if (tableSearch) {
+            tableSearch.addEventListener('input', () => { this.tablePage = 0; this.renderTableRows(); });
+        }
+        document.querySelectorAll('#node-table th.sortable').forEach(th => {
+            th.addEventListener('click', () => this.handleTableSort(th.dataset.col));
+        });
+        const tablePageSize = document.getElementById('table-page-size');
+        if (tablePageSize) {
+            tablePageSize.addEventListener('change', () => {
+                this.tablePageSize = parseInt(tablePageSize.value, 10);
+                this.tablePage = 0;
+                this.renderTableRows();
+            });
+        }
+        document.getElementById('table-prev')?.addEventListener('click', () => {
+            if (this.tablePage > 0) { this.tablePage--; this.renderTableRows(true); }
+        });
+        document.getElementById('table-next')?.addEventListener('click', () => {
+            this.tablePage++;
+            this.renderTableRows(true);
+        });
+        document.querySelectorAll('.table-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.tableFilter = btn.dataset.filter;
+                this.tablePage = 0;
+                document.querySelectorAll('.table-filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.renderTableRows();
+                this.syncUrlParams();
+            });
+        });
+
         // Clear cache and reload
         const clearCacheButton = document.getElementById('clear-cache');
         if (clearCacheButton) {
@@ -499,6 +584,8 @@ class BitcoinNetworkExplorer {
     
     setupHoverTooltip() {
         const raycaster = new THREE.Raycaster();
+        raycaster.params.Mesh = {};   // ensure mesh picking is default exact
+        this.hoverRaycaster = raycaster; // store so toggle2DView can adjust threshold
         const mouse = new THREE.Vector2();
 
         // Create tooltip element
@@ -554,6 +641,36 @@ class BitcoinNetworkExplorer {
             tooltip.style.display = 'none';
         });
         
+        // Shift+click: smoothly orbit around the clicked node
+        this.renderer.domElement.addEventListener('click', (event) => {
+            if (!event.shiftKey) return;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, this.camera);
+            const intersects = raycaster.intersectObjects(this.nodes);
+            if (intersects.length > 0) {
+                // getWorldPosition accounts for scene.rotation so the target
+                // lands on the actual rendered position of the node
+                const worldPos = new THREE.Vector3();
+                intersects[0].object.getWorldPosition(worldPos);
+
+                // Stop auto-rotation — the world-space target would drift otherwise
+                this.isRotating = false;
+                this.updateRotationButton(false);
+
+                this.isFocused = true;
+                this.orbitTransition = {
+                    fromTarget:   this.controls.target.clone(),
+                    toTarget:     worldPos,
+                    fromDistance: this.controls.distance,
+                    toDistance:   3,
+                    progress:     0,
+                    duration:     30
+                };
+                tooltip.style.display = 'none';
+            }
+        });
+
         // Add double-click handler for node navigation
         this.renderer.domElement.addEventListener('dblclick', (event) => {
             // Calculate mouse position in normalized device coordinates
@@ -582,19 +699,34 @@ class BitcoinNetworkExplorer {
     filterNodesByImplementation(selectedImplementation) {
         this.nodes.forEach(node => {
             const material = node.material;
-            const nodeImplementation = node.userData.type;
-            
-            if (nodeImplementation === selectedImplementation) {
-                // Highlight selected implementation with full opacity and white color
-                material.opacity = 1.0;
-                material.color.setHex(0xffffff);
-                material.transparent = true;
-            } else {
-                // Reduce opacity and change to grey for others
-                material.opacity = 0.3;
-                material.color.setHex(0x666666);
-                material.transparent = true;
+            const type = node.userData.type;
+            const ua   = node.userData.userAgent || '';
+            let match = false;
+
+            switch (selectedImplementation) {
+                case 'core-v30plus': {
+                    const m = ua.match(/Satoshi:(\d+)\./);
+                    match = type === 'bitcoin-core' && m && parseInt(m[1]) >= 30;
+                    break;
+                }
+                case 'core-older': {
+                    const m = ua.match(/Satoshi:(\d+)\./);
+                    match = type === 'bitcoin-core' && (!m || parseInt(m[1]) < 30);
+                    break;
+                }
+                case 'knots-bip110':
+                    match = type === 'knots' && ua.toLowerCase().includes('bip110');
+                    break;
+                case 'knots-standard':
+                    match = type === 'knots' && !ua.toLowerCase().includes('bip110');
+                    break;
+                default:
+                    match = type === selectedImplementation;
             }
+
+            material.opacity = match ? 1.0 : 0.3;
+            material.color.setHex(match ? 0xffffff : 0x666666);
+            material.transparent = true;
         });
         
         this.updateFilterButtons(selectedImplementation);
@@ -663,7 +795,25 @@ class BitcoinNetworkExplorer {
         
         const earth = new THREE.Mesh(earthGeometry, earthMaterial);
         earth.rotation.y = (180 * Math.PI) / 180; // Rotate 50 degrees
+        this.earthMesh = earth;
         this.scene.add(earth);
+
+        // Flat map plane for 2D mode — same texture, equirectangular projection
+        // Width=132 covers longitude ±66 units, height=66 covers latitude ±33 units,
+        // matching the node flat-projection coordinates exactly.
+        const planeMaterial = new THREE.MeshBasicMaterial({
+            map: earthTexture,
+            color: 0x555555,
+            transparent: true,
+            opacity: 0.9,
+            side: THREE.DoubleSide
+        });
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(132, 66), planeMaterial);
+        plane.rotation.x = -Math.PI / 2; // Lay flat in XZ plane
+        plane.position.y = -0.05;        // Just below nodes at y=0
+        plane.visible = false;           // Only shown in 2D mode
+        this.mapPlaneMesh = plane;
+        this.scene.add(plane);
     }
 
 
@@ -672,10 +822,35 @@ class BitcoinNetworkExplorer {
         this.showPopupMessage(
             'Rate Limit Exceeded',
             `${apiName} is temporarily unavailable due to too many requests. Please try again in a few minutes.`,
-            'warning'
+            'warning',
+            [{ label: 'Load Archive Data', onClick: () => this.loadLocalArchive() }]
         );
     }
     
+    async loadLocalArchive() {
+        const ARCHIVE_PATH = 'js/bitnodes-snapshot-1772712282.json';
+        try {
+            this.updateLoadingProgress('Loading archive snapshot...', 10);
+            const response = await fetch(ARCHIVE_PATH);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+
+            this.nodeData = data;
+            this.subtitlePrefix = 'Archive: ';
+            this.latestSnapshot = { timestamp: data.timestamp, total_nodes: data.total_nodes };
+            this.snapshotsData = null;
+            this.currentSnapshotIndex = 0;
+
+            this.updateLoadingProgress('Creating visualization...', 80);
+            this.createNetworkVisualization();
+            this.updateSnapshotNavButtons();
+        } catch (error) {
+            console.error('Failed to load local archive:', error);
+            this.hideLoadingModal();
+            this.showGenericError('local archive data');
+        }
+    }
+
     showGenericError(dataType) {
         this.showPopupMessage(
             'Error',
@@ -684,7 +859,7 @@ class BitcoinNetworkExplorer {
         );
     }
     
-    showPopupMessage(title, message, type = 'info') {
+    showPopupMessage(title, message, type = 'info', extraButtons = []) {
         // Remove existing popup if any
         const existingPopup = document.querySelector('.api-popup');
         if (existingPopup) {
@@ -704,6 +879,7 @@ class BitcoinNetworkExplorer {
                     <p>${message}</p>
                 </div>
                 <div class="popup-footer">
+                    ${extraButtons.map((btn, i) => `<button class="popup-extra popup-extra-${i}">${btn.label}</button>`).join('')}
                     <button class="popup-retry">Retry</button>
                     <button class="popup-dismiss">Dismiss</button>
                 </div>
@@ -815,6 +991,12 @@ class BitcoinNetworkExplorer {
             popup.remove();
             this.fetchData();
         });
+        extraButtons.forEach((btn, i) => {
+            popup.querySelector(`.popup-extra-${i}`)?.addEventListener('click', () => {
+                popup.remove();
+                btn.onClick();
+            });
+        });
         
         // Close on background click
         popup.addEventListener('click', (e) => {
@@ -851,9 +1033,11 @@ class BitcoinNetworkExplorer {
         
         // Clear existing nodes and connections
         this.nodes.forEach(node => this.scene.remove(node));
-        this.connections.forEach(connection => this.scene.remove(connection));
         this.nodes = [];
-        this.connections = [];
+        this.clearConnections();
+        this.showConnections = false;
+        const connBtn = document.getElementById('toggle-connections');
+        if (connBtn) connBtn.textContent = 'Show Connections';
         
         console.log('🧹 Cleared existing nodes and connections');
         
@@ -973,6 +1157,7 @@ class BitcoinNetworkExplorer {
             const node = new THREE.Mesh(geometry, material);
             node.position.set(x, y, z);
             
+            const hasLocation = lat != null && lng != null && !isNaN(lat) && !isNaN(lng) && lat !== 0.0 && lng !== 0.0;
             node.userData = {
                 type: nodeImplementation,
                 address: address,
@@ -983,7 +1168,10 @@ class BitcoinNetworkExplorer {
                 latestHeight: latestHeight,
                 asn: asn,
                 org: org,
-                index: i
+                index: i,
+                lat: lat,
+                lng: lng,
+                hasLocation: hasLocation
             };
             
             if (shouldLog) {
@@ -1024,6 +1212,7 @@ class BitcoinNetworkExplorer {
                 // Update UI with node counts now that nodes are created
                 console.log('📊 Updating UI with node implementation counts...');
                 this.updateUI();
+                this.applyUrlParams();
                 
                 this.updateLoadingProgress('Complete!', 100);
                 setTimeout(() => {
@@ -1229,6 +1418,7 @@ class BitcoinNetworkExplorer {
                 }
                 
                 this.nodeData = await snapshotResponse.json();
+                this.subtitlePrefix = '';
                 
                 this.updateLoadingProgress('Creating visualization...', 80);
                 console.log('✅ Fetched node data:', this.nodeData);
@@ -1416,11 +1606,25 @@ class BitcoinNetworkExplorer {
         
         console.log('📊 Counting node implementations from', this.nodes.length, 'nodes...');
         
-        // Count node implementations
+        // Count node implementations and sub-metrics
         const nodeImplementations = {};
+        let coreV30plus = 0, coreOlder = 0;
+        let knotsBip110 = 0, knotsStandard = 0;
+
         this.nodes.forEach(node => {
             const implementation = node.userData.type;
             nodeImplementations[implementation] = (nodeImplementations[implementation] || 0) + 1;
+
+            const ua = node.userData.userAgent || '';
+
+            if (implementation === 'bitcoin-core') {
+                const m = ua.match(/Satoshi:(\d+)\./);
+                if (m && parseInt(m[1]) >= 30) coreV30plus++;
+                else coreOlder++;
+            } else if (implementation === 'knots') {
+                if (ua.toLowerCase().includes('bip110')) knotsBip110++;
+                else knotsStandard++;
+            }
         });
         
         console.log('📊 Node implementation counts:', nodeImplementations);
@@ -1434,27 +1638,28 @@ class BitcoinNetworkExplorer {
         document.getElementById('hash-rate').textContent = '450 EH/s'; // Placeholder
         document.getElementById('difficulty').textContent = '67.96 T'; // Placeholder
         
-        // Update implementation counts and percentage bars
-        const implementations = ['bitcoin-core', 'knots', 'bcoin', 'other'];
-        implementations.forEach(impl => {
-            const count = nodeImplementations[impl] || 0;
-            const percentage = totalRenderedNodes > 0 ? (count / totalRenderedNodes * 100) : 0;
-            
-            // Update count text
-            document.getElementById(impl).textContent = count.toLocaleString();
-            
-            // Update percentage bar
-            const bar = document.getElementById(`bar-${impl}`);
-            if (bar) {
-                bar.style.width = `${percentage}%`;
-                console.log(`  📊 ${impl}: ${count} nodes (${percentage.toFixed(1)}%)`);
-            }
+        // Update all implementation rows (flat list, bars relative to total rendered nodes)
+        const setEl  = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        const setBar = (id, pct) => { const el = document.getElementById(id); if (el) el.style.width = `${pct}%`; };
+        const pct = (n) => totalRenderedNodes > 0 ? n / totalRenderedNodes * 100 : 0;
+
+        const rows = [
+            { id: 'core-v30plus',   count: coreV30plus },
+            { id: 'core-older',     count: coreOlder },
+            { id: 'knots-standard', count: knotsStandard },
+            { id: 'knots-bip110',   count: knotsBip110 },
+            { id: 'bcoin',          count: nodeImplementations['bcoin'] || 0 },
+            { id: 'other',          count: nodeImplementations['other'] || 0 },
+        ];
+        rows.forEach(({ id, count }) => {
+            setEl(id, count > 0 ? count.toLocaleString() : '0');
+            setBar(`bar-${id}`, pct(count));
         });
-        
+
         console.log('✅ UI updated with implementation counts and percentage bars');
         
         // Update subtitle with timestamp and node count
-        let subtitle = `${totalNodes.toLocaleString()} nodes • ${this.formatDate(timestamp)}`;
+        let subtitle = `${this.subtitlePrefix}${totalNodes.toLocaleString()} nodes • ${this.formatDate(timestamp)}`;
         
         // Add mobile optimization notice
         if (this.isMobile && this.nodes.length < totalNodes) {
@@ -1470,6 +1675,103 @@ class BitcoinNetworkExplorer {
         // Log animate start once
         this.logAnimateStart();
         
+        // Smooth orbit-focus transition (triggered by shift+click)
+        if (this.orbitTransition) {
+            const tr = this.orbitTransition;
+            tr.progress = Math.min(tr.progress + 1 / tr.duration, 1);
+            // Smoothstep easing: slow start and end, fast middle
+            const t = tr.progress * tr.progress * (3 - 2 * tr.progress);
+            this.controls.target.lerpVectors(tr.fromTarget, tr.toTarget, t);
+            this.controls.distance = tr.fromDistance + (tr.toDistance - tr.fromDistance) * t;
+            this.controls.update();
+            if (tr.progress >= 1) this.orbitTransition = null;
+        }
+
+        // Depth dimming + anti-overlap scale.
+        // Above DEPTH_OFF distance all nodes are pure white (full-network view).
+        // Between DEPTH_OFF and DEPTH_ON the effect blends in smoothly.
+        // Below DEPTH_ON the full quadratic depth gradient is applied.
+        const DEPTH_OFF  = 80;   // distance at which dimming is fully off (all white)
+        const DEPTH_ON   = 40;   // distance at which dimming is fully on
+        const MIN_BRIGHT = 0.18; // linear floor for farthest nodes (sRGB ≈ 0.46)
+        const SCALE_ZONE = 50;
+        const MIN_SCALE  = 0.25;
+        // In orthographic mode scale nodes proportionally to the frustum size so
+        // they keep a consistent apparent screen size as you zoom out.
+        const orthoFactor = this.isPerspective ? 1 : (this.orthographicZoom / 100);
+        const baseScale   = (this.is2DMode ? 1.2 : 1.0) * orthoFactor;
+
+        // How strongly the depth effect applies — 0 when zoomed out, 1 when close.
+        const depthStrength = Math.min(1, Math.max(0,
+            (DEPTH_OFF - this.controls.distance) / (DEPTH_OFF - DEPTH_ON)
+        ));
+
+        // Camera in scene-local space (scene rotates, nodes are scene-children).
+        const camPosLocal = this.scene.worldToLocal(this.camera.position.clone());
+
+        // When fully zoomed out restore all nodes to white in one pass and skip
+        // per-node work for this frame.
+        if (depthStrength === 0) {
+            if (this.nearScalingActive) {
+                this.nearScalingActive = false;
+                this.nodes.forEach(node => {
+                    node.material.color.setHex(0xffffff);
+                    node.scale.setScalar(baseScale);
+                });
+            }
+        } else {
+            // Pass 1 — find visible distance range for normalisation
+            let minDist = Infinity, maxDist = 0;
+            this.nodes.forEach(node => {
+                if (!node.visible) return;
+                const d = node.position.distanceTo(camPosLocal);
+                if (d < minDist) minDist = d;
+                if (d > maxDist) maxDist = d;
+            });
+            const distRange = maxDist - minDist;
+
+            // Pass 2 — depth brightness + anti-overlap scale
+            this.nodes.forEach(node => {
+                if (!node.visible) return;
+                const dist = node.position.distanceTo(camPosLocal);
+
+                // Quadratic falloff blended by depthStrength.
+                // At depthStrength=0 all nodes stay white; at 1 far nodes go dark.
+                const depthRatio = distRange > 0.5 ? (dist - minDist) / distRange : 0;
+                const t = 1 - depthRatio;
+                const fullBright = MIN_BRIGHT + (1 - MIN_BRIGHT) * t * t;
+                const brightness = 1 - depthStrength * (1 - fullBright);
+                node.material.color.setScalar(brightness);
+
+                // Scale shrinkage only when close enough to cause overlap
+                if (this.controls.distance < SCALE_ZONE) {
+                    const ratio = Math.min(1, dist / SCALE_ZONE);
+                    const s = Math.max(MIN_SCALE, ratio * ratio * baseScale);
+                    if (Math.abs(node.scale.x - s) > 0.0005) node.scale.setScalar(s);
+                }
+            });
+
+            // Orthographic mode: all nodes share the same size (the smallest computed
+            // scale) so they appear uniform regardless of depth position.
+            if (!this.isPerspective && this.controls.distance < SCALE_ZONE) {
+                let minScale = baseScale;
+                this.nodes.forEach(node => {
+                    if (node.visible && node.scale.x < minScale) minScale = node.scale.x;
+                });
+                this.nodes.forEach(node => {
+                    if (node.visible && Math.abs(node.scale.x - minScale) > 0.0005)
+                        node.scale.setScalar(minScale);
+                });
+            }
+
+            // Restore scales when leaving the scale zone
+            if (this.controls.distance >= SCALE_ZONE && this.nearScalingActive) {
+                this.nearScalingActive = false;
+                this.nodes.forEach(node => node.scale.setScalar(baseScale));
+            }
+            if (this.controls.distance < SCALE_ZONE) this.nearScalingActive = true;
+        }
+
         // Rotate scene (optional, can be disabled)
         if (this.isRotating) {
             this.scene.rotation.y += 0.001; // Faster rotation
@@ -1495,18 +1797,21 @@ class BitcoinNetworkExplorer {
     }
 
     onWindowResize() {
+        const sceneEl = document.getElementById('scene');
+        const w = sceneEl ? sceneEl.clientWidth  : window.innerWidth;
+        const h = sceneEl ? sceneEl.clientHeight : window.innerHeight;
         if (this.isPerspective) {
-            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.aspect = w / h;
             this.camera.updateProjectionMatrix();
         } else {
-            const aspect = window.innerWidth / window.innerHeight;
+            const aspect = w / h;
             this.camera.left = -this.orthographicZoom * aspect / 2;
             this.camera.right = this.orthographicZoom * aspect / 2;
             this.camera.top = this.orthographicZoom / 2;
             this.camera.bottom = -this.orthographicZoom / 2;
             this.camera.updateProjectionMatrix();
         }
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(w, h);
     }
     
     setupPanelToggle() {
@@ -2238,30 +2543,21 @@ class BitcoinNetworkExplorer {
     // Navigation methods
     rotateLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         this.controls.theta -= 0.2;
         this.controls.update();
     }
     
     rotateRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         this.controls.theta += 0.2;
         this.controls.update();
     }
     
     rotateUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         this.controls.phi -= 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.controls.update();
@@ -2269,10 +2565,7 @@ class BitcoinNetworkExplorer {
     
     rotateDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         this.controls.phi += 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.controls.update();
@@ -2280,10 +2573,7 @@ class BitcoinNetworkExplorer {
     
     panLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
         right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
@@ -2293,10 +2583,7 @@ class BitcoinNetworkExplorer {
     
     panRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
         right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
@@ -2306,10 +2593,7 @@ class BitcoinNetworkExplorer {
     
     panUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
         this.controls.target.add(up.multiplyScalar(0.5));
@@ -2318,10 +2602,7 @@ class BitcoinNetworkExplorer {
     
     panDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
         this.controls.target.add(up.multiplyScalar(-0.5));
@@ -2330,13 +2611,11 @@ class BitcoinNetworkExplorer {
     
     zoomIn() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         if (this.isPerspective) {
             this.controls.distance -= 2;
-            this.controls.distance = Math.max(10, Math.min(200, this.controls.distance));
+            const { min: ziMin, max: ziMax } = this.zoomLimits();
+            this.controls.distance = Math.max(ziMin, Math.min(ziMax, this.controls.distance));
             this.controls.update();
         } else {
             this.orthographicZoom += 5;
@@ -2353,13 +2632,11 @@ class BitcoinNetworkExplorer {
     
     zoomOut() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        this.updateRotationButton(false);
         if (this.isPerspective) {
             this.controls.distance += 2;
-            this.controls.distance = Math.max(10, Math.min(200, this.controls.distance));
+            const { min: zoMin, max: zoMax } = this.zoomLimits();
+            this.controls.distance = Math.max(zoMin, Math.min(zoMax, this.controls.distance));
             this.controls.update();
         } else {
             this.orthographicZoom -= 5;
@@ -2374,6 +2651,480 @@ class BitcoinNetworkExplorer {
         }
     }
     
+    toggleConnections() {
+        this.showConnections = !this.showConnections;
+        const btn = document.getElementById('toggle-connections');
+        if (this.showConnections) {
+            this.createConnections();
+            if (btn) btn.textContent = 'Hide Connections';
+        } else {
+            this.clearConnections();
+            if (btn) btn.textContent = 'Show Connections';
+        }
+        this.syncUrlParams();
+    }
+
+    createConnections() {
+        this.clearConnections();
+
+        const visibleNodes = this.nodes.filter(n => n.visible);
+        if (visibleNodes.length < 2) return;
+
+        // Budget: at least one random line per node so every node is covered
+        const MAX_LINES = Math.max(3000, visibleNodes.length);
+        const positions = new Float32Array(MAX_LINES * 6);
+        let count = 0;
+
+        // Phase 1 – guaranteed pass: shuffle all nodes, pair each as source with a
+        // random destination. Every node gets ≥1 random connection.
+        const shuffledRandom = visibleNodes.slice().sort(() => Math.random() - 0.5);
+        for (let i = 0; i < shuffledRandom.length && count < MAX_LINES; i++) {
+            const a = shuffledRandom[i];
+            const b = visibleNodes[Math.floor(Math.random() * visibleNodes.length)];
+            if (a === b) continue;
+            const base = count * 6;
+            positions[base]     = a.position.x;
+            positions[base + 1] = a.position.y;
+            positions[base + 2] = a.position.z;
+            positions[base + 3] = b.position.x;
+            positions[base + 4] = b.position.y;
+            positions[base + 5] = b.position.z;
+            count++;
+        }
+
+        // Phase 2 – fill remaining budget with additional random pairs
+        const extraAttempts = (MAX_LINES - count) * 3;
+        for (let i = 0; i < extraAttempts && count < MAX_LINES; i++) {
+            const a = visibleNodes[Math.floor(Math.random() * visibleNodes.length)];
+            const b = visibleNodes[Math.floor(Math.random() * visibleNodes.length)];
+            if (a === b) continue;
+            const base = count * 6;
+            positions[base]     = a.position.x;
+            positions[base + 1] = a.position.y;
+            positions[base + 2] = a.position.z;
+            positions[base + 3] = b.position.x;
+            positions[base + 4] = b.position.y;
+            positions[base + 5] = b.position.z;
+            count++;
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions.slice(0, count * 6), 3));
+
+        const sharedMaterial = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.07,
+            blending: THREE.ScreenBlending,
+            depthWrite: false
+        });
+
+        const lineSegments = new THREE.LineSegments(geometry, sharedMaterial);
+        this.connectionsMesh = lineSegments;
+        this.scene.add(lineSegments);
+
+        // --- Proximity connections: only link nodes within a radius ---
+        const PROX_LINES = 1000;
+        const RADIUS = 22;
+        const proxPositions = new Float32Array(PROX_LINES * 6);
+        let proxCount = 0;
+
+        // Phase 1 – guaranteed pass: every node gets ≥1 proximity connection
+        // (if a neighbour within RADIUS exists after 20 attempts).
+        const shuffledProx = visibleNodes.slice().sort(() => Math.random() - 0.5);
+        for (let i = 0; i < shuffledProx.length && proxCount < PROX_LINES; i++) {
+            const a = shuffledProx[i];
+            for (let t = 0; t < 20; t++) {
+                const b = visibleNodes[Math.floor(Math.random() * visibleNodes.length)];
+                if (b === a) continue;
+                if (a.position.distanceTo(b.position) > RADIUS) continue;
+                const base = proxCount * 6;
+                proxPositions[base]     = a.position.x;
+                proxPositions[base + 1] = a.position.y;
+                proxPositions[base + 2] = a.position.z;
+                proxPositions[base + 3] = b.position.x;
+                proxPositions[base + 4] = b.position.y;
+                proxPositions[base + 5] = b.position.z;
+                proxCount++;
+                break;
+            }
+        }
+
+        // Phase 2 – fill remaining proximity budget
+        const proxExtra = (PROX_LINES - proxCount) * 8;
+        for (let i = 0; i < proxExtra && proxCount < PROX_LINES; i++) {
+            const a = visibleNodes[Math.floor(Math.random() * visibleNodes.length)];
+            for (let t = 0; t < 20; t++) {
+                const b = visibleNodes[Math.floor(Math.random() * visibleNodes.length)];
+                if (b === a) continue;
+                if (a.position.distanceTo(b.position) > RADIUS) continue;
+                const base = proxCount * 6;
+                proxPositions[base]     = a.position.x;
+                proxPositions[base + 1] = a.position.y;
+                proxPositions[base + 2] = a.position.z;
+                proxPositions[base + 3] = b.position.x;
+                proxPositions[base + 4] = b.position.y;
+                proxPositions[base + 5] = b.position.z;
+                proxCount++;
+                break;
+            }
+        }
+
+        if (proxCount > 0) {
+            const proxGeometry = new THREE.BufferGeometry();
+            proxGeometry.setAttribute('position', new THREE.BufferAttribute(proxPositions.slice(0, proxCount * 6), 3));
+            this.proximityMesh = new THREE.LineSegments(proxGeometry, sharedMaterial);
+            this.scene.add(this.proximityMesh);
+        }
+
+        // Keep connections array in sync for clearing on data reload
+        this.connections = [lineSegments, this.proximityMesh].filter(Boolean);
+    }
+
+    clearConnections() {
+        if (this.connectionsMesh) {
+            this.connectionsMesh.geometry.dispose();
+            this.connectionsMesh.material.dispose(); // shared material disposed here
+            this.scene.remove(this.connectionsMesh);
+            this.connectionsMesh = null;
+        }
+        if (this.proximityMesh) {
+            this.proximityMesh.geometry.dispose();
+            // material already disposed above (shared)
+            this.scene.remove(this.proximityMesh);
+            this.proximityMesh = null;
+        }
+        this.connections = [];
+    }
+
+    // ── Table Pane ──────────────────────────────────────────────────────────
+
+    toggleTablePane() {
+        if (this.tableOpen) {
+            this.closeTablePane();
+        } else {
+            this.openTablePane();
+        }
+    }
+
+    openTablePane() {
+        this.tableOpen = true;
+        const pane = document.getElementById('node-table-pane');
+        const btn  = document.getElementById('toggle-table');
+        if (pane) { pane.classList.add('open'); pane.setAttribute('aria-hidden', 'false'); }
+        if (btn)  btn.classList.add('active');
+        document.body.classList.add('table-open');
+        setTimeout(() => this.onWindowResize(), 310);
+        this.renderTableRows();
+        this.syncUrlParams();
+    }
+
+    closeTablePane() {
+        this.tableOpen = false;
+        const pane = document.getElementById('node-table-pane');
+        const btn  = document.getElementById('toggle-table');
+        if (pane) { pane.classList.remove('open'); pane.setAttribute('aria-hidden', 'true'); }
+        if (btn)  btn.classList.remove('active');
+        document.body.classList.remove('table-open');
+        setTimeout(() => this.onWindowResize(), 310);
+        this.syncUrlParams();
+    }
+
+    handleTableSort(column) {
+        if (this.tableSort.column === column) {
+            this.tableSort.dir *= -1;
+        } else {
+            this.tableSort.column = column;
+            this.tableSort.dir = 1;
+        }
+        // Update header indicators
+        document.querySelectorAll('#node-table th.sortable').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (th.dataset.col === column) {
+                th.classList.add(this.tableSort.dir === 1 ? 'sort-asc' : 'sort-desc');
+            }
+        });
+        this.tablePage = 0;
+        this.renderTableRows();
+    }
+
+    getNodeTableData() {
+        return this.nodes.map(node => {
+            const d = node.userData || {};
+            // Derive a clean client string from userAgent
+            let client = d.userAgent || '';
+            const match = client.match(/\/([^/]+:[^/]+)/);
+            if (match) client = match[1];
+            client = client.replace(/^\//, '').slice(0, 20);
+
+            return {
+                address:   d.address   || '',
+                country:   d.country   || '',
+                city:      d.city      || '',
+                userAgent: client,
+                height:    typeof d.height === 'number' ? d.height : (parseInt(d.height) || 0),
+                isTor:     !d.hasLocation,
+                visible:   node.visible,
+            };
+        });
+    }
+
+    renderTableRows(scrollToTop = false) {
+        const tbody   = document.getElementById('node-table-body');
+        const countEl = document.getElementById('table-count');
+        const footerEl  = document.getElementById('table-footer-note');
+        const pageInfoEl = document.getElementById('table-page-info');
+        const prevBtn  = document.getElementById('table-prev');
+        const nextBtn  = document.getElementById('table-next');
+        if (!tbody) return;
+
+        const query = (document.getElementById('table-search')?.value || '').toLowerCase().trim();
+        const { column, dir } = this.tableSort;
+        const pageSize = this.tablePageSize;
+
+        let rows = this.getNodeTableData();
+
+        // Type filter
+        if (this.tableFilter === 'clearnet') rows = rows.filter(r => !r.isTor);
+        else if (this.tableFilter === 'tor')  rows = rows.filter(r =>  r.isTor);
+
+        // Search filter
+        if (query) {
+            rows = rows.filter(r =>
+                r.address.toLowerCase().includes(query) ||
+                r.country.toLowerCase().includes(query) ||
+                r.city.toLowerCase().includes(query) ||
+                r.userAgent.toLowerCase().includes(query)
+            );
+        }
+
+        const total = rows.length;
+
+        // Sort
+        rows.sort((a, b) => {
+            let av = a[column], bv = b[column];
+            if (column === 'height') return dir * (av - bv);
+            av = String(av).toLowerCase();
+            bv = String(bv).toLowerCase();
+            return dir * av.localeCompare(bv);
+        });
+
+        // Pagination
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        this.tablePage = Math.min(this.tablePage, totalPages - 1);
+        const start = this.tablePage * pageSize;
+        const pageRows = rows.slice(start, start + pageSize);
+
+        // Count badge
+        if (countEl) {
+            countEl.textContent = query
+                ? `${total.toLocaleString()} match${total !== 1 ? 'es' : ''}`
+                : `${this.nodes.length.toLocaleString()} nodes`;
+        }
+
+        // Page info & prev/next state
+        if (pageInfoEl) pageInfoEl.textContent = `${this.tablePage + 1} of ${totalPages}`;
+        if (prevBtn) prevBtn.disabled = this.tablePage === 0;
+        if (nextBtn) nextBtn.disabled = this.tablePage >= totalPages - 1;
+
+        // Footer note
+        if (footerEl) {
+            const from = total === 0 ? 0 : start + 1;
+            const to   = Math.min(start + pageSize, total);
+            footerEl.textContent = total === 0
+                ? ''
+                : `${from.toLocaleString()}–${to.toLocaleString()} of ${total.toLocaleString()}`;
+        }
+
+        if (pageRows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="table-no-results">No nodes match your search.</td></tr>`;
+            return;
+        }
+
+        // Build HTML string for performance
+        const html = pageRows.map(r => {
+            const badge = r.isTor ? `<span class="node-type-badge tor">Tor</span>` : '';
+            const heightStr = r.height > 0 ? r.height.toLocaleString() : '—';
+            const addrShort = r.address.length > 38 ? r.address.slice(0, 36) + '…' : r.address;
+            return `<tr data-address="${escHtml(r.address)}">
+                <td class="addr-cell" title="${escHtml(r.address)}">${escHtml(addrShort)}${badge}</td>
+                <td title="${escHtml(r.country)}">${escHtml(r.country) || '—'}</td>
+                <td title="${escHtml(r.city)}">${escHtml(r.city) || '—'}</td>
+                <td title="${escHtml(r.userAgent)}">${escHtml(r.userAgent) || '—'}</td>
+                <td class="height-cell">${heightStr}</td>
+            </tr>`;
+        }).join('');
+
+        tbody.innerHTML = html;
+
+        if (scrollToTop) {
+            const body = document.querySelector('.table-pane-body');
+            if (body) body.scrollTop = 0;
+        }
+    }
+
+    // ── URL Parameter Sync ────────────────────────────────────────────────────
+
+    syncUrlParams() {
+        const p = new URLSearchParams();
+        if (this.is2DMode)        p.set('view',        '2d');
+        if (!this.isEarthVisible) p.set('earth',       '0');
+        if (this.showConnections) p.set('connections', '1');
+        if (this.tableOpen)       p.set('table',       '1');
+        if (!this.isRotating)     p.set('rotate',      '0');
+        if (this.tableFilter !== 'all') p.set('filter', this.tableFilter);
+
+        const qs = p.toString();
+        const newUrl = qs ? `${location.pathname}?${qs}` : location.pathname;
+        history.replaceState(null, '', newUrl);
+    }
+
+    applyUrlParams() {
+        const p = new URLSearchParams(location.search);
+
+        // view
+        if (p.get('view') === '2d' && !this.is2DMode) this.toggle2DView();
+
+        // earth
+        if (p.get('earth') === '0' && this.isEarthVisible) this.toggleEarth();
+
+        // connections
+        if (p.get('connections') === '1' && !this.showConnections) this.toggleConnections();
+
+        // rotate
+        if (p.get('rotate') === '0' && this.isRotating) {
+            this.isRotating = false;
+            this.updateRotationButton(false);
+        }
+
+        // table + filter
+        const filter = p.get('filter');
+        if (filter && ['all', 'clearnet', 'tor'].includes(filter)) {
+            this.tableFilter = filter;
+            document.querySelectorAll('.table-filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filter);
+            });
+        }
+        if (p.get('table') === '1') this.openTablePane();
+    }
+
+    toggleEarth() {
+        this.isEarthVisible = !this.isEarthVisible;
+        if (this.is2DMode) {
+            if (this.mapPlaneMesh) this.mapPlaneMesh.visible = this.isEarthVisible;
+        } else {
+            if (this.earthMesh) this.earthMesh.visible = this.isEarthVisible;
+        }
+        const btn = document.getElementById('toggle-earth');
+        if (btn) btn.textContent = this.isEarthVisible ? 'Hide Map' : 'Show Map';
+        this.syncUrlParams();
+    }
+
+    toggle2DView() {
+        // Reset connections on every mode switch — lines reference old node positions
+        if (this.showConnections) {
+            this.clearConnections();
+            this.showConnections = false;
+            const connBtn = document.getElementById('toggle-connections');
+            if (connBtn) connBtn.textContent = 'Show Connections';
+        }
+
+        this.is2DMode = !this.is2DMode;
+        const btn = document.getElementById('toggle-2d');
+
+        if (this.is2DMode) {
+            // --- Enter 2D mode ---
+            this.scene.rotation.y = 0;
+
+            // Hide the 3D globe; show the flat map plane honoring current earth visibility
+            if (this.earthMesh) this.earthMesh.visible = false;
+            if (this.mapPlaneMesh) this.mapPlaneMesh.visible = this.isEarthVisible;
+
+            // Reposition nodes onto flat map plane; hide Tor nodes
+            // Scale nodes up so they are visible and raycaster-hittable from top-down
+            this.nodes.forEach(node => {
+                node.userData.originalPosition = node.position.clone();
+                if (node.userData.hasLocation) {
+                    const flatX = (node.userData.lng / 180) * 66;
+                    const flatZ = -(node.userData.lat / 90) * 33;
+                    node.position.set(flatX, 0, flatZ);
+                    node.visible = true;
+                    node.scale.setScalar(1.2);
+                } else {
+                    node.visible = false;
+                }
+            });
+
+            // Save current camera state
+            this.savedCameraState = {
+                phi: this.controls.phi,
+                theta: this.controls.theta,
+                distance: this.controls.distance,
+                target: this.controls.target.clone(),
+                cameraUp: this.camera.up.clone()
+            };
+
+            // Position camera top-down: phi≈0 puts camera directly above
+            this.controls.phi = 0.001;
+            this.controls.theta = 0;
+            this.controls.distance = 120;
+            this.controls.target.set(0, 0, 0);
+            // north-up: screen-up direction maps to world -Z (negative lat = south in our projection)
+            this.camera.up.set(0, 0, -1);
+            this.controls.update();
+
+            if (btn) btn.textContent = '3D Globe';
+        } else {
+            // --- Exit 2D mode ---
+
+            // Hide the flat map plane and restore the 3D globe
+            if (this.mapPlaneMesh) this.mapPlaneMesh.visible = false;
+            if (this.earthMesh) this.earthMesh.visible = this.isEarthVisible;
+
+            // Restore all node positions, scale and visibility
+            this.nodes.forEach(node => {
+                if (node.userData.originalPosition) {
+                    node.position.copy(node.userData.originalPosition);
+                }
+                node.scale.setScalar(1);
+                node.visible = true;
+            });
+
+            // Restore camera state
+            if (this.savedCameraState) {
+                this.controls.phi = this.savedCameraState.phi;
+                this.controls.theta = this.savedCameraState.theta;
+                this.controls.distance = this.savedCameraState.distance;
+                this.controls.target.copy(this.savedCameraState.target);
+                this.camera.up.copy(this.savedCameraState.cameraUp);
+            } else {
+                this.camera.up.set(0, 1, 0);
+            }
+            this.controls.update();
+
+            if (btn) btn.textContent = '2D Map';
+        }
+        this.syncUrlParams();
+    }
+
+    resetCamera() {
+        if (this.is2DMode) {
+            // Top-down view centred on the flat map
+            this.controls.target.set(0, 0, 0);
+            this.controls.distance = 120;
+            this.controls.phi = 0.001;
+            this.controls.theta = 0;
+            this.camera.up.set(0, 0, -1);
+        } else {
+            this.controls.target.set(0, 0, 0);
+            this.controls.distance = 100;
+            this.controls.phi = Math.PI / 2.5;
+            this.controls.theta = -3.5;
+            this.camera.up.set(0, 1, 0);
+        }
+        this.controls.update();
+    }
+
     toggleCameraView() {
         const currentPosition = this.camera.position.clone();
         const currentTarget = this.controls.target.clone();
@@ -2401,10 +3152,22 @@ class BitcoinNetworkExplorer {
         this.controls.target.copy(currentTarget);
         this.camera.lookAt(this.controls.target);
         
-        // Update the button text
-        const button = document.getElementById('toggle-view');
-        if (button) {
-            button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
+        this.updateViewButton();
+    }
+
+    updateViewButton() {
+        const btn = document.getElementById('toggle-view');
+        if (!btn) return;
+        const icon = document.getElementById('toggle-view-icon');
+        // When currently perspective, offer to switch to orthographic (and vice-versa)
+        if (this.isPerspective) {
+            if (icon) icon.src = 'imgs/icons/orthographic.svg';
+            btn.title = 'Switch to orthographic';
+            btn.setAttribute('aria-label', 'Orthographic view');
+        } else {
+            if (icon) icon.src = 'imgs/icons/perspective.svg';
+            btn.title = 'Switch to perspective';
+            btn.setAttribute('aria-label', 'Perspective view');
         }
     }
 }

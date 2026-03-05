@@ -59,13 +59,21 @@
                         <div>Active Connections: <span id="connections">Loading...</span></div>
                         <div>Hash Rate: <span id="hash-rate">Loading...</span></div>
                         <div>Difficulty: <span id="difficulty">Loading...</span></div>
-                        <div class="implementation-item" data-implementation="bitcoin-core">
-                            <div class="implementation-bar" id="bar-bitcoin-core"></div>
-                            <span class="implementation-name">Bitcoin Core</span>: <span id="bitcoin-core">Loading...</span>
+                        <div class="implementation-item" data-implementation="core-v30plus">
+                            <div class="implementation-bar" id="bar-core-v30plus"></div>
+                            <span class="implementation-name">Core v30+</span>: <span id="core-v30plus">Loading...</span>
                         </div>
-                        <div class="implementation-item" data-implementation="knots">
-                            <div class="implementation-bar" id="bar-knots"></div>
-                            <span class="implementation-name">Knots</span>: <span id="knots">Loading...</span>
+                        <div class="implementation-item" data-implementation="core-older">
+                            <div class="implementation-bar" id="bar-core-older"></div>
+                            <span class="implementation-name">Core older</span>: <span id="core-older">Loading...</span>
+                        </div>
+                        <div class="implementation-item" data-implementation="knots-standard">
+                            <div class="implementation-bar" id="bar-knots-standard"></div>
+                            <span class="implementation-name">Knots standard</span>: <span id="knots-standard">Loading...</span>
+                        </div>
+                        <div class="implementation-item" data-implementation="knots-bip110">
+                            <div class="implementation-bar" id="bar-knots-bip110"></div>
+                            <span class="implementation-name">Knots BIP110</span>: <span id="knots-bip110">Loading...</span>
                         </div>
                         <div class="implementation-item" data-implementation="bcoin">
                             <div class="implementation-bar" id="bar-bcoin"></div>
@@ -84,6 +92,10 @@
             
             <div class="controls">
                 <div class="controls-main">
+                    <button id="toggle-2d" title="View clearnet nodes on flat map">2D Map</button>
+                    <button id="toggle-earth" title="Show or hide the Earth geography texture">Hide Map</button>
+                    <button id="toggle-connections" title="Show random connections between nodes">Show Connections</button>
+                    <button id="toggle-table" title="Show node data table">Table</button>
                     <button id="clear-cache" title="Clear cached data and reload">Clear Cache</button>
                 </div>
                 <div id="controls-camera-root" class="controls-camera"></div>
@@ -92,6 +104,54 @@
         
     </div>
     
+    <!-- Node Table Pane -->
+    <div id="node-table-pane" class="node-table-pane" aria-hidden="true">
+        <div class="table-pane-header">
+            <div class="table-pane-title">
+                <h3>Nodes</h3>
+                <span id="table-count" class="table-count"></span>
+            </div>
+            <div class="table-type-filter" role="group" aria-label="Node type filter">
+                <button class="table-filter-btn active" data-filter="all">All</button>
+                <button class="table-filter-btn" data-filter="clearnet">Clearnet</button>
+                <button class="table-filter-btn" data-filter="tor">Tor</button>
+            </div>
+            <input id="table-search" class="table-search" type="text" placeholder="Search address, country…" autocomplete="off">
+            <button id="close-table-pane" class="close-table-pane" title="Close table" aria-label="Close table">✕</button>
+        </div>
+        <div class="table-pane-body">
+            <table id="node-table" class="node-table">
+                <thead>
+                    <tr>
+                        <th data-col="address" class="sortable">Address <span class="sort-indicator">↕</span></th>
+                        <th data-col="country" class="sortable">Country <span class="sort-indicator">↕</span></th>
+                        <th data-col="city" class="sortable">City <span class="sort-indicator">↕</span></th>
+                        <th data-col="userAgent" class="sortable">Client <span class="sort-indicator">↕</span></th>
+                        <th data-col="height" class="sortable">Height <span class="sort-indicator">↕</span></th>
+                    </tr>
+                </thead>
+                <tbody id="node-table-body"></tbody>
+            </table>
+        </div>
+        <div class="table-pane-footer">
+            <div class="table-pane-footer-left">
+                <label class="table-page-size-label" for="table-page-size">Show</label>
+                <select id="table-page-size" class="table-page-size">
+                    <option value="100">100</option>
+                    <option value="500" selected>500</option>
+                    <option value="1000">1000</option>
+                    <option value="5000">5000</option>
+                </select>
+            </div>
+            <div class="table-pagination">
+                <button id="table-prev" class="table-page-btn" title="Previous page" disabled>←</button>
+                <span id="table-page-info" class="table-page-info">1 of 1</span>
+                <button id="table-next" class="table-page-btn" title="Next page" disabled>→</button>
+            </div>
+            <span id="table-footer-note" class="table-footer-note"></span>
+        </div>
+    </div>
+
     <div class="disclaimer">
         Data sources: Bitnodes.io
     </div>
