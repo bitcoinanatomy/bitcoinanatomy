@@ -1,5 +1,19 @@
 // Bitcoin Explorer - Network Page
 
+// Montage loop: 5 shots. target = point on Earth surface (radius 33); no target = look at center.
+const MONTAGE_SHOTS = [
+    // 1. General — wide, zoom in to minimum distance
+    { name: 'General', distance: 170, phi: 1.42, theta: -2.5, rotationSpeed: 0.00025, panSpeedTheta: 0.018, panSpeedPhi: 0, zoomSpeed: -27, holdSeconds: 5 },
+    // 2. Detail — camera close, point of interest on surface (limb)
+    { name: 'Detail', distance: 48, phi: 1.48, theta: -7.2, rotationSpeed: 0.00035, panSpeedTheta: 0.05, panSpeedPhi: 0.008, zoomSpeed: -0.5, holdSeconds: 5, target: [28, 15, -10] },
+    // 3. Mid — camera close to center, fast pan
+    { name: 'Mid', distance: 44, phi: 1.45, theta: 0.5, rotationSpeed: 0.0008, panSpeedTheta: 0.18, panSpeedPhi: 0.025, zoomSpeed: 0, holdSeconds: 5, target: [25, 20, -6] },
+    // 4. Horizon — camera at mid-Atlantic latitude, orbits around scene center (0,0,0); globe rotation
+    { name: 'Horizon', distance: 33, phi: 1.52, theta: -1.37, rotationSpeed: 0.0012, panSpeedTheta: 0.07, panSpeedPhi: 0, zoomSpeed: 0, holdSeconds: 5 },
+    // 5. Europe — fly-by over Europe (target on sphere ~lat 50°N, lng 10°E)
+    { name: 'Europe', distance: 52, phi: 1.38, theta: 2.9, rotationSpeed: 0.0004, panSpeedTheta: 0.14, panSpeedPhi: 0.01, zoomSpeed: -0.3, holdSeconds: 5, target: [-21.05, 65.06, 4.01] }
+];
+
 function escHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -41,6 +55,12 @@ class BitcoinNetworkExplorer {
         this.tablePage = 0;
         this.tablePageSize = 500;
         this.tableFilter = 'all'; // 'all' | 'clearnet' | 'tor'
+        
+        // Montage loop: 3 camera shots with different angle, zoom, rotation speed
+        this.montageActive = false;
+        this.montageShotIndex = 0;
+        this.montagePhaseStartTime = 0;
+        this.montageLastTime = 0;
         
         // Cache configuration
         this.CACHE_KEY = 'bitnodes_data_cache';
@@ -85,6 +105,9 @@ class BitcoinNetworkExplorer {
 
     init() {
         console.log('⚙️ Initializing BitcoinNetworkExplorer...');
+        
+        // Apply ui=hidden from URL immediately so UI is hidden before data loads
+        this.applyUiHiddenFromUrl();
         
         console.log('  1️⃣ Setting up Three.js...');
         this.setupThreeJS();
@@ -211,6 +234,7 @@ class BitcoinNetworkExplorer {
             // Stop automatic rotation when user starts interacting
             this.isRotating = false;
             this.updateRotationButton(false);
+            this.stopMontageIfActive();
         });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
@@ -250,6 +274,7 @@ class BitcoinNetworkExplorer {
             // Stop automatic rotation when user starts zooming
             this.isRotating = false;
             this.updateRotationButton(false);
+            this.stopMontageIfActive();
             
             // Zoom in/out with inverted scroll direction
             if (this.isPerspective) {
@@ -291,6 +316,7 @@ class BitcoinNetworkExplorer {
             
             this.isRotating = false;
             this.updateRotationButton(false);
+            this.stopMontageIfActive();
 
             if (e.touches.length === 1) {
                 // Single touch - rotation/panning
@@ -413,7 +439,9 @@ class BitcoinNetworkExplorer {
 
     zoomLimits() {
         if (this.is2DMode) return { min: 2,   max: 600 };
-        return             { min: 0.5, max: 600 };
+        // Earth sphere radius is 33; keep camera just outside it for close-to-surface feel
+        const MIN_DISTANCE = 40;
+        return { min: MIN_DISTANCE, max: 600 };
     }
 
     updateRotationButton(rotating) {
@@ -435,7 +463,10 @@ class BitcoinNetworkExplorer {
         });
         
         // Reset camera
-        document.getElementById('reset-camera').addEventListener('click', () => this.resetCamera());
+        document.getElementById('reset-camera').addEventListener('click', () => {
+            this.stopMontageIfActive();
+            this.resetCamera();
+        });
         
         // Show all nodes
         document.getElementById('show-all').addEventListener('click', () => {
@@ -527,6 +558,25 @@ class BitcoinNetworkExplorer {
             });
         }
         
+        // Montage loop
+        const toggleMontageButton = document.getElementById('toggle-montage');
+        if (toggleMontageButton) {
+            toggleMontageButton.addEventListener('click', () => this.toggleMontage());
+        }
+        
+        // View UI toggle: persist in URL (handler runs after controls-camera toggle)
+        const toggleUiBtn = document.getElementById('toggle-ui');
+        if (toggleUiBtn) {
+            toggleUiBtn.addEventListener('click', () => { setTimeout(() => this.syncUrlParams(), 0); });
+        }
+        
+        // Log camera/orbit state to console (press L) — copy for MONTAGE_SHOTS
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'l' || e.key === 'L') {
+                this.logCameraState();
+            }
+        });
+        
         // Implementation filter clicks
         document.querySelectorAll('.implementation-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -540,44 +590,54 @@ class BitcoinNetworkExplorer {
             });
         });
         
-        // Navigation controls
+        // Navigation controls (stop montage when user moves camera)
         document.getElementById('rotate-left').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.rotateLeft();
         });
         
         document.getElementById('rotate-right').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.rotateRight();
         });
         
         document.getElementById('rotate-up').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.rotateUp();
         });
         
         document.getElementById('rotate-down').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.rotateDown();
         });
         
         document.getElementById('pan-left').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.panLeft();
         });
         
         document.getElementById('pan-right').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.panRight();
         });
         
         document.getElementById('pan-up').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.panUp();
         });
         
         document.getElementById('pan-down').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.panDown();
         });
         
         document.getElementById('zoom-in').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.zoomIn();
         });
         
         document.getElementById('zoom-out').addEventListener('click', () => {
+            this.stopMontageIfActive();
             this.zoomOut();
         });
     }
@@ -612,7 +672,34 @@ class BitcoinNetworkExplorer {
             raycaster.setFromCamera(mouse, this.camera);
 
             // Calculate objects intersecting the picking ray
-            const intersects = raycaster.intersectObjects(this.nodes);
+            let intersects = raycaster.intersectObjects(this.nodes);
+
+            // When nodes are scaled down, the ray often misses; fallback to closest node in screen space
+            const cameraToOrigin = this.camera.position.length();
+            if (intersects.length === 0 && cameraToOrigin < 80 && this.nodes.length > 0) {
+                const worldPos = new THREE.Vector3();
+                const ndc = new THREE.Vector3();
+                const MIN_HOVER_PIXELS = 28;
+                let bestNode = null;
+                let bestDist = MIN_HOVER_PIXELS;
+                for (let i = 0; i < this.nodes.length; i++) {
+                    const node = this.nodes[i];
+                    if (!node.visible) continue;
+                    node.getWorldPosition(worldPos);
+                    ndc.copy(worldPos).project(this.camera);
+                    if (ndc.z < -1 || ndc.z > 1) continue;
+                    const sx = (ndc.x * 0.5 + 0.5) * window.innerWidth;
+                    const sy = (-ndc.y * 0.5 + 0.5) * window.innerHeight;
+                    const dist = Math.hypot(event.clientX - sx, event.clientY - sy);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestNode = node;
+                    }
+                }
+                if (bestNode) {
+                    intersects = [{ object: bestNode }];
+                }
+            }
 
             if (intersects.length > 0) {
                 const intersectedObject = intersects[0].object;
@@ -819,16 +906,66 @@ class BitcoinNetworkExplorer {
 
     
     showRateLimitError(apiName) {
+        if (this.rateLimitArchiveTimeout) {
+            clearTimeout(this.rateLimitArchiveTimeout);
+            this.rateLimitArchiveTimeout = null;
+        }
+        const self = this;
+        var countdownInterval = null;
         this.showPopupMessage(
             'Rate Limit Exceeded',
-            `${apiName} is temporarily unavailable due to too many requests. Please try again in a few minutes.`,
+            `${apiName} is temporarily unavailable.`,
             'warning',
-            [{ label: 'Load Archive Data', onClick: () => this.loadLocalArchive() }]
+            [{ label: 'Load Archive', onClick: function () {
+                if (countdownInterval) clearInterval(countdownInterval);
+                if (self.rateLimitArchiveTimeout) {
+                    clearTimeout(self.rateLimitArchiveTimeout);
+                    self.rateLimitArchiveTimeout = null;
+                }
+                self.loadLocalArchive();
+            } }],
+            function onDismiss() {
+                if (countdownInterval) clearInterval(countdownInterval);
+                if (self.rateLimitArchiveTimeout) {
+                    clearTimeout(self.rateLimitArchiveTimeout);
+                    self.rateLimitArchiveTimeout = null;
+                }
+            },
+            'Archive data will load automatically in 10 seconds, or click Load Archive now.'
         );
+        var popup = document.querySelector('.api-popup');
+        if (popup) {
+            var body = popup.querySelector('.popup-body');
+            if (body) {
+                var countdownEl = document.createElement('div');
+                countdownEl.className = 'popup-countdown';
+                countdownEl.style.cssText = 'margin-top: 10px; color: #888; font-size: 13px;';
+                body.appendChild(countdownEl);
+                var sec = 10;
+                countdownEl.textContent = 'Loading archive in ' + sec + ' seconds';
+                countdownInterval = setInterval(function () {
+                    sec--;
+                    if (sec <= 0) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                        countdownEl.textContent = 'Loading...';
+                    } else {
+                        countdownEl.textContent = 'Loading archive in ' + sec + ' second' + (sec === 1 ? '' : 's');
+                    }
+                }, 1000);
+            }
+        }
+        this.rateLimitArchiveTimeout = setTimeout(function () {
+            self.rateLimitArchiveTimeout = null;
+            popup = document.querySelector('.api-popup');
+            if (popup) popup.remove();
+            self.loadLocalArchive();
+        }, 10000);
     }
     
     async loadLocalArchive() {
         const ARCHIVE_PATH = 'js/bitnodes-snapshot-1772712282.json';
+        this.showLoadingModal('Loading archive snapshot...');
         try {
             this.updateLoadingProgress('Loading archive snapshot...', 10);
             const response = await fetch(ARCHIVE_PATH);
@@ -844,6 +981,7 @@ class BitcoinNetworkExplorer {
             this.updateLoadingProgress('Creating visualization...', 80);
             this.createNetworkVisualization();
             this.updateSnapshotNavButtons();
+            this.syncUrlParams();
         } catch (error) {
             console.error('Failed to load local archive:', error);
             this.hideLoadingModal();
@@ -859,11 +997,17 @@ class BitcoinNetworkExplorer {
         );
     }
     
-    showPopupMessage(title, message, type = 'info', extraButtons = []) {
+    showPopupMessage(title, message, type = 'info', extraButtons = [], onDismiss = null, mutedMessage = null) {
         // Remove existing popup if any
         const existingPopup = document.querySelector('.api-popup');
         if (existingPopup) {
             existingPopup.remove();
+        }
+        
+        const self = this;
+        function removePopup() {
+            if (onDismiss) onDismiss();
+            popup.remove();
         }
         
         // Create popup element
@@ -877,9 +1021,10 @@ class BitcoinNetworkExplorer {
                 </div>
                 <div class="popup-body">
                     <p>${message}</p>
+                    ${mutedMessage ? `<p class="popup-body-muted">${mutedMessage}</p>` : ''}
                 </div>
                 <div class="popup-footer">
-                    ${extraButtons.map((btn, i) => `<button class="popup-extra popup-extra-${i}">${btn.label}</button>`).join('')}
+                    ${extraButtons.map((btn, i) => `<button class="popup-extra popup-extra-${i}${i === 0 ? ' popup-extra-primary' : ''}">${btn.label}</button>`).join('')}
                     <button class="popup-retry">Retry</button>
                     <button class="popup-dismiss">Dismiss</button>
                 </div>
@@ -950,6 +1095,10 @@ class BitcoinNetworkExplorer {
             line-height: 1.5;
             font-size: 14px;
         `;
+        const mutedEl = popup.querySelector('.popup-body-muted');
+        if (mutedEl) {
+            mutedEl.style.cssText = 'margin-top: 12px; margin-bottom: 0; color: #888; font-size: 13px;';
+        }
         
         const footer = popup.querySelector('.popup-footer');
         footer.style.cssText = `
@@ -963,52 +1112,63 @@ class BitcoinNetworkExplorer {
         const buttons = popup.querySelectorAll('button');
         buttons.forEach(btn => {
             if (btn.className.includes('popup-')) {
+                const isPrimary = btn.classList.contains('popup-extra-primary');
                 btn.style.cssText = `
                     padding: 6px 12px;
-                    border: 1px solid #555;
-                    background: #000;
-                    color: white;
+                    border: 1px solid ${isPrimary ? '#fff' : '#555'};
+                    background: ${isPrimary ? '#fff' : '#000'};
+                    color: ${isPrimary ? '#000' : 'white'};
                     border-radius: 2px;
                     cursor: pointer;
                     font-size: 12px;
                     transition: all 0.2s;
                 `;
                 btn.addEventListener('mouseenter', () => {
-                    btn.style.background = '#333';
-                    btn.style.borderColor = '#666';
+                    if (isPrimary) {
+                        btn.style.background = '#e0e0e0';
+                        btn.style.borderColor = '#ccc';
+                    } else {
+                        btn.style.background = '#333';
+                        btn.style.borderColor = '#666';
+                    }
                 });
                 btn.addEventListener('mouseleave', () => {
-                    btn.style.background = '#000';
-                    btn.style.borderColor = '#555';
+                    if (isPrimary) {
+                        btn.style.background = '#fff';
+                        btn.style.borderColor = '#fff';
+                    } else {
+                        btn.style.background = '#000';
+                        btn.style.borderColor = '#555';
+                    }
                 });
             }
         });
         
         // Add event listeners
-        closeBtn.addEventListener('click', () => popup.remove());
-        popup.querySelector('.popup-dismiss').addEventListener('click', () => popup.remove());
+        closeBtn.addEventListener('click', removePopup);
+        popup.querySelector('.popup-dismiss').addEventListener('click', removePopup);
         popup.querySelector('.popup-retry').addEventListener('click', () => {
-            popup.remove();
+            removePopup();
             this.fetchData();
         });
         extraButtons.forEach((btn, i) => {
             popup.querySelector(`.popup-extra-${i}`)?.addEventListener('click', () => {
-                popup.remove();
                 btn.onClick();
+                removePopup();
             });
         });
         
         // Close on background click
         popup.addEventListener('click', (e) => {
             if (e.target === popup) {
-                popup.remove();
+                removePopup();
             }
         });
         
         // Auto-close after 10 seconds
         setTimeout(() => {
             if (document.body.contains(popup)) {
-                popup.remove();
+                removePopup();
             }
         }, 10000);
         
@@ -1349,6 +1509,13 @@ class BitcoinNetworkExplorer {
     async fetchData() {
         this.showLoadingModal('Loading network data...');
         
+        // URL param: load local archive instead of live/cache
+        const archiveParam = new URLSearchParams(location.search).get('archive');
+        if (archiveParam === '1' || archiveParam === 'true' || archiveParam === 'local') {
+            await this.loadLocalArchive();
+            return;
+        }
+        
         // Check cache first
         const cachedData = this.getCachedData();
         if (cachedData) {
@@ -1687,23 +1854,59 @@ class BitcoinNetworkExplorer {
             if (tr.progress >= 1) this.orbitTransition = null;
         }
 
+        // Montage loop: each shot has continuous motion; all cuts are immediate
+        if (this.montageActive) {
+            if (this.is2DMode) {
+                this.montageActive = false;
+                this.updateMontageButton(false);
+            } else {
+                const now = performance.now();
+                const deltaSec = this.montageLastTime ? Math.min((now - this.montageLastTime) / 1000, 0.1) : 0;
+                this.montageLastTime = now;
+                const zoomLim = this.zoomLimits();
+                const shot = MONTAGE_SHOTS[this.montageShotIndex];
+                // General: allow zoom to continue to end (don't stop at 40); Horizon: camera on surface (33)
+                const distMin = (shot.name === 'General') ? 33 : (shot.name === 'Horizon' && shot.distance === 33) ? 33 : zoomLim.min;
+
+                this.scene.rotation.y += (shot.rotationSpeed || 0) * deltaSec;
+                this.controls.theta += (shot.panSpeedTheta || 0) * deltaSec;
+                this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi + (shot.panSpeedPhi || 0) * deltaSec));
+                this.controls.distance = Math.max(distMin, Math.min(zoomLim.max, this.controls.distance + (shot.zoomSpeed || 0) * deltaSec));
+                this.controls.update();
+
+                if (now - this.montagePhaseStartTime >= shot.holdSeconds * 1000) {
+                    const toIndex = (this.montageShotIndex + 1) % MONTAGE_SHOTS.length;
+                    const toShot = MONTAGE_SHOTS[toIndex];
+                    this.montageShotIndex = toIndex;
+                    this.montagePhaseStartTime = now;
+                    if (toShot.target) {
+                        this.controls.target.set(toShot.target[0], toShot.target[1], toShot.target[2]);
+                    } else {
+                        this.controls.target.set(0, 0, 0);
+                    }
+                    this.controls.distance = (toShot.name === 'Horizon' && toShot.distance === 33) ? 33 : Math.max(zoomLim.min, toShot.distance);
+                    this.controls.phi = toShot.phi;
+                    this.controls.theta = toShot.theta;
+                    this.controls.update();
+                }
+            }
+        }
+
         // Depth dimming + anti-overlap scale.
+        // Use distance from camera to origin so all shots (including custom-target e.g. Horizon) respect proximity.
+        const cameraToOrigin = this.camera.position.length();
         // Above DEPTH_OFF distance all nodes are pure white (full-network view).
-        // Between DEPTH_OFF and DEPTH_ON the effect blends in smoothly.
-        // Below DEPTH_ON the full quadratic depth gradient is applied.
-        const DEPTH_OFF  = 80;   // distance at which dimming is fully off (all white)
-        const DEPTH_ON   = 40;   // distance at which dimming is fully on
-        const MIN_BRIGHT = 0.18; // linear floor for farthest nodes (sRGB ≈ 0.46)
+        const DEPTH_OFF  = 80;
+        const DEPTH_ON   = 40;
+        const MIN_BRIGHT = 0.18;
         const SCALE_ZONE = 50;
         const MIN_SCALE  = 0.25;
-        // In orthographic mode scale nodes proportionally to the frustum size so
-        // they keep a consistent apparent screen size as you zoom out.
         const orthoFactor = this.isPerspective ? 1 : (this.orthographicZoom / 100);
         const baseScale   = (this.is2DMode ? 1.2 : 1.0) * orthoFactor;
 
-        // How strongly the depth effect applies — 0 when zoomed out, 1 when close.
+        // How strongly the depth effect applies — 0 when zoomed out, 1 when close (by proximity to origin).
         const depthStrength = Math.min(1, Math.max(0,
-            (DEPTH_OFF - this.controls.distance) / (DEPTH_OFF - DEPTH_ON)
+            (DEPTH_OFF - cameraToOrigin) / (DEPTH_OFF - DEPTH_ON)
         ));
 
         // Camera in scene-local space (scene rotates, nodes are scene-children).
@@ -1743,8 +1946,8 @@ class BitcoinNetworkExplorer {
                 const brightness = 1 - depthStrength * (1 - fullBright);
                 node.material.color.setScalar(brightness);
 
-                // Scale shrinkage only when close enough to cause overlap
-                if (this.controls.distance < SCALE_ZONE) {
+                // Scale shrinkage only when camera is close enough to origin (proximity-based for all shots)
+                if (cameraToOrigin < SCALE_ZONE) {
                     const ratio = Math.min(1, dist / SCALE_ZONE);
                     const s = Math.max(MIN_SCALE, ratio * ratio * baseScale);
                     if (Math.abs(node.scale.x - s) > 0.0005) node.scale.setScalar(s);
@@ -1753,7 +1956,7 @@ class BitcoinNetworkExplorer {
 
             // Orthographic mode: all nodes share the same size (the smallest computed
             // scale) so they appear uniform regardless of depth position.
-            if (!this.isPerspective && this.controls.distance < SCALE_ZONE) {
+            if (!this.isPerspective && cameraToOrigin < SCALE_ZONE) {
                 let minScale = baseScale;
                 this.nodes.forEach(node => {
                     if (node.visible && node.scale.x < minScale) minScale = node.scale.x;
@@ -1765,16 +1968,16 @@ class BitcoinNetworkExplorer {
             }
 
             // Restore scales when leaving the scale zone
-            if (this.controls.distance >= SCALE_ZONE && this.nearScalingActive) {
+            if (cameraToOrigin >= SCALE_ZONE && this.nearScalingActive) {
                 this.nearScalingActive = false;
                 this.nodes.forEach(node => node.scale.setScalar(baseScale));
             }
-            if (this.controls.distance < SCALE_ZONE) this.nearScalingActive = true;
+            if (cameraToOrigin < SCALE_ZONE) this.nearScalingActive = true;
         }
 
-        // Rotate scene (optional, can be disabled)
-        if (this.isRotating) {
-            this.scene.rotation.y += 0.001; // Faster rotation
+        // Rotate scene (optional; when montage is active rotation is handled above)
+        if (!this.montageActive && this.isRotating) {
+            this.scene.rotation.y += 0.001;
         }
         
         this.renderer.render(this.scene, this.camera);
@@ -2965,6 +3168,16 @@ class BitcoinNetworkExplorer {
 
     // ── URL Parameter Sync ────────────────────────────────────────────────────
 
+    applyUiHiddenFromUrl() {
+        if (new URLSearchParams(location.search).get('ui') !== 'hidden') return;
+        document.body.classList.add('ui-hidden');
+        const toggleUi = document.getElementById('toggle-ui');
+        if (toggleUi) {
+            toggleUi.title = 'Show UI';
+            toggleUi.setAttribute('aria-label', 'Show UI');
+        }
+    }
+
     syncUrlParams() {
         const p = new URLSearchParams();
         if (this.is2DMode)        p.set('view',        '2d');
@@ -2973,6 +3186,9 @@ class BitcoinNetworkExplorer {
         if (this.tableOpen)       p.set('table',       '1');
         if (!this.isRotating)     p.set('rotate',      '0');
         if (this.tableFilter !== 'all') p.set('filter', this.tableFilter);
+        if (document.body.classList.contains('ui-hidden')) p.set('ui', 'hidden');
+        if (this.montageActive) p.set('montage', '1');
+        if (this.subtitlePrefix === 'Archive: ') p.set('archive', '1');
 
         const qs = p.toString();
         const newUrl = qs ? `${location.pathname}?${qs}` : location.pathname;
@@ -3006,6 +3222,12 @@ class BitcoinNetworkExplorer {
             });
         }
         if (p.get('table') === '1') this.openTablePane();
+
+        // UI visibility (view toggle) — also applied early in init() via applyUiHiddenFromUrl()
+        if (p.get('ui') === 'hidden') this.applyUiHiddenFromUrl();
+
+        // Montage (only start if not already active and not in 2D mode)
+        if (p.get('montage') === '1' && !this.montageActive && !this.is2DMode) this.toggleMontage();
     }
 
     toggleEarth() {
@@ -3123,6 +3345,69 @@ class BitcoinNetworkExplorer {
             this.camera.up.set(0, 1, 0);
         }
         this.controls.update();
+    }
+
+    toggleMontage() {
+        if (this.montageActive) {
+            this.montageActive = false;
+            this.updateMontageButton(false);
+            this.syncUrlParams();
+            return;
+        }
+        if (this.is2DMode) {
+            return; // Montage only in 3D globe view
+        }
+        this.orbitTransition = null;
+        this.montageActive = true;
+        this.montageShotIndex = 0;
+        this.montagePhaseStartTime = performance.now();
+        this.montageLastTime = this.montagePhaseStartTime;
+        const shot = MONTAGE_SHOTS[0];
+        const zoomLim = this.zoomLimits();
+        if (shot.target) {
+            this.controls.target.set(shot.target[0], shot.target[1], shot.target[2]);
+        } else {
+            this.controls.target.set(0, 0, 0);
+        }
+        this.controls.distance = (shot.name === 'Horizon' && shot.distance === 33) ? 33 : Math.max(zoomLim.min, shot.distance);
+        this.controls.phi = shot.phi;
+        this.controls.theta = shot.theta;
+        this.controls.update();
+        this.updateMontageButton(true);
+        this.syncUrlParams();
+    }
+
+    updateMontageButton(active) {
+        const btn = document.getElementById('toggle-montage');
+        if (!btn) return;
+        btn.textContent = active ? 'Stop montage' : 'Montage';
+        btn.title = active ? 'Stop camera montage loop' : 'Start camera montage loop (5 shots)';
+    }
+
+    /** Stop montage when user moves camera (drag, zoom, buttons). */
+    stopMontageIfActive() {
+        if (this.montageActive) {
+            this.montageActive = false;
+            this.updateMontageButton(false);
+            this.syncUrlParams();
+        }
+    }
+
+    /** Log current orbit/camera state to console. Press L to capture a shot for MONTAGE_SHOTS. */
+    logCameraState() {
+        const c = this.controls;
+        const pos = this.camera.position;
+        console.log('——— Camera / orbit state ———');
+        console.log('target:', c.target.x, c.target.y, c.target.z);
+        console.log('distance:', c.distance);
+        console.log('phi:', c.phi, '(rad)', (c.phi * 180 / Math.PI).toFixed(2) + '°');
+        console.log('theta:', c.theta, '(rad)', (c.theta * 180 / Math.PI).toFixed(2) + '°');
+        console.log('camera.position:', pos.x.toFixed(3), pos.y.toFixed(3), pos.z.toFixed(3));
+        console.log('——— Paste into MONTAGE_SHOTS ———');
+        console.log(
+            `{ distance: ${c.distance.toFixed(2)}, phi: ${c.phi.toFixed(4)}, theta: ${c.theta.toFixed(4)} }`
+        );
+        console.log('(optional: phi as Math.PI)', `phi: Math.PI / ${(Math.PI / c.phi).toFixed(2)},`);
     }
 
     toggleCameraView() {

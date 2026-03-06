@@ -405,6 +405,23 @@ body:not(.homepage) {
     font-weight: bold;
 }
 
+/* Prominent archive dropdown (e.g. network page): white, last in row */
+.archive-dropdown-prominent {
+    color: #fff;
+    border-color: #fff;
+    background-color: #1a1a1a;
+    font-weight: 500;
+    margin-left: auto;
+}
+.archive-dropdown-prominent:hover {
+    color: #fff;
+    border-color: #fff;
+    background-color: #222;
+}
+.archive-dropdown-prominent:focus {
+    border-color: #fff;
+}
+
 /* Homepage header */
 .container .header {
     text-align: center;

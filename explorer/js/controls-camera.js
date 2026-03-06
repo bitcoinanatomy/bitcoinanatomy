@@ -27,6 +27,9 @@ function ControlsCamera(container, options) {
             <button id="reset-camera" title="Reset view" aria-label="Reset view">
                 <img class="control-icon-svg" src="${iconPath}/reset-view.svg" alt="">
             </button>
+            <button id="toggle-fullscreen" title="Full screen" aria-label="Full screen">
+                <svg id="toggle-fullscreen-icon" class="control-icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
         </div>
     </div>`
         : '';
@@ -106,6 +109,25 @@ function ControlsCamera(container, options) {
             uiEl.addEventListener('mouseleave', scheduleRemove);
             navEl.addEventListener('mouseenter', addReveal);
             navEl.addEventListener('mouseleave', scheduleRemove);
+        }
+        // Fullscreen toggle: use #container if present, else document.documentElement
+        var fullscreenBtn = document.getElementById('toggle-fullscreen');
+        if (fullscreenBtn) {
+            var fullscreenTarget = document.getElementById('container') || document.documentElement;
+            function updateFullscreenLabel() {
+                var isFull = !!document.fullscreenElement;
+                fullscreenBtn.title = isFull ? 'Exit full screen' : 'Full screen';
+                fullscreenBtn.setAttribute('aria-label', fullscreenBtn.title);
+                setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 50);
+            }
+            document.addEventListener('fullscreenchange', updateFullscreenLabel);
+            fullscreenBtn.addEventListener('click', function () {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    fullscreenTarget.requestFullscreen();
+                }
+            });
         }
     }
 }
