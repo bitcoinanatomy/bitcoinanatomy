@@ -61,6 +61,8 @@ class BitcoinNetworkExplorer {
         this.montageShotIndex = 0;
         this.montagePhaseStartTime = 0;
         this.montageLastTime = 0;
+        this.montageMusicEnabled = true;
+        this.montageInstruments = null;
         
         // Cache configuration
         this.CACHE_KEY = 'bitnodes_data_cache';
@@ -568,6 +570,29 @@ class BitcoinNetworkExplorer {
         const toggleUiBtn = document.getElementById('toggle-ui');
         if (toggleUiBtn) {
             toggleUiBtn.addEventListener('click', () => { setTimeout(() => this.syncUrlParams(), 0); });
+        }
+
+        // Montage music mute (View group)
+        const viewButtons = document.getElementById('toggle-fullscreen')?.parentElement;
+        if (viewButtons) {
+            const musicBtn = document.createElement('button');
+            musicBtn.id = 'toggle-montage-music';
+            musicBtn.type = 'button';
+            musicBtn.title = this.montageMusicEnabled ? 'Music on' : 'Music off';
+            musicBtn.setAttribute('aria-label', musicBtn.title);
+            musicBtn.innerHTML = '<svg id="toggle-montage-music-icon" class="control-icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+            musicBtn.addEventListener('click', () => {
+                this.montageMusicEnabled = !this.montageMusicEnabled;
+                musicBtn.title = this.montageMusicEnabled ? 'Music on' : 'Music off';
+                musicBtn.setAttribute('aria-label', musicBtn.title);
+                const icon = document.getElementById('toggle-montage-music-icon');
+                if (icon) {
+                    icon.innerHTML = this.montageMusicEnabled
+                        ? '<path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>'
+                        : '<path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+                }
+            });
+            viewButtons.appendChild(musicBtn);
         }
         
         // Log camera/orbit state to console (press L) — copy for MONTAGE_SHOTS
@@ -1888,6 +1913,7 @@ class BitcoinNetworkExplorer {
                     this.controls.phi = toShot.phi;
                     this.controls.theta = toShot.theta;
                     this.controls.update();
+                    this.montageMusicPhrase(toShot);
                 }
             }
         }
@@ -3347,6 +3373,98 @@ class BitcoinNetworkExplorer {
         this.controls.update();
     }
 
+    /** Create fallback synths for montage music — Zimmer-style: deep pad, brass, strings, sparse melody, cinematic drums, reverb. */
+    montageMusicInit() {
+        if (typeof Tone === 'undefined' || this.montageInstruments) return;
+        try {
+            const vol = new Tone.Volume(-8).toDestination();
+            const reverb = new Tone.Reverb({ decay: 3.5, wet: 0.35 }).connect(vol);
+            reverb.generate();
+
+            const pad = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'sine' },
+                envelope: { attack: 1.2, decay: 0.3, sustain: 0.8, release: 2.5 }
+            }).connect(reverb);
+            const sub = new Tone.MonoSynth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.8, decay: 0.2, sustain: 0.9, release: 2 }
+            }).connect(reverb);
+            const brass = new Tone.PolySynth(Tone.FMSynth, {
+                harmonicity: 2,
+                envelope: { attack: 0.5, decay: 0.2, sustain: 0.7, release: 1.8 }
+            }).connect(reverb);
+            const brassLow = new Tone.MonoSynth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.4, decay: 0.3, sustain: 0.6, release: 1.5 }
+            }).connect(reverb);
+            const strings = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.8, decay: 0.2, sustain: 0.7, release: 2.2 }
+            }).connect(reverb);
+            const melody = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.3, decay: 0.4, sustain: 0.6, release: 1.8 }
+            }).connect(reverb);
+            const volDrums = new Tone.Volume(-14).connect(vol);
+            const kick = new Tone.MembraneSynth({ pitchDecay: 0.05, envelope: { decay: 0.35, sustain: 0 } }).connect(volDrums);
+            const impact = new Tone.NoiseSynth({ envelope: { decay: 0.4, sustain: 0 } }).connect(new Tone.Filter(120, 'lowpass').connect(volDrums));
+            this.montageInstruments = { pad, sub, brass, brassLow, strings, melody, kick, impact };
+        } catch (e) {
+            console.warn('Montage music init failed:', e);
+        }
+    }
+
+    /** Two alternate progressions with distinct melodies; pick by shot index (even = A, odd = B). */
+    _montageMusicProgressions() {
+        return {
+            progressionA: {
+                chords: [['A2', 'C3', 'E3'], ['F2', 'A2', 'C3'], ['C3', 'E3', 'G3'], ['G2', 'B2', 'D3'], ['E2', 'G2', 'B2']],
+                heroNotes: (rootHi, thirdHi, fifthHi) => [[fifthHi, rootHi], [rootHi, thirdHi], [thirdHi, fifthHi], [fifthHi, thirdHi], [rootHi, fifthHi]]
+            },
+            progressionB: {
+                chords: [['D2', 'F2', 'A2'], ['Bb2', 'D3', 'F3'], ['C2', 'E2', 'G2'], ['A2', 'C3', 'E3'], ['E2', 'G2', 'B2']],
+                heroNotes: (rootHi, thirdHi, fifthHi) => [[fifthHi, thirdHi], [thirdHi, rootHi], [rootHi, fifthHi], [thirdHi, fifthHi], [fifthHi, rootHi]]
+            }
+        };
+    }
+
+    /** Trigger one phrase per shot — Zimmer-style: deep pad + sub, heroic brass, strings wash, sparse melody, cinematic pulse. */
+    montageMusicPhrase(shot) {
+        if (!this.montageMusicEnabled || typeof Tone === 'undefined' || !this.montageInstruments) return;
+        try {
+            const { progressionA, progressionB } = this._montageMusicProgressions();
+            const idx = this.montageShotIndex % 5;
+            const useB = idx % 2 === 1;
+            const prog = useB ? progressionB : progressionA;
+            const chord = prog.chords[idx];
+            const root = chord[0], third = chord[1], fifth = chord[2];
+            const rootLo = root.replace(/\d/, n => Math.max(0, Number(n) - 1));
+            const rootHi = root.replace(/\d/, n => Number(n) + 2);
+            const thirdHi = third.replace(/\d/, n => Number(n) + 2);
+            const fifthHi = fifth.replace(/\d/, n => Number(n) + 2);
+            const t = Tone.now();
+            const dur = shot.holdSeconds;
+
+            this.montageInstruments.pad.triggerAttackRelease(chord, dur, t);
+            this.montageInstruments.sub.triggerAttackRelease(rootLo, dur, t);
+            this.montageInstruments.brassLow.triggerAttackRelease(rootLo, dur * 0.9, t + 0.15);
+            this.montageInstruments.brass.triggerAttackRelease([third, fifth], dur * 0.85, t + 0.2);
+            this.montageInstruments.brass.triggerAttackRelease([thirdHi], dur * 0.5, t + 0.5);
+            this.montageInstruments.strings.triggerAttackRelease([fifth, third], dur, t + 0.25);
+
+            const heroNotes = prog.heroNotes(rootHi, thirdHi, fifthHi);
+            const [a, b] = heroNotes[idx];
+            this.montageInstruments.melody.triggerAttackRelease(a, dur * 0.45, t + dur * 0.15);
+            this.montageInstruments.melody.triggerAttackRelease(b, dur * 0.5, t + dur * 0.5);
+
+            this.montageInstruments.kick.triggerAttackRelease('C1', 0.4, t);
+            this.montageInstruments.kick.triggerAttackRelease('C1', 0.35, t + dur * 0.5);
+            this.montageInstruments.impact.triggerAttackRelease(0.25, t);
+        } catch (e) {
+            console.warn('Montage music phrase failed:', e);
+        }
+    }
+
     toggleMontage() {
         if (this.montageActive) {
             this.montageActive = false;
@@ -3374,6 +3492,12 @@ class BitcoinNetworkExplorer {
         this.controls.theta = shot.theta;
         this.controls.update();
         this.updateMontageButton(true);
+        if (typeof Tone !== 'undefined' && this.montageMusicEnabled) {
+            Tone.start().then(() => {
+                this.montageMusicInit();
+                this.montageMusicPhrase(MONTAGE_SHOTS[0]);
+            }).catch(() => {});
+        }
         this.syncUrlParams();
     }
 
@@ -3389,6 +3513,16 @@ class BitcoinNetworkExplorer {
         if (this.montageActive) {
             this.montageActive = false;
             this.updateMontageButton(false);
+            if (this.montageInstruments) {
+                try {
+                    this.montageInstruments.pad.releaseAll();
+                    if (this.montageInstruments.sub) this.montageInstruments.sub.triggerRelease();
+                    this.montageInstruments.brass.releaseAll();
+                    if (this.montageInstruments.brassLow) this.montageInstruments.brassLow.triggerRelease();
+                    this.montageInstruments.strings.releaseAll();
+                    if (this.montageInstruments.melody) this.montageInstruments.melody.releaseAll();
+                } catch (e) {}
+            }
             this.syncUrlParams();
         }
     }
