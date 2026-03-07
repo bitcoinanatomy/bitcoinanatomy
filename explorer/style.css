@@ -555,6 +555,27 @@ body:not(.homepage) {
     font-weight: 500;
 }
 
+.camera-coords-panel {
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.camera-coords-panel .panel-content {
+    font-size: 0.75rem;
+    line-height: 1.6em;
+}
+
+.camera-coords-unit {
+    color: #888;
+    font-weight: 400;
+}
+
+.camera-coords-hint {
+    margin-top: 6px;
+    font-size: 0.7rem;
+    color: #666;
+}
+
 /* ================================
    BUTTONS & CONTROLS
    ================================ */

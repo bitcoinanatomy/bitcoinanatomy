@@ -1,15 +1,16 @@
 // Bitcoin Explorer - Network Page
 
 // Montage loop: 5 shots. target = point on Earth surface (radius 33); no target = look at center.
+// Camera: distance = radius from target; phi = vertical angle from +Y (0=above, π/2=equator); theta = horizontal angle around Y (longitude).
 const MONTAGE_SHOTS = [
     // 1. General — wide, zoom in to minimum distance
-    { name: 'General', distance: 170, phi: 1.42, theta: -2.5, rotationSpeed: 0.00025, panSpeedTheta: 0.018, panSpeedPhi: 0, zoomSpeed: -27, holdSeconds: 5 },
+    { name: 'General', distance: 170, phi: 1.42, theta: -2.5, rotationSpeed: 0.00025, panSpeedTheta: 0.018, panSpeedPhi: 0, zoomSpeed: -17, holdSeconds: 5 },
     // 2. Detail — camera close, point of interest on surface (limb)
-    { name: 'Detail', distance: 48, phi: 1.48, theta: -7.2, rotationSpeed: 0.00035, panSpeedTheta: 0.05, panSpeedPhi: 0.008, zoomSpeed: -0.5, holdSeconds: 5, target: [28, 15, -10] },
+    { name: 'Detail', distance: 47.6, phi: 1.5, theta: -8.5002, rotationSpeed: 0.00035, panSpeedTheta: 0.05, panSpeedPhi: 0.008, zoomSpeed: -0.5, holdSeconds: 5, target: [17.03, 14.43, -1.77] },
     // 3. Mid — camera close to center, fast pan
     { name: 'Mid', distance: 44, phi: 1.45, theta: 0.5, rotationSpeed: 0.0008, panSpeedTheta: 0.18, panSpeedPhi: 0.025, zoomSpeed: 0, holdSeconds: 5, target: [25, 20, -6] },
-    // 4. Horizon — camera at mid-Atlantic latitude, orbits around scene center (0,0,0); globe rotation
-    { name: 'Horizon', distance: 33, phi: 1.52, theta: -1.37, rotationSpeed: 0.0012, panSpeedTheta: 0.07, panSpeedPhi: 0, zoomSpeed: 0, holdSeconds: 5 },
+    // 4. Horizon — camera and point of interest from user positioning
+    { name: 'Horizon', distance: 5, phi: 1.455, theta: -2.1574, rotationSpeed: -0.02, panSpeedTheta: 0, panSpeedPhi: 0, zoomSpeed: 0, holdSeconds: 5, target: [-24.14, 22.07, 8.47] },
     // 5. Europe — fly-by over Europe (target on sphere ~lat 50°N, lng 10°E)
     { name: 'Europe', distance: 52, phi: 1.38, theta: 2.9, rotationSpeed: 0.0004, panSpeedTheta: 0.14, panSpeedPhi: 0.01, zoomSpeed: -0.3, holdSeconds: 5, target: [-21.05, 65.06, 4.01] }
 ];
@@ -63,6 +64,7 @@ class BitcoinNetworkExplorer {
         this.montageLastTime = 0;
         this.montageMusicEnabled = true;
         this.montageInstruments = null;
+        this.cameraCoordsLastUpdate = 0;
         
         // Cache configuration
         this.CACHE_KEY = 'bitnodes_data_cache';
@@ -110,6 +112,7 @@ class BitcoinNetworkExplorer {
         
         // Apply ui=hidden from URL immediately so UI is hidden before data loads
         this.applyUiHiddenFromUrl();
+        this.applyCameraInfoFromUrl();
         
         console.log('  1️⃣ Setting up Three.js...');
         this.setupThreeJS();
@@ -200,7 +203,12 @@ class BitcoinNetworkExplorer {
     }
 
     setupOrbitControls() {
-        // Create custom orbit controls
+        // Orbit camera: position = spherical coords around target. Camera always looks at target.
+        // - target: 3D point the camera orbits and looks at (e.g. scene center or a point on the globe).
+        // - distance: radius from target; larger = zoomed out, smaller = closer.
+        // - phi: polar angle from +Y (vertical). 0 = above target, π/2 = equator, π = below. Clamped (0.1, π−0.1).
+        // - theta: azimuthal angle around Y (horizontal). 0 = +X side, π/2 = +Z; drag left/right changes theta.
+        // Position: x = target.x + distance*sin(phi)*cos(theta), y = target.y + distance*cos(phi), z = target.z + distance*sin(phi)*sin(theta).
         this.controls = {
             target: new THREE.Vector3(0, 0, 0),
             distance: 100,
@@ -595,6 +603,25 @@ class BitcoinNetworkExplorer {
             viewButtons.appendChild(musicBtn);
         }
         
+        // Camera coords panel: click to copy distance, phi, theta, target, targetPhi, targetTheta
+        const cameraCoordsPanel = document.getElementById('camera-coords-panel');
+        if (cameraCoordsPanel) {
+            cameraCoordsPanel.addEventListener('click', () => {
+                const c = this.controls;
+                const tx = c.target.x, ty = c.target.y, tz = c.target.z;
+                const r = Math.sqrt(tx * tx + ty * ty + tz * tz);
+                const tPhi = r >= 1e-6 ? Math.acos(Math.max(-1, Math.min(1, ty / r))) : 0;
+                const tTheta = r >= 1e-6 ? Math.atan2(tz, tx) : 0;
+                const line = `distance: ${c.distance.toFixed(2)}, phi: ${c.phi.toFixed(4)}, theta: ${c.theta.toFixed(4)}, target: [${tx.toFixed(2)}, ${ty.toFixed(2)}, ${tz.toFixed(2)}], targetPhi: ${tPhi.toFixed(4)}, targetTheta: ${tTheta.toFixed(4)}`;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(line).then(() => {
+                        const hint = cameraCoordsPanel.querySelector('.camera-coords-hint');
+                        if (hint) { const t = hint.textContent; hint.textContent = 'Copied!'; setTimeout(() => { hint.textContent = t; }, 800); }
+                    }).catch(() => {});
+                }
+            });
+        }
+
         // Log camera/orbit state to console (press L) — copy for MONTAGE_SHOTS
         document.addEventListener('keydown', (e) => {
             if (e.key === 'l' || e.key === 'L') {
@@ -1890,8 +1917,8 @@ class BitcoinNetworkExplorer {
                 this.montageLastTime = now;
                 const zoomLim = this.zoomLimits();
                 const shot = MONTAGE_SHOTS[this.montageShotIndex];
-                // General: allow zoom to continue to end (don't stop at 40); Horizon: camera on surface (33)
-                const distMin = (shot.name === 'General') ? 33 : (shot.name === 'Horizon' && shot.distance === 33) ? 33 : zoomLim.min;
+                // General: allow zoom to continue to end (don't stop at 40); Horizon: allow any distance (e.g. 3 or 33)
+                const distMin = (shot.name === 'General') ? 33 : (shot.name === 'Horizon') ? Math.min(33, shot.distance) : zoomLim.min;
 
                 this.scene.rotation.y += (shot.rotationSpeed || 0) * deltaSec;
                 this.controls.theta += (shot.panSpeedTheta || 0) * deltaSec;
@@ -1909,7 +1936,7 @@ class BitcoinNetworkExplorer {
                     } else {
                         this.controls.target.set(0, 0, 0);
                     }
-                    this.controls.distance = (toShot.name === 'Horizon' && toShot.distance === 33) ? 33 : Math.max(zoomLim.min, toShot.distance);
+                    this.controls.distance = (toShot.name === 'Horizon') ? toShot.distance : Math.max(zoomLim.min, toShot.distance);
                     this.controls.phi = toShot.phi;
                     this.controls.theta = toShot.theta;
                     this.controls.update();
@@ -2006,9 +2033,40 @@ class BitcoinNetworkExplorer {
             this.scene.rotation.y += 0.001;
         }
         
+this.updateCameraCoordsDisplay();
         this.renderer.render(this.scene, this.camera);
     }
-    
+
+    /** Update sidebar camera coords display (throttled). Target phi/theta = spherical angles of target from origin. */
+    updateCameraCoordsDisplay() {
+        const now = performance.now();
+        if (now - this.cameraCoordsLastUpdate < 100) return;
+        this.cameraCoordsLastUpdate = now;
+        const distEl = document.getElementById('camera-dist');
+        const phiEl = document.getElementById('camera-phi');
+        const thetaEl = document.getElementById('camera-theta');
+        const targetEl = document.getElementById('camera-target');
+        const targetPhiEl = document.getElementById('camera-target-phi');
+        const targetThetaEl = document.getElementById('camera-target-theta');
+        if (!distEl || !phiEl || !thetaEl) return;
+        const c = this.controls;
+        distEl.textContent = c.distance.toFixed(2);
+        phiEl.textContent = c.phi.toFixed(4);
+        thetaEl.textContent = c.theta.toFixed(4);
+        const tx = c.target.x, ty = c.target.y, tz = c.target.z;
+        targetEl.textContent = [tx.toFixed(2), ty.toFixed(2), tz.toFixed(2)].join(', ');
+        const r = Math.sqrt(tx * tx + ty * ty + tz * tz);
+        if (r < 1e-6) {
+            if (targetPhiEl) targetPhiEl.textContent = '—';
+            if (targetThetaEl) targetThetaEl.textContent = '—';
+        } else {
+            const tPhi = Math.acos(Math.max(-1, Math.min(1, ty / r)));
+            const tTheta = Math.atan2(tz, tx);
+            if (targetPhiEl) targetPhiEl.textContent = tPhi.toFixed(4);
+            if (targetThetaEl) targetThetaEl.textContent = tTheta.toFixed(4);
+        }
+    }
+
     // Add a one-time log to verify animate is running
     logAnimateStart() {
         if (!this.animateLogged) {
@@ -3204,6 +3262,13 @@ class BitcoinNetworkExplorer {
         }
     }
 
+    applyCameraInfoFromUrl() {
+        const p = new URLSearchParams(location.search);
+        const show = p.get('camerainfo') === 'true' || p.get('camerainfo') === '1';
+        const panel = document.getElementById('camera-coords-panel');
+        if (panel) panel.style.display = show ? '' : 'none';
+    }
+
     syncUrlParams() {
         const p = new URLSearchParams();
         if (this.is2DMode)        p.set('view',        '2d');
@@ -3215,6 +3280,8 @@ class BitcoinNetworkExplorer {
         if (document.body.classList.contains('ui-hidden')) p.set('ui', 'hidden');
         if (this.montageActive) p.set('montage', '1');
         if (this.subtitlePrefix === 'Archive: ') p.set('archive', '1');
+        const current = new URLSearchParams(location.search);
+        if (current.get('camerainfo') === '1' || current.get('camerainfo') === 'true') p.set('camerainfo', '1');
 
         const qs = p.toString();
         const newUrl = qs ? `${location.pathname}?${qs}` : location.pathname;
@@ -3251,6 +3318,8 @@ class BitcoinNetworkExplorer {
 
         // UI visibility (view toggle) — also applied early in init() via applyUiHiddenFromUrl()
         if (p.get('ui') === 'hidden') this.applyUiHiddenFromUrl();
+
+        this.applyCameraInfoFromUrl();
 
         // Montage (only start if not already active and not in 2D mode)
         if (p.get('montage') === '1' && !this.montageActive && !this.is2DMode) this.toggleMontage();
@@ -3405,10 +3474,18 @@ class BitcoinNetworkExplorer {
                 oscillator: { type: 'sine' },
                 envelope: { attack: 0.3, decay: 0.4, sustain: 0.6, release: 1.8 }
             }).connect(reverb);
+            const volPattern = new Tone.Volume(-14).connect(reverb);
+            const delay = new Tone.FeedbackDelay(0.28, 0.4).connect(volPattern);
+            delay.wet.value = 0.2;
+            const vibrato = new Tone.Vibrato(5, 0.15).connect(delay);
+            const patternSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.8 }
+            }).connect(vibrato);
             const volDrums = new Tone.Volume(-14).connect(vol);
             const kick = new Tone.MembraneSynth({ pitchDecay: 0.05, envelope: { decay: 0.35, sustain: 0 } }).connect(volDrums);
             const impact = new Tone.NoiseSynth({ envelope: { decay: 0.4, sustain: 0 } }).connect(new Tone.Filter(120, 'lowpass').connect(volDrums));
-            this.montageInstruments = { pad, sub, brass, brassLow, strings, melody, kick, impact };
+            this.montageInstruments = { pad, sub, brass, brassLow, strings, melody, patternSynth, kick, impact };
         } catch (e) {
             console.warn('Montage music init failed:', e);
         }
@@ -3419,11 +3496,13 @@ class BitcoinNetworkExplorer {
         return {
             progressionA: {
                 chords: [['A2', 'C3', 'E3'], ['F2', 'A2', 'C3'], ['C3', 'E3', 'G3'], ['G2', 'B2', 'D3'], ['E2', 'G2', 'B2']],
-                heroNotes: (rootHi, thirdHi, fifthHi) => [[fifthHi, rootHi], [rootHi, thirdHi], [thirdHi, fifthHi], [fifthHi, thirdHi], [rootHi, fifthHi]]
+                heroNotes: (rootHi, thirdHi, fifthHi) => [[fifthHi, rootHi], [rootHi, thirdHi], [thirdHi, fifthHi], [fifthHi, thirdHi], [rootHi, fifthHi]],
+                patternNotes: [['E4', 'G4', 'A4', 'G4', 'E4'], ['C4', 'F4', 'A4', 'F4', 'C4'], ['G4', 'E4', 'C4', 'E4', 'G4'], ['D4', 'B3', 'G3', 'B3', 'D4'], ['B4', 'G4', 'E4', 'G4', 'B4']]
             },
             progressionB: {
                 chords: [['D2', 'F2', 'A2'], ['Bb2', 'D3', 'F3'], ['C2', 'E2', 'G2'], ['A2', 'C3', 'E3'], ['E2', 'G2', 'B2']],
-                heroNotes: (rootHi, thirdHi, fifthHi) => [[fifthHi, thirdHi], [thirdHi, rootHi], [rootHi, fifthHi], [thirdHi, fifthHi], [fifthHi, rootHi]]
+                heroNotes: (rootHi, thirdHi, fifthHi) => [[fifthHi, thirdHi], [thirdHi, rootHi], [rootHi, fifthHi], [thirdHi, fifthHi], [fifthHi, rootHi]],
+                patternNotes: [['A4', 'F4', 'D4', 'F4', 'A4'], ['F4', 'D4', 'Bb3', 'D4', 'F4'], ['G4', 'E4', 'C4', 'E4', 'G4'], ['E4', 'C4', 'A3', 'C4', 'E4'], ['B4', 'G4', 'E4', 'G4', 'B4']]
             }
         };
     }
@@ -3457,6 +3536,12 @@ class BitcoinNetworkExplorer {
             this.montageInstruments.melody.triggerAttackRelease(a, dur * 0.45, t + dur * 0.15);
             this.montageInstruments.melody.triggerAttackRelease(b, dur * 0.5, t + dur * 0.5);
 
+            const pattern = prog.patternNotes[idx];
+            const step = dur / pattern.length;
+            pattern.forEach((note, i) => {
+                this.montageInstruments.patternSynth.triggerAttackRelease(note, step * 0.85, t + step * (i + 0.1));
+            });
+
             this.montageInstruments.kick.triggerAttackRelease('C1', 0.4, t);
             this.montageInstruments.kick.triggerAttackRelease('C1', 0.35, t + dur * 0.5);
             this.montageInstruments.impact.triggerAttackRelease(0.25, t);
@@ -3487,7 +3572,7 @@ class BitcoinNetworkExplorer {
         } else {
             this.controls.target.set(0, 0, 0);
         }
-        this.controls.distance = (shot.name === 'Horizon' && shot.distance === 33) ? 33 : Math.max(zoomLim.min, shot.distance);
+        this.controls.distance = (shot.name === 'Horizon') ? shot.distance : Math.max(zoomLim.min, shot.distance);
         this.controls.phi = shot.phi;
         this.controls.theta = shot.theta;
         this.controls.update();
@@ -3521,6 +3606,7 @@ class BitcoinNetworkExplorer {
                     if (this.montageInstruments.brassLow) this.montageInstruments.brassLow.triggerRelease();
                     this.montageInstruments.strings.releaseAll();
                     if (this.montageInstruments.melody) this.montageInstruments.melody.releaseAll();
+                    if (this.montageInstruments.patternSynth) this.montageInstruments.patternSynth.releaseAll();
                 } catch (e) {}
             }
             this.syncUrlParams();
