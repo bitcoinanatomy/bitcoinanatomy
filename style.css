@@ -922,7 +922,7 @@ h2.slider-hero span {
 }
 
 .swiper-container {
-  width: 100vw;
+  width: 100%;
   height: auto;
   padding: 5rem 0 0rem 0;
   background: #111111;
