@@ -14,7 +14,8 @@ class BitcoinBlockchainExplorer {
         // Get adjustment index from URL parameter for highlighting
         const urlParams = new URLSearchParams(window.location.search);
         this.highlightAdjustment = urlParams.get('adjustment') ? parseInt(urlParams.get('adjustment')) : null;
-        
+        this.vrManager = null;
+
         this.init();
     }
 
@@ -29,11 +30,17 @@ class BitcoinBlockchainExplorer {
 
     init() {
         this.setupThreeJS();
+
+        if (typeof VRManager !== 'undefined') {
+            this.vrManager = new VRManager(this, { panelTitle: 'Blockchain', panelDomId: 'chain-info' });
+            this.vrManager.init();
+        }
+
         this.setupOrbitControls();
         this.setupControls();
         this.setupPanelToggle();
         this.createScene();
-        this.animate();
+        this.renderer.setAnimationLoop(() => this.animate());
         this.fetchData();
     }
 
@@ -1306,8 +1313,6 @@ class BitcoinBlockchainExplorer {
     }
 
     animate() {
-        requestAnimationFrame(() => this.animate());
-        
         const elapsedTime = this.clock.getElapsedTime();
         
         if (this.isRotating) {
@@ -1321,7 +1326,8 @@ class BitcoinBlockchainExplorer {
         
         // Update controls (if needed)
         // this.controls.update(); // Not needed for custom controls
-        
+
+        this.vrManager && this.vrManager.update();
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -1412,6 +1418,7 @@ class BitcoinBlockchainExplorer {
     }
 
     onWindowResize() {
+        if (this.renderer && this.renderer.xr && this.renderer.xr.isPresenting) return;
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);

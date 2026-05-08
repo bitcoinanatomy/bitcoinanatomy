@@ -104,7 +104,8 @@ class BitcoinBlockExplorer {
         this.urlRawDataOpen = urlParams.get('rawdata') === 'open'; // Whether raw data panel should be open
         this.urlMerkleTree = urlParams.get('merkle') === 'true' || urlParams.get('merkleTree') === 'true'; // Auto-load merkle tree
         this.urlLoadAll = urlParams.get('loadAll') === 'true' || urlParams.get('loadall') === 'true'; // Auto-load all transactions
-        
+        this.vrManager = null;
+
         // Set initial view mode from URL
         if (this.urlViewMode === 'ascii') {
             this.rawViewMode = 'ascii';
@@ -129,6 +130,12 @@ class BitcoinBlockExplorer {
 
     async init() {
         this.setupThreeJS();
+
+        if (typeof VRManager !== 'undefined') {
+            this.vrManager = new VRManager(this, { panelTitle: 'Block', panelDomId: 'block-info' });
+            this.vrManager.init();
+        }
+
         this.setupControls();
         this.setupButtonControls();
         this.setupHoverTooltip();
@@ -146,7 +153,7 @@ class BitcoinBlockExplorer {
         await this.fetchChainTipHeight();
         
         await this.createScene();
-        this.animate();
+        this.renderer.setAnimationLoop(() => this.animate());
         this.fetchData();
         
         // Auto-open raw data panel if URL parameter is set
@@ -2671,18 +2678,18 @@ class BitcoinBlockExplorer {
     }
 
     animate() {
-        requestAnimationFrame(() => this.animate());
-        
         if (this.isRotating) {
             this.scene.rotation.y += 0.001;
         }
         
         // Transaction cuboids are static (no animation)
-        
+
+        this.vrManager && this.vrManager.update();
         this.renderer.render(this.scene, this.camera);
     }
 
     onWindowResize() {
+        if (this.renderer && this.renderer.xr && this.renderer.xr.isPresenting) return;
         // Get the container dimensions (respects split screen)
         const container = document.getElementById('container');
         const width = container.clientWidth;

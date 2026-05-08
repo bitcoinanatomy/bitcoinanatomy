@@ -65,7 +65,8 @@ class BitcoinNetworkExplorer {
         this.montageMusicEnabled = true;
         this.montageInstruments = null;
         this.cameraCoordsLastUpdate = 0;
-        
+        this.vrManager = null;
+
         // Cache configuration
         this.CACHE_KEY = 'bitnodes_data_cache';
         this.CACHE_TIMESTAMP_KEY = 'bitnodes_cache_timestamp';
@@ -116,7 +117,12 @@ class BitcoinNetworkExplorer {
         
         console.log('  1️⃣ Setting up Three.js...');
         this.setupThreeJS();
-        
+
+        if (typeof VRManager !== 'undefined') {
+            this.vrManager = new VRManager(this, { panelTitle: 'Network', panelDomId: 'network-info' });
+            this.vrManager.init();
+        }
+
         console.log('  2️⃣ Setting up orbit controls...');
         this.setupOrbitControls();
         
@@ -136,7 +142,7 @@ class BitcoinNetworkExplorer {
         this.createScene();
         
         console.log('  6️⃣ Starting animation loop...');
-        this.animate();
+        this.renderer.setAnimationLoop(() => this.animate());
         
         console.log('  7️⃣ Fetching data...');
         this.fetchData();
@@ -1677,12 +1683,12 @@ class BitcoinNetworkExplorer {
                 this.updateSnapshotNavButtons();
             }
         } catch (error) {
-            this.hideLoadingModal();
             console.error('Error fetching network data:', error);
-            this.showGenericError('Network data');
+            console.log('📦 Falling back to local archive snapshot...');
+            this.loadLocalArchive();
         }
     }
-    
+
     showLoadingModal(message) {
         // Remove existing loading modal if any
         const existingModal = document.querySelector('.loading-modal');
@@ -1889,8 +1895,6 @@ class BitcoinNetworkExplorer {
     }
 
     animate() {
-        requestAnimationFrame(() => this.animate());
-        
         // Log animate start once
         this.logAnimateStart();
         
@@ -2034,6 +2038,7 @@ class BitcoinNetworkExplorer {
         }
         
 this.updateCameraCoordsDisplay();
+        this.vrManager && this.vrManager.update();
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -2084,6 +2089,7 @@ this.updateCameraCoordsDisplay();
     }
 
     onWindowResize() {
+        if (this.renderer && this.renderer.xr && this.renderer.xr.isPresenting) return;
         const sceneEl = document.getElementById('scene');
         const w = sceneEl ? sceneEl.clientWidth  : window.innerWidth;
         const h = sceneEl ? sceneEl.clientHeight : window.innerHeight;

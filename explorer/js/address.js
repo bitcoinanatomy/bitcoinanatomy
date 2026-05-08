@@ -56,7 +56,8 @@ class BitcoinAddressExplorer {
         } else {
             this.address = defaultAddress;
         }
-        
+        this.vrManager = null;
+
         this.init();
     }
 
@@ -72,9 +73,15 @@ class BitcoinAddressExplorer {
 
     init() {
         this.setupThreeJS();
+
+        if (typeof VRManager !== 'undefined') {
+            this.vrManager = new VRManager(this, { panelTitle: 'Address', panelDomId: 'address-info' });
+            this.vrManager.init();
+        }
+
         this.setupMouseControls();
         this.createScene();
-        this.animate();
+        this.renderer.setAnimationLoop(() => this.animate());
         this.fetchData();
     }
 
@@ -1174,17 +1181,17 @@ class BitcoinAddressExplorer {
     }
 
     animate() {
-        requestAnimationFrame(() => this.animate());
-        
         if (this.isRotating) {
             this.controls.theta += 0.005;
             this.updateCameraPosition();
         }
-        
+
+        this.vrManager && this.vrManager.update();
         this.renderer.render(this.scene, this.camera);
     }
 
     onWindowResize() {
+        if (this.renderer && this.renderer.xr && this.renderer.xr.isPresenting) return;
         if (this.isPerspective) {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();

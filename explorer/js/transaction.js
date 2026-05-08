@@ -72,7 +72,8 @@ class BitcoinTransactionExplorer {
         } else if (this.urlViewMode === 'dump') {
             this.rawViewMode = 'dump';
         }
-        
+        this.vrManager = null;
+
         this.init();
     }
 
@@ -94,9 +95,15 @@ class BitcoinTransactionExplorer {
         // Gradient for coinbase tube: grey 0.2 opacity to white 0.8 opacity (along tube length)
         this.coinbaseTubeGradientTexture = this.createHorizontalGradientTexture('#88888833', '#ffffffcc');
         this.setupThreeJS();
+
+        if (typeof VRManager !== 'undefined') {
+            this.vrManager = new VRManager(this, { panelTitle: 'Transaction', panelDomId: 'tx-info' });
+            this.vrManager.init();
+        }
+
         this.setupMouseControls();
         this.createScene();
-        this.animate();
+        this.renderer.setAnimationLoop(() => this.animate());
         this.fetchData();
     }
 
@@ -1359,13 +1366,12 @@ class BitcoinTransactionExplorer {
     // Repositioning is handled during creation based on input radii
 
     animate() {
-        requestAnimationFrame(() => this.animate());
-        
         if (this.isRotating) {
             this.controls.theta += 0.001;
             this.updateCameraPosition();
         }
-        
+
+        this.vrManager && this.vrManager.update();
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -1519,6 +1525,7 @@ class BitcoinTransactionExplorer {
     }
 
     onWindowResize() {
+        if (this.renderer && this.renderer.xr && this.renderer.xr.isPresenting) return;
         // Get the container dimensions (respects split screen when raw data panel is open)
         const container = document.getElementById('container');
         const width = container.clientWidth;

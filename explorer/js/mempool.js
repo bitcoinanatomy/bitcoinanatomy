@@ -10,17 +10,24 @@ class BitcoinMempoolExplorer {
         this.isPerspective = true;
         this.mempoolData = null;
         this.feeBandLabelsVisible = true;
-        
+        this.vrManager = null;
+
         this.init();
     }
 
     init() {
         this.setupThreeJS();
+
+        if (typeof VRManager !== 'undefined') {
+            this.vrManager = new VRManager(this, { panelTitle: 'Mempool', panelDomId: 'mempool-stats' });
+            this.vrManager.init();
+        }
+
         this.setupOrbitControls();
         this.setupControls();
         this.setupPanelToggle();
         this.createScene();
-        this.animate();
+        this.renderer.setAnimationLoop(() => this.animate());
         this.fetchData();
     }
 
@@ -1128,8 +1135,6 @@ class BitcoinMempoolExplorer {
     }
 
     animate() {
-        requestAnimationFrame(() => this.animate());
-        
         // Rotate scene (optional, can be disabled)
         if (this.isRotating) {
             this.scene.rotation.y += 0.001; // Faster rotation
@@ -1140,7 +1145,8 @@ class BitcoinMempoolExplorer {
         
         // Update fee band label positions
         this.updateFeeBandLabelPositions();
-        
+
+        this.vrManager && this.vrManager.update();
         this.renderer.render(this.scene, this.camera);
     }
     
@@ -1220,6 +1226,7 @@ class BitcoinMempoolExplorer {
     }
 
     onWindowResize() {
+        if (this.renderer && this.renderer.xr && this.renderer.xr.isPresenting) return;
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
