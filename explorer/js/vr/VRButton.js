@@ -260,16 +260,75 @@
                 button.style.borderColor = '';
             }
 
+            function startSession() {
+                navigator.xr.requestSession('immersive-vr', sessionInit)
+                    .then(onSessionStarted)
+                    .catch(function (err) {
+                        console.warn('[VRButton] Failed to start XR session:', err);
+                    });
+            }
+
+            function showAutoOverlay() {
+                if (document.getElementById('vr-auto-overlay')) return;
+                var FC = '"BureauGrotesque", sans-serif';
+                var F  = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+                var overlay = document.createElement('div');
+                overlay.id = 'vr-auto-overlay';
+                overlay.style.cssText = [
+                    'position: fixed', 'inset: 0', 'z-index: 99998',
+                    'display: flex', 'flex-direction: column',
+                    'align-items: center', 'justify-content: center',
+                    'cursor: pointer', 'background: transparent',
+                ].join(';');
+
+                var label = document.createElement('div');
+                label.textContent = 'TAP TO ENTER VR';
+                label.style.cssText = [
+                    'font-family: ' + FC,
+                    'font-size: clamp(1.4rem, 4vw, 2.4rem)',
+                    'font-weight: 400',
+                    'letter-spacing: 0.12em',
+                    'color: rgba(255,255,255,0.90)',
+                    'pointer-events: none',
+                    'user-select: none',
+                    'text-transform: uppercase',
+                ].join(';');
+
+                var sub = document.createElement('div');
+                sub.textContent = 'WebXR headset detected';
+                sub.style.cssText = [
+                    'margin-top: 10px',
+                    'font-family: ' + F,
+                    'font-size: 0.72rem',
+                    'font-weight: 300',
+                    'letter-spacing: 0.1em',
+                    'color: rgba(255,255,255,0.35)',
+                    'pointer-events: none',
+                    'user-select: none',
+                    'text-transform: uppercase',
+                ].join(';');
+
+                overlay.appendChild(label);
+                overlay.appendChild(sub);
+                document.body.appendChild(overlay);
+
+                overlay.addEventListener('click', function () {
+                    overlay.remove();
+                    startSession();
+                });
+            }
+
             if ('xr' in navigator) {
                 navigator.xr.isSessionSupported('immersive-vr').then(function (supported) {
                     vrSupported = supported;
+                    button.textContent = 'Enter VR';
+                    button.disabled = false;
                     if (supported) {
-                        button.textContent = 'Enter VR';
-                        button.disabled = false;
                         button.title = 'Enter immersive VR mode';
+                        // Auto-present: show tap-to-enter overlay immediately
+                        showAutoOverlay();
                     } else {
-                        button.textContent = 'Enter VR';
-                        button.disabled = false;
                         button.style.opacity = '0.6';
                         button.title = 'VR not detected — click for setup instructions';
                     }
@@ -289,14 +348,13 @@
                     currentSession.end();
                     return;
                 }
-                var startFn = vrSupported ? function () {
-                    navigator.xr.requestSession('immersive-vr', sessionInit)
-                        .then(onSessionStarted)
-                        .catch(function (err) {
-                            console.warn('[VRButton] Failed to start XR session:', err);
-                        });
-                } : null;
-                showVRInstructions(window.location.href, startFn);
+                if (vrSupported) {
+                    // Supported: go straight into VR, no modal
+                    startSession();
+                } else {
+                    // Not supported: show setup instructions
+                    showVRInstructions(window.location.href, null);
+                }
             });
 
             // Only apply floating styles when we created the element ourselves
