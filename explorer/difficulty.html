@@ -6,6 +6,7 @@
     <title>Bitcoin Explorer - Difficulty Adjustments</title>
     <meta name="description" content="Bitcoin difficulty adjustments 3D visualization">
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
     <style>
         /* Custom slider styling */
         #block-visibility-slider::-webkit-slider-thumb {
@@ -117,6 +118,7 @@
             <div class="controls">
                 <div class="controls-main">
                     <button id="back-to-blockchain" style="display: none;">Back to Blockchain</button>
+                    <button id="vr-button" title="Enter immersive VR mode">Enter VR</button>
                 </div>
                 <div id="controls-camera-root" class="controls-camera"></div>
             </div>
@@ -134,6 +136,10 @@
     </script>
     <script src="js/controls-camera.js"></script>
     <script>ControlsCamera(document.getElementById('controls-camera-root'), { viewGroup: true });</script>
+    <script src="js/vr/VRButton.js"></script>
+    <script src="js/vr/SpatialPanel.js"></script>
+    <script src="js/vr/VRNavMenu.js"></script>
+    <script src="js/vr/VRManager.js"></script>
     <script src="js/difficulty.js"></script>
     <script>
         // Hamburger menu functionality
