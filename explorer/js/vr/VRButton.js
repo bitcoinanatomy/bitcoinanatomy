@@ -278,7 +278,8 @@
                 overlay.style.cssText = [
                     'position: fixed', 'inset: 0', 'z-index: 99998',
                     'display: flex', 'flex-direction: column',
-                    'align-items: center', 'justify-content: center',
+                    'align-items: center', 'justify-content: flex-end',
+                    'padding-bottom: 10vh',
                     'cursor: pointer', 'background: transparent',
                 ].join(';');
 
