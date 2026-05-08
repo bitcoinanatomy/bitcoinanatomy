@@ -1,0 +1,13 @@
+{
+  "name": "Bitcoin Anatomy Explorer",
+  "short_name": "BTC Explorer",
+  "description": "Interactive 3D Bitcoin network, block, and transaction explorer",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#f7931a",
+  "xr_compatible": true,
+  "icons": [
+    { "src": "imgs/network.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
