@@ -1175,7 +1175,7 @@ class BitcoinTransactionExplorer {
         // Create central transaction cuboid
         const width = 2; // Fixed width
         const depth = width / 10; // 1/10th of width
-        const height = Math.max(0.01, (this.transactionData.size || 250) / 1000); // Based on transaction size
+        const height = Math.max(0.01, (this.transactionData.size || 250) / 3360); // Based on transaction size (halved vs width/depth)
         
         const txGeometry = new THREE.BoxGeometry(width, height, depth);
         const txMaterial = new THREE.MeshLambertMaterial({ 
