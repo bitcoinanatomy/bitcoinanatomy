@@ -119,6 +119,7 @@
                 <div class="controls-main">
                     <button id="back-to-blockchain" style="display: none;">Back to Blockchain</button>
                     <button id="vr-button" title="Enter immersive VR mode">Enter VR</button>
+                    <button id="ar-button" title="Enter mixed reality (passthrough) mode">Enter MR</button>
                 </div>
                 <div id="controls-camera-root" class="controls-camera"></div>
             </div>
@@ -129,10 +130,20 @@
         Data sources: pvxg.net, Mempool.space
     </div>
 
-    <!-- Three.js from CDN (ES Modules) -->
+    <!-- Three.js + WebXR addons via importmap -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+      }
+    }
+    </script>
     <script type="module">
-        import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
+        import * as THREE from 'three';
+        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
         window.THREE = THREE;
+        window.XRControllerModelFactory = XRControllerModelFactory;
     </script>
     <script src="js/controls-camera.js"></script>
     <script>ControlsCamera(document.getElementById('controls-camera-root'), { viewGroup: true });</script>

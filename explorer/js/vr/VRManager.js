@@ -2,23 +2,22 @@
  * VRManager — WebXR session lifecycle, controller setup, and spatial UI coordination.
  *
  * Controller mapping:
- *   Right trigger (hold)      — pan / tilt the scene
- *   Left trigger  (hold)      — pan / tilt the scene
- *   Both triggers (hold)      — pinch-to-scale (wider = zoom in, closer = zoom out)
- *   Left grip                 — toggle wrist nav menu
- *   Right trigger (point+press on nav button) — navigate to page
+ *   Right thumbstick (X/Y)         — rotate scene
+ *   Left  thumbstick (Y)           — scale scene (up = bigger)
+ *   Right trigger (point + press)  — select scene object  /  confirm nav menu item
+ *   Left  grip                     — toggle wrist nav menu  (hold both grips → reset)
+ *   Right grip                     — toggle HUD             (hold both grips → reset)
  *
- * Scene content is parented into a pivot Group on session start so scale / rotation
- * affect only the virtual content, not the controllers or spatial panel.
+ * AR / MR support: detects immersive-ar blend mode → transparent background,
+ * no scene fog, tighter initial scale (table-top feel), reduced HUD opacity.
  *
  * Exposed as window.VRManager.
  */
 (function () {
     'use strict';
 
-    // Initial scale factors: maps scene units → metres at session start.
-    // The pivot group is set to this scale; user can then pinch to adjust freely.
-    var SCALE_MAP = {
+    // Initial scale factors in VR: scene units → metres
+    var SCALE_MAP_VR = {
         'network.html':     0.005,
         'blockchain.html':  0.05,
         'block.html':       0.1,
@@ -29,9 +28,35 @@
         'address.html':     0.1,
     };
 
-    var ROT_SENSITIVITY = 8;   // radians of rotation per metre of controller travel
-    var SCALE_MIN       = 1e-5;
-    var SCALE_MAX       = 1e4;
+    // Tighter scales for AR (table-top)
+    var SCALE_MAP_AR = {
+        'network.html':     0.002,
+        'blockchain.html':  0.02,
+        'block.html':       0.04,
+        'difficulty.html':  0.02,
+        'transaction.html': 0.01,
+        'mempool.html':     0.02,
+        'node.html':        0.02,
+        'address.html':     0.04,
+    };
+
+    var SCALE_MIN        = 1e-5;
+    var SCALE_MAX        = 1e4;
+    var THUMBSTICK_DEAD  = 0.12;
+    var THUMBSTICK_ROT   = 0.025;   // radians per frame per unit axis deflection
+    var THUMBSTICK_SCALE = 0.03;    // scale factor per frame per unit axis deflection
+
+    // HUD corner geometry (all panels at 60 cm — comfortable reading distance)
+    var HUD_Z        = -0.60;
+    var HUD_W        = 0.18;        // panel physical width (m)
+    var HUD_H_TOP    = 0.068;       // top panels physical height (m)
+    var HUD_H_BOT    = 0.092;       // bottom panels physical height (m)
+    var HUD_X        = 0.28;        // horizontal offset from center
+    var HUD_Y_TOP    = 0.17;        // upward offset for top panels
+    var HUD_Y_BOT    = 0.13;        // downward offset for bottom panels
+    var HUD_CW       = 512;         // canvas pixel width (all panels)
+    var HUD_CH_TOP   = 192;         // canvas pixel height (top panels)
+    var HUD_CH_BOT   = 256;         // canvas pixel height (bottom panels)
 
     // -------------------------------------------------------------------------
 
@@ -41,41 +66,51 @@
         this.panelTitle = options.panelTitle || 'Info';
         this.panelDomId = options.panelDomId || null;
 
-        this.controller0 = null; // right hand
-        this.controller1 = null; // left hand
+        this.controller0 = null;   // right hand (ray source)
+        this.controller1 = null;   // left hand
+        this._grip0      = null;   // right controller grip (model host)
+        this._grip1      = null;   // left controller grip (model host)
+        this._ray0       = null;   // right ray Line mesh
+        this._ray1       = null;   // left ray Line mesh
 
-        this.spatialPanel    = null;
-        this.navMenu         = null;
-        this._panelInterval  = null;
-        this.interactables   = [];
+        this.spatialPanel   = null;
+        this.navMenu        = null;
+        this._panelInterval = null;
+        this.interactables  = [];
 
         this._origControlsUpdate = null;
         this._wasRotating        = false;
         this._wasMontageActive   = false;
 
-        // Pivot group — wraps all explorer scene content during a VR session
-        this.pivot                    = null;
-        this._pivotBaseScale          = 1;
-        this._needsInitialPlacement   = false; // set true on session start, cleared on first frame
+        // Pivot — wraps scene content so scale/rotation don't affect controllers/HUD
+        this.pivot                  = null;
+        this._needsInitialPlacement = false;
 
-        // HUD — two head-locked side panels (Iron Man style)
-        this._hudPivot   = null; // Group whose transform mirrors the XR camera each frame
-        this._hudL       = null; // Left panel mesh
-        this._hudR       = null; // Right panel mesh
-        this._hudLCanvas = null;
-        this._hudRCanvas = null;
-        this._hudLCtx    = null;
-        this._hudRCtx    = null;
-        this._hudLTex    = null;
-        this._hudRTex    = null;
+        // Mode
+        this._isAR      = false;
+        this._savedBg   = undefined;
+        this._savedFog  = undefined;
 
-        // Trigger / pinch state
-        this._trigger0       = false;
-        this._trigger1       = false;
-        this._prevPos0       = new THREE.Vector3();
-        this._prevPos1       = new THREE.Vector3();
-        this._pinchInitDist  = 0;
-        this._pinchInitScale = 1;
+        // HUD — 4 corner panels (rebuilt each session to pick up AR/VR opacity)
+        this._hudPivot   = null;
+        this._hudTL      = null;  this._hudTLCanvas = null;  this._hudTLCtx = null;  this._hudTLTex = null;
+        this._hudTR      = null;  this._hudTRCanvas = null;  this._hudTRCtx = null;  this._hudTRTex = null;
+        this._hudBL      = null;  this._hudBLCanvas = null;  this._hudBLCtx = null;  this._hudBLTex = null;
+        this._hudBR      = null;  this._hudBRCanvas = null;  this._hudBRCtx = null;  this._hudBRTex = null;
+        this._hudBgAlpha = 0.82;
+
+        // Saved camera state for XR session
+        this._savedCameraPos  = null;
+        this._savedCameraQuat = null;
+
+        // Interaction state
+        this._grip0Held          = false;
+        this._grip1Held          = false;
+        this._bothGripsResetDone = false;
+
+        // Selection
+        this._raycaster    = new THREE.Raycaster();
+        this._labelMesh    = null;
     }
 
     // -------------------------------------------------------------------------
@@ -88,12 +123,8 @@
 
         renderer.xr.enabled = true;
 
-        // Wire up the VR button
         if (typeof VRButton !== 'undefined') {
-            var btn = VRButton.createButton(renderer);
-            if (!document.getElementById('vr-button')) {
-                document.body.appendChild(btn);
-            }
+            VRButton.createButton(renderer);
         }
 
         renderer.xr.addEventListener('sessionstart', function () { self._onSessionStart(); });
@@ -101,13 +132,11 @@
 
         this._setupControllers();
 
-        // Spatial panel — attached to scene directly (never goes into pivot)
         if (typeof SpatialPanel !== 'undefined') {
             this.spatialPanel = new SpatialPanel({ title: this.panelTitle });
             this.spatialPanel.attachToScene(this.explorer.scene);
         }
 
-        // Wrist nav menu — attached to left controller
         if (typeof VRNavMenu !== 'undefined' && this.controller1) {
             this.navMenu = new VRNavMenu(this);
             this.navMenu.build();
@@ -127,50 +156,185 @@
         this.controller0 = renderer.xr.getController(0); // right
         this.controller1 = renderer.xr.getController(1); // left
 
-        // Visual rays
-        var pts    = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -4)];
-        var rayGeo = new THREE.BufferGeometry().setFromPoints(pts);
-        this.controller0.add(new THREE.Line(rayGeo,         new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })));
-        this.controller1.add(new THREE.Line(rayGeo.clone(), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })));
+        // Visual rays — right is full opacity, left is dimmer
+        var rayPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -4)];
+        var rayGeo = new THREE.BufferGeometry().setFromPoints(rayPts);
+        this._ray0 = new THREE.Line(rayGeo,         new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
+        this._ray1 = new THREE.Line(rayGeo.clone(), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+        this.controller0.add(this._ray0);
+        this.controller1.add(this._ray1);
 
+        // Controller grip models (XRControllerModelFactory loaded via importmap)
+        this._grip0 = renderer.xr.getControllerGrip(0);
+        this._grip1 = renderer.xr.getControllerGrip(1);
+        if (typeof XRControllerModelFactory !== 'undefined') {
+            var factory = new XRControllerModelFactory();
+            this._grip0.add(factory.createControllerModel(this._grip0));
+            this._grip1.add(factory.createControllerModel(this._grip1));
+        }
+        scene.add(this._grip0);
+        scene.add(this._grip1);
         scene.add(this.controller0);
         scene.add(this.controller1);
 
-        // ── Right trigger ──────────────────────────────────────────────────────
+        // ── Right trigger — select scene object or confirm nav item ────────────
         this.controller0.addEventListener('selectstart', function () {
-            self._trigger0 = true;
-            self.controller0.getWorldPosition(self._prevPos0);
-            self._pinchInitDist = 0;
-            // Select nav button if menu is open
             if (self.navMenu && self.navMenu.group.visible) {
                 self.navMenu.selectHighlighted();
+                self._haptic('right', 50, 0.4);
+            } else {
+                self._trySelectObject();
             }
         });
-        this.controller0.addEventListener('selectend', function () {
-            self._trigger0      = false;
-            self._pinchInitDist = 0;
-        });
 
-        // ── Left trigger ───────────────────────────────────────────────────────
-        this.controller1.addEventListener('selectstart', function () {
-            self._trigger1 = true;
-            self.controller1.getWorldPosition(self._prevPos1);
-            self._pinchInitDist = 0;
-        });
-        this.controller1.addEventListener('selectend', function () {
-            self._trigger1      = false;
-            self._pinchInitDist = 0;
-        });
-
-        // ── Left grip → toggle nav menu ────────────────────────────────────────
+        // ── Left grip — nav menu toggle  (both grips → reset) ─────────────────
         this.controller1.addEventListener('squeezestart', function () {
-            if (self.navMenu) self.navMenu.toggle();
+            self._grip1Held = true;
+            if (self._grip0Held) {
+                if (!self._bothGripsResetDone) {
+                    self._bothGripsResetDone = true;
+                    self._resetScene();
+                }
+            } else {
+                if (self.navMenu) {
+                    self.navMenu.toggle();
+                    self._haptic('left', 30, 0.25);
+                }
+            }
+        });
+        this.controller1.addEventListener('squeezeend', function () {
+            self._grip1Held          = false;
+            self._bothGripsResetDone = false;
         });
 
-        // ── Right grip → toggle HUD ────────────────────────────────────────────
+        // ── Right grip — HUD toggle  (both grips → reset) ─────────────────────
         this.controller0.addEventListener('squeezestart', function () {
-            self._toggleHud();
+            self._grip0Held = true;
+            if (self._grip1Held) {
+                if (!self._bothGripsResetDone) {
+                    self._bothGripsResetDone = true;
+                    self._resetScene();
+                }
+            } else {
+                self._toggleHud();
+                self._haptic('right', 30, 0.25);
+            }
         });
+        this.controller0.addEventListener('squeezeend', function () {
+            self._grip0Held          = false;
+            self._bothGripsResetDone = false;
+        });
+    };
+
+    // -------------------------------------------------------------------------
+    // Haptics
+    // -------------------------------------------------------------------------
+
+    VRManager.prototype._haptic = function (handedness, durationMs, intensity) {
+        var session = this.explorer.renderer.xr.getSession();
+        if (!session || !session.inputSources) return;
+        for (var i = 0; i < session.inputSources.length; i++) {
+            var src = session.inputSources[i];
+            if (src.handedness === handedness && src.gamepad &&
+                src.gamepad.hapticActuators && src.gamepad.hapticActuators.length > 0) {
+                try { src.gamepad.hapticActuators[0].pulse(intensity, durationMs); } catch (e) {}
+            }
+        }
+    };
+
+    // -------------------------------------------------------------------------
+    // Both-grips reset
+    // -------------------------------------------------------------------------
+
+    VRManager.prototype._resetScene = function () {
+        if (!this.pivot) return;
+        var page     = window.location.pathname.split('/').pop() || 'network.html';
+        var scaleMap = this._isAR ? SCALE_MAP_AR : SCALE_MAP_VR;
+        var scale    = scaleMap[page] || 0.05;
+        this.pivot.scale.setScalar(scale);
+        this.pivot.rotation.set(0, 0, 0);
+        this._placeInFrontOfUser();
+        this._haptic('left',  80, 0.5);
+        this._haptic('right', 80, 0.5);
+    };
+
+    // -------------------------------------------------------------------------
+    // Object selection + label
+    // -------------------------------------------------------------------------
+
+    VRManager.prototype._trySelectObject = function () {
+        if (!this.pivot) return;
+
+        var tempMat = new THREE.Matrix4();
+        tempMat.identity().extractRotation(this.controller0.matrixWorld);
+        this._raycaster.ray.origin.setFromMatrixPosition(this.controller0.matrixWorld);
+        this._raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMat);
+
+        var hits = this._raycaster.intersectObjects(this.pivot.children, true);
+        if (hits.length === 0) return;
+
+        var obj = hits[0].object;
+        this._haptic('right', 50, 0.4);
+        this._showObjectLabel(obj, hits[0].point);
+
+        if (this.spatialPanel) {
+            var lines = this._getObjectLines(obj);
+            this.spatialPanel.update(lines);
+            this.spatialPanel.setVisible(true);
+            this._positionPanel();
+        }
+    };
+
+    VRManager.prototype._getObjectLines = function (obj) {
+        var lines = [];
+        if (obj.userData) {
+            Object.keys(obj.userData).forEach(function (k) {
+                var v = obj.userData[k];
+                if (typeof v === 'string' || typeof v === 'number') {
+                    lines.push(k + ': ' + v);
+                }
+            });
+        }
+        return lines.length > 0 ? lines : this._readPanelLines();
+    };
+
+    VRManager.prototype._showObjectLabel = function (obj, worldPoint) {
+        if (this._labelMesh) {
+            this.explorer.scene.remove(this._labelMesh);
+            if (this._labelMesh.material.map) this._labelMesh.material.map.dispose();
+            this._labelMesh = null;
+        }
+
+        var canvas = document.createElement('canvas');
+        canvas.width = 384; canvas.height = 80;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'rgba(0,0,0,0.82)';
+        ctx.fillRect(0, 0, 384, 80);
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(1, 1, 382, 78);
+        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+        ctx.font = '300 26px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        var name = obj.userData.name || obj.name || obj.type || 'Object';
+        ctx.fillText(String(name).toUpperCase(), 192, 40);
+
+        var tex = new THREE.CanvasTexture(canvas);
+        var mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+        this._labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.031), mat);
+        this._labelMesh.renderOrder = 9999;
+        this._labelMesh.position.copy(worldPoint).y += 0.09;
+        this.explorer.scene.add(this._labelMesh);
+
+        var self = this;
+        setTimeout(function () {
+            if (self._labelMesh) {
+                self.explorer.scene.remove(self._labelMesh);
+                if (self._labelMesh.material.map) self._labelMesh.material.map.dispose();
+                self._labelMesh = null;
+            }
+        }, 4000);
     };
 
     // -------------------------------------------------------------------------
@@ -182,26 +346,40 @@
         var explorer = this.explorer;
         var renderer = explorer.renderer;
 
+        // Detect AR vs VR
+        var session    = renderer.xr.getSession();
+        this._isAR     = !!(session && session.environmentBlendMode !== 'opaque');
+        this._hudBgAlpha = this._isAR ? 0.60 : 0.82;
+
         // Disable desktop orbit controls
         if (explorer.controls && typeof explorer.controls.update === 'function') {
-            this._origControlsUpdate  = explorer.controls.update.bind(explorer.controls);
-            explorer.controls.update  = function () {};
+            this._origControlsUpdate = explorer.controls.update.bind(explorer.controls);
+            explorer.controls.update = function () {};
         }
 
         // Pause auto-rotation / montage
         if (typeof explorer.isRotating !== 'undefined') {
-            this._wasRotating    = explorer.isRotating;
-            explorer.isRotating  = false;
+            this._wasRotating   = explorer.isRotating;
+            explorer.isRotating = false;
         }
         if (typeof explorer.montageActive !== 'undefined') {
-            this._wasMontageActive   = explorer.montageActive;
-            explorer.montageActive   = false;
+            this._wasMontageActive = explorer.montageActive;
+            explorer.montageActive = false;
         }
 
-        // Force perspective camera
+        // Force perspective camera if needed
         if (explorer.isPerspective === false) {
             var tv = document.getElementById('toggle-view');
             if (tv) tv.click();
+        }
+
+        // AR: transparent background, no fog
+        if (this._isAR) {
+            this._savedBg  = explorer.scene.background;
+            this._savedFog = explorer.scene.fog;
+            explorer.scene.background = null;
+            explorer.scene.fog        = null;
+            renderer.setClearAlpha(0);
         }
 
         // Reset XR camera scale — pivot handles scale from now on
@@ -209,29 +387,33 @@
         if (xrCamera) xrCamera.scale.setScalar(1);
 
         // ── Build pivot ────────────────────────────────────────────────────────
-        // Objects that must stay in scene-root space (not scaled with content)
-        var keepInScene = [this.controller0, this.controller1];
+        var keepInScene = [this.controller0, this.controller1, this._grip0, this._grip1];
         var spatialMesh = this.spatialPanel ? this.spatialPanel.getMesh() : null;
         if (spatialMesh) keepInScene.push(spatialMesh);
-        // _hudPivot is added to scene AFTER pivot build (in _attachHud), so no need to exclude it here
 
         this.pivot = new THREE.Group();
-
-        var toMove = explorer.scene.children.slice().filter(function (c) {
-            return keepInScene.indexOf(c) === -1;
-        });
-        toMove.forEach(function (child) {
-            explorer.scene.remove(child);
-            self.pivot.add(child);
+        explorer.scene.children.slice().forEach(function (c) {
+            if (keepInScene.indexOf(c) === -1) {
+                explorer.scene.remove(c);
+                self.pivot.add(c);
+            }
         });
 
-        var page = window.location.pathname.split('/').pop() || 'network.html';
-        var scale = SCALE_MAP[page] || 0.05;
-        this._pivotBaseScale        = scale;
-        this._pinchInitScale        = scale;
-        this._needsInitialPlacement = true; // position in front of user on first frame
+        var page     = window.location.pathname.split('/').pop() || 'network.html';
+        var scaleMap = this._isAR ? SCALE_MAP_AR : SCALE_MAP_VR;
+        var scale    = scaleMap[page] || 0.05;
         this.pivot.scale.setScalar(scale);
+        this._needsInitialPlacement = true;
         explorer.scene.add(this.pivot);
+
+        // ── Add scene camera to scene so Three.js XR can write its pose into it ─
+        // renderer.xr.getCamera() copies the XR headset pose into explorer.camera's
+        // position/quaternion BEFORE scene.updateMatrixWorld() runs each frame,
+        // making camera children (the HUD) automatically head-locked — same as Asia XR.
+        // Must happen AFTER pivot build so the camera isn't swept into the pivot.
+        this._savedCameraPos  = explorer.camera.position.clone();
+        this._savedCameraQuat = explorer.camera.quaternion.clone();
+        explorer.scene.add(explorer.camera);
 
         // ── HUD ───────────────────────────────────────────────────────────────
         this._attachHud();
@@ -244,23 +426,21 @@
             this._startPanelUpdate();
         }
 
-        // Hide DOM chrome (nav + disclaimer stay visible in HUD instead)
-        var uiEl = document.getElementById('ui');
-        if (uiEl) uiEl.style.visibility = 'hidden';
-        var navEl  = document.querySelector('nav.navbar');
-        var discEl = document.querySelector('.disclaimer');
-        if (navEl)  navEl.style.visibility  = 'hidden';
-        if (discEl) discEl.style.visibility = 'hidden';
+        // Hide DOM chrome
+        ['#ui', 'nav.navbar', '.disclaimer'].forEach(function (sel) {
+            var el = sel[0] === '#' ? document.getElementById(sel.slice(1)) : document.querySelector(sel);
+            if (el) el.style.visibility = 'hidden';
+        });
     };
 
     VRManager.prototype._onSessionEnd = function () {
         var self     = this;
         var explorer = this.explorer;
+        var renderer = explorer.renderer;
 
         // Return pivot children to scene root
         if (this.pivot) {
-            var toRestore = this.pivot.children.slice();
-            toRestore.forEach(function (child) {
+            this.pivot.children.slice().forEach(function (child) {
                 self.pivot.remove(child);
                 explorer.scene.add(child);
             });
@@ -268,40 +448,60 @@
             this.pivot = null;
         }
 
+        // Restore AR scene state
+        if (this._isAR) {
+            if (typeof this._savedBg  !== 'undefined') explorer.scene.background = this._savedBg;
+            if (typeof this._savedFog !== 'undefined') explorer.scene.fog        = this._savedFog;
+            renderer.setClearAlpha(1);
+        }
+        this._isAR = false;
+
         // Restore orbit controls
         if (this._origControlsUpdate && explorer.controls) {
-            explorer.controls.update    = this._origControlsUpdate;
-            this._origControlsUpdate    = null;
+            explorer.controls.update = this._origControlsUpdate;
+            this._origControlsUpdate = null;
         }
 
         // Restore auto-rotation / montage
         if (typeof explorer.isRotating !== 'undefined')    explorer.isRotating    = this._wasRotating;
         if (typeof explorer.montageActive !== 'undefined') explorer.montageActive = this._wasMontageActive;
 
-        // Hide spatial panel + HUD
+        // Clean up selection label
+        if (this._labelMesh) {
+            explorer.scene.remove(this._labelMesh);
+            if (this._labelMesh.material.map) this._labelMesh.material.map.dispose();
+            this._labelMesh = null;
+        }
+
+        // Restore scene camera to its original position outside the scene graph
+        explorer.scene.remove(explorer.camera);
+        if (this._savedCameraPos) {
+            explorer.camera.position.copy(this._savedCameraPos);
+            explorer.camera.quaternion.copy(this._savedCameraQuat);
+            this._savedCameraPos = this._savedCameraQuat = null;
+        }
+
+        // Hide panel + HUD, clear HUD objects so they rebuild fresh next session
         if (this.spatialPanel) this.spatialPanel.setVisible(false);
         this._detachHud();
+        this._hudTL = null; this._hudTR = null; this._hudBL = null; this._hudBR = null;
+        this._hudPivot = null;
         this._stopPanelUpdate();
         this.interactables = [];
 
-        // Reset interaction state
-        this._trigger0              = false;
-        this._trigger1              = false;
-        this._pinchInitDist         = 0;
+        // Reset grip state
+        this._grip0Held = this._grip1Held = this._bothGripsResetDone = false;
         this._needsInitialPlacement = false;
 
         // Restore DOM chrome
-        var uiEl   = document.getElementById('ui');
-        var navEl  = document.querySelector('nav.navbar');
-        var discEl = document.querySelector('.disclaimer');
-        if (uiEl)   uiEl.style.visibility   = '';
-        if (navEl)  navEl.style.visibility  = '';
-        if (discEl) discEl.style.visibility = '';
+        ['#ui', 'nav.navbar', '.disclaimer'].forEach(function (sel) {
+            var el = sel[0] === '#' ? document.getElementById(sel.slice(1)) : document.querySelector(sel);
+            if (el) el.style.visibility = '';
+        });
     };
 
     // -------------------------------------------------------------------------
-    // Initial pivot placement — called on first rendered frame so XR camera
-    // pose is fully tracked and we can place the model in front of the user.
+    // Initial placement
     // -------------------------------------------------------------------------
 
     VRManager.prototype._placeInFrontOfUser = function () {
@@ -312,95 +512,71 @@
         xrCamera.getWorldPosition(camPos);
         xrCamera.getWorldDirection(camDir);
 
-        // Project forward direction onto the horizontal plane so the model
-        // floats at a fixed height rather than following head tilt
         var forward = new THREE.Vector3(camDir.x, 0, camDir.z);
-        if (forward.lengthSq() < 0.0001) forward.set(0, 0, -1); // fallback if looking straight up/down
+        if (forward.lengthSq() < 0.0001) forward.set(0, 0, -1);
         forward.normalize();
 
-        // Place ~0.8 m in front of the user, just below eye level
+        var dist = this._isAR ? 0.5 : 0.8;
         this.pivot.position.set(
-            camPos.x + forward.x * 0.8,
+            camPos.x + forward.x * dist,
             camPos.y - 0.15,
-            camPos.z + forward.z * 0.8
+            camPos.z + forward.z * dist
         );
     };
 
     // -------------------------------------------------------------------------
-    // Minority Report interaction (called every frame)
+    // Thumbstick rotation + scale (per-frame)
     // -------------------------------------------------------------------------
 
     VRManager.prototype._updateInteraction = function () {
         if (!this.pivot || !this.explorer.renderer.xr.isPresenting) return;
 
-        var pos0 = new THREE.Vector3();
-        var pos1 = new THREE.Vector3();
-        if (this._trigger0) this.controller0.getWorldPosition(pos0);
-        if (this._trigger1) this.controller1.getWorldPosition(pos1);
+        var session = this.explorer.renderer.xr.getSession();
+        if (!session || !session.inputSources) return;
 
-        if (this._trigger0 && this._trigger1) {
-            // ── Both triggers: pinch-to-scale ─────────────────────────────────
-            var dist = pos0.distanceTo(pos1);
-            if (this._pinchInitDist > 0) {
-                var ratio    = dist / this._pinchInitDist;
-                var newScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, this._pinchInitScale * ratio));
-                this.pivot.scale.setScalar(newScale);
-            } else {
-                // First frame with both pressed — record baseline
-                this._pinchInitDist  = dist;
-                this._pinchInitScale = this.pivot.scale.x;
+        for (var i = 0; i < session.inputSources.length; i++) {
+            var src = session.inputSources[i];
+            if (!src.gamepad || src.gamepad.axes.length < 4) continue;
+
+            var ax = src.gamepad.axes[2]; // thumbstick X
+            var ay = src.gamepad.axes[3]; // thumbstick Y
+
+            if (src.handedness === 'right') {
+                // Right thumbstick — rotate scene
+                if (Math.abs(ax) > THUMBSTICK_DEAD) this.pivot.rotation.y += ax * THUMBSTICK_ROT;
+                if (Math.abs(ay) > THUMBSTICK_DEAD) this.pivot.rotation.x -= ay * THUMBSTICK_ROT;
+            } else if (src.handedness === 'left') {
+                // Left thumbstick Y — scale scene (push up = zoom in)
+                if (Math.abs(ay) > THUMBSTICK_DEAD) {
+                    var newScale = this.pivot.scale.x * (1 - ay * THUMBSTICK_SCALE);
+                    this.pivot.scale.setScalar(Math.max(SCALE_MIN, Math.min(SCALE_MAX, newScale)));
+                }
             }
-            // Keep prevPos current so single-hand resumes smoothly
-            this._prevPos0.copy(pos0);
-            this._prevPos1.copy(pos1);
-
-        } else if (this._trigger0) {
-            // ── Right trigger only: pan / tilt ────────────────────────────────
-            this._pinchInitDist = 0;
-            var d0 = pos0.clone().sub(this._prevPos0);
-            if (d0.length() < 0.5) {
-                this.pivot.rotation.y += d0.x * ROT_SENSITIVITY;
-                this.pivot.rotation.x -= d0.y * ROT_SENSITIVITY;
-            }
-            this._prevPos0.copy(pos0);
-
-        } else if (this._trigger1) {
-            // ── Left trigger only: pan / tilt ─────────────────────────────────
-            this._pinchInitDist = 0;
-            var d1 = pos1.clone().sub(this._prevPos1);
-            if (d1.length() < 0.5) {
-                this.pivot.rotation.y += d1.x * ROT_SENSITIVITY;
-                this.pivot.rotation.x -= d1.y * ROT_SENSITIVITY;
-            }
-            this._prevPos1.copy(pos1);
-
-        } else {
-            this._pinchInitDist = 0;
         }
     };
 
     // -------------------------------------------------------------------------
-    // Spatial panel helpers
+    // Spatial panel
     // -------------------------------------------------------------------------
 
     VRManager.prototype._positionPanel = function () {
         if (!this.spatialPanel) return;
-        var cam     = this.explorer.camera;
+        var xrCam   = this.explorer.renderer.xr.getCamera();
+        var cam     = xrCam || this.explorer.camera;
         var forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
         var right   = new THREE.Vector3(1, 0,  0).applyQuaternion(cam.quaternion);
         var pos     = cam.position.clone()
-            .addScaledVector(forward, 1.2)
-            .addScaledVector(right,   0.35);
-        pos.y = cam.position.y + 0.1;
+            .addScaledVector(forward, 1.0)
+            .addScaledVector(right,   0.40);
+        pos.y = cam.position.y + 0.05;
         this.spatialPanel.setPosition(pos.x, pos.y, pos.z);
         this.spatialPanel.getMesh().lookAt(cam.position);
     };
 
     VRManager.prototype._toggleHud = function () {
-        if (!this._hudL) return;
-        var vis = !this._hudL.visible;
-        [this._hudL, this._hudR, this._hudTop, this._hudBot].forEach(function (m) { if (m) m.visible = vis; });
-        // Sync nav-menu toggle button
+        if (!this._hudTL) return;
+        var vis = !this._hudTL.visible;
+        [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) { if (m) m.visible = vis; });
         if (this.navMenu && this.navMenu._toggleButtons) {
             var self = this;
             this.navMenu._toggleButtons.forEach(function (btn) {
@@ -415,18 +591,15 @@
         this._panelInterval = setInterval(function () {
             var lines = self._readPanelLines();
             if (self.spatialPanel) self.spatialPanel.update(lines);
-            if (self._hudL)        self._drawHud(lines);
+            self._drawHud(lines);
         }, 1000);
         var initLines = this._readPanelLines();
         if (this.spatialPanel) this.spatialPanel.update(initLines);
-        if (this._hudL)        this._drawHud(initLines);
+        this._drawHud(initLines);
     };
 
     VRManager.prototype._stopPanelUpdate = function () {
-        if (this._panelInterval) {
-            clearInterval(this._panelInterval);
-            this._panelInterval = null;
-        }
+        if (this._panelInterval) { clearInterval(this._panelInterval); this._panelInterval = null; }
     };
 
     VRManager.prototype._readPanelLines = function () {
@@ -442,191 +615,236 @@
     };
 
     // -------------------------------------------------------------------------
-    // HUD — head-locked info strip
+    // HUD — 4 corner panels
     // -------------------------------------------------------------------------
 
     VRManager.prototype._buildHud = function () {
-        var mkMat = function (tex) {
-            return new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
-        };
-        var mkCanvas = function (w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+        var self = this;
 
-        // Side panels — portrait (320×480, 2:3)
-        this._hudLCanvas = mkCanvas(320, 480); this._hudRCanvas = mkCanvas(320, 480);
-        this._hudLCtx    = this._hudLCanvas.getContext('2d');
-        this._hudRCtx    = this._hudRCanvas.getContext('2d');
-        this._hudLTex    = new THREE.CanvasTexture(this._hudLCanvas);
-        this._hudRTex    = new THREE.CanvasTexture(this._hudRCanvas);
-        this._hudL = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.113), mkMat(this._hudLTex));
-        this._hudR = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.113), mkMat(this._hudRTex));
+        function mkMat(tex) {
+            return new THREE.MeshBasicMaterial({
+                map: tex, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide
+            });
+        }
+        function mkCanvas(w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
 
-        // Top strip — logo (512×36)
-        this._hudTopCanvas = mkCanvas(512, 36); this._hudTopCtx = this._hudTopCanvas.getContext('2d');
-        this._hudTopTex    = new THREE.CanvasTexture(this._hudTopCanvas);
-        this._hudTop = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.027), mkMat(this._hudTopTex));
+        // Top-left — page title
+        this._hudTLCanvas = mkCanvas(HUD_CW, HUD_CH_TOP);
+        this._hudTLCtx    = this._hudTLCanvas.getContext('2d');
+        this._hudTLTex    = new THREE.CanvasTexture(this._hudTLCanvas);
+        this._hudTL       = new THREE.Mesh(new THREE.PlaneGeometry(HUD_W, HUD_H_TOP), mkMat(this._hudTLTex));
 
-        // Bottom strip — data source (512×28)
-        this._hudBotCanvas = mkCanvas(512, 28); this._hudBotCtx = this._hudBotCanvas.getContext('2d');
-        this._hudBotTex    = new THREE.CanvasTexture(this._hudBotCanvas);
-        this._hudBot = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.019), mkMat(this._hudBotTex));
+        // Top-right — primary stat
+        this._hudTRCanvas = mkCanvas(HUD_CW, HUD_CH_TOP);
+        this._hudTRCtx    = this._hudTRCanvas.getContext('2d');
+        this._hudTRTex    = new THREE.CanvasTexture(this._hudTRCanvas);
+        this._hudTR       = new THREE.Mesh(new THREE.PlaneGeometry(HUD_W, HUD_H_TOP), mkMat(this._hudTRTex));
 
-        [this._hudL, this._hudR, this._hudTop, this._hudBot].forEach(function (m) { m.renderOrder = 9999; });
+        // Bottom-left — secondary stats
+        this._hudBLCanvas = mkCanvas(HUD_CW, HUD_CH_BOT);
+        this._hudBLCtx    = this._hudBLCanvas.getContext('2d');
+        this._hudBLTex    = new THREE.CanvasTexture(this._hudBLCanvas);
+        this._hudBL       = new THREE.Mesh(new THREE.PlaneGeometry(HUD_W, HUD_H_BOT), mkMat(this._hudBLTex));
+
+        // Bottom-right — data source + timestamp
+        this._hudBRCanvas = mkCanvas(HUD_CW, HUD_CH_BOT);
+        this._hudBRCtx    = this._hudBRCanvas.getContext('2d');
+        this._hudBRTex    = new THREE.CanvasTexture(this._hudBRCanvas);
+        this._hudBR       = new THREE.Mesh(new THREE.PlaneGeometry(HUD_W, HUD_H_BOT), mkMat(this._hudBRTex));
+
+        [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) { m.renderOrder = 9999; });
         this._drawHud([]);
     };
 
-    // Draw one HUD panel — minimal monochrome, no decoration
-    VRManager.prototype._drawHudPanel = function (ctx, canvas, lines, side) {
-        var W = canvas.width, H = canvas.height;
+    // Draw one corner panel.  corner: 'TL' | 'TR' | 'BL' | 'BR'
+    VRManager.prototype._drawCorner = function (ctx, canvas, corner, lines) {
+        var W   = canvas.width;
+        var H   = canvas.height;
+        var PAD = 18;
+        var bg  = this._hudBgAlpha;
+
         ctx.clearRect(0, 0, W, H);
 
-        // Subtle background
-        ctx.fillStyle = 'rgba(0,0,0,0.50)';
+        // Background
+        ctx.fillStyle = 'rgba(0,0,0,' + bg + ')';
         ctx.fillRect(0, 0, W, H);
 
-        var PAD   = 20;
-        var isLeft = side === 'left';
-        var align  = isLeft ? 'left' : 'right';
-        var xBase  = isLeft ? PAD : W - PAD;
+        // Thin white border (hairline)
+        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+        ctx.lineWidth   = 1.5;
+        ctx.strokeRect(1, 1, W - 2, H - 2);
 
         ctx.textBaseline = 'top';
-        ctx.textAlign    = align;
 
-        // Page name
-        var page = window.location.pathname.split('/').pop().replace('.html', '').toUpperCase() || 'EXPLORER';
-        ctx.fillStyle = 'rgba(255,255,255,0.90)';
-        ctx.font      = '400 54px "BureauGrotesque", sans-serif';
-        ctx.fillText(page, xBase, PAD);
+        if (corner === 'TL') {
+            // Page title — large, left-aligned
+            var page = window.location.pathname.split('/').pop().replace('.html', '').toUpperCase() || 'EXPLORER';
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            ctx.font      = '400 58px "BureauGrotesque", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(page, PAD, PAD - 4);
 
-        // Rule
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.fillRect(PAD, PAD + 66, W - PAD * 2, 1);
+            // Thin rule
+            ctx.fillStyle = 'rgba(255,255,255,0.10)';
+            ctx.fillRect(PAD, PAD + 64, W - PAD * 2, 1);
 
-        // Stats — left panel: first half; right panel: second half
-        var half   = Math.ceil(lines.length / 2);
-        var subset = isLeft ? lines.slice(0, half) : lines.slice(half);
-        ctx.font = '300 19px "Inter", sans-serif';
-        subset.forEach(function (line, i) {
-            var y   = PAD + 80 + i * 34;
-            var col = line.indexOf(':');
+            // Sub-label
+            ctx.fillStyle = 'rgba(255,255,255,0.26)';
+            ctx.font      = '300 17px "Inter", sans-serif';
+            ctx.fillText('ANATOMY OF BITCOIN', PAD, PAD + 74);
+
+        } else if (corner === 'TR') {
+            // Primary stat — right-aligned, value large
+            var primary = lines[0] || '';
+            var col     = primary.indexOf(':');
+            ctx.textAlign = 'right';
             if (col > -1) {
-                var lbl = line.slice(0, col + 1);
-                var val = line.slice(col + 1).trim();
-                if (isLeft) {
-                    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillText(lbl + ' ', xBase, y);
-                    ctx.fillStyle = 'rgba(255,255,255,0.80)'; ctx.fillText(val, xBase + ctx.measureText(lbl + ' ').width, y);
-                } else {
-                    ctx.fillStyle = 'rgba(255,255,255,0.80)'; ctx.fillText(val, xBase, y);
-                    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillText(' ' + lbl, xBase - ctx.measureText(val).width, y);
-                }
-            } else {
-                ctx.fillStyle = 'rgba(255,255,255,0.65)';
-                ctx.fillText(line, xBase, y);
+                var lbl = primary.slice(0, col + 1);
+                var val = primary.slice(col + 1).trim();
+                ctx.font      = '300 17px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.32)';
+                ctx.fillText(lbl, W - PAD, PAD);
+                ctx.font      = '400 48px "BureauGrotesque", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                ctx.fillText(val, W - PAD, PAD + 22);
+            } else if (primary) {
+                ctx.font      = '400 36px "BureauGrotesque", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.90)';
+                ctx.fillText(primary, W - PAD, PAD + 22);
             }
-        });
-    };
 
-    VRManager.prototype._drawHudTop = function () {
-        var ctx = this._hudTopCtx, W = this._hudTopCanvas.width, H = this._hudTopCanvas.height;
-        ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle    = 'rgba(255,255,255,0.75)';
-        ctx.font         = '400 24px "BureauGrotesque", sans-serif';
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('ANATOMY OF BITCOIN EXPLORER', W / 2, H / 2);
-        this._hudTopTex.needsUpdate = true;
-    };
+        } else if (corner === 'BL') {
+            // Secondary stats — left-aligned label:value pairs
+            var secondary = lines.slice(1, 5);
+            ctx.textAlign = 'left';
+            ctx.font      = '300 22px "Inter", sans-serif';
+            secondary.forEach(function (line, i) {
+                var y    = PAD + i * 52;
+                var colon = line.indexOf(':');
+                if (colon > -1) {
+                    var sl   = line.slice(0, colon + 1) + ' ';
+                    var sv   = line.slice(colon + 1).trim();
+                    var lblW = ctx.measureText(sl).width;
+                    ctx.fillStyle = 'rgba(255,255,255,0.32)';
+                    ctx.fillText(sl, PAD, y);
+                    ctx.fillStyle = 'rgba(255,255,255,0.90)';
+                    ctx.fillText(sv, PAD + lblW, y);
+                } else {
+                    ctx.fillStyle = 'rgba(255,255,255,0.70)';
+                    ctx.fillText(line, PAD, y);
+                }
+            });
 
-    VRManager.prototype._drawHudBot = function () {
-        var ctx = this._hudBotCtx, W = this._hudBotCanvas.width, H = this._hudBotCanvas.height;
-        ctx.clearRect(0, 0, W, H);
-        var discEl = document.querySelector('.disclaimer');
-        var txt = discEl ? discEl.textContent.trim().replace(/\s+/g, ' ') : '';
-        ctx.fillStyle    = 'rgba(255,255,255,0.25)';
-        ctx.font         = '300 16px "Inter", sans-serif';
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(txt, W / 2, H / 2);
-        this._hudBotTex.needsUpdate = true;
+        } else if (corner === 'BR') {
+            // Data source + timestamp — right-aligned, dim
+            var discEl = document.querySelector('.disclaimer');
+            var src    = discEl ? discEl.textContent.trim().replace(/\s+/g, ' ') : 'Data: Mempool.space';
+            var now    = new Date();
+            var ts     = now.toUTCString().replace(/:\d\d GMT$/, ' UTC');
+
+            ctx.textAlign = 'right';
+            ctx.font      = '300 19px "Inter", sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.28)';
+            ctx.fillText(src, W - PAD, PAD);
+            ctx.font      = '300 17px "Inter", sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            ctx.fillText(ts, W - PAD, PAD + 30);
+        }
     };
 
     VRManager.prototype._drawHud = function (lines) {
-        this._drawHudPanel(this._hudLCtx, this._hudLCanvas, lines, 'left');
-        this._drawHudPanel(this._hudRCtx, this._hudRCanvas, lines, 'right');
-        this._drawHudTop();
-        this._drawHudBot();
-        this._hudLTex.needsUpdate = true;
-        this._hudRTex.needsUpdate = true;
+        if (!this._hudTL) return;
+        this._drawCorner(this._hudTLCtx, this._hudTLCanvas, 'TL', lines);
+        this._drawCorner(this._hudTRCtx, this._hudTRCanvas, 'TR', lines);
+        this._drawCorner(this._hudBLCtx, this._hudBLCanvas, 'BL', lines);
+        this._drawCorner(this._hudBRCtx, this._hudBRCanvas, 'BR', lines);
+        this._hudTLTex.needsUpdate = true;
+        this._hudTRTex.needsUpdate = true;
+        this._hudBLTex.needsUpdate = true;
+        this._hudBRTex.needsUpdate = true;
     };
 
     VRManager.prototype._attachHud = function () {
-        if (!this._hudL) this._buildHud();
-        if (!this._hudPivot) {
-            // Side panels: ±21cm from center, at eye level, 45cm in front
-            // Top/bottom strips: centered, above/below side panels
-            var Z = -0.45;
-            this._hudPivot = new THREE.Group();
-            this._hudL.position.set(-0.21,   0,     Z);
-            this._hudR.position.set( 0.21,   0,     Z);
-            this._hudTop.position.set(0,     0.22, Z);   // near top of comfortable FOV
-            this._hudBot.position.set(0,    -0.22, Z);   // near bottom of comfortable FOV
-            [this._hudL, this._hudR, this._hudTop, this._hudBot].forEach(function (m) {
-                m.quaternion.identity();
-            });
-            this._hudPivot.add(this._hudL);
-            this._hudPivot.add(this._hudR);
-            this._hudPivot.add(this._hudTop);
-            this._hudPivot.add(this._hudBot);
-        }
-        this.explorer.scene.add(this._hudPivot);
-        [this._hudL, this._hudR, this._hudTop, this._hudBot].forEach(function (m) { m.visible = true; });
+        var self = this;
+        if (!this._hudTL) this._buildHud();
+        this._hudPivot = new THREE.Group();
+
+        this._hudTL.position.set(-HUD_X,  HUD_Y_TOP, HUD_Z);
+        this._hudTR.position.set( HUD_X,  HUD_Y_TOP, HUD_Z);
+        this._hudBL.position.set(-HUD_X, -HUD_Y_BOT, HUD_Z);
+        this._hudBR.position.set( HUD_X, -HUD_Y_BOT, HUD_Z);
+
+        [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) {
+            m.quaternion.identity();
+            m.frustumCulled = false;
+            self._hudPivot.add(m);
+        });
+
+        this.explorer.camera.add(this._hudPivot);
+        [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) { m.visible = true; });
     };
 
     VRManager.prototype._detachHud = function () {
-        if (this._hudPivot) this.explorer.scene.remove(this._hudPivot);
+        if (this._hudPivot) this.explorer.camera.remove(this._hudPivot);
     };
 
-    // Called every frame: mirror the XR camera's world transform into _hudPivot.
-    // getWorldPosition/Quaternion call updateWorldMatrix() first, ensuring we read the
-    // XR system's current pose values rather than a stale matrixWorld.
+    // Sync HUD pivot to XR head pose every frame.
+    // Use xrCam.position / quaternion — these are written directly by the XR system
+    // at the start of each animation frame, before renderer.render() runs.
+    // matrixWorld is NOT reliable here (it may still reflect the previous frame).
     VRManager.prototype._updateHudTransform = function () {
-        if (!this._hudPivot || !this._hudL || !this._hudL.visible) return;
+        if (!this._hudPivot || !this._hudTL || !this._hudTL.visible) return;
         var xrCam = this.explorer.renderer.xr.getCamera();
-        var pos   = new THREE.Vector3();
-        var quat  = new THREE.Quaternion();
-        xrCam.getWorldPosition(pos);
-        xrCam.getWorldQuaternion(quat);
-        this._hudPivot.position.copy(pos);
-        this._hudPivot.quaternion.copy(quat);
+        this._hudPivot.position.copy(xrCam.position);
+        this._hudPivot.quaternion.copy(xrCam.quaternion);
+    };
+
+    // Hide right ray when nav menu is closed and nothing interactable is targeted;
+    // show both rays when menu is open.
+    VRManager.prototype._updateRays = function () {
+        if (!this._ray0 || !this._ray1) return;
+        var menuOpen = this.navMenu && this.navMenu.group.visible;
+        this._ray0.material.opacity = menuOpen ? 0.6 : (this.navMenu && this.navMenu.highlighted ? 0.6 : 0.15);
+        this._ray1.visible = menuOpen;
     };
 
     // -------------------------------------------------------------------------
-    // Per-frame update (called from each explorer's animate())
+    // Per-frame update (called from each page's animate loop)
     // -------------------------------------------------------------------------
 
     VRManager.prototype.update = function () {
         if (!this.explorer.renderer.xr.isPresenting) return;
 
-        // On the very first frame the XR camera pose is tracked — place model in front of user
         if (this._needsInitialPlacement) {
             this._placeInFrontOfUser();
             this._needsInitialPlacement = false;
         }
 
-        // Keep spatial panel facing the XR camera
+        // Spatial panel faces XR camera
         if (this.spatialPanel && this.spatialPanel.getMesh().visible) {
             var xrCam = this.explorer.renderer.xr.getCamera();
             if (xrCam) this.spatialPanel.getMesh().lookAt(xrCam.position);
         }
 
-        // Nav menu hover (right controller ray)
-        if (this.controller0 && this.navMenu) {
-            this.navMenu.updateHover(this.controller0);
+        // Selection label faces XR camera
+        if (this._labelMesh) {
+            var xrCam2 = this.explorer.renderer.xr.getCamera();
+            if (xrCam2) this._labelMesh.lookAt(xrCam2.position);
         }
 
-        // HUD — keep glued to viewer head
-        this._updateHudTransform();
+        // Nav menu hover + haptic tick on new hover
+        if (this.controller0 && this.navMenu) {
+            var prevHighlight = this.navMenu.highlighted;
+            this.navMenu.updateHover(this.controller0);
+            if (this.navMenu.highlighted && this.navMenu.highlighted !== prevHighlight) {
+                this._haptic('right', 20, 0.2);
+            }
+        }
 
-        // Minority report pan / tilt / scale
+        // Context-aware ray opacity
+        this._updateRays();
+
+        // Thumbstick rotate + scale
         this._updateInteraction();
     };
 

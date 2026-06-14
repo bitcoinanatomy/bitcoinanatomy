@@ -39,24 +39,20 @@
 
         // Background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
-        ctx.beginPath();
-        ctx.roundRect ? ctx.roundRect(0, 0, CANVAS_W, CANVAS_H, 12) : ctx.rect(0, 0, CANVAS_W, CANVAS_H);
-        ctx.fill();
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
         // Border
-        ctx.strokeStyle = '#f7931a';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.roundRect ? ctx.roundRect(2, 2, CANVAS_W - 4, CANVAS_H - 4, 10) : ctx.rect(2, 2, CANVAS_W - 4, CANVAS_H - 4);
-        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(1, 1, CANVAS_W - 2, CANVAS_H - 2);
 
         // Title
-        ctx.fillStyle = '#f7931a';
-        ctx.font = 'bold 26px monospace';
-        ctx.fillText(this.title, 20, 40);
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.font = '400 26px "BureauGrotesque", sans-serif';
+        ctx.fillText(this.title.toUpperCase(), 20, 40);
 
         // Divider
-        ctx.strokeStyle = 'rgba(247,147,26,0.4)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(20, 54);
@@ -64,7 +60,7 @@
         ctx.stroke();
 
         // Lines
-        ctx.fillStyle = '#e8e8e8';
+        ctx.fillStyle = 'rgba(255,255,255,0.82)';
         ctx.font = '20px monospace';
         var y = 82;
         for (var i = 0; i < Math.min(lines.length, 10); i++) {
