@@ -2,15 +2,17 @@
  * VRManager — WebXR session lifecycle, controller setup, and spatial UI coordination.
  *
  * Controller mapping (resolved via XRInputSource.handedness — not slot index):
- *   Right thumbstick (X/Y)         — rotate scene (around gaze / near-user focus)
- *   Left  thumbstick (Y)           — scale scene (up = bigger)
+ *   Right thumbstick (X/Y)         — rotate around gaze / near-user focus
+ *   Left  thumbstick (Y)           — scale around the same focus point
  *   Left  thumbstick (X)           — strafe / pan scene horizontally
  *   Right / left trigger (hold)    — rotate / tilt (same focus anchor)
- *   Both triggers (hold)           — pinch-to-scale
- *   Right trigger (tap / nav)      — select scene object  /  confirm nav menu item
+ *   Both triggers (hold)           — pinch-to-scale (same focus anchor)
+ *   Focus marker                   — visible while rotating or scaling
+ *   Right trigger (tap / nav)      — select → HUD corners  /  confirm nav menu item
  *   Left / right grip (hold+drag)  — grab and pan / move the scene in space
  *   Left  grip (tap)               — toggle wrist nav menu  (hold both grips → reset)
- *   Right grip (tap)               — toggle HUD             (hold both grips → reset)
+ *   Right grip (tap)               — toggle HUD (staggered reveal; both grips → reset)
+ *   HUD                            — staggered corner reveal on show / pointer select
  *
  * Note: getController(0/1) is connection order only. Quest and the Immersive Web
  * Emulator often disagree on which index is left/right; handedness keeps them aligned.
@@ -70,6 +72,10 @@
     var HUD_CW       = 512;         // canvas pixel width (all panels)
     var HUD_CH_TOP   = 192;         // canvas pixel height (top panels)
     var HUD_CH_BOT   = 256;         // canvas pixel height (bottom panels)
+    var HUD_REVEAL_STAGGER = 90;    // ms between corner reveals
+    var HUD_REVEAL_DUR     = 320;   // ms ease per corner
+    var HUD_REVEAL_SLIDE   = 0.035; // metres — panels ease in from outside
+    var HUD_SELECT_HOLD_MS = 8000;  // keep pointer-select info on HUD this long
 
     // -------------------------------------------------------------------------
 
@@ -113,6 +119,10 @@
         this._hudBL      = null;  this._hudBLCanvas = null;  this._hudBLCtx = null;  this._hudBLTex = null;
         this._hudBR      = null;  this._hudBRCanvas = null;  this._hudBRCtx = null;  this._hudBRTex = null;
         this._hudBgAlpha = 0.82;
+        this._hudBasePos = null;   // resting corner positions
+        this._hudReveal  = null;   // staggered reveal animation state
+        this._selectionLines = null;
+        this._selectionUntil = 0;
 
         // Saved camera state for XR session
         this._savedCameraPos  = null;
@@ -136,10 +146,11 @@
         this._pinchInitScale = 1;
         this._triggerTravel0 = 0;   // cumulative right-trigger drag for tap vs hold
 
-        // Rotation orbits a near-user focus point (not the model origin), held stable per gesture
-        this._rotAnchor      = null;
-        this._rotAnchorLocal = new THREE.Vector3();
-        this._rotAnchorTmp   = new THREE.Vector3();
+        // Rotate/scale around a near-user focus point (not the model origin), held per gesture
+        this._focusAnchor      = null;
+        this._focusAnchorLocal = new THREE.Vector3();
+        this._focusAnchorTmp   = new THREE.Vector3();
+        this._anchorMarker     = null; // world-space crosshair at the focus point
 
         // Selection
         this._raycaster    = new THREE.Raycaster();
@@ -419,14 +430,14 @@
         var scale    = scaleMap[page] || 0.05;
         this.pivot.scale.setScalar(scale);
         this.pivot.rotation.set(0, 0, 0);
-        this._clearRotationAnchor();
+        this._clearFocusAnchor();
         this._placeInFrontOfUser();
         this._haptic('left',  80, 0.5);
         this._haptic('right', 80, 0.5);
     };
 
     // -------------------------------------------------------------------------
-    // Object selection + label
+    // Object selection → HUD (no floating panel / label)
     // -------------------------------------------------------------------------
 
     VRManager.prototype._trySelectObject = function () {
@@ -442,66 +453,52 @@
 
         var obj = hits[0].object;
         this._haptic('right', 50, 0.4);
-        this._showObjectLabel(obj, hits[0].point);
-
-        if (this.spatialPanel) {
-            var lines = this._getObjectLines(obj);
-            this.spatialPanel.update(lines);
-            this.spatialPanel.setVisible(true);
-            this._positionPanel();
-        }
+        this._showSelectionOnHud(obj);
     };
 
     VRManager.prototype._getObjectLines = function (obj) {
         var lines = [];
+        var name = (obj.userData && (obj.userData.name || obj.userData.label)) || obj.name || obj.type || 'Object';
+        lines.push('Selected: ' + name);
+
         if (obj.userData) {
             Object.keys(obj.userData).forEach(function (k) {
+                if (k === 'name' || k === 'label') return;
                 var v = obj.userData[k];
-                if (typeof v === 'string' || typeof v === 'number') {
+                if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
                     lines.push(k + ': ' + v);
                 }
             });
         }
-        return lines.length > 0 ? lines : this._readPanelLines();
+        return lines.length > 1 ? lines : lines.concat(this._readPanelLines());
     };
 
-    VRManager.prototype._showObjectLabel = function (obj, worldPoint) {
-        if (this._labelMesh) {
-            this.explorer.scene.remove(this._labelMesh);
-            if (this._labelMesh.material.map) this._labelMesh.material.map.dispose();
-            this._labelMesh = null;
+    VRManager.prototype._showSelectionOnHud = function (obj) {
+        var lines = this._getObjectLines(obj);
+        this._selectionLines = lines;
+        this._selectionUntil = performance.now() + HUD_SELECT_HOLD_MS;
+
+        // Selection lives on the HUD — hide the floating info panel if open
+        if (this.spatialPanel) this.spatialPanel.setVisible(false);
+
+        if (!this._hudTL) this._attachHud();
+        [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) {
+            if (m) m.visible = true;
+        });
+
+        this._drawHud(lines);
+        this._startHudReveal();
+    };
+
+    VRManager.prototype._hudLines = function () {
+        if (this._selectionLines && performance.now() < this._selectionUntil) {
+            return this._selectionLines;
         }
-
-        var canvas = document.createElement('canvas');
-        canvas.width = 384; canvas.height = 80;
-        var ctx = canvas.getContext('2d');
-        ctx.fillStyle = 'rgba(0,0,0,0.82)';
-        ctx.fillRect(0, 0, 384, 80);
-        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(1, 1, 382, 78);
-        ctx.fillStyle = 'rgba(255,255,255,0.92)';
-        ctx.font = '300 26px "Inter", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        var name = obj.userData.name || obj.name || obj.type || 'Object';
-        ctx.fillText(String(name).toUpperCase(), 192, 40);
-
-        var tex = new THREE.CanvasTexture(canvas);
-        var mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
-        this._labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.031), mat);
-        this._labelMesh.renderOrder = 9999;
-        this._labelMesh.position.copy(worldPoint).y += 0.09;
-        this.explorer.scene.add(this._labelMesh);
-
-        var self = this;
-        setTimeout(function () {
-            if (self._labelMesh) {
-                self.explorer.scene.remove(self._labelMesh);
-                if (self._labelMesh.material.map) self._labelMesh.material.map.dispose();
-                self._labelMesh = null;
-            }
-        }, 4000);
+        if (this._selectionLines && performance.now() >= this._selectionUntil) {
+            this._selectionLines = null;
+            this._selectionUntil = 0;
+        }
+        return this._readPanelLines();
     };
 
     // -------------------------------------------------------------------------
@@ -584,15 +581,17 @@
         // Route later scene.add() calls (e.g. network nodes loaded async) into pivot
         this._installSceneHooks();
 
-        // ── HUD ───────────────────────────────────────────────────────────────
+        // ── HUD (primary info surface; staggered reveal on enter) ──────────────
         this._attachHud();
+        this._startHudReveal();
+        this._startPanelUpdate();
 
-        // ── Spatial panel ──────────────────────────────────────────────────────
+        // ── Spatial panel — optional, off by default (HUD replaces it) ─────────
         if (this.spatialPanel) {
             this._positionPanel();
-            this.spatialPanel.setVisible(true);
+            this.spatialPanel.setVisible(false);
+            var spatialMesh = this.spatialPanel.getMesh();
             if (spatialMesh) this.interactables.push(spatialMesh);
-            this._startPanelUpdate();
         }
 
         // Hide DOM chrome
@@ -602,7 +601,7 @@
         });
     };
 
-    // Controllers, grips, HUD host camera, spatial panel, selection label stay at scene root
+    // Controllers, grips, HUD host camera, spatial panel, selection label, focus marker stay at scene root
     VRManager.prototype._shouldKeepInScene = function (obj) {
         if (!obj) return true;
         if (obj === this.pivot) return true;
@@ -610,6 +609,7 @@
         if (obj === this._grip0 || obj === this._grip1) return true;
         if (obj === this.explorer.camera) return true;
         if (obj === this._labelMesh) return true;
+        if (obj === this._anchorMarker) return true;
         var spatialMesh = this.spatialPanel ? this.spatialPanel.getMesh() : null;
         if (spatialMesh && obj === spatialMesh) return true;
         return false;
@@ -740,7 +740,11 @@
         this._trigger0 = this._trigger1 = false;
         this._pinchInitDist = 0;
         this._triggerTravel0 = 0;
-        this._clearRotationAnchor();
+        this._clearFocusAnchor();
+        this._disposeAnchorMarker();
+        this._selectionLines = null;
+        this._selectionUntil = 0;
+        this._hudReveal = null;
         this._needsInitialPlacement = false;
 
         // Restore DOM chrome
@@ -825,11 +829,10 @@
     };
 
     /**
-     * World-space point to orbit during rotate gestures.
+     * World-space point for rotate/scale.
      * Prefer what you're looking at (ray hit); else a focus point ahead of the camera.
-     * Keeps nearby content stable instead of swinging around a distant model origin.
      */
-    VRManager.prototype._pickRotationAnchor = function () {
+    VRManager.prototype._pickFocusAnchor = function () {
         var xrCam = this.explorer.renderer.xr.getCamera();
         var camPos = xrCam.position;
         var forward = new THREE.Vector3(0, 0, -1).applyQuaternion(xrCam.quaternion);
@@ -845,29 +848,156 @@
         return camPos.clone().addScaledVector(forward, focusDist);
     };
 
-    VRManager.prototype._clearRotationAnchor = function () {
-        this._rotAnchor = null;
+    VRManager.prototype._ensureFocusAnchor = function () {
+        if (!this._focusAnchor) {
+            this._focusAnchor = this._pickFocusAnchor();
+        }
+        this._showAnchorMarker();
+        return this._focusAnchor;
     };
 
-    /** Apply euler deltas so a world anchor stays fixed (orbit, not spin-about-origin). */
+    VRManager.prototype._clearFocusAnchor = function () {
+        this._focusAnchor = null;
+        this._hideAnchorMarker();
+    };
+
+    VRManager.prototype._ensureAnchorMarker = function () {
+        if (this._anchorMarker) return this._anchorMarker;
+
+        var group = new THREE.Group();
+        group.name = 'vr-focus-anchor';
+        group.renderOrder = 1000;
+
+        var sphereMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            depthTest: false,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.95
+        });
+        var sphere = new THREE.Mesh(new THREE.SphereGeometry(0.014, 16, 16), sphereMat);
+        sphere.renderOrder = 1000;
+        group.add(sphere);
+
+        // 3D crosshair arms
+        var armLen = 0.045;
+        var lineMat = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            depthTest: false,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.75
+        });
+        var axes = [
+            [-armLen, 0, 0, armLen, 0, 0],
+            [0, -armLen, 0, 0, armLen, 0],
+            [0, 0, -armLen, 0, 0, armLen]
+        ];
+        for (var i = 0; i < axes.length; i++) {
+            var a = axes[i];
+            var geo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(a[0], a[1], a[2]),
+                new THREE.Vector3(a[3], a[4], a[5])
+            ]);
+            var line = new THREE.Line(geo, lineMat);
+            line.renderOrder = 1000;
+            group.add(line);
+        }
+
+        // Soft outer ring (camera-facing disc outline via thin torus)
+        var ring = new THREE.Mesh(
+            new THREE.TorusGeometry(0.028, 0.0025, 8, 32),
+            new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                depthTest: false,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.55
+            })
+        );
+        ring.renderOrder = 1000;
+        group.add(ring);
+        group.userData.ring = ring;
+
+        group.visible = false;
+        this.explorer.scene.add(group);
+        this._anchorMarker = group;
+        return group;
+    };
+
+    VRManager.prototype._showAnchorMarker = function () {
+        var marker = this._ensureAnchorMarker();
+        if (this._focusAnchor) marker.position.copy(this._focusAnchor);
+        marker.visible = true;
+    };
+
+    VRManager.prototype._hideAnchorMarker = function () {
+        if (this._anchorMarker) this._anchorMarker.visible = false;
+    };
+
+    VRManager.prototype._updateAnchorMarker = function () {
+        if (!this._anchorMarker || !this._anchorMarker.visible || !this._focusAnchor) return;
+        this._anchorMarker.position.copy(this._focusAnchor);
+        // Keep ring facing the user
+        var ring = this._anchorMarker.userData.ring;
+        if (ring) {
+            var xrCam = this.explorer.renderer.xr.getCamera();
+            ring.lookAt(xrCam.position);
+        }
+    };
+
+    VRManager.prototype._disposeAnchorMarker = function () {
+        if (!this._anchorMarker) return;
+        var marker = this._anchorMarker;
+        if (marker.parent) marker.parent.remove(marker);
+        marker.traverse(function (child) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+        });
+        this._anchorMarker = null;
+    };
+
+    /** Keep a world point fixed while changing pivot rotation. */
     VRManager.prototype._applyPivotRotation = function (dRotX, dRotY) {
         if (!this.pivot || (dRotX === 0 && dRotY === 0)) return;
 
-        if (!this._rotAnchor) {
-            this._rotAnchor = this._pickRotationAnchor();
-        }
-
+        var anchor = this._ensureFocusAnchor();
         this.pivot.updateMatrixWorld(true);
-        this._rotAnchorLocal.copy(this._rotAnchor);
-        this.pivot.worldToLocal(this._rotAnchorLocal);
+        this._focusAnchorLocal.copy(anchor);
+        this.pivot.worldToLocal(this._focusAnchorLocal);
 
         this.pivot.rotation.x += dRotX;
         this.pivot.rotation.y += dRotY;
         this.pivot.updateMatrixWorld(true);
 
-        this._rotAnchorTmp.copy(this._rotAnchorLocal);
-        this.pivot.localToWorld(this._rotAnchorTmp);
-        this.pivot.position.add(this._rotAnchor).sub(this._rotAnchorTmp);
+        this._focusAnchorTmp.copy(this._focusAnchorLocal);
+        this.pivot.localToWorld(this._focusAnchorTmp);
+        this.pivot.position.add(anchor).sub(this._focusAnchorTmp);
+        this._updateAnchorMarker();
+    };
+
+    /** Keep a world point fixed while changing pivot uniform scale. */
+    VRManager.prototype._applyPivotScale = function (newScale) {
+        if (!this.pivot) return;
+        newScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, newScale));
+        if (Math.abs(newScale - this.pivot.scale.x) < 1e-12) {
+            this._ensureFocusAnchor();
+            this._updateAnchorMarker();
+            return;
+        }
+
+        var anchor = this._ensureFocusAnchor();
+        this.pivot.updateMatrixWorld(true);
+        this._focusAnchorLocal.copy(anchor);
+        this.pivot.worldToLocal(this._focusAnchorLocal);
+
+        this.pivot.scale.setScalar(newScale);
+        this.pivot.updateMatrixWorld(true);
+
+        this._focusAnchorTmp.copy(this._focusAnchorLocal);
+        this.pivot.localToWorld(this._focusAnchorTmp);
+        this.pivot.position.add(anchor).sub(this._focusAnchorTmp);
+        this._updateAnchorMarker();
     };
 
     VRManager.prototype._updateTriggerDrag = function () {
@@ -882,16 +1012,16 @@
         if (this._trigger1) this.controller1.getWorldPosition(pos1);
 
         if (this._trigger0 && this._trigger1) {
-            // Both triggers: pinch-to-scale
-            this._clearRotationAnchor();
+            // Both triggers: pinch-to-scale around focus anchor
             var dist = pos0.distanceTo(pos1);
             if (this._pinchInitDist > 0) {
                 var ratio = dist / this._pinchInitDist;
-                var newScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, this._pinchInitScale * ratio));
-                this.pivot.scale.setScalar(newScale);
+                this._applyPivotScale(this._pinchInitScale * ratio);
             } else {
                 this._pinchInitDist  = dist;
                 this._pinchInitScale = this.pivot.scale.x;
+                this._ensureFocusAnchor();
+                this._updateAnchorMarker();
             }
             this._prevPos0.copy(pos0);
             this._prevPos1.copy(pos1);
@@ -933,9 +1063,9 @@
 
     VRManager.prototype._updateThumbsticks = function () {
         var session = this.explorer.renderer.xr.getSession();
-        if (!session || !session.inputSources) return;
+        if (!session || !session.inputSources) return false;
 
-        var rotating = false;
+        var transforming = false;
 
         for (var i = 0; i < session.inputSources.length; i++) {
             var src = session.inputSources[i];
@@ -953,11 +1083,11 @@
                 if (Math.abs(ax) > THUMBSTICK_DEAD) dYaw = ax * THUMBSTICK_ROT;
                 if (Math.abs(ay) > THUMBSTICK_DEAD) dPitch = -ay * THUMBSTICK_ROT;
                 if (dYaw !== 0 || dPitch !== 0) {
-                    rotating = true;
+                    transforming = true;
                     this._applyPivotRotation(dPitch, dYaw);
                 }
             } else if (src.handedness === 'left') {
-                // X — camera-relative horizontal pan; Y — scale
+                // X — camera-relative horizontal pan; Y — scale about focus
                 if (Math.abs(ax) > THUMBSTICK_DEAD || Math.abs(ay) > THUMBSTICK_DEAD) {
                     if (Math.abs(ax) > THUMBSTICK_DEAD) {
                         var xrCam = this.explorer.renderer.xr.getCamera();
@@ -969,14 +1099,14 @@
                         }
                     }
                     if (Math.abs(ay) > THUMBSTICK_DEAD) {
-                        var newScale = this.pivot.scale.x * (1 - ay * THUMBSTICK_SCALE);
-                        this.pivot.scale.setScalar(Math.max(SCALE_MIN, Math.min(SCALE_MAX, newScale)));
+                        transforming = true;
+                        this._applyPivotScale(this.pivot.scale.x * (1 - ay * THUMBSTICK_SCALE));
                     }
                 }
             }
         }
 
-        return rotating;
+        return transforming;
     };
 
     VRManager.prototype._updateInteraction = function () {
@@ -984,16 +1114,16 @@
 
         // Grip pan > trigger rotate/pinch > thumbsticks
         if (this._updateGripDrag()) {
-            this._clearRotationAnchor();
+            this._clearFocusAnchor();
             return;
         }
         if (this._updateTriggerDrag()) {
-            // Single-trigger rotate keeps anchor; release both clears via next frames
-            if (!this._trigger0 && !this._trigger1) this._clearRotationAnchor();
+            this._updateAnchorMarker();
             return;
         }
-        var rotating = this._updateThumbsticks();
-        if (!rotating) this._clearRotationAnchor();
+        var transforming = this._updateThumbsticks();
+        if (!transforming) this._clearFocusAnchor();
+        else this._updateAnchorMarker();
     };
 
     // -------------------------------------------------------------------------
@@ -1017,7 +1147,20 @@
     VRManager.prototype._toggleHud = function () {
         if (!this._hudTL) return;
         var vis = !this._hudTL.visible;
-        [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) { if (m) m.visible = vis; });
+        if (vis) {
+            [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) {
+                if (m) m.visible = true;
+            });
+            this._startHudReveal();
+        } else {
+            this._hudReveal = null;
+            [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) {
+                if (m) {
+                    m.visible = false;
+                    m.material.opacity = 1;
+                }
+            });
+        }
         if (this.navMenu && this.navMenu._toggleButtons) {
             var self = this;
             this.navMenu._toggleButtons.forEach(function (btn) {
@@ -1030,13 +1173,13 @@
         var self = this;
         this._stopPanelUpdate();
         this._panelInterval = setInterval(function () {
-            var lines = self._readPanelLines();
-            if (self.spatialPanel) self.spatialPanel.update(lines);
+            var lines = self._hudLines();
+            if (self.spatialPanel && self.spatialPanel.getMesh().visible) {
+                self.spatialPanel.update(self._readPanelLines());
+            }
             self._drawHud(lines);
         }, 1000);
-        var initLines = this._readPanelLines();
-        if (this.spatialPanel) this.spatialPanel.update(initLines);
-        this._drawHud(initLines);
+        this._drawHud(this._hudLines());
     };
 
     VRManager.prototype._stopPanelUpdate = function () {
@@ -1177,19 +1320,38 @@
             });
 
         } else if (corner === 'BR') {
-            // Data source + timestamp — right-aligned, dim
-            var discEl = document.querySelector('.disclaimer');
-            var src    = discEl ? discEl.textContent.trim().replace(/\s+/g, ' ') : 'Data: Mempool.space';
-            var now    = new Date();
-            var ts     = now.toUTCString().replace(/:\d\d GMT$/, ' UTC');
-
             ctx.textAlign = 'right';
-            ctx.font      = '300 19px "Inter", sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.28)';
-            ctx.fillText(src, W - PAD, PAD);
-            ctx.font      = '300 17px "Inter", sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.18)';
-            ctx.fillText(ts, W - PAD, PAD + 30);
+            if (this._selectionLines && performance.now() < this._selectionUntil) {
+                // Pointer-select mode — show selection context instead of feed meta
+                var extra = lines.slice(5, 8);
+                ctx.font      = '300 17px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.32)';
+                ctx.fillText('OBJECT SELECTED', W - PAD, PAD);
+                ctx.font      = '300 20px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.78)';
+                extra.forEach(function (line, i) {
+                    var text = line.length > 36 ? line.slice(0, 34) + '…' : line;
+                    ctx.fillText(text, W - PAD, PAD + 34 + i * 28);
+                });
+                if (extra.length === 0) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+                    ctx.font      = '300 17px "Inter", sans-serif';
+                    ctx.fillText('Details on left / top', W - PAD, PAD + 34);
+                }
+            } else {
+                // Data source + timestamp — right-aligned, dim
+                var discEl = document.querySelector('.disclaimer');
+                var src    = discEl ? discEl.textContent.trim().replace(/\s+/g, ' ') : 'Data: Mempool.space';
+                var now    = new Date();
+                var ts     = now.toUTCString().replace(/:\d\d GMT$/, ' UTC');
+
+                ctx.font      = '300 19px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.28)';
+                ctx.fillText(src, W - PAD, PAD);
+                ctx.font      = '300 17px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.18)';
+                ctx.fillText(ts, W - PAD, PAD + 30);
+            }
         }
     };
 
@@ -1210,14 +1372,22 @@
         if (!this._hudTL) this._buildHud();
         this._hudPivot = new THREE.Group();
 
-        this._hudTL.position.set(-HUD_X,  HUD_Y_TOP, HUD_Z);
-        this._hudTR.position.set( HUD_X,  HUD_Y_TOP, HUD_Z);
-        this._hudBL.position.set(-HUD_X, -HUD_Y_BOT, HUD_Z);
-        this._hudBR.position.set( HUD_X, -HUD_Y_BOT, HUD_Z);
+        this._hudBasePos = {
+            TL: new THREE.Vector3(-HUD_X,  HUD_Y_TOP, HUD_Z),
+            TR: new THREE.Vector3( HUD_X,  HUD_Y_TOP, HUD_Z),
+            BL: new THREE.Vector3(-HUD_X, -HUD_Y_BOT, HUD_Z),
+            BR: new THREE.Vector3( HUD_X, -HUD_Y_BOT, HUD_Z)
+        };
+
+        this._hudTL.position.copy(this._hudBasePos.TL);
+        this._hudTR.position.copy(this._hudBasePos.TR);
+        this._hudBL.position.copy(this._hudBasePos.BL);
+        this._hudBR.position.copy(this._hudBasePos.BR);
 
         [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) {
             m.quaternion.identity();
             m.frustumCulled = false;
+            m.material.transparent = true;
             self._hudPivot.add(m);
         });
 
@@ -1226,7 +1396,64 @@
     };
 
     VRManager.prototype._detachHud = function () {
+        this._hudReveal = null;
         if (this._hudPivot) this.explorer.camera.remove(this._hudPivot);
+    };
+
+    /** Staggered corner reveal — opacity + slide-in from outside. */
+    VRManager.prototype._startHudReveal = function () {
+        if (!this._hudTL || !this._hudBasePos) return;
+        var panels = [
+            { mesh: this._hudTL, key: 'TL', sx: -1, sy:  1 },
+            { mesh: this._hudTR, key: 'TR', sx:  1, sy:  1 },
+            { mesh: this._hudBL, key: 'BL', sx: -1, sy: -1 },
+            { mesh: this._hudBR, key: 'BR', sx:  1, sy: -1 }
+        ];
+        panels.forEach(function (p) {
+            if (!p.mesh) return;
+            p.mesh.visible = true;
+            p.mesh.material.opacity = 0;
+        });
+        this._hudReveal = {
+            start: performance.now(),
+            panels: panels
+        };
+        this._updateHudReveal();
+    };
+
+    VRManager.prototype._updateHudReveal = function () {
+        if (!this._hudReveal || !this._hudBasePos) return;
+
+        var now = performance.now();
+        var allDone = true;
+        var panels = this._hudReveal.panels;
+
+        for (var i = 0; i < panels.length; i++) {
+            var p = panels[i];
+            if (!p.mesh) continue;
+            var local = (now - this._hudReveal.start - i * HUD_REVEAL_STAGGER) / HUD_REVEAL_DUR;
+            if (local < 1) allDone = false;
+            var t = local <= 0 ? 0 : (local >= 1 ? 1 : local);
+            // easeOutCubic
+            var e = 1 - Math.pow(1 - t, 3);
+            var base = this._hudBasePos[p.key];
+            p.mesh.material.opacity = e;
+            p.mesh.position.set(
+                base.x + (1 - e) * HUD_REVEAL_SLIDE * p.sx,
+                base.y + (1 - e) * HUD_REVEAL_SLIDE * p.sy,
+                base.z
+            );
+        }
+
+        if (allDone) {
+            for (var j = 0; j < panels.length; j++) {
+                var q = panels[j];
+                if (!q.mesh) continue;
+                q.mesh.material.opacity = 1;
+                q.mesh.position.copy(this._hudBasePos[q.key]);
+            }
+            this._hudReveal = null;
+        }
     };
 
     // Sync HUD pivot to XR head pose every frame.
@@ -1261,17 +1488,14 @@
             this._needsInitialPlacement = false;
         }
 
-        // Spatial panel faces XR camera
+        // Spatial panel faces XR camera (optional; off by default)
         if (this.spatialPanel && this.spatialPanel.getMesh().visible) {
             var xrCam = this.explorer.renderer.xr.getCamera();
             if (xrCam) this.spatialPanel.getMesh().lookAt(xrCam.position);
         }
 
-        // Selection label faces XR camera
-        if (this._labelMesh) {
-            var xrCam2 = this.explorer.renderer.xr.getCamera();
-            if (xrCam2) this._labelMesh.lookAt(xrCam2.position);
-        }
+        // Staggered HUD corner reveal
+        this._updateHudReveal();
 
         // Nav menu hover + haptic tick on new hover
         if (this.controller0 && this.navMenu) {
