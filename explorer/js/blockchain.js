@@ -59,8 +59,7 @@ class BitcoinBlockchainExplorer {
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.enabled = false;
         container.appendChild(this.renderer.domElement);
         
         window.addEventListener('resize', () => this.onWindowResize());
@@ -881,33 +880,29 @@ class BitcoinBlockchainExplorer {
     }
     
     createScene() {
-        // Add lighting for shadows
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+        // Even fill lighting — no hard key so the helix isn’t lit on one side only
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
         this.scene.add(ambientLight);
-        
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 10, 5);
-        directionalLight.castShadow = true;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
-        this.scene.add(directionalLight);
-        
-        // Add fill lights for softer illumination
-        const fillLight1 = new THREE.DirectionalLight(0xffffff, 0.3);
-        fillLight1.position.set(-10, -10, -5);
-        this.scene.add(fillLight1);
-        
-        const fillLight2 = new THREE.DirectionalLight(0xffffff, 0.2);
-        fillLight2.position.set(0, 20, 0);
-        this.scene.add(fillLight2);
-        
-        const fillLight3 = new THREE.DirectionalLight(0xffffff, 0.15);
-        fillLight3.position.set(0, -20, 0);
-        this.scene.add(fillLight3);
-        
-        // Grid hidden for cleaner look
-        // const gridHelper = new THREE.GridHelper(100, 100, 0x333333, 0x222222);
-        // this.scene.add(gridHelper);
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.45);
+        hemiLight.position.set(0, 1, 0);
+        this.scene.add(hemiLight);
+
+        // Weak opposing fills for subtle edge definition without hotspots
+        const fillA = new THREE.DirectionalLight(0xffffff, 0.22);
+        fillA.position.set(8, 10, 6);
+        fillA.castShadow = false;
+        this.scene.add(fillA);
+
+        const fillB = new THREE.DirectionalLight(0xffffff, 0.22);
+        fillB.position.set(-8, 4, -6);
+        fillB.castShadow = false;
+        this.scene.add(fillB);
+
+        const fillC = new THREE.DirectionalLight(0xffffff, 0.16);
+        fillC.position.set(0, -8, 2);
+        fillC.castShadow = false;
+        this.scene.add(fillC);
         
         this.createBlockchainVisualization();
     }
@@ -919,10 +914,10 @@ class BitcoinBlockchainExplorer {
         const discThickness = 0.05;
         // const discRadius = 1.7; // Removed fixed radius
         
-        // Color gradient: darker at genesis, progressively brighter as discs are added.
-        // MeshBasicMaterial so helix orientation / scene lights don't scramble perceived brightness.
-        const startColor = new THREE.Color(0x222222);
-        const endColor = new THREE.Color(0xffffff);
+        // Color gradient: darker at genesis → brighter toward tip.
+        // Cap below pure white so StandardMaterial still has headroom for lit edges/highlights.
+        const startColor = new THREE.Color(0x2a2a2a);
+        const endColor = new THREE.Color(0xc8c8c8);
         
         // Special sphere indices for highlighting important blocks
         const specialSpheres = [
@@ -982,8 +977,14 @@ class BitcoinBlockchainExplorer {
 
 
             const geometry = new THREE.CylinderGeometry(randomRadius, randomRadius, discThickness, 32);
-            const material = new THREE.MeshBasicMaterial({
-                color: color
+            const material = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 1.0,
+                metalness: 0.0,
+                // Reduce z-fighting where tightly packed discs overlap in depth
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
             });
             
             const disc = new THREE.Mesh(geometry, material);
@@ -991,7 +992,7 @@ class BitcoinBlockchainExplorer {
             disc.rotation.set(Math.PI / 2, 0, t);
             
             disc.castShadow = false;
-            disc.receiveShadow = true;
+            disc.receiveShadow = false;
             disc.userData = { 
                 index: i, 
                 t: t,
@@ -1010,14 +1011,15 @@ class BitcoinBlockchainExplorer {
         const mempoolY = -(height * mempoolT) + 21; // Inverted Y-axis direction
         const mempoolZ = -radius * Math.sin(mempoolT); // Inverted Z-axis direction
         
-        // Create mempool disc with distinct appearance
+        // Create mempool disc with distinct appearance (lit tip, not a flood light)
         const mempoolRadius = 1.8; // Slightly larger than regular discs
         const mempoolGeometry = new THREE.CylinderGeometry(mempoolRadius, mempoolRadius, discThickness, 32);
         const mempoolMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffff, // White color to emit light
-            roughness: 0.0, // Completely smooth for maximum reflectivity
-            metalness: 0.8, // High metallic for bright appearance
-            emissive: 0x888888 // Much higher emissive for self-illumination
+            color: 0xf0f0f0,
+            roughness: 1.0,
+            metalness: 0.0,
+            emissive: 0x222222,
+            emissiveIntensity: 0.25
         });
         
         const mempoolDisc = new THREE.Mesh(mempoolGeometry, mempoolMaterial);
@@ -1025,7 +1027,7 @@ class BitcoinBlockchainExplorer {
         mempoolDisc.rotation.set(Math.PI / 2, 0, mempoolT);
         
         mempoolDisc.castShadow = false;
-        mempoolDisc.receiveShadow = true;
+        mempoolDisc.receiveShadow = false;
         mempoolDisc.userData = { 
             index: numDiscs,
             t: mempoolT,
@@ -1035,21 +1037,12 @@ class BitcoinBlockchainExplorer {
         this.scene.add(mempoolDisc);
         this.blocks.push(mempoolDisc);
         
-        // Add a point light at the mempool disc position to make it emit light
-        const mempoolLight = new THREE.PointLight(0xffffff, 3.0, 25); // White light, much higher intensity 3.0, distance 25
-        mempoolLight.position.set(mempoolX, mempoolY, mempoolZ);
-        mempoolLight.castShadow = true;
-        mempoolLight.shadow.mapSize.width = 512;
-        mempoolLight.shadow.mapSize.height = 512;
-        this.scene.add(mempoolLight);
-        
         // Rotate the entire helix 90 degrees around X-axis
+        const helixRot = new THREE.Matrix4().makeRotationX(Math.PI / 2);
         this.blocks.forEach(block => {
             if (!block.userData.special) { // Only rotate helix discs, not UTXOs
                 const originalPosition = block.position.clone();
-                const rotationMatrix = new THREE.Matrix4();
-                rotationMatrix.makeRotationX(Math.PI / 2); // 90 degrees
-                originalPosition.applyMatrix4(rotationMatrix);
+                originalPosition.applyMatrix4(helixRot);
                 block.position.copy(originalPosition);
                 
                 // Adjust the disc's rotation to maintain proper orientation
