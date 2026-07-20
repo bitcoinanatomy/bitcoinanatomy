@@ -230,24 +230,6 @@
                     .catch(function (e) { console.warn('[VRButton] AR session failed:', e); });
             }
 
-            function showAutoOverlay() {
-                if (document.getElementById('vr-auto-overlay')) return;
-                var FC = '"BureauGrotesque", sans-serif';
-                var F  = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-                var ol = document.createElement('div');
-                ol.id = 'vr-auto-overlay';
-                ol.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:10vh;cursor:pointer;background:transparent;';
-                var label = document.createElement('div');
-                label.textContent = 'TAP TO ENTER XR';
-                label.style.cssText = 'font-family:' + FC + ';font-size:clamp(1.4rem,4vw,2.4rem);font-weight:400;letter-spacing:0.12em;color:rgba(255,255,255,0.90);pointer-events:none;user-select:none;text-transform:uppercase;';
-                var sub = document.createElement('div');
-                sub.textContent = arSupported ? 'VR + Mixed Reality available' : 'WebXR headset detected';
-                sub.style.cssText = 'margin-top:10px;font-family:' + F + ';font-size:0.72rem;font-weight:300;letter-spacing:0.1em;color:rgba(255,255,255,0.35);pointer-events:none;user-select:none;text-transform:uppercase;';
-                ol.appendChild(label); ol.appendChild(sub);
-                document.body.appendChild(ol);
-                ol.addEventListener('click', function () { ol.remove(); startVR(); });
-            }
-
             if ('xr' in navigator) {
                 // Check VR support
                 navigator.xr.isSessionSupported('immersive-vr').then(function (supported) {
@@ -256,7 +238,7 @@
                     vrBtn.disabled    = false;
                     if (supported) {
                         vrBtn.title = 'Enter immersive VR mode';
-                        showAutoOverlay();
+                        startVR();
                     } else {
                         vrBtn.style.opacity = '0.6';
                         vrBtn.title = 'VR not detected — click for setup instructions';

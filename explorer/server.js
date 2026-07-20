@@ -1,11 +1,24 @@
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const PORT = 8080;
 const HTTPS_PORT = 8443;
+const HOST = '0.0.0.0';
 const ROOT = path.join(__dirname, '..');
+
+function lanIPs() {
+    var ips = [];
+    var nets = os.networkInterfaces();
+    Object.keys(nets).forEach(function (name) {
+        nets[name].forEach(function (net) {
+            if (net.family === 'IPv4' && !net.internal) ips.push(net.address);
+        });
+    });
+    return ips;
+}
 
 const MIME = {
     '.html': 'text/html',
@@ -25,12 +38,18 @@ const XR_HEADERS = {
     'Cross-Origin-Embedder-Policy': 'require-corp',
 };
 
-function handler(req, res) {
-    const urlPath = req.url.split('?')[0];
-    const filePath = path.join(ROOT, urlPath === '/' ? 'explorer/network.html' : urlPath);
-    const ext = path.extname(filePath);
+function resolvePath(urlPath) {
+    var clean = decodeURIComponent(urlPath.split('?')[0]);
+    if (clean === '/') return path.join(ROOT, 'explorer', 'index.html');
+    // Trailing slash or bare directory → index.html
+    if (clean.endsWith('/')) return path.join(ROOT, clean, 'index.html');
+    var candidate = path.join(ROOT, clean);
+    return candidate;
+}
 
-    fs.readFile(filePath, (err, data) => {
+function sendFile(res, filePath) {
+    var ext = path.extname(filePath);
+    fs.readFile(filePath, function (err, data) {
         if (err) {
             res.writeHead(404, { 'Content-Type': 'text/plain' });
             res.end('Not found');
@@ -44,8 +63,24 @@ function handler(req, res) {
     });
 }
 
-// Always start plain HTTP (works for localhost WebXR in Chrome/Firefox)
-http.createServer(handler).listen(PORT, () => {
+function handler(req, res) {
+    var filePath = resolvePath(req.url);
+
+    fs.stat(filePath, function (err, stat) {
+        if (!err && stat.isDirectory()) {
+            sendFile(res, path.join(filePath, 'index.html'));
+            return;
+        }
+        sendFile(res, filePath);
+    });
+}
+
+// Plain HTTP (works for localhost WebXR in Chrome/Firefox)
+var httpServer = http.createServer(handler);
+httpServer.on('error', function (err) {
+    console.warn(`[HTTP] port ${PORT} unavailable (${err.code}) — continuing without it`);
+});
+httpServer.listen(PORT, HOST, () => {
     console.log(`HTTP  server: http://localhost:${PORT}/`);
     console.log(`Open  http://localhost:${PORT}/explorer/network.html`);
     console.log('');
@@ -71,9 +106,12 @@ if (wantsHttps) {
             key:  fs.readFileSync(sslKey),
             cert: fs.readFileSync(sslCert),
         };
-        https.createServer(options, handler).listen(HTTPS_PORT, () => {
+        https.createServer(options, handler).listen(HTTPS_PORT, HOST, () => {
             console.log(`HTTPS server: https://localhost:${HTTPS_PORT}/`);
-            console.log(`Open  https://localhost:${HTTPS_PORT}/network.html`);
+            lanIPs().forEach(function (ip) {
+                console.log(`Quest  URL:  https://${ip}:${HTTPS_PORT}/explorer/`);
+            });
+            console.log('(Accept the self-signed cert warning in Quest Browser)');
         });
     }
 }

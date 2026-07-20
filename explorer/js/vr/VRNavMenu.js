@@ -242,7 +242,7 @@
                 label:    'HUD',
                 getState: function () {
                     var vm = self.vrManager;
-                    return vm && vm._hudL ? vm._hudL.visible : false;
+                    return vm && vm._hudTL ? vm._hudTL.visible : false;
                 },
                 onSelect: function (mesh) {
                     if (self.vrManager) self.vrManager._toggleHud();
