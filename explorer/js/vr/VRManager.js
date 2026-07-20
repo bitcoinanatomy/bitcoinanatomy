@@ -12,7 +12,7 @@
  *   Left / right grip (hold+drag)  — grab and pan / move the scene in space
  *   Left  grip (tap)               — toggle wrist nav menu  (hold both grips → reset)
  *   Right grip (tap)               — toggle HUD (staggered reveal; both grips → reset)
- *   Pointers                       — rays on both controllers; hover scales target
+ *   Pointers                       — rays on both controllers; hover/select per-page whitelist
  *   HUD                            — staggered corner reveal on show / pointer select
  *
  * Note: getController(0/1) is connection order only. Quest and the Immersive Web
@@ -72,8 +72,8 @@
     var HUD_H_TOP    = 0.068;       // top panels physical height (m)
     var HUD_H_BOT    = 0.092;       // bottom panels physical height (m)
     var HUD_X        = 0.20;        // horizontal offset from center
-    var HUD_Y_TOP    = 0.12;        // upward offset for top panels
-    var HUD_Y_BOT    = 0.09;        // downward offset for bottom panels
+    var HUD_Y_TOP    = 0.02;        // upward offset for top panels (lower overall HUD)
+    var HUD_Y_BOT    = 0.18;        // downward offset for bottom panels
     var HUD_CW       = 512;         // canvas pixel width (all panels)
     var HUD_CH_TOP   = 192;         // canvas pixel height (top panels)
     var HUD_CH_BOT   = 256;         // canvas pixel height (bottom panels)
@@ -132,6 +132,7 @@
         this._hudBgAlpha = 0.82;
         this._hudBasePos = null;   // resting corner positions
         this._hudReveal  = null;   // staggered reveal animation state
+        this._hudSigs    = { TL: null, TR: null, BL: null, BR: null };
         this._selectionLines = null;
         this._selectionUntil = 0;
 
@@ -471,6 +472,65 @@
     // Pointer hover + object selection → HUD
     // -------------------------------------------------------------------------
 
+    VRManager.prototype._pageId = function () {
+        return window.location.pathname.split('/').pop() || 'network.html';
+    };
+
+    /**
+     * Per-page whitelist of pointer-selectable meshes.
+     * Non-matching geometry is ignored for hover scale and trigger select.
+     * Pages may override via explorer.isVRSelectable(obj).
+     */
+    VRManager.prototype._isPointerSelectable = function (obj) {
+        if (!obj || obj === this.pivot) return false;
+        var ex = this.explorer;
+        if (ex && typeof ex.isVRSelectable === 'function') {
+            try { return !!ex.isVRSelectable(obj); } catch (e) { /* fall through */ }
+        }
+
+        var ud = obj.userData || {};
+        var page = this._pageId();
+
+        switch (page) {
+            case 'blockchain.html':
+                // Epoch / genesis / mempool discs only — not UTXO spheres
+                return !ud.special && (ud.t != null || ud.isMempool === true);
+
+            case 'block.html':
+                // Transaction cuboids only (not header / past-future blocks / UTXOs)
+                return !!ud.txid;
+
+            case 'difficulty.html':
+                // Spiral blocks only (not adjustment discs)
+                return ud.isBlock === true;
+
+            case 'network.html':
+                // Peer nodes only
+                return !!ud.address;
+
+            case 'mempool.html':
+                // Fee-rate cuboids
+                return ud.feeRate != null || !!ud.txid;
+
+            case 'address.html':
+                // History txs + UTXO spheres (not the address body)
+                return ud.type === 'transaction' || ud.type === 'utxo';
+
+            case 'transaction.html':
+                // Central tx + input/output tubes and caps
+                return ud.type === 'transaction' ||
+                    ud.type === 'input' || ud.type === 'output' ||
+                    ud.type === 'input-cap' || ud.type === 'output-cap';
+
+            case 'node.html':
+                // Protocol feature cuboids + helix/spiral navigators
+                return !!(ud.name && (ud.type === 'Bitcoin Protocol' || ud.url));
+
+            default:
+                return !!(ud.txid || ud.address || ud.isBlock || ud.t != null || ud.type || ud.name);
+        }
+    };
+
     VRManager.prototype._castFromController = function (controller, raycaster) {
         if (!controller || !this.pivot) return null;
         this._hoverTempMat.identity().extractRotation(controller.matrixWorld);
@@ -478,33 +538,23 @@
         raycaster.ray.direction.set(0, 0, -1).applyMatrix4(this._hoverTempMat);
         var hits = raycaster.intersectObjects(this.pivot.children, true);
         if (!hits.length) return null;
-        // Prefer meshes with useful userData (skip empty helpers)
+        // First hit that resolves to a page-allowed selectable
         for (var i = 0; i < hits.length; i++) {
             var o = this._resolveSelectTarget(hits[i].object);
-            if (o && o !== this.pivot) {
+            if (o) {
                 return { object: o, point: hits[i].point, distance: hits[i].distance, hitObject: hits[i].object };
             }
         }
-        return { object: hits[0].object, point: hits[0].point, distance: hits[0].distance, hitObject: hits[0].object };
+        return null;
     };
 
     VRManager.prototype._resolveSelectTarget = function (obj) {
         var o = obj;
         while (o && o !== this.pivot) {
-            var ud = o.userData || {};
-            if (
-                ud.isMempool || ud.isGenesis || ud.isMilestone ||
-                ud.txid || ud.address || ud.blockHeight != null ||
-                (typeof ud.index === 'number' && (ud.t != null || ud.progress != null || ud.layer != null)) ||
-                ud.type === 'currentBlock' || ud.type === 'pastBlock' || ud.type === 'futureBlock' ||
-                ud.type === 'header' || ud.type === 'blockUtxo' ||
-                ud.name || ud.label
-            ) {
-                return o;
-            }
+            if (this._isPointerSelectable(o)) return o;
             o = o.parent;
         }
-        return obj;
+        return null;
     };
 
     VRManager.prototype._clearHover = function () {
@@ -582,7 +632,8 @@
     };
 
     VRManager.prototype._getObjectLines = function (obj) {
-        obj = this._resolveSelectTarget(obj);
+        obj = this._resolveSelectTarget(obj) || obj;
+        if (!obj) return ['Selected: —'];
         var ex = this.explorer;
         if (ex && typeof ex.getVRObjectInfo === 'function') {
             try {
@@ -591,7 +642,7 @@
             } catch (e) { /* fall through */ }
         }
 
-        var ud = (obj && obj.userData) || {};
+        var ud = obj.userData || {};
         var lines = [];
 
         if (ud.isMempool) {
@@ -671,8 +722,9 @@
             if (m) m.visible = true;
         });
 
-        this._drawHud(lines);
-        this._startHudReveal();
+        // Only re-reveal corners whose content actually changed
+        var changed = this._drawHud(lines);
+        if (changed && changed.length) this._startHudReveal(changed);
     };
 
     VRManager.prototype._hudLines = function () {
@@ -1545,16 +1597,45 @@
         }
     };
 
+    /** Stable content fingerprint per corner (ignores live clock on BR meta). */
+    VRManager.prototype._hudCornerSig = function (corner, lines) {
+        lines = lines || [];
+        if (corner === 'TL') {
+            return (window.location.pathname.split('/').pop() || 'explorer').replace('.html', '');
+        }
+        if (corner === 'TR') return String(lines[0] || '');
+        if (corner === 'BL') return lines.slice(1, 5).join('\n');
+        if (corner === 'BR') {
+            if (this._selectionLines && performance.now() < this._selectionUntil) {
+                return 'SEL|' + lines.slice(5, 8).join('\n');
+            }
+            return 'META';
+        }
+        return '';
+    };
+
+    /** Draw HUD; returns list of corner keys whose content changed ('TL'|'TR'|'BL'|'BR'). */
     VRManager.prototype._drawHud = function (lines) {
-        if (!this._hudTL) return;
-        this._drawCorner(this._hudTLCtx, this._hudTLCanvas, 'TL', lines);
-        this._drawCorner(this._hudTRCtx, this._hudTRCanvas, 'TR', lines);
-        this._drawCorner(this._hudBLCtx, this._hudBLCanvas, 'BL', lines);
-        this._drawCorner(this._hudBRCtx, this._hudBRCanvas, 'BR', lines);
-        this._hudTLTex.needsUpdate = true;
-        this._hudTRTex.needsUpdate = true;
-        this._hudBLTex.needsUpdate = true;
-        this._hudBRTex.needsUpdate = true;
+        if (!this._hudTL) return [];
+        lines = lines || [];
+        var corners = [
+            { key: 'TL', ctx: this._hudTLCtx, canvas: this._hudTLCanvas, tex: this._hudTLTex },
+            { key: 'TR', ctx: this._hudTRCtx, canvas: this._hudTRCanvas, tex: this._hudTRTex },
+            { key: 'BL', ctx: this._hudBLCtx, canvas: this._hudBLCanvas, tex: this._hudBLTex },
+            { key: 'BR', ctx: this._hudBRCtx, canvas: this._hudBRCanvas, tex: this._hudBRTex }
+        ];
+        var changed = [];
+        for (var i = 0; i < corners.length; i++) {
+            var c = corners[i];
+            var sig = this._hudCornerSig(c.key, lines);
+            if (sig !== this._hudSigs[c.key]) {
+                this._hudSigs[c.key] = sig;
+                changed.push(c.key);
+            }
+            this._drawCorner(c.ctx, c.canvas, c.key, lines);
+            c.tex.needsUpdate = true;
+        }
+        return changed;
     };
 
     VRManager.prototype._attachHud = function () {
@@ -1590,20 +1671,45 @@
         if (this._hudPivot) this.explorer.camera.remove(this._hudPivot);
     };
 
-    /** Staggered corner reveal — opacity + slide-in from outside. */
-    VRManager.prototype._startHudReveal = function () {
+    /**
+     * Staggered corner reveal — opacity + slide-in from outside.
+     * @param {string[]} [keys] — optional subset ('TL'|'TR'|'BL'|'BR'); default all.
+     */
+    VRManager.prototype._startHudReveal = function (keys) {
         if (!this._hudTL || !this._hudBasePos) return;
-        var panels = [
+
+        var all = [
             { mesh: this._hudTL, key: 'TL', sx: -1, sy:  1 },
             { mesh: this._hudTR, key: 'TR', sx:  1, sy:  1 },
             { mesh: this._hudBL, key: 'BL', sx: -1, sy: -1 },
             { mesh: this._hudBR, key: 'BR', sx:  1, sy: -1 }
         ];
-        panels.forEach(function (p) {
-            if (!p.mesh) return;
+        var want = null;
+        if (keys && keys.length) {
+            want = {};
+            for (var k = 0; k < keys.length; k++) want[keys[k]] = true;
+        }
+
+        var panels = [];
+        for (var i = 0; i < all.length; i++) {
+            var p = all[i];
+            if (!p.mesh) continue;
             p.mesh.visible = true;
+            if (want && !want[p.key]) {
+                // Unchanged panels stay fully visible at rest
+                p.mesh.material.opacity = 1;
+                p.mesh.position.copy(this._hudBasePos[p.key]);
+                continue;
+            }
             p.mesh.material.opacity = 0;
-        });
+            panels.push(p);
+        }
+
+        if (!panels.length) {
+            this._hudReveal = null;
+            return;
+        }
+
         this._hudReveal = {
             start: performance.now(),
             panels: panels
