@@ -312,7 +312,7 @@
 
     VRNavMenu.prototype.attachToController = function (controller) {
         controller.add(this.group);
-        this.group.position.set(0, 0.10, -0.05);
+        this.group.position.set(0, 0.18, -0.05);
         this.group.rotation.x = -0.35;
     };
 

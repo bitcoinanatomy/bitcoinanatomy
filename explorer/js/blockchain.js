@@ -919,9 +919,10 @@ class BitcoinBlockchainExplorer {
         const discThickness = 0.05;
         // const discRadius = 1.7; // Removed fixed radius
         
-        // Color gradient parameters
-        const startColor = new THREE.Color(0x555555); // Grey
-        const endColor = new THREE.Color(0xffffff); // White
+        // Color gradient: darker at genesis, progressively brighter as discs are added.
+        // MeshBasicMaterial so helix orientation / scene lights don't scramble perceived brightness.
+        const startColor = new THREE.Color(0x222222);
+        const endColor = new THREE.Color(0xffffff);
         
         // Special sphere indices for highlighting important blocks
         const specialSpheres = [
@@ -943,7 +944,7 @@ class BitcoinBlockchainExplorer {
             const z = -radius * Math.sin(t); // Inverted Z-axis direction
             
             // Calculate color based on position in the sequence
-            const progress = i / (numDiscs - 1);
+            const progress = numDiscs <= 1 ? 1 : i / (numDiscs - 1);
             const color = new THREE.Color().lerpColors(startColor, endColor, progress);
             
             // Create cylinder disc with random radius
@@ -981,10 +982,8 @@ class BitcoinBlockchainExplorer {
 
 
             const geometry = new THREE.CylinderGeometry(randomRadius, randomRadius, discThickness, 32);
-            const material = new THREE.MeshStandardMaterial({
-                color: color,
-                roughness: 0.8,
-                metalness: 0.0
+            const material = new THREE.MeshBasicMaterial({
+                color: color
             });
             
             const disc = new THREE.Mesh(geometry, material);

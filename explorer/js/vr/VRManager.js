@@ -1,16 +1,19 @@
 /**
  * VRManager — WebXR session lifecycle, controller setup, and spatial UI coordination.
  *
- * Controller mapping (both schemes supported):
- *   Right thumbstick (X/Y)         — rotate scene
+ * Controller mapping (resolved via XRInputSource.handedness — not slot index):
+ *   Right thumbstick (X/Y)         — rotate scene (around gaze / near-user focus)
  *   Left  thumbstick (Y)           — scale scene (up = bigger)
  *   Left  thumbstick (X)           — strafe / pan scene horizontally
- *   Right / left trigger (hold)    — rotate / tilt the scene
+ *   Right / left trigger (hold)    — rotate / tilt (same focus anchor)
  *   Both triggers (hold)           — pinch-to-scale
  *   Right trigger (tap / nav)      — select scene object  /  confirm nav menu item
  *   Left / right grip (hold+drag)  — grab and pan / move the scene in space
  *   Left  grip (tap)               — toggle wrist nav menu  (hold both grips → reset)
  *   Right grip (tap)               — toggle HUD             (hold both grips → reset)
+ *
+ * Note: getController(0/1) is connection order only. Quest and the Immersive Web
+ * Emulator often disagree on which index is left/right; handedness keeps them aligned.
  *
  * AR / MR support: detects immersive-ar blend mode → transparent background,
  * no scene fog, tighter initial scale (table-top feel), reduced HUD opacity.
@@ -52,6 +55,9 @@
     var THUMBSTICK_ROT   = 0.025;   // radians per frame per unit axis deflection
     var THUMBSTICK_SCALE = 0.03;    // scale factor per frame per unit axis deflection
     var THUMBSTICK_PAN   = 0.02;    // metres per frame per unit axis deflection
+    // Grip-drag pan gain: 1:1 near the model; grows with distance / scale so huge scenes still move
+    var GRIP_PAN_REF_DIST  = 0.8;   // metres — typical place-in-front distance
+    var GRIP_PAN_REF_SCALE = 0.05;  // typical VR content scale
 
     // HUD corner geometry (all panels at 60 cm — comfortable reading distance)
     var HUD_Z        = -0.60;
@@ -73,12 +79,14 @@
         this.panelTitle = options.panelTitle || 'Info';
         this.panelDomId = options.panelDomId || null;
 
-        this.controller0 = null;   // right hand (ray source)
-        this.controller1 = null;   // left hand
-        this._grip0      = null;   // right controller grip (model host)
-        this._grip1      = null;   // left controller grip (model host)
+        this.controller0 = null;   // logical right hand (ray source) — after handedness resolve
+        this.controller1 = null;   // logical left hand
+        this._grip0      = null;   // logical right grip (model host)
+        this._grip1      = null;   // logical left grip
         this._ray0       = null;   // right ray Line mesh
         this._ray1       = null;   // left ray Line mesh
+        this._rawControllers = null; // [getController(0), getController(1)] — index ≠ hand
+        this._rawGrips       = null;
 
         this.spatialPanel   = null;
         this.navMenu        = null;
@@ -127,6 +135,11 @@
         this._pinchInitDist  = 0;
         this._pinchInitScale = 1;
         this._triggerTravel0 = 0;   // cumulative right-trigger drag for tap vs hold
+
+        // Rotation orbits a near-user focus point (not the model origin), held stable per gesture
+        this._rotAnchor      = null;
+        this._rotAnchorLocal = new THREE.Vector3();
+        this._rotAnchorTmp   = new THREE.Vector3();
 
         // Selection
         this._raycaster    = new THREE.Raycaster();
@@ -177,10 +190,23 @@
         var renderer = this.explorer.renderer;
         var scene    = this.explorer.scene;
 
-        this.controller0 = renderer.xr.getController(0); // right
-        this.controller1 = renderer.xr.getController(1); // left
+        // Slot index is connection order only — do not treat 0/1 as right/left.
+        this._rawControllers = [
+            renderer.xr.getController(0),
+            renderer.xr.getController(1)
+        ];
+        this._rawGrips = [
+            renderer.xr.getControllerGrip(0),
+            renderer.xr.getControllerGrip(1)
+        ];
 
-        // Visual rays — right is full opacity, left is dimmer
+        // Provisional mapping until `connected` reports handedness (Quest-typical).
+        this.controller0 = this._rawControllers[0];
+        this.controller1 = this._rawControllers[1];
+        this._grip0 = this._rawGrips[0];
+        this._grip1 = this._rawGrips[1];
+
+        // Visual rays — right is fuller opacity, left is dimmer
         var rayPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -4)];
         var rayGeo = new THREE.BufferGeometry().setFromPoints(rayPts);
         this._ray0 = new THREE.Line(rayGeo,         new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
@@ -188,96 +214,182 @@
         this.controller0.add(this._ray0);
         this.controller1.add(this._ray1);
 
-        // Controller grip models (XRControllerModelFactory loaded via importmap)
-        this._grip0 = renderer.xr.getControllerGrip(0);
-        this._grip1 = renderer.xr.getControllerGrip(1);
         if (typeof XRControllerModelFactory !== 'undefined') {
             var factory = new XRControllerModelFactory();
-            this._grip0.add(factory.createControllerModel(this._grip0));
-            this._grip1.add(factory.createControllerModel(this._grip1));
+            this._rawGrips[0].add(factory.createControllerModel(this._rawGrips[0]));
+            this._rawGrips[1].add(factory.createControllerModel(this._rawGrips[1]));
         }
-        scene.add(this._grip0);
-        scene.add(this._grip1);
-        scene.add(this.controller0);
-        scene.add(this.controller1);
+        scene.add(this._rawGrips[0]);
+        scene.add(this._rawGrips[1]);
+        scene.add(this._rawControllers[0]);
+        scene.add(this._rawControllers[1]);
 
-        // ── Right trigger — hold = pan/tilt; both = pinch; tap = select / nav ─
-        this.controller0.addEventListener('selectstart', function () {
-            self._trigger0 = true;
-            self._triggerTravel0 = 0;
-            self.controller0.getWorldPosition(self._prevPos0);
-            self._pinchInitDist = 0;
-            if (self.navMenu && self.navMenu.group.visible) {
-                self.navMenu.selectHighlighted();
-                self._haptic('right', 50, 0.4);
-                // Treat as consumed — don't also drag/select on release
-                self._triggerTravel0 = TAP_MOVE_MAX + 1;
-            }
-        });
-        this.controller0.addEventListener('selectend', function () {
-            var wasTap = self._trigger0 && !self._trigger1 && self._triggerTravel0 < TAP_MOVE_MAX;
-            self._trigger0 = false;
-            self._pinchInitDist = 0;
-            if (wasTap) {
-                self._trySelectObject();
-            }
-            self._triggerTravel0 = 0;
-        });
+        for (var i = 0; i < 2; i++) {
+            (function (controller) {
+                controller.addEventListener('connected', function (event) {
+                    controller.userData.handedness = event.data && event.data.handedness;
+                    self._resolveControllerHands();
+                });
+                controller.addEventListener('disconnected', function () {
+                    controller.userData.handedness = undefined;
+                    self._resolveControllerHands();
+                });
 
-        // ── Left trigger — hold = pan/tilt; both = pinch ──────────────────────
-        this.controller1.addEventListener('selectstart', function () {
-            self._trigger1 = true;
-            self.controller1.getWorldPosition(self._prevPos1);
-            self._pinchInitDist = 0;
-        });
-        this.controller1.addEventListener('selectend', function () {
-            self._trigger1 = false;
-            self._pinchInitDist = 0;
-        });
+                // Route by handedness so Quest and the WebXR emulator stay aligned
+                controller.addEventListener('selectstart', function () {
+                    if (self._handRole(controller) === 'right') self._onRightSelectStart();
+                    else self._onLeftSelectStart();
+                });
+                controller.addEventListener('selectend', function () {
+                    if (self._handRole(controller) === 'right') self._onRightSelectEnd();
+                    else self._onLeftSelectEnd();
+                });
+                controller.addEventListener('squeezestart', function () {
+                    if (self._handRole(controller) === 'right') self._onRightSqueezeStart();
+                    else self._onLeftSqueezeStart();
+                });
+                controller.addEventListener('squeezeend', function () {
+                    if (self._handRole(controller) === 'right') self._onRightSqueezeEnd();
+                    else self._onLeftSqueezeEnd();
+                });
+            })(this._rawControllers[i]);
+        }
+    };
 
-        // ── Left grip — hold+drag = pan; tap = nav menu; both grips = reset ───
-        this.controller1.addEventListener('squeezestart', function () {
-            self._grip1Held = true;
-            self._gripTravel1 = 0;
-            self.controller1.getWorldPosition(self._gripDragPrev1);
-            if (self._grip0Held && !self._bothGripsResetDone) {
-                self._bothGripsResetDone = true;
-                self._gripTravel0 = self._gripTravel1 = TAP_MOVE_MAX + 1;
-                self._resetScene();
-            }
-        });
-        this.controller1.addEventListener('squeezeend', function () {
-            var wasTap = self._grip1Held && !self._bothGripsResetDone && self._gripTravel1 < TAP_MOVE_MAX;
-            self._grip1Held = false;
-            self._bothGripsResetDone = false;
-            self._gripTravel1 = 0;
-            if (wasTap && self.navMenu) {
-                self.navMenu.toggle();
-                self._haptic('left', 30, 0.25);
-            }
-        });
+    /** left | right — prefers XR handedness; falls back to slot index (0=right). */
+    VRManager.prototype._handRole = function (controller) {
+        var h = controller && controller.userData && controller.userData.handedness;
+        if (h === 'left' || h === 'right') return h;
+        return controller === this._rawControllers[0] ? 'right' : 'left';
+    };
 
-        // ── Right grip — hold+drag = pan; tap = HUD; both grips = reset ───────
-        this.controller0.addEventListener('squeezestart', function () {
-            self._grip0Held = true;
-            self._gripTravel0 = 0;
-            self.controller0.getWorldPosition(self._gripDragPrev0);
-            if (self._grip1Held && !self._bothGripsResetDone) {
-                self._bothGripsResetDone = true;
-                self._gripTravel0 = self._gripTravel1 = TAP_MOVE_MAX + 1;
-                self._resetScene();
+    /** Map raw slots → logical controller0/right and controller1/left. */
+    VRManager.prototype._resolveControllerHands = function () {
+        if (!this._rawControllers) return;
+
+        var right = null;
+        var left = null;
+        var rightGrip = null;
+        var leftGrip = null;
+
+        for (var i = 0; i < 2; i++) {
+            var c = this._rawControllers[i];
+            var g = this._rawGrips[i];
+            if (c.userData.handedness === 'right') {
+                right = c;
+                rightGrip = g;
+            } else if (c.userData.handedness === 'left') {
+                left = c;
+                leftGrip = g;
             }
-        });
-        this.controller0.addEventListener('squeezeend', function () {
-            var wasTap = self._grip0Held && !self._bothGripsResetDone && self._gripTravel0 < TAP_MOVE_MAX;
-            self._grip0Held = false;
-            self._bothGripsResetDone = false;
-            self._gripTravel0 = 0;
-            if (wasTap) {
-                self._toggleHud();
-                self._haptic('right', 30, 0.25);
-            }
-        });
+        }
+
+        if (!right) {
+            right = this._rawControllers[0];
+            rightGrip = this._rawGrips[0];
+        }
+        if (!left) {
+            left = this._rawControllers[1];
+            leftGrip = this._rawGrips[1];
+        }
+        if (right === left) {
+            var other = right === this._rawControllers[0] ? 1 : 0;
+            left = this._rawControllers[other];
+            leftGrip = this._rawGrips[other];
+        }
+
+        var changed = this.controller0 !== right || this.controller1 !== left;
+        this.controller0 = right;
+        this.controller1 = left;
+        this._grip0 = rightGrip;
+        this._grip1 = leftGrip;
+
+        if (changed && this._ray0 && this._ray1) {
+            if (this._ray0.parent) this._ray0.parent.remove(this._ray0);
+            if (this._ray1.parent) this._ray1.parent.remove(this._ray1);
+            right.add(this._ray0);
+            left.add(this._ray1);
+            if (this.navMenu) this.navMenu.attachToController(left);
+        }
+    };
+
+    // ── Right trigger — hold = pan/tilt; both = pinch; tap = select / nav ─────
+    VRManager.prototype._onRightSelectStart = function () {
+        this._trigger0 = true;
+        this._triggerTravel0 = 0;
+        this.controller0.getWorldPosition(this._prevPos0);
+        this._pinchInitDist = 0;
+        if (this.navMenu && this.navMenu.group.visible) {
+            this.navMenu.selectHighlighted();
+            this._haptic('right', 50, 0.4);
+            this._triggerTravel0 = TAP_MOVE_MAX + 1;
+        }
+    };
+
+    VRManager.prototype._onRightSelectEnd = function () {
+        var wasTap = this._trigger0 && !this._trigger1 && this._triggerTravel0 < TAP_MOVE_MAX;
+        this._trigger0 = false;
+        this._pinchInitDist = 0;
+        if (wasTap) this._trySelectObject();
+        this._triggerTravel0 = 0;
+    };
+
+    // ── Left trigger — hold = pan/tilt; both = pinch ──────────────────────────
+    VRManager.prototype._onLeftSelectStart = function () {
+        this._trigger1 = true;
+        this.controller1.getWorldPosition(this._prevPos1);
+        this._pinchInitDist = 0;
+    };
+
+    VRManager.prototype._onLeftSelectEnd = function () {
+        this._trigger1 = false;
+        this._pinchInitDist = 0;
+    };
+
+    // ── Left grip — hold+drag = pan; tap = nav menu; both grips = reset ───────
+    VRManager.prototype._onLeftSqueezeStart = function () {
+        this._grip1Held = true;
+        this._gripTravel1 = 0;
+        this.controller1.getWorldPosition(this._gripDragPrev1);
+        if (this._grip0Held && !this._bothGripsResetDone) {
+            this._bothGripsResetDone = true;
+            this._gripTravel0 = this._gripTravel1 = TAP_MOVE_MAX + 1;
+            this._resetScene();
+        }
+    };
+
+    VRManager.prototype._onLeftSqueezeEnd = function () {
+        var wasTap = this._grip1Held && !this._bothGripsResetDone && this._gripTravel1 < TAP_MOVE_MAX;
+        this._grip1Held = false;
+        this._bothGripsResetDone = false;
+        this._gripTravel1 = 0;
+        if (wasTap && this.navMenu) {
+            this.navMenu.toggle();
+            this._haptic('left', 30, 0.25);
+        }
+    };
+
+    // ── Right grip — hold+drag = pan; tap = HUD; both grips = reset ───────────
+    VRManager.prototype._onRightSqueezeStart = function () {
+        this._grip0Held = true;
+        this._gripTravel0 = 0;
+        this.controller0.getWorldPosition(this._gripDragPrev0);
+        if (this._grip1Held && !this._bothGripsResetDone) {
+            this._bothGripsResetDone = true;
+            this._gripTravel0 = this._gripTravel1 = TAP_MOVE_MAX + 1;
+            this._resetScene();
+        }
+    };
+
+    VRManager.prototype._onRightSqueezeEnd = function () {
+        var wasTap = this._grip0Held && !this._bothGripsResetDone && this._gripTravel0 < TAP_MOVE_MAX;
+        this._grip0Held = false;
+        this._bothGripsResetDone = false;
+        this._gripTravel0 = 0;
+        if (wasTap) {
+            this._toggleHud();
+            this._haptic('right', 30, 0.25);
+        }
     };
 
     // -------------------------------------------------------------------------
@@ -307,6 +419,7 @@
         var scale    = scaleMap[page] || 0.05;
         this.pivot.scale.setScalar(scale);
         this.pivot.rotation.set(0, 0, 0);
+        this._clearRotationAnchor();
         this._placeInFrontOfUser();
         this._haptic('left',  80, 0.5);
         this._haptic('right', 80, 0.5);
@@ -404,6 +517,9 @@
         var session    = renderer.xr.getSession();
         this._isAR     = !!(session && session.environmentBlendMode !== 'opaque');
         this._hudBgAlpha = this._isAR ? 0.60 : 0.82;
+
+        // Re-resolve in case `connected` already fired for both hands
+        this._resolveControllerHands();
 
         // Disable desktop orbit controls
         if (explorer.controls && typeof explorer.controls.update === 'function') {
@@ -624,6 +740,7 @@
         this._trigger0 = this._trigger1 = false;
         this._pinchInitDist = 0;
         this._triggerTravel0 = 0;
+        this._clearRotationAnchor();
         this._needsInitialPlacement = false;
 
         // Restore DOM chrome
@@ -661,6 +778,20 @@
     // Scene control (per-frame): grip pan + trigger rotate/pinch + thumbsticks
     // -------------------------------------------------------------------------
 
+    /**
+     * Pan multiplier for grip-drag. Near / small → ~1 (direct hand mapping).
+     * Farther from the model or larger scale → higher gain so the scene keeps pace.
+     */
+    VRManager.prototype._gripPanGain = function () {
+        if (!this.pivot) return 1;
+        var xrCam = this.explorer.renderer.xr.getCamera();
+        var dist = xrCam.position.distanceTo(this.pivot.position);
+        var distGain = dist / GRIP_PAN_REF_DIST;
+        // sqrt so extreme scales don't teleport; still much faster when huge
+        var scaleGain = Math.sqrt(Math.max(this.pivot.scale.x, SCALE_MIN) / GRIP_PAN_REF_SCALE);
+        return Math.max(1, distGain, scaleGain);
+    };
+
     // Grip hold + move — translate the pivot in world space (grab-drag)
     VRManager.prototype._updateGripDrag = function () {
         if (this._bothGripsResetDone) return false;
@@ -668,13 +799,15 @@
         // Both grips reserved for reset — don't pan while both are down
         if (this._grip0Held && this._grip1Held) return false;
 
+        var gain = this._gripPanGain();
+
         if (this._grip0Held) {
             var pos0 = new THREE.Vector3();
             this.controller0.getWorldPosition(pos0);
             var d0 = pos0.clone().sub(this._gripDragPrev0);
             if (d0.length() < 0.5) {
-                this.pivot.position.add(d0);
-                this._gripTravel0 += d0.length();
+                this.pivot.position.addScaledVector(d0, gain);
+                this._gripTravel0 += d0.length(); // physical hand travel (tap vs drag)
             }
             this._gripDragPrev0.copy(pos0);
             return true;
@@ -684,11 +817,57 @@
         this.controller1.getWorldPosition(pos1);
         var d1 = pos1.clone().sub(this._gripDragPrev1);
         if (d1.length() < 0.5) {
-            this.pivot.position.add(d1);
+            this.pivot.position.addScaledVector(d1, gain);
             this._gripTravel1 += d1.length();
         }
         this._gripDragPrev1.copy(pos1);
         return true;
+    };
+
+    /**
+     * World-space point to orbit during rotate gestures.
+     * Prefer what you're looking at (ray hit); else a focus point ahead of the camera.
+     * Keeps nearby content stable instead of swinging around a distant model origin.
+     */
+    VRManager.prototype._pickRotationAnchor = function () {
+        var xrCam = this.explorer.renderer.xr.getCamera();
+        var camPos = xrCam.position;
+        var forward = new THREE.Vector3(0, 0, -1).applyQuaternion(xrCam.quaternion);
+
+        if (this.pivot && this.pivot.children.length) {
+            this._raycaster.set(camPos, forward);
+            var hits = this._raycaster.intersectObjects(this.pivot.children, true);
+            if (hits.length > 0) return hits[0].point.clone();
+        }
+
+        var dist = camPos.distanceTo(this.pivot.position);
+        var focusDist = Math.max(0.3, Math.min(dist, 1.5));
+        return camPos.clone().addScaledVector(forward, focusDist);
+    };
+
+    VRManager.prototype._clearRotationAnchor = function () {
+        this._rotAnchor = null;
+    };
+
+    /** Apply euler deltas so a world anchor stays fixed (orbit, not spin-about-origin). */
+    VRManager.prototype._applyPivotRotation = function (dRotX, dRotY) {
+        if (!this.pivot || (dRotX === 0 && dRotY === 0)) return;
+
+        if (!this._rotAnchor) {
+            this._rotAnchor = this._pickRotationAnchor();
+        }
+
+        this.pivot.updateMatrixWorld(true);
+        this._rotAnchorLocal.copy(this._rotAnchor);
+        this.pivot.worldToLocal(this._rotAnchorLocal);
+
+        this.pivot.rotation.x += dRotX;
+        this.pivot.rotation.y += dRotY;
+        this.pivot.updateMatrixWorld(true);
+
+        this._rotAnchorTmp.copy(this._rotAnchorLocal);
+        this.pivot.localToWorld(this._rotAnchorTmp);
+        this.pivot.position.add(this._rotAnchor).sub(this._rotAnchorTmp);
     };
 
     VRManager.prototype._updateTriggerDrag = function () {
@@ -704,6 +883,7 @@
 
         if (this._trigger0 && this._trigger1) {
             // Both triggers: pinch-to-scale
+            this._clearRotationAnchor();
             var dist = pos0.distanceTo(pos1);
             if (this._pinchInitDist > 0) {
                 var ratio = dist / this._pinchInitDist;
@@ -723,8 +903,7 @@
             this._pinchInitDist = 0;
             var d0 = pos0.clone().sub(this._prevPos0);
             if (d0.length() < 0.5) {
-                this.pivot.rotation.y += d0.x * ROT_SENSITIVITY;
-                this.pivot.rotation.x -= d0.y * ROT_SENSITIVITY;
+                this._applyPivotRotation(-d0.y * ROT_SENSITIVITY, d0.x * ROT_SENSITIVITY);
                 this._triggerTravel0 += d0.length();
             }
             this._prevPos0.copy(pos0);
@@ -735,8 +914,7 @@
         this._pinchInitDist = 0;
         var d1 = pos1.clone().sub(this._prevPos1);
         if (d1.length() < 0.5) {
-            this.pivot.rotation.y += d1.x * ROT_SENSITIVITY;
-            this.pivot.rotation.x -= d1.y * ROT_SENSITIVITY;
+            this._applyPivotRotation(-d1.y * ROT_SENSITIVITY, d1.x * ROT_SENSITIVITY);
         }
         this._prevPos1.copy(pos1);
         return true;
@@ -757,6 +935,8 @@
         var session = this.explorer.renderer.xr.getSession();
         if (!session || !session.inputSources) return;
 
+        var rotating = false;
+
         for (var i = 0; i < session.inputSources.length; i++) {
             var src = session.inputSources[i];
             if (!src.gamepad) continue;
@@ -768,8 +948,14 @@
             var ay = axes.y;
 
             if (src.handedness === 'right') {
-                if (Math.abs(ax) > THUMBSTICK_DEAD) this.pivot.rotation.y += ax * THUMBSTICK_ROT;
-                if (Math.abs(ay) > THUMBSTICK_DEAD) this.pivot.rotation.x -= ay * THUMBSTICK_ROT;
+                var dYaw = 0;
+                var dPitch = 0;
+                if (Math.abs(ax) > THUMBSTICK_DEAD) dYaw = ax * THUMBSTICK_ROT;
+                if (Math.abs(ay) > THUMBSTICK_DEAD) dPitch = -ay * THUMBSTICK_ROT;
+                if (dYaw !== 0 || dPitch !== 0) {
+                    rotating = true;
+                    this._applyPivotRotation(dPitch, dYaw);
+                }
             } else if (src.handedness === 'left') {
                 // X — camera-relative horizontal pan; Y — scale
                 if (Math.abs(ax) > THUMBSTICK_DEAD || Math.abs(ay) > THUMBSTICK_DEAD) {
@@ -789,15 +975,25 @@
                 }
             }
         }
+
+        return rotating;
     };
 
     VRManager.prototype._updateInteraction = function () {
         if (!this.pivot || !this.explorer.renderer.xr.isPresenting) return;
 
         // Grip pan > trigger rotate/pinch > thumbsticks
-        if (this._updateGripDrag()) return;
-        if (this._updateTriggerDrag()) return;
-        this._updateThumbsticks();
+        if (this._updateGripDrag()) {
+            this._clearRotationAnchor();
+            return;
+        }
+        if (this._updateTriggerDrag()) {
+            // Single-trigger rotate keeps anchor; release both clears via next frames
+            if (!this._trigger0 && !this._trigger1) this._clearRotationAnchor();
+            return;
+        }
+        var rotating = this._updateThumbsticks();
+        if (!rotating) this._clearRotationAnchor();
     };
 
     // -------------------------------------------------------------------------
