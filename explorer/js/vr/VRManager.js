@@ -8,10 +8,11 @@
  *   Right / left trigger (hold)    — rotate / tilt (same focus anchor)
  *   Both triggers (hold)           — pinch-to-scale (same focus anchor)
  *   Focus marker                   — visible while rotating or scaling
- *   Right trigger (tap / nav)      — select → HUD corners  /  confirm nav menu item
+ *   Right / left trigger (tap)     — select pointed object → HUD  /  confirm nav (right)
  *   Left / right grip (hold+drag)  — grab and pan / move the scene in space
  *   Left  grip (tap)               — toggle wrist nav menu  (hold both grips → reset)
  *   Right grip (tap)               — toggle HUD (staggered reveal; both grips → reset)
+ *   Pointers                       — rays on both controllers; hover scales target
  *   HUD                            — staggered corner reveal on show / pointer select
  *
  * Note: getController(0/1) is connection order only. Quest and the Immersive Web
@@ -53,6 +54,10 @@
     var SCALE_MAX        = 1e4;
     var ROT_SENSITIVITY  = 8;       // radians of rotation per metre of controller travel
     var TAP_MOVE_MAX     = 0.04;    // metres — below this, release counts as a tap (not a drag)
+    var HOVER_SCALE      = 1.15;    // scale-up while a pointer aims at an object
+    var RAY_IDLE_OPACITY = 0.35;
+    var RAY_HIT_OPACITY  = 0.85;
+    var RAY_LENGTH       = 4;       // metres
     var THUMBSTICK_DEAD  = 0.12;
     var THUMBSTICK_ROT   = 0.025;   // radians per frame per unit axis deflection
     var THUMBSTICK_SCALE = 0.03;    // scale factor per frame per unit axis deflection
@@ -91,8 +96,14 @@
         this._grip1      = null;   // logical left grip
         this._ray0       = null;   // right ray Line mesh
         this._ray1       = null;   // left ray Line mesh
+        this._rayTip0    = null;   // right hit cursor
+        this._rayTip1    = null;   // left hit cursor
         this._rawControllers = null; // [getController(0), getController(1)] — index ≠ hand
         this._rawGrips       = null;
+        this._hoveredObj       = null;
+        this._hoveredBaseScale = null;
+        this._hoverTempMat     = new THREE.Matrix4();
+        this._raycasterL       = new THREE.Raycaster();
 
         this.spatialPanel   = null;
         this.navMenu        = null;
@@ -145,6 +156,7 @@
         this._pinchInitDist  = 0;
         this._pinchInitScale = 1;
         this._triggerTravel0 = 0;   // cumulative right-trigger drag for tap vs hold
+        this._triggerTravel1 = 0;   // cumulative left-trigger drag for tap vs hold
 
         // Rotate/scale around a near-user focus point (not the model origin), held per gesture
         this._focusAnchor      = null;
@@ -152,7 +164,7 @@
         this._focusAnchorTmp   = new THREE.Vector3();
         this._anchorMarker     = null; // world-space crosshair at the focus point
 
-        // Selection
+        // Selection / pointer hover
         this._raycaster    = new THREE.Raycaster();
         this._labelMesh    = null;
 
@@ -217,13 +229,27 @@
         this._grip0 = this._rawGrips[0];
         this._grip1 = this._rawGrips[1];
 
-        // Visual rays — right is fuller opacity, left is dimmer
-        var rayPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -4)];
+        // Pointer rays on both controllers (+ tip cursors at hit point)
+        var rayPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -RAY_LENGTH)];
         var rayGeo = new THREE.BufferGeometry().setFromPoints(rayPts);
-        this._ray0 = new THREE.Line(rayGeo,         new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
-        this._ray1 = new THREE.Line(rayGeo.clone(), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+        this._ray0 = new THREE.Line(rayGeo,         new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: RAY_IDLE_OPACITY }));
+        this._ray1 = new THREE.Line(rayGeo.clone(), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: RAY_IDLE_OPACITY }));
+        this._ray0.visible = true;
+        this._ray1.visible = true;
         this.controller0.add(this._ray0);
         this.controller1.add(this._ray1);
+
+        var tipGeo = new THREE.SphereGeometry(0.008, 12, 12);
+        var tipMat0 = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, transparent: true, opacity: 0.95 });
+        var tipMat1 = tipMat0.clone();
+        this._rayTip0 = new THREE.Mesh(tipGeo, tipMat0);
+        this._rayTip1 = new THREE.Mesh(tipGeo.clone(), tipMat1);
+        this._rayTip0.visible = false;
+        this._rayTip1.visible = false;
+        this._rayTip0.renderOrder = 1001;
+        this._rayTip1.renderOrder = 1001;
+        scene.add(this._rayTip0);
+        scene.add(this._rayTip1);
 
         if (typeof XRControllerModelFactory !== 'undefined') {
             var factory = new XRControllerModelFactory();
@@ -341,20 +367,24 @@
         var wasTap = this._trigger0 && !this._trigger1 && this._triggerTravel0 < TAP_MOVE_MAX;
         this._trigger0 = false;
         this._pinchInitDist = 0;
-        if (wasTap) this._trySelectObject();
+        if (wasTap) this._trySelectObject(this.controller0, 'right');
         this._triggerTravel0 = 0;
     };
 
-    // ── Left trigger — hold = pan/tilt; both = pinch ──────────────────────────
+    // ── Left trigger — hold = pan/tilt; both = pinch; tap = select ────────────
     VRManager.prototype._onLeftSelectStart = function () {
         this._trigger1 = true;
+        this._triggerTravel1 = 0;
         this.controller1.getWorldPosition(this._prevPos1);
         this._pinchInitDist = 0;
     };
 
     VRManager.prototype._onLeftSelectEnd = function () {
+        var wasTap = this._trigger1 && !this._trigger0 && this._triggerTravel1 < TAP_MOVE_MAX;
         this._trigger1 = false;
         this._pinchInitDist = 0;
+        if (wasTap) this._trySelectObject(this.controller1, 'left');
+        this._triggerTravel1 = 0;
     };
 
     // ── Left grip — hold+drag = pan; tap = nav menu; both grips = reset ───────
@@ -430,6 +460,7 @@
         var scale    = scaleMap[page] || 0.05;
         this.pivot.scale.setScalar(scale);
         this.pivot.rotation.set(0, 0, 0);
+        this._clearHover();
         this._clearFocusAnchor();
         this._placeInFrontOfUser();
         this._haptic('left',  80, 0.5);
@@ -437,39 +468,193 @@
     };
 
     // -------------------------------------------------------------------------
-    // Object selection → HUD (no floating panel / label)
+    // Pointer hover + object selection → HUD
     // -------------------------------------------------------------------------
 
-    VRManager.prototype._trySelectObject = function () {
-        if (!this.pivot) return;
+    VRManager.prototype._castFromController = function (controller, raycaster) {
+        if (!controller || !this.pivot) return null;
+        this._hoverTempMat.identity().extractRotation(controller.matrixWorld);
+        raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+        raycaster.ray.direction.set(0, 0, -1).applyMatrix4(this._hoverTempMat);
+        var hits = raycaster.intersectObjects(this.pivot.children, true);
+        if (!hits.length) return null;
+        // Prefer meshes with useful userData (skip empty helpers)
+        for (var i = 0; i < hits.length; i++) {
+            var o = this._resolveSelectTarget(hits[i].object);
+            if (o && o !== this.pivot) {
+                return { object: o, point: hits[i].point, distance: hits[i].distance, hitObject: hits[i].object };
+            }
+        }
+        return { object: hits[0].object, point: hits[0].point, distance: hits[0].distance, hitObject: hits[0].object };
+    };
 
-        var tempMat = new THREE.Matrix4();
-        tempMat.identity().extractRotation(this.controller0.matrixWorld);
-        this._raycaster.ray.origin.setFromMatrixPosition(this.controller0.matrixWorld);
-        this._raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMat);
+    VRManager.prototype._resolveSelectTarget = function (obj) {
+        var o = obj;
+        while (o && o !== this.pivot) {
+            var ud = o.userData || {};
+            if (
+                ud.isMempool || ud.isGenesis || ud.isMilestone ||
+                ud.txid || ud.address || ud.blockHeight != null ||
+                (typeof ud.index === 'number' && (ud.t != null || ud.progress != null || ud.layer != null)) ||
+                ud.type === 'currentBlock' || ud.type === 'pastBlock' || ud.type === 'futureBlock' ||
+                ud.type === 'header' || ud.type === 'blockUtxo' ||
+                ud.name || ud.label
+            ) {
+                return o;
+            }
+            o = o.parent;
+        }
+        return obj;
+    };
 
-        var hits = this._raycaster.intersectObjects(this.pivot.children, true);
-        if (hits.length === 0) return;
+    VRManager.prototype._clearHover = function () {
+        if (this._hoveredObj && this._hoveredBaseScale) {
+            this._hoveredObj.scale.copy(this._hoveredBaseScale);
+        }
+        this._hoveredObj = null;
+        this._hoveredBaseScale = null;
+    };
 
-        var obj = hits[0].object;
-        this._haptic('right', 50, 0.4);
-        this._showSelectionOnHud(obj);
+    VRManager.prototype._setHover = function (obj) {
+        if (this._hoveredObj === obj) return;
+        this._clearHover();
+        if (!obj || !obj.scale) return;
+        this._hoveredObj = obj;
+        this._hoveredBaseScale = obj.scale.clone();
+        obj.scale.multiplyScalar(HOVER_SCALE);
+    };
+
+    VRManager.prototype._updatePointers = function () {
+        if (!this.pivot || !this.controller0 || !this.controller1) return;
+
+        var hitR = this._castFromController(this.controller0, this._raycaster);
+        var hitL = this._castFromController(this.controller1, this._raycasterL);
+
+        // Prefer nearer hit for hover scale
+        var hover = null;
+        if (hitR && hitL) hover = hitR.distance <= hitL.distance ? hitR : hitL;
+        else hover = hitR || hitL;
+
+        if (hover) this._setHover(hover.object);
+        else this._clearHover();
+
+        // Ray + tip feedback
+        if (this._ray0) {
+            this._ray0.visible = true;
+            this._ray0.material.opacity = hitR ? RAY_HIT_OPACITY : RAY_IDLE_OPACITY;
+        }
+        if (this._ray1) {
+            this._ray1.visible = true;
+            this._ray1.material.opacity = hitL ? RAY_HIT_OPACITY : RAY_IDLE_OPACITY;
+        }
+        if (this._rayTip0) {
+            if (hitR) {
+                this._rayTip0.visible = true;
+                this._rayTip0.position.copy(hitR.point);
+            } else {
+                this._rayTip0.visible = false;
+            }
+        }
+        if (this._rayTip1) {
+            if (hitL) {
+                this._rayTip1.visible = true;
+                this._rayTip1.position.copy(hitL.point);
+            } else {
+                this._rayTip1.visible = false;
+            }
+        }
+    };
+
+    VRManager.prototype._trySelectObject = function (controller, hand) {
+        if (!this.pivot || !controller) return;
+
+        var hit = this._castFromController(controller, this._raycaster);
+        if (!hit) return;
+
+        this._haptic(hand || 'right', 50, 0.4);
+        this._showSelectionOnHud(hit.object);
+
+        // Optional page hook for loading richer data / side effects
+        var ex = this.explorer;
+        if (ex && typeof ex.onVRSelect === 'function') {
+            try { ex.onVRSelect(hit.object); } catch (e) { /* ignore page errors */ }
+        }
     };
 
     VRManager.prototype._getObjectLines = function (obj) {
-        var lines = [];
-        var name = (obj.userData && (obj.userData.name || obj.userData.label)) || obj.name || obj.type || 'Object';
-        lines.push('Selected: ' + name);
-
-        if (obj.userData) {
-            Object.keys(obj.userData).forEach(function (k) {
-                if (k === 'name' || k === 'label') return;
-                var v = obj.userData[k];
-                if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
-                    lines.push(k + ': ' + v);
-                }
-            });
+        obj = this._resolveSelectTarget(obj);
+        var ex = this.explorer;
+        if (ex && typeof ex.getVRObjectInfo === 'function') {
+            try {
+                var custom = ex.getVRObjectInfo(obj);
+                if (custom && custom.length) return custom;
+            } catch (e) { /* fall through */ }
         }
+
+        var ud = (obj && obj.userData) || {};
+        var lines = [];
+
+        if (ud.isMempool) {
+            return ['Selected: Mempool', 'Pending transactions', 'Tip of the chain'];
+        }
+        if (ud.isGenesis || (ud.index === 0 && ud.t != null)) {
+            return ['Selected: Genesis', 'Epoch 0', 'Blocks 0 – 2,015', 'Jan 3, 2009'];
+        }
+        if (typeof ud.index === 'number' && ud.t != null) {
+            var start = ud.index * 2016;
+            var end = start + 2015;
+            lines = ['Selected: Epoch ' + ud.index];
+            lines.push('Blocks: ' + start.toLocaleString() + ' – ' + end.toLocaleString());
+            if (ud.isMilestone) lines.push('Milestone: Halving epoch');
+            return lines;
+        }
+        if (ud.txid) {
+            var short = String(ud.txid);
+            if (short.length > 18) short = short.slice(0, 10) + '…' + short.slice(-6);
+            lines = ['Selected: Transaction', 'TXID: ' + short];
+            if (ud.index != null) lines.push('Index: ' + ud.index);
+            if (ud.layer != null) lines.push('Layer: ' + ud.layer);
+            if (ud.fee != null) lines.push('Fee: ' + ud.fee);
+            if (ud.size != null) lines.push('Size: ' + ud.size);
+            return lines;
+        }
+        if (ud.type === 'header') {
+            return ['Selected: Block Header', ud.description || '80 bytes'];
+        }
+        if (ud.type === 'currentBlock' || ud.type === 'pastBlock' || ud.type === 'futureBlock') {
+            var label = ud.type === 'currentBlock' ? 'Current block' : (ud.type === 'pastBlock' ? 'Past block' : 'Future block');
+            lines = ['Selected: ' + label];
+            if (ud.blockHeight != null) lines.push('Height: ' + Number(ud.blockHeight).toLocaleString());
+            return lines;
+        }
+        if (ud.type === 'blockUtxo' && ud.utxo) {
+            var u = ud.utxo;
+            lines = ['Selected: UTXO'];
+            if (u.value != null) lines.push('Value: ' + (u.value / 1e8).toFixed(8) + ' BTC');
+            if (u.txid) lines.push('TXID: ' + String(u.txid).slice(0, 16) + '…');
+            return lines;
+        }
+        if (ud.address || ud.userAgent || ud.country) {
+            lines = ['Selected: Node'];
+            if (ud.address) lines.push('Addr: ' + ud.address);
+            if (ud.type) lines.push('Impl: ' + ud.type);
+            if (ud.city || ud.country) lines.push('Loc: ' + [ud.city, ud.country].filter(Boolean).join(', '));
+            if (ud.height != null) lines.push('Height: ' + ud.height);
+            if (ud.org) lines.push('Org: ' + ud.org);
+            return lines;
+        }
+
+        var name = ud.name || ud.label || obj.name || obj.type || 'Object';
+        lines.push('Selected: ' + name);
+        Object.keys(ud).forEach(function (k) {
+            if (k === 'name' || k === 'label' || k === 'originalColor') return;
+            var v = ud[k];
+            if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+                var s = String(v);
+                if (s.length > 42) s = s.slice(0, 40) + '…';
+                lines.push(k + ': ' + s);
+            }
+        });
         return lines.length > 1 ? lines : lines.concat(this._readPanelLines());
     };
 
@@ -601,7 +786,7 @@
         });
     };
 
-    // Controllers, grips, HUD host camera, spatial panel, selection label, focus marker stay at scene root
+        // Controllers, grips, HUD host camera, spatial panel, focus marker, ray tips stay at scene root
     VRManager.prototype._shouldKeepInScene = function (obj) {
         if (!obj) return true;
         if (obj === this.pivot) return true;
@@ -610,6 +795,7 @@
         if (obj === this.explorer.camera) return true;
         if (obj === this._labelMesh) return true;
         if (obj === this._anchorMarker) return true;
+        if (obj === this._rayTip0 || obj === this._rayTip1) return true;
         var spatialMesh = this.spatialPanel ? this.spatialPanel.getMesh() : null;
         if (spatialMesh && obj === spatialMesh) return true;
         return false;
@@ -739,9 +925,12 @@
         this._gripTravel0 = this._gripTravel1 = 0;
         this._trigger0 = this._trigger1 = false;
         this._pinchInitDist = 0;
-        this._triggerTravel0 = 0;
+        this._triggerTravel0 = this._triggerTravel1 = 0;
+        this._clearHover();
         this._clearFocusAnchor();
         this._disposeAnchorMarker();
+        if (this._rayTip0) this._rayTip0.visible = false;
+        if (this._rayTip1) this._rayTip1.visible = false;
         this._selectionLines = null;
         this._selectionUntil = 0;
         this._hudReveal = null;
@@ -1025,7 +1214,7 @@
             }
             this._prevPos0.copy(pos0);
             this._prevPos1.copy(pos1);
-            this._triggerTravel0 = TAP_MOVE_MAX + 1; // pinch cancels tap-select
+            this._triggerTravel0 = this._triggerTravel1 = TAP_MOVE_MAX + 1; // pinch cancels tap-select
             return true;
         }
 
@@ -1045,6 +1234,7 @@
         var d1 = pos1.clone().sub(this._prevPos1);
         if (d1.length() < 0.5) {
             this._applyPivotRotation(-d1.y * ROT_SENSITIVITY, d1.x * ROT_SENSITIVITY);
+            this._triggerTravel1 += d1.length();
         }
         this._prevPos1.copy(pos1);
         return true;
@@ -1467,13 +1657,14 @@
         this._hudPivot.quaternion.copy(xrCam.quaternion);
     };
 
-    // Hide right ray when nav menu is closed and nothing interactable is targeted;
-    // show both rays when menu is open.
+    // Both pointers stay visible; opacity is driven by _updatePointers hit state.
     VRManager.prototype._updateRays = function () {
-        if (!this._ray0 || !this._ray1) return;
-        var menuOpen = this.navMenu && this.navMenu.group.visible;
-        this._ray0.material.opacity = menuOpen ? 0.6 : (this.navMenu && this.navMenu.highlighted ? 0.6 : 0.15);
-        this._ray1.visible = menuOpen;
+        if (this._ray0) this._ray0.visible = true;
+        if (this._ray1) this._ray1.visible = true;
+        // Brighten further when aiming at nav menu items
+        if (this.navMenu && this.navMenu.group.visible && this.navMenu.highlighted && this._ray0) {
+            this._ray0.material.opacity = Math.max(this._ray0.material.opacity, RAY_HIT_OPACITY);
+        }
     };
 
     // -------------------------------------------------------------------------
@@ -1497,6 +1688,9 @@
         // Staggered HUD corner reveal
         this._updateHudReveal();
 
+        // Dual pointers: hover scale + tip cursors
+        this._updatePointers();
+
         // Nav menu hover + haptic tick on new hover
         if (this.controller0 && this.navMenu) {
             var prevHighlight = this.navMenu.highlighted;
@@ -1506,7 +1700,6 @@
             }
         }
 
-        // Context-aware ray opacity
         this._updateRays();
 
         // Pull in content added after session start (e.g. network nodes)

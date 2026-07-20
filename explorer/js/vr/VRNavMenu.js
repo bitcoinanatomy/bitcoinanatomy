@@ -2,6 +2,8 @@
  * VRNavMenu — wrist-anchored grid navigation menu for moving between explorer pages.
  * Parented to the left XR controller. Toggle with left controller grip.
  * Cards reveal with a staggered fade + slide-up animation.
+ * Below page cards: global toggles (HUD / Info Panel / Rotation) plus
+ * page-specific action toggles (UTXOs, Merkle, Load TXs, etc.).
  * Exposed as window.VRNavMenu.
  */
 (function () {
@@ -26,10 +28,12 @@
     var GAP_Y      = 0.034;   // includes label space below card
     var LABEL_H    = 0.030;   // label plane height
 
-    // Toggle row below grid
-    var TOGGLE_W   = 0.090;
-    var TOGGLE_H   = 0.022;
-    var TOGGLE_GAP = 0.010;
+    // Toggle / action rows below grid
+    var TOGGLE_W     = 0.090;
+    var TOGGLE_H     = 0.022;
+    var TOGGLE_GAP   = 0.010;
+    var TOGGLE_ROW_GAP = 0.008;
+    var TOGGLES_PER_ROW = 4;
 
     // Interaction
     var OPACITY_DEFAULT = 0.92;
@@ -84,32 +88,223 @@
         return tex;
     }
 
-    function makeToggleLabel(text, active) {
+    function makeToggleLabel(text, active, kind) {
         var W = 360, H = 56;
+        var isAction = kind === 'action';
         var canvas = document.createElement('canvas');
         canvas.width = W; canvas.height = H;
         var ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, W, H);
         // Pill background
-        ctx.fillStyle = active ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)';
+        ctx.fillStyle = (!isAction && active) ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)';
         ctx.roundRect(0, 0, W, H, 6);
         ctx.fill();
         // Text
-        ctx.fillStyle = active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.45)';
-        ctx.font = '300 26px "Inter", sans-serif';
+        ctx.fillStyle = (!isAction && active) ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)';
+        if (isAction) ctx.fillStyle = 'rgba(255,255,255,0.82)';
+        ctx.font = '300 24px "Inter", sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.letterSpacing = '2px';
+        ctx.letterSpacing = '1px';
         ctx.fillText(text, 14, H / 2);
-        // On/off dot
-        var dotColor = active ? '#ffffff' : 'rgba(255,255,255,0.25)';
-        ctx.beginPath();
-        ctx.arc(W - 22, H / 2, 7, 0, Math.PI * 2);
-        ctx.fillStyle = dotColor;
-        ctx.fill();
+        if (isAction) {
+            // Small chevron for one-shot actions
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(W - 28, H / 2 - 6);
+            ctx.lineTo(W - 18, H / 2);
+            ctx.lineTo(W - 28, H / 2 + 6);
+            ctx.stroke();
+        } else {
+            // On/off dot
+            var dotColor = active ? '#ffffff' : 'rgba(255,255,255,0.25)';
+            ctx.beginPath();
+            ctx.arc(W - 22, H / 2, 7, 0, Math.PI * 2);
+            ctx.fillStyle = dotColor;
+            ctx.fill();
+        }
         var tex = new THREE.CanvasTexture(canvas);
         tex.needsUpdate = true;
         return tex;
+    }
+
+    function currentPageFile() {
+        var path = (window.location.pathname || '').split('/').pop() || '';
+        return path || 'network.html';
+    }
+
+    function clickDomButton(id) {
+        var el = document.getElementById(id);
+        if (!el || el.disabled) return false;
+        el.click();
+        return true;
+    }
+
+    function explorerProp(vrManager, key) {
+        var ex = vrManager && vrManager.explorer;
+        return ex ? !!ex[key] : false;
+    }
+
+    /** Page-specific controls under the global HUD / Info / Rotation row. */
+    function getPageActionDefs(vrManager) {
+        var page = currentPageFile();
+        var click = function (id) {
+            return function (mesh) {
+                clickDomButton(id);
+                if (mesh) {
+                    // Refresh after DOM handler updates explorer state
+                    setTimeout(function () {
+                        if (vrManager && vrManager.navMenu) {
+                            vrManager.navMenu._refreshToggle(mesh);
+                        }
+                    }, 0);
+                }
+            };
+        };
+
+        var map = {
+            'blockchain.html': [
+                {
+                    label: 'UTXOS',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'showUTXOs'); },
+                    onSelect: click('toggle-utxos')
+                },
+                {
+                    label: 'LABELS',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'showLabels'); },
+                    onSelect: click('toggle-labels')
+                }
+            ],
+            'block.html': [
+                {
+                    label: 'LOAD TXS',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    onSelect: click('load-all-transactions')
+                },
+                {
+                    label: 'MERKLE',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'merkleTreeVisible'); },
+                    onSelect: click('show-merkle-tree')
+                },
+                {
+                    label: 'UTXO',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'utxoSpheresVisible'); },
+                    onSelect: click('show-utxos')
+                },
+                {
+                    label: 'MORE',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    onSelect: click('show-more-blocks')
+                }
+            ],
+            'network.html': [
+                {
+                    label: '2D MAP',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'is2DMode'); },
+                    onSelect: click('toggle-2d')
+                },
+                {
+                    label: 'MAP',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'isEarthVisible'); },
+                    onSelect: click('toggle-earth')
+                },
+                {
+                    label: 'LINKS',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'showConnections'); },
+                    onSelect: click('toggle-connections')
+                },
+                {
+                    label: 'MONTAGE',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'montageActive'); },
+                    onSelect: click('toggle-montage')
+                }
+            ],
+            'mempool.html': [
+                {
+                    label: 'FEE LBL',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'feeBandLabelsVisible'); },
+                    onSelect: click('toggle-fee-labels')
+                }
+            ],
+            'address.html': [
+                {
+                    label: 'MORE TXS',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    onSelect: click('load-more-transactions')
+                }
+            ],
+            'difficulty.html': [
+                {
+                    label: 'BLOCKS',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'isSoundEnabled'); },
+                    onSelect: click('toggle-sound')
+                },
+                {
+                    label: '10 MIN',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'isMetronomeEnabled'); },
+                    onSelect: click('toggle-metronome')
+                },
+                {
+                    label: '1000X',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    onSelect: click('animate-1000x')
+                },
+                {
+                    label: '10000X',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    onSelect: click('animate-10000x')
+                }
+            ],
+            'node.html': [
+                {
+                    label: 'DETAILS',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'showDetails'); },
+                    onSelect: click('toggle-details')
+                }
+            ],
+            'transaction.html': [
+                {
+                    label: 'TREEMAP',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    onSelect: click('show-treemap')
+                },
+                {
+                    label: 'RAW DATA',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    onSelect: click('show-raw-data')
+                }
+            ]
+        };
+
+        return map[page] || [];
+    }
+
+    function chunkDefs(defs, size) {
+        var rows = [];
+        for (var i = 0; i < defs.length; i += size) {
+            rows.push(defs.slice(i, i + size));
+        }
+        return rows;
     }
 
     // -------------------------------------------------------------------------
@@ -142,9 +337,57 @@
         var rows  = Math.ceil(PAGES.length / GRID_COLS);
         var gridH = rows * CELL_H + (rows - 1) * GAP_Y;
 
-        var toggleRowCount = 3; // HUD + INFO PANEL + ROTATION
-        var toggleRowH = TOGGLE_H + 0.012;
-        var totalToggleW = toggleRowCount * TOGGLE_W + (toggleRowCount - 1) * TOGGLE_GAP;
+        var globalToggleDefs = [
+            {
+                label:    'HUD',
+                kind:     'toggle',
+                getState: function () {
+                    var vm = self.vrManager;
+                    return vm && vm._hudTL ? vm._hudTL.visible : false;
+                },
+                onSelect: function (mesh) {
+                    if (self.vrManager) self.vrManager._toggleHud();
+                    self._refreshToggle(mesh);
+                },
+            },
+            {
+                label:    'INFO PANEL',
+                kind:     'toggle',
+                getState: function () {
+                    var sp = self.vrManager && self.vrManager.spatialPanel;
+                    return sp ? sp.getMesh().visible : false;
+                },
+                onSelect: function (mesh) {
+                    var sp = self.vrManager && self.vrManager.spatialPanel;
+                    if (!sp) return;
+                    sp.setVisible(!sp.getMesh().visible);
+                    self._refreshToggle(mesh);
+                },
+            },
+            {
+                label:    'ROTATION',
+                kind:     'toggle',
+                getState: function () {
+                    var ex = self.vrManager && self.vrManager.explorer;
+                    return ex ? !!ex.isRotating : false;
+                },
+                onSelect: function (mesh) {
+                    var ex = self.vrManager && self.vrManager.explorer;
+                    if (!ex || typeof ex.isRotating === 'undefined') return;
+                    ex.isRotating = !ex.isRotating;
+                    self._refreshToggle(mesh);
+                },
+            },
+        ];
+
+        var pageActionDefs = getPageActionDefs(this.vrManager);
+        var toggleRows = [globalToggleDefs].concat(chunkDefs(pageActionDefs, TOGGLES_PER_ROW));
+        var toggleRowCount = toggleRows.length;
+        var widestRow = toggleRows.reduce(function (max, row) {
+            return Math.max(max, row.length);
+        }, 0);
+        var toggleBlockH = toggleRowCount * TOGGLE_H + Math.max(0, toggleRowCount - 1) * TOGGLE_ROW_GAP;
+        var totalToggleW = widestRow * TOGGLE_W + Math.max(0, widestRow - 1) * TOGGLE_GAP;
 
         var LOGO_H   = 0.026;   // world-space height of logo strip
         var LOGO_GAP = 0.014;   // gap between logo and top of grid
@@ -152,7 +395,7 @@
 
         var padX     = 0.022;
         var padTop   = 0.012;   // above logo
-        var padBot   = 0.014 + toggleRowH + 0.012;
+        var padBot   = 0.014 + toggleBlockH + 0.012;
         var plateW   = Math.max(gridW, totalToggleW) + padX * 2;
         var plateH   = gridH + LABEL_H + padTop + padBot + LOGO_H + LOGO_GAP + DIV_H + 0.010;
 
@@ -236,64 +479,36 @@
             self._borders.push(border);
         });
 
-        // ── Visibility toggles ────────────────────────────────────────────────
-        var toggleDefs = [
-            {
-                label:    'HUD',
-                getState: function () {
-                    var vm = self.vrManager;
-                    return vm && vm._hudTL ? vm._hudTL.visible : false;
-                },
-                onSelect: function (mesh) {
-                    if (self.vrManager) self.vrManager._toggleHud();
-                    self._refreshToggle(mesh);
-                },
-            },
-            {
-                label:    'INFO PANEL',
-                getState: function () {
-                    var sp = self.vrManager && self.vrManager.spatialPanel;
-                    return sp ? sp.getMesh().visible : false;
-                },
-                onSelect: function (mesh) {
-                    var sp = self.vrManager && self.vrManager.spatialPanel;
-                    if (!sp) return;
-                    sp.setVisible(!sp.getMesh().visible);
-                    self._refreshToggle(mesh);
-                },
-            },
-            {
-                label:    'ROTATION',
-                getState: function () {
-                    var ex = self.vrManager && self.vrManager.explorer;
-                    return ex ? !!ex.isRotating : false;
-                },
-                onSelect: function (mesh) {
-                    var ex = self.vrManager && self.vrManager.explorer;
-                    if (!ex || typeof ex.isRotating === 'undefined') return;
-                    ex.isRotating = !ex.isRotating;
-                    self._refreshToggle(mesh);
-                },
-            },
-        ];
+        // ── Global toggles + page-specific actions ────────────────────────────
+        var toggleTopY = -(gridH / 2) - LABEL_H - 0.016 - TOGGLE_H / 2 + gridShift;
 
-        var toggleRowY = -(gridH / 2) - LABEL_H - 0.016 - TOGGLE_H / 2 + gridShift;
-        var toggleStartX = -(totalToggleW / 2) + TOGGLE_W / 2;
+        toggleRows.forEach(function (rowDefs, rowIndex) {
+            var rowY = toggleTopY - rowIndex * (TOGGLE_H + TOGGLE_ROW_GAP);
+            var rowW = rowDefs.length * TOGGLE_W + Math.max(0, rowDefs.length - 1) * TOGGLE_GAP;
+            var startX = -(rowW / 2) + TOGGLE_W / 2;
 
-        toggleDefs.forEach(function (def, ti) {
-            var tx = toggleStartX + ti * (TOGGLE_W + TOGGLE_GAP);
-            var active = def.getState();
+            rowDefs.forEach(function (def, ti) {
+                var tx = startX + ti * (TOGGLE_W + TOGGLE_GAP);
+                var kind = def.kind || 'toggle';
+                var active = kind === 'toggle' ? !!def.getState() : false;
 
-            var tMat = new THREE.MeshBasicMaterial({ map: makeToggleLabel(def.label, active), transparent: true, side: THREE.DoubleSide, opacity: 0.9 });
-            var tMesh = new THREE.Mesh(new THREE.PlaneGeometry(TOGGLE_W, TOGGLE_H), tMat);
-            tMesh.position.set(tx, toggleRowY, 0.001);
-            tMesh.userData.onSelect  = def.onSelect;
-            tMesh.userData.getState  = def.getState;
-            tMesh.userData.defLabel  = def.label;
-            tMesh.userData.baseY     = toggleRowY;
+                var tMat = new THREE.MeshBasicMaterial({
+                    map: makeToggleLabel(def.label, active, kind),
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    opacity: 0.9
+                });
+                var tMesh = new THREE.Mesh(new THREE.PlaneGeometry(TOGGLE_W, TOGGLE_H), tMat);
+                tMesh.position.set(tx, rowY, 0.001);
+                tMesh.userData.onSelect  = def.onSelect;
+                tMesh.userData.getState  = def.getState || function () { return false; };
+                tMesh.userData.defLabel  = def.label;
+                tMesh.userData.defKind   = kind;
+                tMesh.userData.baseY     = rowY;
 
-            self.group.add(tMesh);
-            self._toggleButtons.push(tMesh);
+                self.group.add(tMesh);
+                self._toggleButtons.push(tMesh);
+            });
         });
 
         this._allTargets = this.buttons.concat(this._toggleButtons);
@@ -301,9 +516,17 @@
 
     // Rebuild a toggle button's canvas texture to reflect current state
     VRNavMenu.prototype._refreshToggle = function (mesh) {
+        if (!mesh || !mesh.material) return;
         if (mesh.material.map) mesh.material.map.dispose();
-        mesh.material.map = makeToggleLabel(mesh.userData.defLabel, mesh.userData.getState());
+        var kind = mesh.userData.defKind || 'toggle';
+        var active = kind === 'toggle' && mesh.userData.getState ? !!mesh.userData.getState() : false;
+        mesh.material.map = makeToggleLabel(mesh.userData.defLabel, active, kind);
         mesh.material.needsUpdate = true;
+    };
+
+    VRNavMenu.prototype._refreshAllToggles = function () {
+        var self = this;
+        this._toggleButtons.forEach(function (t) { self._refreshToggle(t); });
     };
 
     // -------------------------------------------------------------------------
@@ -318,6 +541,7 @@
 
     VRNavMenu.prototype.show = function () {
         var self = this;
+        this._refreshAllToggles();
         this.buttons.forEach(function (mesh, i) {
             mesh.position.y       = mesh.userData.baseY - SLIDE_UP;
             mesh.material.opacity = 0;
