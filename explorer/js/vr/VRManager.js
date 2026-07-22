@@ -8,7 +8,8 @@
  *   Right / left trigger (hold)    — rotate / tilt (same focus anchor)
  *   Both triggers (hold)           — pinch-to-scale (same focus anchor)
  *   Focus marker                   — visible while rotating or scaling
- *   Right / left trigger (tap)     — select pointed object → HUD  /  confirm nav (right)
+ *   Right / left trigger (tap)     — select pointed object → HUD
+ *   Right / left trigger (double)  — navigate to the pointed object's page
  *   Left / right grip (hold+drag)  — grab and pan / move the scene in space
  *   Left  grip (tap)               — toggle wrist nav menu  (hold both grips → reset)
  *   Right grip (tap)               — toggle HUD (staggered reveal; both grips → reset)
@@ -19,7 +20,7 @@
  * Emulator often disagree on which index is left/right; handedness keeps them aligned.
  *
  * AR / MR support: detects immersive-ar blend mode → transparent background,
- * no scene fog, tighter initial scale (table-top feel), reduced HUD opacity.
+ * no scene fog, tighter initial scale (table-top feel).
  *
  * Exposed as window.VRManager.
  */
@@ -71,9 +72,9 @@
     var HUD_W        = 0.18;        // panel physical width (m)
     var HUD_H_TOP    = 0.068;       // top panels physical height (m)
     var HUD_H_BOT    = 0.092;       // bottom panels physical height (m)
-    var HUD_X        = 0.20;        // horizontal offset from center
-    var HUD_Y_TOP    = 0.02;        // upward offset for top panels (lower overall HUD)
-    var HUD_Y_BOT    = 0.18;        // downward offset for bottom panels
+    var HUD_X        = 0.13;        // horizontal offset from center (inward)
+    var HUD_Y_TOP    = 0.00;        // upward offset for top panels
+    var HUD_Y_BOT    = 0.12;        // downward offset for bottom panels
     var HUD_CW       = 512;         // canvas pixel width (all panels)
     var HUD_CH_TOP   = 192;         // canvas pixel height (top panels)
     var HUD_CH_BOT   = 256;         // canvas pixel height (bottom panels)
@@ -81,6 +82,7 @@
     var HUD_REVEAL_DUR     = 320;   // ms ease per corner
     var HUD_REVEAL_SLIDE   = 0.035; // metres — panels ease in from outside
     var HUD_SELECT_HOLD_MS = 8000;  // keep pointer-select info on HUD this long
+    var DOUBLE_SELECT_MS   = 450;   // second trigger tap within this window → navigate
 
     // -------------------------------------------------------------------------
 
@@ -129,12 +131,15 @@
         this._hudTR      = null;  this._hudTRCanvas = null;  this._hudTRCtx = null;  this._hudTRTex = null;
         this._hudBL      = null;  this._hudBLCanvas = null;  this._hudBLCtx = null;  this._hudBLTex = null;
         this._hudBR      = null;  this._hudBRCanvas = null;  this._hudBRCtx = null;  this._hudBRTex = null;
-        this._hudBgAlpha = 0.82;
         this._hudBasePos = null;   // resting corner positions
         this._hudReveal  = null;   // staggered reveal animation state
         this._hudSigs    = { TL: null, TR: null, BL: null, BR: null };
         this._selectionLines = null;
         this._selectionUntil = 0;
+        this._selectionKind  = null;   // bitcoin object kind for HUD TL
+        this._selectionToken = 0;      // cancels stale mempool fetches
+        this._lastSelectObj  = null;   // for double-trigger navigation
+        this._lastSelectAt   = 0;
 
         // Saved camera state for XR session
         this._savedCameraPos  = null;
@@ -161,8 +166,9 @@
 
         // Rotate/scale around a near-user focus point (not the model origin), held per gesture
         this._focusAnchor      = null;
-        this._focusAnchorLocal = new THREE.Vector3();
         this._focusAnchorTmp   = new THREE.Vector3();
+        this._focusAxis       = new THREE.Vector3();
+        this._focusQuat       = new THREE.Quaternion();
         this._anchorMarker     = null; // world-space crosshair at the focus point
 
         // Selection / pointer hover
@@ -501,8 +507,8 @@
                 return !!ud.txid;
 
             case 'difficulty.html':
-                // Spiral blocks only (not adjustment discs)
-                return ud.isBlock === true;
+                // Spiral blocks + adjacent adjustment discs
+                return ud.isBlock === true || ud.isDisc === true;
 
             case 'network.html':
                 // Peer nodes only
@@ -621,6 +627,20 @@
         var hit = this._castFromController(controller, this._raycaster);
         if (!hit) return;
 
+        var now = performance.now();
+        var isDouble = this._lastSelectObj === hit.object &&
+            (now - this._lastSelectAt) < DOUBLE_SELECT_MS;
+
+        if (isDouble) {
+            this._lastSelectObj = null;
+            this._lastSelectAt = 0;
+            this._navigateFromObject(hit.object, hand || 'right');
+            return;
+        }
+
+        this._lastSelectObj = hit.object;
+        this._lastSelectAt = now;
+
         this._haptic(hand || 'right', 50, 0.4);
         this._showSelectionOnHud(hit.object);
 
@@ -631,88 +651,503 @@
         }
     };
 
-    VRManager.prototype._getObjectLines = function (obj) {
-        obj = this._resolveSelectTarget(obj) || obj;
-        if (!obj) return ['Selected: —'];
+    /**
+     * Double-trigger navigation. Pages may handle via onVRDoubleSelect(obj) → true,
+     * or supply a URL via getVRNavigateUrl(obj). Otherwise a shared userData map is used.
+     */
+    VRManager.prototype._navigateFromObject = function (obj, hand) {
         var ex = this.explorer;
-        if (ex && typeof ex.getVRObjectInfo === 'function') {
+        if (ex && typeof ex.onVRDoubleSelect === 'function') {
             try {
-                var custom = ex.getVRObjectInfo(obj);
-                if (custom && custom.length) return custom;
+                if (ex.onVRDoubleSelect(obj) === true) {
+                    this._haptic(hand || 'right', 80, 0.6);
+                    return;
+                }
+            } catch (e) { /* fall through to URL resolve */ }
+        }
+
+        var url = this._resolveNavigateUrl(obj);
+        if (!url) {
+            // Not navigable — keep HUD feedback on the selection
+            this._haptic(hand || 'right', 30, 0.2);
+            this._showSelectionOnHud(obj);
+            return;
+        }
+
+        this._haptic(hand || 'right', 80, 0.6);
+        if (typeof window.explorerNavigate === 'function') {
+            window.explorerNavigate(url);
+        } else {
+            window.location.href = url;
+        }
+    };
+
+    /** Map a selectable mesh to an explorer page URL (or null if none). */
+    VRManager.prototype._resolveNavigateUrl = function (obj) {
+        obj = this._resolveSelectTarget(obj) || obj;
+        if (!obj) return null;
+
+        var ex = this.explorer;
+        if (ex && typeof ex.getVRNavigateUrl === 'function') {
+            try {
+                var custom = ex.getVRNavigateUrl(obj);
+                if (custom) return custom;
             } catch (e) { /* fall through */ }
         }
 
         var ud = obj.userData || {};
-        var lines = [];
+        var ZERO_TX = '0000000000000000000000000000000000000000000000000000000000000000';
 
+        // Difficulty spiral block → block page
+        if (ud.isBlock && ud.blockInfo && ud.blockInfo.height != null) {
+            return 'block.html?height=' + ud.blockInfo.height;
+        }
+
+        // Difficulty adjacent adjustment disc → that epoch
+        if (ud.isDisc && ud.adjustmentIndex != null) {
+            return 'difficulty.html?adjustment=' + ud.adjustmentIndex;
+        }
+
+        // Blockchain epoch discs
+        if (ud.isMempool) return 'mempool.html';
+        if (!ud.special && ud.t != null && typeof ud.index === 'number') {
+            return 'difficulty.html?adjustment=' + ud.index;
+        }
+
+        // Transactions (block / address / mempool cuboids)
+        if (ud.txid && String(ud.txid).indexOf('dummy') !== 0) {
+            return 'transaction.html?txid=' + encodeURIComponent(ud.txid);
+        }
+        if (ud.type === 'transaction' && ud.data && ud.data.txid) {
+            return 'transaction.html?txid=' + encodeURIComponent(ud.data.txid);
+        }
+        if (ud.type === 'utxo' && ud.data && ud.data.txid) {
+            return 'transaction.html?txid=' + encodeURIComponent(ud.data.txid);
+        }
+        if (ud.type === 'blockUtxo' && ud.utxo && ud.utxo.txid) {
+            return 'transaction.html?txid=' + encodeURIComponent(ud.utxo.txid);
+        }
+
+        // Block page: past / future neighbour blocks
+        if ((ud.type === 'pastBlock' || ud.type === 'futureBlock') && ud.blockHeight != null) {
+            return 'block.html?height=' + ud.blockHeight;
+        }
+
+        // Network peer → node page
+        if (ud.address) {
+            var addr = String(ud.address);
+            var m = addr.match(/\[([^\]]+)\]:(\d+)/);
+            if (m) addr = m[1] + '-' + m[2];
+            else addr = addr.replace(':', '-');
+            return 'node.html?node=' + encodeURIComponent(addr);
+        }
+
+        // Node protocol feature with explicit URL
+        if (ud.url) return ud.url;
+
+        // Transaction page inputs / outputs
+        if ((ud.type === 'input' || ud.type === 'input-cap') && !ud.isCoinbase && ud.data && ud.data.txid) {
+            if (ud.data.txid !== ZERO_TX) {
+                return 'transaction.html?txid=' + encodeURIComponent(ud.data.txid);
+            }
+        }
+        if ((ud.type === 'output' || ud.type === 'output-cap') && ud.spendingData && ud.spendingData.txid) {
+            return 'transaction.html?txid=' + encodeURIComponent(ud.spendingData.txid);
+        }
+
+        return null;
+    };
+
+    // ── Bitcoin formatting helpers (never dump mesh / layout userData) ────────
+
+    VRManager.prototype._shortHash = function (h, head, tail) {
+        h = String(h || '');
+        head = head == null ? 10 : head;
+        tail = tail == null ? 6 : tail;
+        if (tail <= 0) {
+            if (h.length <= head) return h;
+            return h.slice(0, head) + '…';
+        }
+        if (h.length <= head + tail + 1) return h;
+        return h.slice(0, head) + '…' + h.slice(-tail);
+    };
+
+    VRManager.prototype._fmtBtc = function (sats) {
+        if (sats == null || isNaN(Number(sats))) return null;
+        return (Number(sats) / 1e8).toFixed(8) + ' BTC';
+    };
+
+    VRManager.prototype._fmtNum = function (n) {
+        if (n == null || isNaN(Number(n))) return null;
+        return Number(n).toLocaleString();
+    };
+
+    VRManager.prototype._fmtTime = function (unixSec) {
+        if (unixSec == null) return null;
+        try {
+            return new Date(Number(unixSec) * 1000).toUTCString().replace(/:\d\d GMT$/, ' UTC');
+        } catch (e) { return null; }
+    };
+
+    /** Build HUD lines from a mempool.space-style tx object. */
+    VRManager.prototype._linesFromTxData = function (tx, txid) {
+        tx = tx || {};
+        txid = txid || tx.txid;
+        var lines = [];
+        var feeSats = tx.fee;
+        if (feeSats == null && tx.vin && tx.vout) {
+            var tin = 0, tout = 0, i;
+            for (i = 0; i < tx.vin.length; i++) tin += (tx.vin[i].prevout && tx.vin[i].prevout.value) || 0;
+            for (i = 0; i < tx.vout.length; i++) tout += tx.vout[i].value || 0;
+            if (tin > 0) feeSats = tin - tout;
+        }
+
+        if (feeSats != null && feeSats >= 0) lines.push('Fee: ' + this._fmtNum(feeSats) + ' sats');
+        else lines.push('Type: Transaction');
+
+        if (txid) lines.push('TXID: ' + this._shortHash(txid));
+        if (tx.size != null) lines.push('Size: ' + this._fmtNum(tx.size) + ' B');
+        if (tx.weight != null) lines.push('Weight: ' + this._fmtNum(tx.weight) + ' WU');
+        else if (tx.vsize != null) lines.push('VSize: ' + this._fmtNum(tx.vsize) + ' vB');
+
+        var vinN = tx.vin && tx.vin.length;
+        var voutN = tx.vout && tx.vout.length;
+        if (vinN != null || voutN != null) {
+            lines.push('I/O: ' + (vinN || 0) + ' in / ' + (voutN || 0) + ' out');
+        }
+
+        if (tx.status) {
+            if (tx.status.confirmed) {
+                if (tx.status.block_height != null) lines.push('Block: ' + this._fmtNum(tx.status.block_height));
+                var t = this._fmtTime(tx.status.block_time);
+                if (t) lines.push('Time: ' + t);
+            } else {
+                lines.push('Status: Unconfirmed');
+            }
+        }
+        return lines;
+    };
+
+    /**
+     * Bitcoin-domain HUD lines for a selected mesh.
+     * Reads nested payloads (transactionData / data / blockInfo / utxo) — never
+     * dumps layout fields (layer, radius, opacity, position, …).
+     */
+    VRManager.prototype._getObjectLines = function (obj) {
+        obj = this._resolveSelectTarget(obj) || obj;
+        if (!obj) {
+            this._selectionKind = null;
+            return ['Type: —'];
+        }
+        var ex = this.explorer;
+        if (ex && typeof ex.getVRObjectInfo === 'function') {
+            try {
+                var custom = ex.getVRObjectInfo(obj);
+                if (custom) {
+                    if (Object.prototype.toString.call(custom) === '[object Array]' && custom.length) {
+                        this._selectionKind = 'Selected';
+                        return custom;
+                    }
+                    if (custom.lines && custom.lines.length) {
+                        this._selectionKind = custom.kind || 'Selected';
+                        return custom.lines;
+                    }
+                }
+            } catch (e) { /* fall through */ }
+        }
+
+        var ud = obj.userData || {};
+        var lines;
+        var kind;
+
+        // ── Blockchain epochs ─────────────────────────────────────────────────
         if (ud.isMempool) {
-            return ['Selected: Mempool', 'Pending transactions', 'Tip of the chain'];
-        }
-        if (ud.isGenesis || (ud.index === 0 && ud.t != null)) {
-            return ['Selected: Genesis', 'Epoch 0', 'Blocks 0 – 2,015', 'Jan 3, 2009'];
-        }
-        if (typeof ud.index === 'number' && ud.t != null) {
+            kind = 'Mempool';
+            lines = ['Tip: Pending', 'Pending transactions', 'Unconfirmed set', 'Tip of the chain'];
+        } else if (ud.isGenesis || (ud.index === 0 && ud.t != null)) {
+            kind = 'Genesis';
+            lines = ['Epoch: 0', 'Blocks: 0 – 2,015', 'Date: Jan 3, 2009', 'First difficulty epoch'];
+        } else if (typeof ud.index === 'number' && ud.t != null) {
+            kind = 'Epoch';
             var start = ud.index * 2016;
             var end = start + 2015;
-            lines = ['Selected: Epoch ' + ud.index];
+            lines = ['Epoch: ' + ud.index];
             lines.push('Blocks: ' + start.toLocaleString() + ' – ' + end.toLocaleString());
-            if (ud.isMilestone) lines.push('Milestone: Halving epoch');
-            return lines;
-        }
-        if (ud.txid) {
-            var short = String(ud.txid);
-            if (short.length > 18) short = short.slice(0, 10) + '…' + short.slice(-6);
-            lines = ['Selected: Transaction', 'TXID: ' + short];
-            if (ud.index != null) lines.push('Index: ' + ud.index);
-            if (ud.layer != null) lines.push('Layer: ' + ud.layer);
-            if (ud.fee != null) lines.push('Fee: ' + ud.fee);
-            if (ud.size != null) lines.push('Size: ' + ud.size);
-            return lines;
-        }
-        if (ud.type === 'header') {
-            return ['Selected: Block Header', ud.description || '80 bytes'];
-        }
-        if (ud.type === 'currentBlock' || ud.type === 'pastBlock' || ud.type === 'futureBlock') {
-            var label = ud.type === 'currentBlock' ? 'Current block' : (ud.type === 'pastBlock' ? 'Past block' : 'Future block');
-            lines = ['Selected: ' + label];
-            if (ud.blockHeight != null) lines.push('Height: ' + Number(ud.blockHeight).toLocaleString());
-            return lines;
-        }
-        if (ud.type === 'blockUtxo' && ud.utxo) {
-            var u = ud.utxo;
-            lines = ['Selected: UTXO'];
-            if (u.value != null) lines.push('Value: ' + (u.value / 1e8).toFixed(8) + ' BTC');
-            if (u.txid) lines.push('TXID: ' + String(u.txid).slice(0, 16) + '…');
-            return lines;
-        }
-        if (ud.address || ud.userAgent || ud.country) {
-            lines = ['Selected: Node'];
+            if (ud.isMilestone) lines.push('Milestone: Halving');
+            if (ud.progress != null) lines.push('Progress: ' + Math.round(ud.progress * 100) + '%');
+
+        // ── Difficulty spiral block (nested blockInfo) ────────────────────────
+        } else if (ud.isBlock && ud.blockInfo) {
+            kind = 'Block';
+            var bi = ud.blockInfo;
+            lines = ['Height: ' + this._fmtNum(bi.height)];
+            if (bi.nTx != null) lines.push('Txs: ' + this._fmtNum(bi.nTx));
+            if (bi.size != null) lines.push('Size: ' + this._fmtNum(bi.size) + ' B');
+            var bt = this._fmtTime(bi.time);
+            if (bt) lines.push('Time: ' + bt);
+            if (bi.timeDifference != null) {
+                var secs = Math.abs(bi.timeDifference);
+                var mins = Math.round(secs / 60);
+                lines.push('Δ prev: ' + (mins >= 60
+                    ? (Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm')
+                    : (mins + 'm')));
+            }
+
+        // ── Difficulty adjacent adjustment discs ──────────────────────────────
+        } else if (ud.isDisc && ud.adjustmentIndex != null) {
+            kind = 'Epoch';
+            var adj = ud.adjustmentIndex;
+            var aStart = adj * 2016;
+            var aEnd = aStart + 2015;
+            lines = ['Epoch: ' + adj];
+            lines.push('Blocks: ' + aStart.toLocaleString() + ' – ' + aEnd.toLocaleString());
+            if (ud.isFuture) lines.push('Period: Future');
+            else if (ud.isPast) lines.push('Period: Previous');
+
+        // ── Block page: transaction cuboid ────────────────────────────────────
+        } else if (ud.txid && (ud.transactionData || !ud.type || ud.type === 'transaction')) {
+            kind = 'Transaction';
+            if (ud.transactionData) {
+                lines = this._linesFromTxData(ud.transactionData, ud.txid);
+            } else {
+                // Bare txid — show identity now; _enrichSelection will fill fee/size
+                lines = [
+                    'Type: Transaction',
+                    'TXID: ' + this._shortHash(ud.txid),
+                    'Loading: mempool.space…'
+                ];
+                if (ud.size != null && typeof ud.size === 'number' && ud.size > 0 && ud.size < 1e7) {
+                    lines.splice(2, 0, 'Size: ' + this._fmtNum(ud.size) + ' B');
+                }
+            }
+            if (ud.index != null && typeof ud.index === 'number') {
+                lines.push('In block: #' + ud.index);
+            }
+
+        // ── Address page history tx (data nested) ─────────────────────────────
+        } else if (ud.type === 'transaction' && ud.data) {
+            kind = 'Transaction';
+            var atd = ud.data;
+            if (atd.vin || atd.vout || atd.fee != null) {
+                lines = this._linesFromTxData(atd, atd.txid);
+            } else {
+                var amt = this._fmtBtc(atd.value);
+                lines = [amt ? 'Value: ' + amt : 'Type: Transaction'];
+                if (atd.txid) lines.push('TXID: ' + this._shortHash(atd.txid));
+                if (atd.size != null) lines.push('Size: ' + this._fmtNum(atd.size) + ' B');
+                if (atd.status && atd.status.block_height != null) {
+                    lines.push('Block: ' + this._fmtNum(atd.status.block_height));
+                }
+                var at = atd.status && this._fmtTime(atd.status.block_time);
+                if (at) lines.push('Time: ' + at);
+                if (atd.status && !atd.status.confirmed) lines.push('Status: Unconfirmed');
+            }
+
+        // ── Transaction page: central body / inputs / outputs ─────────────────
+        } else if (ud.type === 'transaction' && !ud.data && ud.txid) {
+            kind = 'Transaction';
+            lines = ['Type: Transaction', 'TXID: ' + this._shortHash(ud.txid), 'Loading: mempool.space…'];
+        } else if (ud.type === 'input' || ud.type === 'input-cap') {
+            kind = ud.isCoinbase ? 'Coinbase' : 'Input';
+            var vin = ud.data || {};
+            if (ud.isCoinbase) {
+                var cAmt = this._fmtBtc(ud.coinbaseAmount);
+                lines = [cAmt ? 'Reward: ' + cAmt : 'Type: Coinbase'];
+                lines.push('Source: Newly minted');
+                if (vin.coinbase) lines.push('Data: ' + this._shortHash(vin.coinbase, 12, 0));
+            } else {
+                var inAmt = vin.prevout && this._fmtBtc(vin.prevout.value);
+                lines = [inAmt ? 'Value: ' + inAmt : 'Type: Input'];
+                if (ud.index != null) lines.push('Input: #' + (ud.index + 1));
+                if (vin.prevout && vin.prevout.scriptpubkey_type) {
+                    lines.push('Script: ' + vin.prevout.scriptpubkey_type);
+                }
+                if (vin.prevout && vin.prevout.scriptpubkey_address) {
+                    lines.push('Addr: ' + this._shortHash(vin.prevout.scriptpubkey_address, 12, 6));
+                }
+                if (vin.txid) lines.push('From: ' + this._shortHash(vin.txid));
+                if (vin.vout != null) lines.push('Vout: ' + vin.vout);
+            }
+        } else if (ud.type === 'output' || ud.type === 'output-cap') {
+            kind = ud.spendingData ? 'Output (spent)' : 'Output';
+            var vout = ud.data || {};
+            var outAmt = this._fmtBtc(vout.value);
+            lines = [outAmt ? 'Value: ' + outAmt : 'Type: Output'];
+            if (ud.index != null) lines.push('Output: #' + (ud.index + 1));
+            if (vout.scriptpubkey_type) lines.push('Script: ' + vout.scriptpubkey_type);
+            if (vout.scriptpubkey_address) {
+                lines.push('Addr: ' + this._shortHash(vout.scriptpubkey_address, 12, 6));
+            }
+            if (ud.spendingData) {
+                if (ud.spendingData.txid) lines.push('Spent by: ' + this._shortHash(ud.spendingData.txid));
+                if (ud.spendingData.block_height != null) {
+                    lines.push('Spend block: ' + this._fmtNum(ud.spendingData.block_height));
+                }
+            } else if (ud.type === 'output-cap' || !ud.spendingData) {
+                lines.push('Status: Unspent');
+            }
+
+        // ── Address / block UTXOs ──────────────────────────────────────────────
+        } else if ((ud.type === 'utxo' && ud.data) || (ud.type === 'blockUtxo' && ud.utxo)) {
+            kind = 'UTXO';
+            var u = ud.data || ud.utxo;
+            var uAmt = this._fmtBtc(u.value);
+            lines = [uAmt ? 'Value: ' + uAmt : 'Type: UTXO'];
+            if (u.txid) lines.push('TXID: ' + this._shortHash(u.txid));
+            if (u.vout != null) lines.push('Vout: ' + u.vout);
+            if (u.scriptpubkey_address) {
+                lines.push('Addr: ' + this._shortHash(u.scriptpubkey_address, 12, 6));
+            }
+            if (u.status && u.status.block_height != null) {
+                lines.push('Block: ' + this._fmtNum(u.status.block_height));
+            }
+
+        // ── Block header / adjacent blocks ────────────────────────────────────
+        } else if (ud.type === 'header') {
+            kind = 'Header';
+            lines = ['Type: Block header', ud.description || 'Size: 80 bytes'];
+        } else if (ud.type === 'currentBlock' || ud.type === 'pastBlock' || ud.type === 'futureBlock') {
+            kind = ud.type === 'currentBlock' ? 'Current block'
+                : (ud.type === 'pastBlock' ? 'Past block' : 'Future block');
+            lines = ['Type: ' + kind];
+            if (ud.blockHeight != null) lines.push('Height: ' + this._fmtNum(ud.blockHeight));
+
+        // ── Mempool fee-band cuboid (no per-tx id) ────────────────────────────
+        } else if (ud.feeRate != null && !ud.txid) {
+            kind = 'Fee band';
+            lines = ['Fee: ' + Number(ud.feeRate).toFixed(2) + ' sat/vB'];
+            if (ud.originalCount != null) {
+                lines.push('Txs in band: ' + this._fmtNum(ud.originalCount));
+            }
+            lines.push('Source: Mempool histogram');
+
+        // ── Network peer ──────────────────────────────────────────────────────
+        } else if (ud.address || ud.userAgent || (ud.country && !ud.txid)) {
+            kind = 'Node';
+            lines = ['Impl: ' + (ud.type || 'Unknown')];
             if (ud.address) lines.push('Addr: ' + ud.address);
-            if (ud.type) lines.push('Impl: ' + ud.type);
-            if (ud.city || ud.country) lines.push('Loc: ' + [ud.city, ud.country].filter(Boolean).join(', '));
-            if (ud.height != null) lines.push('Height: ' + ud.height);
+            if (ud.city || ud.country) {
+                lines.push('Loc: ' + [ud.city, ud.country].filter(Boolean).join(', '));
+            }
+            var h = ud.height != null ? ud.height : ud.latestHeight;
+            if (h != null) lines.push('Height: ' + this._fmtNum(h));
             if (ud.org) lines.push('Org: ' + ud.org);
-            return lines;
+            if (ud.userAgent) {
+                var ua = String(ud.userAgent);
+                if (ua.length > 40) ua = ua.slice(0, 38) + '…';
+                lines.push('UA: ' + ua);
+            }
+
+        // ── Protocol feature (node.html) ──────────────────────────────────────
+        } else if (ud.name && (ud.type === 'Bitcoin Protocol' || ud.description || ud.year)) {
+            kind = 'Protocol';
+            lines = ['Name: ' + ud.name];
+            if (ud.year != null) lines.push('Year: ' + ud.year);
+            if (ud.description) {
+                var desc = String(ud.description);
+                if (desc.length > 48) desc = desc.slice(0, 46) + '…';
+                lines.push(desc);
+            }
+
+        } else {
+            kind = 'Object';
+            lines = ['Type: ' + (ud.name || ud.label || 'Unknown')];
         }
 
-        var name = ud.name || ud.label || obj.name || obj.type || 'Object';
-        lines.push('Selected: ' + name);
-        Object.keys(ud).forEach(function (k) {
-            if (k === 'name' || k === 'label' || k === 'originalColor') return;
-            var v = ud[k];
-            if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
-                var s = String(v);
-                if (s.length > 42) s = s.slice(0, 40) + '…';
-                lines.push(k + ': ' + s);
+        this._selectionKind = kind;
+        return lines;
+    };
+
+    /** True when we should fetch richer bitcoin data from mempool.space. */
+    VRManager.prototype._selectionNeedsFetch = function (obj) {
+        if (!obj || !obj.userData) return null;
+        var ud = obj.userData;
+        // Block / address cuboid with txid but no full tx payload
+        if (ud.txid && !ud.transactionData && !(ud.data && (ud.data.vin || ud.data.fee != null))) {
+            // Skip dummy / synthetic ids
+            if (String(ud.txid).indexOf('dummy') === 0) return null;
+            return { kind: 'tx', id: String(ud.txid) };
+        }
+        if (ud.type === 'transaction' && ud.data && ud.data.txid && !ud.data.vin && ud.data.fee == null) {
+            // Address-page slim tx — enrich from full tx endpoint
+            return { kind: 'tx', id: String(ud.data.txid) };
+        }
+        if (ud.isBlock && ud.blockInfo && ud.blockInfo.height != null && ud.blockInfo.nTx == null) {
+            return { kind: 'blockHeight', id: String(ud.blockInfo.height) };
+        }
+        return null;
+    };
+
+    VRManager.prototype._enrichSelection = function (obj, token) {
+        var need = this._selectionNeedsFetch(obj);
+        if (!need) return;
+
+        var self = this;
+        var url = need.kind === 'tx'
+            ? 'https://mempool.space/api/tx/' + encodeURIComponent(need.id)
+            : 'https://mempool.space/api/block-height/' + encodeURIComponent(need.id);
+
+        fetch(url).then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return need.kind === 'blockHeight' ? res.text() : res.json();
+        }).then(function (first) {
+            if (need.kind === 'blockHeight') {
+                return fetch('https://mempool.space/api/block/' + encodeURIComponent(String(first).trim()))
+                    .then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    });
+            }
+            return first;
+        }).then(function (data) {
+            if (token !== self._selectionToken) return; // superseded
+            if (!obj.userData) obj.userData = {};
+
+            if (need.kind === 'tx' && data) {
+                obj.userData.transactionData = data;
+                if (obj.userData.data && !obj.userData.data.vin) {
+                    // Keep slim address payload but prefer transactionData for HUD
+                }
+            } else if (need.kind === 'blockHeight' && data && obj.userData.blockInfo) {
+                obj.userData.blockInfo.nTx = data.tx_count;
+                obj.userData.blockInfo.size = data.size;
+                if (data.timestamp != null) obj.userData.blockInfo.time = data.timestamp;
+            }
+
+            var lines = self._getObjectLines(obj);
+            self._selectionLines = lines;
+            self._selectionUntil = performance.now() + HUD_SELECT_HOLD_MS;
+            var changed = self._drawHud(lines);
+            if (changed && changed.length) self._startHudReveal(changed);
+        }).catch(function () {
+            if (token !== self._selectionToken) return;
+            // Leave the "Loading…" line; optionally mark failure
+            if (self._selectionLines) {
+                var next = self._selectionLines.slice();
+                for (var i = 0; i < next.length; i++) {
+                    if (String(next[i]).indexOf('Loading:') === 0) {
+                        next[i] = 'Fetch: unavailable';
+                        break;
+                    }
+                }
+                self._selectionLines = next;
+                self._drawHud(next);
             }
         });
-        return lines.length > 1 ? lines : lines.concat(this._readPanelLines());
     };
 
     VRManager.prototype._showSelectionOnHud = function (obj) {
-        var lines = this._getObjectLines(obj);
+        var lines = this._getObjectLines(obj).slice();
+        // Hint when a second trigger tap would soft-navigate
+        var canNav = false;
+        try { canNav = !!this._resolveNavigateUrl(obj); } catch (e) { canNav = false; }
+        if (canNav && lines.indexOf('Double-trigger → open') < 0) {
+            lines.push('Double-trigger → open');
+        }
         this._selectionLines = lines;
         this._selectionUntil = performance.now() + HUD_SELECT_HOLD_MS;
+        this._selectionToken = (this._selectionToken || 0) + 1;
+        var token = this._selectionToken;
 
         // Selection lives on the HUD — hide the floating info panel if open
         if (this.spatialPanel) this.spatialPanel.setVisible(false);
@@ -725,6 +1160,9 @@
         // Only re-reveal corners whose content actually changed
         var changed = this._drawHud(lines);
         if (changed && changed.length) this._startHudReveal(changed);
+
+        // Enrich incomplete bitcoin payloads from mempool.space
+        this._enrichSelection(obj, token);
     };
 
     VRManager.prototype._hudLines = function () {
@@ -734,6 +1172,7 @@
         if (this._selectionLines && performance.now() >= this._selectionUntil) {
             this._selectionLines = null;
             this._selectionUntil = 0;
+            this._selectionKind = null;
         }
         return this._readPanelLines();
     };
@@ -750,7 +1189,6 @@
         // Detect AR vs VR
         var session    = renderer.xr.getSession();
         this._isAR     = !!(session && session.environmentBlendMode !== 'opaque');
-        this._hudBgAlpha = this._isAR ? 0.60 : 0.82;
 
         // Re-resolve in case `connected` already fired for both hands
         this._resolveControllerHands();
@@ -838,12 +1276,19 @@
         });
     };
 
-        // Controllers, grips, HUD host camera, spatial panel, focus marker, ray tips stay at scene root
+    // Controllers, grips, HUD host camera, spatial panel, focus marker, ray tips stay at scene root
     VRManager.prototype._shouldKeepInScene = function (obj) {
         if (!obj) return true;
         if (obj === this.pivot) return true;
         if (obj === this.controller0 || obj === this.controller1) return true;
         if (obj === this._grip0 || obj === this._grip1) return true;
+        // Raw slots — keep even if logical handedness mapping drifted
+        if (this._rawControllers) {
+            if (obj === this._rawControllers[0] || obj === this._rawControllers[1]) return true;
+        }
+        if (this._rawGrips) {
+            if (obj === this._rawGrips[0] || obj === this._rawGrips[1]) return true;
+        }
         if (obj === this.explorer.camera) return true;
         if (obj === this._labelMesh) return true;
         if (obj === this._anchorMarker) return true;
@@ -851,6 +1296,22 @@
         var spatialMesh = this.spatialPanel ? this.spatialPanel.getMesh() : null;
         if (spatialMesh && obj === spatialMesh) return true;
         return false;
+    };
+
+    /** Re-parent controllers/grips to scene root if a page wipe removed them. */
+    VRManager.prototype._ensureControllersInScene = function () {
+        var scene = this.explorer && this.explorer.scene;
+        if (!scene || !this._rawControllers) return;
+        var add = this._origSceneAdd || scene.add.bind(scene);
+        var objs = [
+            this._rawControllers[0], this._rawControllers[1],
+            this._rawGrips && this._rawGrips[0], this._rawGrips && this._rawGrips[1],
+            this._rayTip0, this._rayTip1
+        ];
+        for (var i = 0; i < objs.length; i++) {
+            var o = objs[i];
+            if (o && o.parent !== scene) add(o);
+        }
     };
 
     // During XR, explorer pages keep calling scene.add/remove (async node loads, etc.).
@@ -985,6 +1446,8 @@
         if (this._rayTip1) this._rayTip1.visible = false;
         this._selectionLines = null;
         this._selectionUntil = 0;
+        this._selectionKind = null;
+        this._selectionToken = (this._selectionToken || 0) + 1;
         this._hudReveal = null;
         this._needsInitialPlacement = false;
 
@@ -1075,10 +1538,13 @@
      */
     VRManager.prototype._pickFocusAnchor = function () {
         var xrCam = this.explorer.renderer.xr.getCamera();
-        var camPos = xrCam.position;
-        var forward = new THREE.Vector3(0, 0, -1).applyQuaternion(xrCam.quaternion);
+        var camPos = new THREE.Vector3();
+        var forward = new THREE.Vector3();
+        xrCam.getWorldPosition(camPos);
+        xrCam.getWorldDirection(forward);
 
         if (this.pivot && this.pivot.children.length) {
+            this.pivot.updateMatrixWorld(true);
             this._raycaster.set(camPos, forward);
             var hits = this._raycaster.intersectObjects(this.pivot.children, true);
             if (hits.length > 0) return hits[0].point.clone();
@@ -1100,6 +1566,20 @@
     VRManager.prototype._clearFocusAnchor = function () {
         this._focusAnchor = null;
         this._hideAnchorMarker();
+    };
+
+    /** Orbit pivot position + orientation around a fixed world-space point. */
+    VRManager.prototype._orbitPivotAroundAnchor = function (axis, angle) {
+        if (!this.pivot || !axis || Math.abs(angle) < 1e-12) return;
+        if (axis.lengthSq() < 1e-12) return;
+        axis.normalize();
+
+        var anchor = this._ensureFocusAnchor();
+        // Translate so the anchor is at the world origin, rotate, translate back
+        this.pivot.position.sub(anchor);
+        this.pivot.position.applyAxisAngle(axis, angle);
+        this.pivot.rotateOnWorldAxis(axis, angle);
+        this.pivot.position.add(anchor);
     };
 
     VRManager.prototype._ensureAnchorMarker = function () {
@@ -1183,7 +1663,8 @@
         var ring = this._anchorMarker.userData.ring;
         if (ring) {
             var xrCam = this.explorer.renderer.xr.getCamera();
-            ring.lookAt(xrCam.position);
+            xrCam.getWorldPosition(this._focusAnchorTmp);
+            ring.lookAt(this._focusAnchorTmp);
         }
     };
 
@@ -1198,46 +1679,53 @@
         this._anchorMarker = null;
     };
 
-    /** Keep a world point fixed while changing pivot rotation. */
+    /**
+     * Rotate around the focus anchor in world space.
+     * dRotY = yaw about world up; dRotX = pitch about camera-horizontal right.
+     */
     VRManager.prototype._applyPivotRotation = function (dRotX, dRotY) {
         if (!this.pivot || (dRotX === 0 && dRotY === 0)) return;
 
-        var anchor = this._ensureFocusAnchor();
-        this.pivot.updateMatrixWorld(true);
-        this._focusAnchorLocal.copy(anchor);
-        this.pivot.worldToLocal(this._focusAnchorLocal);
+        // Lock / show the marker before mutating so the indicated point is the orbit center
+        this._ensureFocusAnchor();
 
-        this.pivot.rotation.x += dRotX;
-        this.pivot.rotation.y += dRotY;
-        this.pivot.updateMatrixWorld(true);
+        if (dRotY !== 0) {
+            this._focusAxis.set(0, 1, 0);
+            this._orbitPivotAroundAnchor(this._focusAxis, dRotY);
+        }
+        if (dRotX !== 0) {
+            var xrCam = this.explorer.renderer.xr.getCamera();
+            xrCam.getWorldQuaternion(this._focusQuat);
+            var camRight = this._focusAxis;
+            camRight.set(1, 0, 0).applyQuaternion(this._focusQuat);
+            camRight.y = 0;
+            if (camRight.lengthSq() < 1e-8) {
+                // Looking straight up/down — fall back to world X
+                camRight.set(1, 0, 0);
+            }
+            this._orbitPivotAroundAnchor(camRight, dRotX);
+        }
 
-        this._focusAnchorTmp.copy(this._focusAnchorLocal);
-        this.pivot.localToWorld(this._focusAnchorTmp);
-        this.pivot.position.add(anchor).sub(this._focusAnchorTmp);
         this._updateAnchorMarker();
     };
 
-    /** Keep a world point fixed while changing pivot uniform scale. */
+    /** Uniform-scale the pivot while keeping the focus anchor fixed in world space. */
     VRManager.prototype._applyPivotScale = function (newScale) {
         if (!this.pivot) return;
         newScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, newScale));
-        if (Math.abs(newScale - this.pivot.scale.x) < 1e-12) {
+        var oldScale = this.pivot.scale.x;
+        if (Math.abs(newScale - oldScale) < 1e-12 || oldScale < 1e-20) {
             this._ensureFocusAnchor();
             this._updateAnchorMarker();
             return;
         }
 
         var anchor = this._ensureFocusAnchor();
-        this.pivot.updateMatrixWorld(true);
-        this._focusAnchorLocal.copy(anchor);
-        this.pivot.worldToLocal(this._focusAnchorLocal);
+        var factor = newScale / oldScale;
 
+        // P' = A + (P - A) * (s'/s)  — scales the offset from the anchor, then set scale
+        this.pivot.position.sub(anchor).multiplyScalar(factor).add(anchor);
         this.pivot.scale.setScalar(newScale);
-        this.pivot.updateMatrixWorld(true);
-
-        this._focusAnchorTmp.copy(this._focusAnchorLocal);
-        this.pivot.localToWorld(this._focusAnchorTmp);
-        this.pivot.position.add(anchor).sub(this._focusAnchorTmp);
         this._updateAnchorMarker();
     };
 
@@ -1487,28 +1975,21 @@
         var W   = canvas.width;
         var H   = canvas.height;
         var PAD = 18;
-        var bg  = this._hudBgAlpha;
 
         ctx.clearRect(0, 0, W, H);
-
-        // Background
-        ctx.fillStyle = 'rgba(0,0,0,' + bg + ')';
-        ctx.fillRect(0, 0, W, H);
-
-        // Thin white border (hairline)
-        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-        ctx.lineWidth   = 1.5;
-        ctx.strokeRect(1, 1, W - 2, H - 2);
-
         ctx.textBaseline = 'top';
 
         if (corner === 'TL') {
-            // Page title — large, left-aligned
-            var page = window.location.pathname.split('/').pop().replace('.html', '').toUpperCase() || 'EXPLORER';
+            var selecting = this._selectionLines && performance.now() < this._selectionUntil;
+            var title = selecting && this._selectionKind
+                ? String(this._selectionKind).toUpperCase()
+                : (window.location.pathname.split('/').pop().replace('.html', '').toUpperCase() || 'EXPLORER');
+            var sub = selecting ? 'SELECTED' : 'ANATOMY OF BITCOIN';
+
             ctx.fillStyle = 'rgba(255,255,255,0.95)';
             ctx.font      = '400 58px "BureauGrotesque", sans-serif';
             ctx.textAlign = 'left';
-            ctx.fillText(page, PAD, PAD - 4);
+            ctx.fillText(title, PAD, PAD - 4);
 
             // Thin rule
             ctx.fillStyle = 'rgba(255,255,255,0.10)';
@@ -1517,7 +1998,7 @@
             // Sub-label
             ctx.fillStyle = 'rgba(255,255,255,0.26)';
             ctx.font      = '300 17px "Inter", sans-serif';
-            ctx.fillText('ANATOMY OF BITCOIN', PAD, PAD + 74);
+            ctx.fillText(sub, PAD, PAD + 74);
 
         } else if (corner === 'TR') {
             // Primary stat — right-aligned, value large
@@ -1568,7 +2049,7 @@
                 var extra = lines.slice(5, 8);
                 ctx.font      = '300 17px "Inter", sans-serif';
                 ctx.fillStyle = 'rgba(255,255,255,0.32)';
-                ctx.fillText('OBJECT SELECTED', W - PAD, PAD);
+                ctx.fillText('BITCOIN DATA', W - PAD, PAD);
                 ctx.font      = '300 20px "Inter", sans-serif';
                 ctx.fillStyle = 'rgba(255,255,255,0.78)';
                 extra.forEach(function (line, i) {
@@ -1601,6 +2082,9 @@
     VRManager.prototype._hudCornerSig = function (corner, lines) {
         lines = lines || [];
         if (corner === 'TL') {
+            if (this._selectionLines && performance.now() < this._selectionUntil && this._selectionKind) {
+                return 'SEL|' + this._selectionKind;
+            }
             return (window.location.pathname.split('/').pop() || 'explorer').replace('.html', '');
         }
         if (corner === 'TR') return String(lines[0] || '');
@@ -1771,6 +2255,89 @@
         if (this.navMenu && this.navMenu.group.visible && this.navMenu.highlighted && this._ray0) {
             this._ray0.material.opacity = Math.max(this._ray0.material.opacity, RAY_HIT_OPACITY);
         }
+    };
+
+    // -------------------------------------------------------------------------
+    // Soft-nav shell (ExplorerRouter) — keep XR session across page swaps
+    // -------------------------------------------------------------------------
+
+    function _disposeObjectTree(root) {
+        if (!root) return;
+        root.traverse(function (child) {
+            if (child.geometry) {
+                try { child.geometry.dispose(); } catch (e) { /* ignore */ }
+            }
+            var mats = child.material;
+            if (!mats) return;
+            var list = Array.isArray(mats) ? mats : [mats];
+            for (var i = 0; i < list.length; i++) {
+                var m = list[i];
+                if (!m) continue;
+                try {
+                    if (m.map) m.map.dispose();
+                    m.dispose();
+                } catch (e) { /* ignore */ }
+            }
+        });
+    }
+
+    /** Remove page content meshes; keep controllers / HUD / pivot / camera. */
+    VRManager.prototype.clearContent = function () {
+        var self = this;
+        var explorer = this.explorer;
+        if (!explorer || !explorer.scene) return;
+        this._clearHover();
+        this._clearFocusAnchor();
+        this._lastSelectObj = null;
+        this._lastSelectAt = 0;
+
+        if (this.pivot && explorer.renderer.xr && explorer.renderer.xr.isPresenting) {
+            this.pivot.children.slice().forEach(function (c) {
+                self.pivot.remove(c);
+                _disposeObjectTree(c);
+            });
+            return;
+        }
+
+        explorer.scene.children.slice().forEach(function (c) {
+            if (self._shouldKeepInScene(c)) return;
+            explorer.scene.remove(c);
+            _disposeObjectTree(c);
+        });
+    };
+
+    VRManager.prototype.resetPageScale = function () {
+        if (!this.pivot) return;
+        var page     = this._pageId();
+        var scaleMap = this._isAR ? SCALE_MAP_AR : SCALE_MAP_VR;
+        var scale    = scaleMap[page] || 0.05;
+        this.pivot.scale.setScalar(scale);
+        this.pivot.rotation.set(0, 0, 0);
+        this._needsInitialPlacement = true;
+    };
+
+    VRManager.prototype.bindExplorer = function (explorer, options) {
+        options = options || {};
+        this.explorer = explorer;
+        if (options.panelTitle) this.panelTitle = options.panelTitle;
+        if (options.panelDomId !== undefined) this.panelDomId = options.panelDomId;
+        if (this.spatialPanel && options.panelTitle && typeof this.spatialPanel.setTitle === 'function') {
+            this.spatialPanel.setTitle(options.panelTitle);
+        }
+    };
+
+    /** After ExplorerRouter finishes creating the next page while presenting. */
+    VRManager.prototype.afterSoftNav = function () {
+        if (!this.explorer || !this.explorer.renderer.xr.isPresenting) return;
+        this._ensureControllersInScene();
+        this._adoptOrphanContent();
+        this.resetPageScale();
+        if (this.navMenu && typeof this.navMenu.rebuild === 'function') {
+            var wasVisible = this.navMenu.group.visible;
+            this.navMenu.rebuild();
+            if (wasVisible) this.navMenu.show();
+        }
+        this._startHudReveal();
     };
 
     // -------------------------------------------------------------------------
