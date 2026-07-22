@@ -251,25 +251,88 @@
                     label: 'BLOCKS',
                     kind: 'toggle',
                     getState: function () { return explorerProp(vrManager, 'isSoundEnabled'); },
-                    onSelect: click('toggle-sound')
+                    onSelect: function (mesh) {
+                        var ex = vrManager && vrManager.explorer;
+                        if (ex) {
+                            ex.isSoundEnabled = !ex.isSoundEnabled;
+                            var btn = document.getElementById('toggle-sound');
+                            if (btn) {
+                                btn.textContent = ex.isSoundEnabled ? 'Blocks: On' : 'Blocks: Off';
+                                btn.style.background = ex.isSoundEnabled ? '#555' : '#333';
+                            }
+                            if (ex.isSoundEnabled && typeof ex.initAudio === 'function') ex.initAudio();
+                        } else {
+                            clickDomButton('toggle-sound');
+                        }
+                        if (mesh) {
+                            setTimeout(function () {
+                                if (vrManager && vrManager.navMenu) vrManager.navMenu._refreshToggle(mesh);
+                            }, 0);
+                        }
+                    }
                 },
                 {
                     label: '10 MIN',
                     kind: 'toggle',
                     getState: function () { return explorerProp(vrManager, 'isMetronomeEnabled'); },
-                    onSelect: click('toggle-metronome')
+                    onSelect: function (mesh) {
+                        var ex = vrManager && vrManager.explorer;
+                        if (ex) {
+                            ex.isMetronomeEnabled = !ex.isMetronomeEnabled;
+                            var btn = document.getElementById('toggle-metronome');
+                            if (btn) {
+                                btn.textContent = ex.isMetronomeEnabled ? '10min: On' : '10min: Off';
+                                btn.style.background = ex.isMetronomeEnabled ? '#555' : '#333';
+                            }
+                            if (ex.isMetronomeEnabled && typeof ex.initAudio === 'function') ex.initAudio();
+                        } else {
+                            clickDomButton('toggle-metronome');
+                        }
+                        if (mesh) {
+                            setTimeout(function () {
+                                if (vrManager && vrManager.navMenu) vrManager.navMenu._refreshToggle(mesh);
+                            }, 0);
+                        }
+                    }
                 },
                 {
                     label: '1000X',
                     kind: 'action',
                     getState: function () { return false; },
-                    onSelect: click('animate-1000x')
+                    onSelect: function () {
+                        var ex = vrManager && vrManager.explorer;
+                        if (ex && typeof ex.startBlockAnimation === 'function') {
+                            ex.startBlockAnimation(1000);
+                        } else {
+                            clickDomButton('animate-1000x');
+                        }
+                    }
                 },
                 {
                     label: '10000X',
                     kind: 'action',
                     getState: function () { return false; },
-                    onSelect: click('animate-10000x')
+                    onSelect: function () {
+                        var ex = vrManager && vrManager.explorer;
+                        if (ex && typeof ex.startBlockAnimation === 'function') {
+                            ex.startBlockAnimation(10000);
+                        } else {
+                            clickDomButton('animate-10000x');
+                        }
+                    }
+                },
+                {
+                    label: '100000X',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    onSelect: function () {
+                        var ex = vrManager && vrManager.explorer;
+                        if (ex && typeof ex.startBlockAnimation === 'function') {
+                            ex.startBlockAnimation(100000);
+                        } else {
+                            clickDomButton('animate-100000x');
+                        }
+                    }
                 }
             ],
             'node.html': [
@@ -535,7 +598,7 @@
 
     VRNavMenu.prototype.attachToController = function (controller) {
         controller.add(this.group);
-        this.group.position.set(0, 0.18, -0.05);
+        this.group.position.set(0, 0.28, -0.05);
         this.group.rotation.x = -0.35;
     };
 
@@ -652,8 +715,43 @@
         if (h.userData.onSelect) {
             h.userData.onSelect(h);
         } else if (h.userData.pageFile) {
-            window.location.href = h.userData.pageFile;
+            if (typeof window.explorerNavigate === 'function') {
+                window.explorerNavigate(h.userData.pageFile);
+            } else {
+                window.location.href = h.userData.pageFile;
+            }
         }
+    };
+
+    /** Full rebuild after soft-nav so page-action toggles match the new page. */
+    VRNavMenu.prototype.rebuild = function () {
+        var self = this;
+        this.hide();
+        this.highlighted = null;
+        while (this.group.children.length) {
+            var c = this.group.children[0];
+            this.group.remove(c);
+            c.traverse(function (child) {
+                if (child.geometry) {
+                    try { child.geometry.dispose(); } catch (e) { /* ignore */ }
+                }
+                var mats = child.material;
+                if (!mats) return;
+                (Array.isArray(mats) ? mats : [mats]).forEach(function (m) {
+                    if (!m) return;
+                    try {
+                        if (m.map) m.map.dispose();
+                        m.dispose();
+                    } catch (e) { /* ignore */ }
+                });
+            });
+        }
+        this.buttons = [];
+        this._labels = [];
+        this._borders = [];
+        this._toggleButtons = [];
+        this._allTargets = [];
+        this.build();
     };
 
     // -------------------------------------------------------------------------
