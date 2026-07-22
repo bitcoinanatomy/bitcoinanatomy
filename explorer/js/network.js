@@ -21,7 +21,11 @@ function escHtml(str) {
 }
 
 class BitcoinNetworkExplorer {
-    constructor() {
+    constructor(opts) {
+        opts = opts || {};
+        this._shell = opts.shell || null;
+        this._ac = new AbortController();
+        this._disposed = false;
         console.log('🚀 BitcoinNetworkExplorer constructor called');
         
         this.scene = null;
@@ -118,7 +122,9 @@ class BitcoinNetworkExplorer {
         console.log('  1️⃣ Setting up Three.js...');
         this.setupThreeJS();
 
-        if (typeof VRManager !== 'undefined') {
+        if (this._shell && this._shell.vrManager) {
+            this.vrManager = this._shell.vrManager;
+        } else if (typeof VRManager !== 'undefined') {
             this.vrManager = new VRManager(this, { panelTitle: 'Network', panelDomId: 'network-info' });
             this.vrManager.init();
         }
@@ -168,6 +174,26 @@ class BitcoinNetworkExplorer {
     }
 
     setupThreeJS() {
+        const signal = this._ac.signal;
+
+        if (this._shell) {
+            this.scene = this._shell.scene;
+            this.camera = this._shell.camera;
+            this.renderer = this._shell.renderer;
+            this.scene.background = new THREE.Color(0x000000);
+            if (this.camera.isPerspectiveCamera) {
+                this.camera.fov = 75;
+                this.camera.near = 0.01;
+                this.camera.far = 2000;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+            }
+            this.camera.position.set(-100, 50, 100);
+            this.camera.lookAt(0, 0, 0);
+            window.addEventListener('resize', () => this.onWindowResize(), { signal });
+            return;
+        }
+
         const container = document.getElementById('scene');
         
         // Scene
@@ -205,7 +231,55 @@ class BitcoinNetworkExplorer {
         container.appendChild(this.renderer.domElement);
         
         // Handle resize
-        window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('resize', () => this.onWindowResize(), { signal });
+    }
+
+    _bindWithAbort(target, fn) {
+        const signal = this._ac.signal;
+        const orig = target.addEventListener.bind(target);
+        target.addEventListener = (t, f, o) => {
+            if (o === true) return orig(t, f, { capture: true, signal });
+            if (o && typeof o === 'object') return orig(t, f, Object.assign({}, o, { signal }));
+            return orig(t, f, { signal });
+        };
+        try { fn(); }
+        finally { target.addEventListener = EventTarget.prototype.addEventListener.bind(target); }
+    }
+
+    dispose() {
+        if (this._disposed) return;
+        this._disposed = true;
+        this._ac.abort();
+        this.isRotating = false;
+        this.montageActive = false;
+        if (this.rateLimitArchiveTimeout) {
+            clearTimeout(this.rateLimitArchiveTimeout);
+            this.rateLimitArchiveTimeout = null;
+        }
+        if (this._hoverTooltipEl && this._hoverTooltipEl.parentNode) {
+            this._hoverTooltipEl.parentNode.removeChild(this._hoverTooltipEl);
+            this._hoverTooltipEl = null;
+        }
+        const drop = (arr) => {
+            (arr || []).forEach((b) => {
+                if (!b) return;
+                if (b.parent) b.parent.remove(b);
+                if (b.geometry) b.geometry.dispose();
+                if (b.material) {
+                    if (Array.isArray(b.material)) b.material.forEach((m) => { if (m) m.dispose(); });
+                    else b.material.dispose();
+                }
+            });
+        };
+        drop(this.nodes);
+        this.nodes = [];
+        drop(this.connections);
+        this.connections = [];
+        this.connectionsMesh = null;
+        this.proximityMesh = null;
+        drop([this.earthMesh, this.mapPlaneMesh].filter(Boolean));
+        this.earthMesh = null;
+        this.mapPlaneMesh = null;
     }
 
     setupOrbitControls() {
@@ -241,7 +315,10 @@ class BitcoinNetworkExplorer {
     
     setupMouseControls() {
         const controls = this.controls;
-        
+        this._bindWithAbort(this.renderer.domElement, () => this._setupMouseControlsInner(controls));
+    }
+
+    _setupMouseControlsInner(controls) {
         this.renderer.domElement.addEventListener('mousedown', (e) => {
             controls.isMouseDown = true;
             controls.lastMouseX = e.clientX;
@@ -319,6 +396,10 @@ class BitcoinNetworkExplorer {
     }
 
     setupTouchControls() {
+        this._bindWithAbort(this.renderer.domElement, () => this._setupTouchControlsInner());
+    }
+
+    _setupTouchControlsInner() {
         let touchStartX = 0;
         let touchStartY = 0;
         let touchStartDistance = 0;
@@ -720,7 +801,9 @@ class BitcoinNetworkExplorer {
         tooltip.style.display = 'none';
         tooltip.style.whiteSpace = 'nowrap';
         document.body.appendChild(tooltip);
+        this._hoverTooltipEl = tooltip;
 
+        this._bindWithAbort(this.renderer.domElement, () => {
         this.renderer.domElement.addEventListener('mousemove', (event) => {
             // Calculate mouse position in normalized device coordinates
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -836,8 +919,9 @@ class BitcoinNetworkExplorer {
                 const formattedAddress = this.formatNodeAddress(nodeData.address);
                 
                 // Navigate to node page with address as URL parameter
-                window.location.href = `node.html?node=${formattedAddress}`;
+                explorerNavigate(`node.html?node=${formattedAddress}`);
             }
+        });
         });
     }
     
@@ -3684,7 +3768,15 @@ this.updateCameraCoordsDisplay();
 }
 
 // Initialize the application when the page loads
+window.ExplorerPages = window.ExplorerPages || {};
+window.ExplorerPages['network.html'] = {
+    panelTitle: 'Network',
+    panelDomId: 'network-info',
+    create: function (opts) { return new BitcoinNetworkExplorer(opts); }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.__softNav) return;
     console.log('📄 DOMContentLoaded event fired');
     
     if (typeof THREE === 'undefined') {
@@ -3695,5 +3787,5 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('✅ Three.js loaded successfully, version:', THREE.REVISION);
     console.log('🎯 Creating BitcoinNetworkExplorer instance...');
-    new BitcoinNetworkExplorer();
+    window.__explorer = new BitcoinNetworkExplorer();
 }); 

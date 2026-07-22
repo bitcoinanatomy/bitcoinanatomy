@@ -1,6 +1,10 @@
 // Bitcoin Explorer - Difficulty Adjustments Page
 class BitcoinDifficultyExplorer {
-    constructor() {
+    constructor(opts) {
+        opts = opts || {};
+        this._shell = opts.shell || null;
+        this._ac = new AbortController();
+        this._disposed = false;
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -11,6 +15,7 @@ class BitcoinDifficultyExplorer {
         this.clock = new THREE.Clock();
         this.selectedAdjustment = null;
         this.blockData = null;
+        this.isLoadingAdjustment = false;
         this.isPerspective = true;
         this.orthographicZoom = 20;
         
@@ -42,7 +47,9 @@ class BitcoinDifficultyExplorer {
     init() {
         this.setupThreeJS();
 
-        if (typeof VRManager !== 'undefined') {
+        if (this._shell && this._shell.vrManager) {
+            this.vrManager = this._shell.vrManager;
+        } else if (typeof VRManager !== 'undefined') {
             this.vrManager = new VRManager(this, { panelTitle: 'Difficulty', panelDomId: 'current-adjustment' });
             this.vrManager.init();
         }
@@ -55,7 +62,94 @@ class BitcoinDifficultyExplorer {
         this.fetchData();
     }
 
+    /** VR pointer whitelist — spiral blocks + adjacent epoch discs. */
+    isVRSelectable(obj) {
+        if (!obj || !obj.userData) return false;
+        return obj.userData.isBlock === true || obj.userData.isDisc === true;
+    }
+
+    /**
+     * VR double-trigger: load adjacent epoch in place (keeps XR session).
+     * Blocks fall through to VRManager URL navigation → block.html.
+     */
+    onVRDoubleSelect(obj) {
+        if (!obj || !obj.userData || !obj.userData.isDisc) return false;
+        const adjustmentIndex = obj.userData.adjustmentIndex;
+        if (adjustmentIndex == null) return false;
+        this.loadAdjustmentPeriod(adjustmentIndex);
+        return true;
+    }
+
+    getVRNavigateUrl(obj) {
+        if (!obj || !obj.userData) return null;
+        if (obj.userData.isBlock && obj.userData.blockInfo && obj.userData.blockInfo.height != null) {
+            return `block.html?height=${obj.userData.blockInfo.height}`;
+        }
+        if (obj.userData.isDisc && obj.userData.adjustmentIndex != null) {
+            return `difficulty.html?adjustment=${obj.userData.adjustmentIndex}`;
+        }
+        return null;
+    }
+
+    dispose() {
+        if (this._disposed) return;
+        this._disposed = true;
+        this._ac.abort();
+        this.isRotating = false;
+        this.isAnimating = false;
+        if (this.animationTimeouts) {
+            this.animationTimeouts.forEach(clearTimeout);
+            this.animationTimeouts = [];
+        }
+        if (this.metronomeIntervalId) {
+            clearInterval(this.metronomeIntervalId);
+            this.metronomeIntervalId = null;
+        }
+        if (this.timeDisplayIntervalId) {
+            clearInterval(this.timeDisplayIntervalId);
+            this.timeDisplayIntervalId = null;
+        }
+        const drop = (arr) => {
+            (arr || []).forEach((b) => {
+                if (b.parent) b.parent.remove(b);
+                if (b.geometry) b.geometry.dispose();
+                if (b.material) {
+                    if (Array.isArray(b.material)) b.material.forEach((m) => m.dispose());
+                    else b.material.dispose();
+                }
+            });
+        };
+        drop(this.blocks);
+        drop(this.discs);
+        this.blocks = [];
+        this.discs = [];
+        if (this._hoverTooltipEl && this._hoverTooltipEl.parentNode) {
+            this._hoverTooltipEl.parentNode.removeChild(this._hoverTooltipEl);
+            this._hoverTooltipEl = null;
+        }
+    }
+
     setupThreeJS() {
+        const signal = this._ac.signal;
+
+        if (this._shell) {
+            this.scene = this._shell.scene;
+            this.camera = this._shell.camera;
+            this.renderer = this._shell.renderer;
+            this.scene.background = new THREE.Color(0x000000);
+            if (this.camera.isPerspectiveCamera) {
+                this.camera.fov = 50;
+                this.camera.near = 0.1;
+                this.camera.far = 1000;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+            }
+            this.camera.position.set(0, 50, 80);
+            this.camera.lookAt(0, 0, 0);
+            window.addEventListener('resize', () => this.onWindowResize(), { signal });
+            return;
+        }
+
         const container = document.getElementById('scene');
         
         this.scene = new THREE.Scene();
@@ -71,7 +165,19 @@ class BitcoinDifficultyExplorer {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(this.renderer.domElement);
         
-        window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('resize', () => this.onWindowResize(), { signal: this._ac.signal });
+    }
+
+    _bindWithAbort(target, fn) {
+        const signal = this._ac.signal;
+        const orig = target.addEventListener.bind(target);
+        target.addEventListener = (t, f, o) => {
+            if (o === true) return orig(t, f, { capture: true, signal });
+            if (o && typeof o === 'object') return orig(t, f, Object.assign({}, o, { signal }));
+            return orig(t, f, { signal });
+        };
+        try { fn(); }
+        finally { target.addEventListener = EventTarget.prototype.addEventListener.bind(target); }
     }
 
     setupOrbitControls() {
@@ -98,7 +204,10 @@ class BitcoinDifficultyExplorer {
     
     setupMouseControls() {
         const controls = this.controls;
-        
+        this._bindWithAbort(this.renderer.domElement, () => this._setupMouseControlsInner(controls));
+    }
+
+    _setupMouseControlsInner(controls) {
         // Create tooltip element
         const tooltip = document.createElement('div');
         tooltip.style.position = 'absolute';
@@ -113,6 +222,7 @@ class BitcoinDifficultyExplorer {
         tooltip.style.display = 'none';
         tooltip.style.whiteSpace = 'nowrap';
         document.body.appendChild(tooltip);
+        this._hoverTooltipEl = tooltip;
         
         // Setup raycaster for tooltip
         const raycaster = new THREE.Raycaster();
@@ -267,13 +377,13 @@ class BitcoinDifficultyExplorer {
                 const object = intersects[0].object;
                 
                 if (object.userData && object.userData.isDisc) {
-                    // Navigate to next difficulty adjustment page
+                    // Load adjacent period in place (replaces placeholder discs with real blocks)
                     const adjustmentIndex = object.userData.adjustmentIndex;
-                    window.location.href = `difficulty.html?adjustment=${adjustmentIndex}`;
+                    this.loadAdjustmentPeriod(adjustmentIndex);
                 } else if (object.userData && object.userData.blockInfo) {
                     // Navigate to block page with block height
                     const blockInfo = object.userData.blockInfo;
-                    window.location.href = `block.html?height=${blockInfo.height}`;
+                    explorerNavigate(`block.html?height=${blockInfo.height}`);
                 }
             }
         });
@@ -305,6 +415,10 @@ class BitcoinDifficultyExplorer {
     }
 
     setupTouchControls() {
+        this._bindWithAbort(this.renderer.domElement, () => this._setupTouchControlsInner());
+    }
+
+    _setupTouchControlsInner() {
         let touchStartX = 0;
         let touchStartY = 0;
         let touchStartDistance = 0;
@@ -446,13 +560,19 @@ class BitcoinDifficultyExplorer {
     }
 
     setupControls() {
-        document.getElementById('toggle-rotation').addEventListener('click', () => {
+        const signal = this._ac.signal;
+        const on = (id, type, handler) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener(type, handler, { signal });
+        };
+
+        on('toggle-rotation', 'click', () => {
             this.isRotating = !this.isRotating;
             const button = document.getElementById('toggle-rotation');
-            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+            if (button) button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
         });
-        
-        document.getElementById('reset-camera').addEventListener('click', () => {
+
+        on('reset-camera', 'click', () => {
             this.camera.position.set(0, 50, 80);
             this.controls.target.set(0, 0, 0);
             this.controls.distance = 50;
@@ -460,98 +580,132 @@ class BitcoinDifficultyExplorer {
             this.controls.theta = 0;
             this.controls.update();
         });
-        
-        // Add orthographic view toggle
-        document.getElementById('toggle-view').addEventListener('click', () => {
-            this.toggleCameraView();
-        });
-        
-        // Navigation controls
-        document.getElementById('rotate-left').addEventListener('click', () => {
-            this.rotateLeft();
-        });
-        
-        document.getElementById('rotate-right').addEventListener('click', () => {
-            this.rotateRight();
-        });
-        
-        document.getElementById('rotate-up').addEventListener('click', () => {
-            this.rotateUp();
-        });
-        
-        document.getElementById('rotate-down').addEventListener('click', () => {
-            this.rotateDown();
-        });
-        
-        document.getElementById('pan-left').addEventListener('click', () => {
-            this.panLeft();
-        });
-        
-        document.getElementById('pan-right').addEventListener('click', () => {
-            this.panRight();
-        });
-        
-        document.getElementById('pan-up').addEventListener('click', () => {
-            this.panUp();
-        });
-        
-        document.getElementById('pan-down').addEventListener('click', () => {
-            this.panDown();
-        });
-        
-        document.getElementById('zoom-in').addEventListener('click', () => {
-            this.zoomIn();
-        });
-        
-        document.getElementById('zoom-out').addEventListener('click', () => {
-            this.zoomOut();
-        });
-        
-        // Animation buttons
-        document.getElementById('animate-1000x').addEventListener('click', () => {
-            this.startBlockAnimation(1000);
-        });
-        
-        document.getElementById('animate-10000x').addEventListener('click', () => {
-            this.startBlockAnimation(10000);
-        });
-        
-        document.getElementById('animate-100000x').addEventListener('click', () => {
-            this.startBlockAnimation(100000);
-        });
-        
-        // Block visibility slider
+
+        on('toggle-view', 'click', () => this.toggleCameraView());
+        on('rotate-left', 'click', () => this.rotateLeft());
+        on('rotate-right', 'click', () => this.rotateRight());
+        on('rotate-up', 'click', () => this.rotateUp());
+        on('rotate-down', 'click', () => this.rotateDown());
+        on('pan-left', 'click', () => this.panLeft());
+        on('pan-right', 'click', () => this.panRight());
+        on('pan-up', 'click', () => this.panUp());
+        on('pan-down', 'click', () => this.panDown());
+        on('zoom-in', 'click', () => this.zoomIn());
+        on('zoom-out', 'click', () => this.zoomOut());
+
+        // Animation buttons (also invoked directly from VR wrist menu)
+        on('animate-1000x', 'click', () => this.startBlockAnimation(1000));
+        on('animate-10000x', 'click', () => this.startBlockAnimation(10000));
+        on('animate-100000x', 'click', () => this.startBlockAnimation(100000));
+
         const blockVisibilitySlider = document.getElementById('block-visibility-slider');
         const blockVisibilityValue = document.getElementById('block-visibility-value');
-        
         if (blockVisibilitySlider && blockVisibilityValue) {
             blockVisibilitySlider.addEventListener('input', (e) => {
-                const percentage = parseInt(e.target.value);
+                const percentage = parseInt(e.target.value, 10);
                 blockVisibilityValue.textContent = `${percentage}%`;
                 this.updateBlockVisibility(percentage);
-                
-                // Update date display based on highest visible block
                 this.updateBlockTimeDisplay(percentage);
-            });
+            }, { signal });
         }
-        
-        // Block sound toggle
-        document.getElementById('toggle-sound').addEventListener('click', () => {
+
+        on('toggle-sound', 'click', () => {
             this.isSoundEnabled = !this.isSoundEnabled;
             const button = document.getElementById('toggle-sound');
-            button.textContent = this.isSoundEnabled ? 'Blocks: On' : 'Blocks: Off';
-            button.style.background = this.isSoundEnabled ? '#555' : '#333';
+            if (button) {
+                button.textContent = this.isSoundEnabled ? 'Blocks: On' : 'Blocks: Off';
+                button.style.background = this.isSoundEnabled ? '#555' : '#333';
+            }
             if (this.isSoundEnabled) this.initAudio();
         });
-        
-        // Metronome toggle
-        document.getElementById('toggle-metronome').addEventListener('click', () => {
+
+        on('toggle-metronome', 'click', () => {
             this.isMetronomeEnabled = !this.isMetronomeEnabled;
             const button = document.getElementById('toggle-metronome');
-            button.textContent = this.isMetronomeEnabled ? '10min: On' : '10min: Off';
-            button.style.background = this.isMetronomeEnabled ? '#555' : '#333';
+            if (button) {
+                button.textContent = this.isMetronomeEnabled ? '10min: On' : '10min: Off';
+                button.style.background = this.isMetronomeEnabled ? '#555' : '#333';
+            }
             if (this.isMetronomeEnabled) this.initAudio();
         });
+
+        on('prev-adjustment', 'click', () => this.loadPreviousAdjustment());
+        on('next-adjustment', 'click', () => this.loadNextAdjustment());
+    }
+
+    clearVisualization() {
+        if (this.isAnimating) {
+            this.stopBlockAnimation();
+        }
+
+        const disposeMesh = (mesh) => {
+            if (!mesh) return;
+            if (mesh.parent) mesh.parent.remove(mesh);
+            if (mesh.geometry) mesh.geometry.dispose();
+            if (mesh.material) {
+                if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
+                else mesh.material.dispose();
+            }
+        };
+
+        (this.blocks || []).forEach((block) => {
+            if (block.userData && block.userData.highlightRing) {
+                disposeMesh(block.userData.highlightRing);
+                block.userData.highlightRing = null;
+            }
+            disposeMesh(block);
+        });
+        (this.discs || []).forEach(disposeMesh);
+
+        this.blocks = [];
+        this.discs = [];
+        this.blockData = null;
+        this.highlightBlockHeight = null;
+    }
+
+    updateAdjustmentNavButtons() {
+        const prevBtn = document.getElementById('prev-adjustment');
+        const nextBtn = document.getElementById('next-adjustment');
+        const epoch = parseInt(this.selectedAdjustment, 10) || 0;
+        const tipEpoch = typeof this.currentAdjustment === 'number' ? this.currentAdjustment : null;
+
+        if (prevBtn) {
+            prevBtn.disabled = !!this.isLoadingAdjustment || epoch <= 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = !!this.isLoadingAdjustment || tipEpoch === null || epoch >= tipEpoch;
+        }
+    }
+
+    loadPreviousAdjustment() {
+        const epoch = parseInt(this.selectedAdjustment, 10) || 0;
+        if (epoch <= 0 || this.isLoadingAdjustment) return;
+        this.loadAdjustmentPeriod(epoch - 1);
+    }
+
+    loadNextAdjustment() {
+        const epoch = parseInt(this.selectedAdjustment, 10) || 0;
+        if (this.isLoadingAdjustment) return;
+        if (typeof this.currentAdjustment === 'number' && epoch >= this.currentAdjustment) return;
+        this.loadAdjustmentPeriod(epoch + 1);
+    }
+
+    async loadAdjustmentPeriod(adjustmentIndex) {
+        const epoch = parseInt(adjustmentIndex, 10);
+        if (Number.isNaN(epoch) || epoch < 0 || this.isLoadingAdjustment) return;
+        if (typeof this.currentAdjustment === 'number' && epoch > this.currentAdjustment) return;
+
+        this.selectedAdjustment = String(epoch);
+        this.highlightBlockHeight = null;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('adjustment', this.selectedAdjustment);
+        url.searchParams.delete('blockHeight');
+        history.pushState({ softNav: true }, '', url.pathname + url.search);
+
+        this.clearVisualization();
+        this.updateAdjustmentNavButtons();
+        await this.fetchData();
     }
     
     toggleCameraView() {
@@ -927,6 +1081,8 @@ class BitcoinDifficultyExplorer {
     }
 
     async fetchData() {
+        this.isLoadingAdjustment = true;
+        this.updateAdjustmentNavButtons();
         this.showLoadingModal('Loading difficulty data...');
         
         try {
@@ -982,6 +1138,9 @@ class BitcoinDifficultyExplorer {
             this.hideLoadingModal();
             console.error('Error fetching block data:', error);
             this.showGenericError('Difficulty data');
+        } finally {
+            this.isLoadingAdjustment = false;
+            this.updateAdjustmentNavButtons();
         }
     }
     
@@ -1396,6 +1555,7 @@ class BitcoinDifficultyExplorer {
             
             // Initialize the date display with the last block's date
             this.updateBlockTimeDisplay(100);
+            this.updateAdjustmentNavButtons();
         }
     }
 
@@ -2023,7 +2183,15 @@ class BitcoinDifficultyExplorer {
     }
 }
 
+window.ExplorerPages = window.ExplorerPages || {};
+window.ExplorerPages['difficulty.html'] = {
+    panelTitle: 'Difficulty',
+    panelDomId: 'current-adjustment',
+    create: function (opts) { return new BitcoinDifficultyExplorer(opts); }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.__softNav) return;
     if (typeof THREE === 'undefined') {
         console.error('Three.js not loaded!');
         document.getElementById('scene').innerHTML = '<div style="color: white; padding: 20px;">Error: Three.js failed to load. Please refresh the page.</div>';
@@ -2031,5 +2199,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     console.log('Three.js loaded successfully:', THREE.REVISION);
-    new BitcoinDifficultyExplorer();
+    window.__explorer = new BitcoinDifficultyExplorer();
 }); 

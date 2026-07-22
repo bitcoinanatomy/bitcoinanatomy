@@ -1,6 +1,10 @@
 // Bitcoin Explorer - Node Page
 class BitcoinNodeExplorer {
-    constructor() {
+    constructor(opts) {
+        opts = opts || {};
+        this._shell = opts.shell || null;
+        this._ac = new AbortController();
+        this._disposed = false;
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -20,7 +24,9 @@ class BitcoinNodeExplorer {
         
         this.setupThreeJS();
 
-        if (typeof VRManager !== 'undefined') {
+        if (this._shell && this._shell.vrManager) {
+            this.vrManager = this._shell.vrManager;
+        } else if (typeof VRManager !== 'undefined') {
             this.vrManager = new VRManager(this, { panelTitle: 'Node', panelDomId: 'node-info' });
             this.vrManager.init();
         }
@@ -249,6 +255,26 @@ class BitcoinNodeExplorer {
     }
 
     setupThreeJS() {
+        const signal = this._ac.signal;
+
+        if (this._shell) {
+            this.scene = this._shell.scene;
+            this.camera = this._shell.camera;
+            this.renderer = this._shell.renderer;
+            this.scene.background = new THREE.Color(0x000000);
+            if (this.camera.isPerspectiveCamera) {
+                this.camera.fov = 75;
+                this.camera.near = 0.1;
+                this.camera.far = 1000;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+            }
+            this.camera.position.set(0, 10, 15);
+            this.camera.lookAt(0, 0, 0);
+            window.addEventListener('resize', () => this.onWindowResize(), { signal });
+            return;
+        }
+
         const container = document.getElementById('scene');
         
         this.scene = new THREE.Scene();
@@ -263,7 +289,43 @@ class BitcoinNodeExplorer {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(this.renderer.domElement);
         
-        window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('resize', () => this.onWindowResize(), { signal });
+    }
+
+    _bindWithAbort(target, fn) {
+        const signal = this._ac.signal;
+        const orig = target.addEventListener.bind(target);
+        target.addEventListener = (t, f, o) => {
+            if (o === true) return orig(t, f, { capture: true, signal });
+            if (o && typeof o === 'object') return orig(t, f, Object.assign({}, o, { signal }));
+            return orig(t, f, { signal });
+        };
+        try { fn(); }
+        finally { target.addEventListener = EventTarget.prototype.addEventListener.bind(target); }
+    }
+
+    dispose() {
+        if (this._disposed) return;
+        this._disposed = true;
+        this._ac.abort();
+        this.isRotating = false;
+        if (this._hoverTooltipEl && this._hoverTooltipEl.parentNode) {
+            this._hoverTooltipEl.parentNode.removeChild(this._hoverTooltipEl);
+            this._hoverTooltipEl = null;
+        }
+        // Dispose scene meshes created by this page (do not dispose shared renderer)
+        if (this.scene) {
+            const toRemove = this.scene.children.slice();
+            toRemove.forEach((child) => {
+                if (child.isLight) return;
+                this.scene.remove(child);
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
+                    else child.material.dispose();
+                }
+            });
+        }
     }
 
     setupOrbitControls() {
@@ -294,7 +356,10 @@ class BitcoinNodeExplorer {
     
     setupMouseControls() {
         const controls = this.controls;
-        
+        this._bindWithAbort(this.renderer.domElement, () => this._setupMouseControlsInner(controls));
+    }
+
+    _setupMouseControlsInner(controls) {
         this.renderer.domElement.addEventListener('mousedown', (e) => {
             controls.isMouseDown = true;
             controls.lastMouseX = e.clientX;
@@ -364,6 +429,10 @@ class BitcoinNodeExplorer {
     }
 
     setupTouchControls() {
+        this._bindWithAbort(this.renderer.domElement, () => this._setupTouchControlsInner());
+    }
+
+    _setupTouchControlsInner() {
         let touchStartX = 0;
         let touchStartY = 0;
         let touchStartDistance = 0;
@@ -512,7 +581,9 @@ class BitcoinNodeExplorer {
         tooltip.style.maxWidth = '300px';
         tooltip.style.lineHeight = '1.4';
         document.body.appendChild(tooltip);
+        this._hoverTooltipEl = tooltip;
 
+        this._bindWithAbort(this.renderer.domElement, () => {
         this.renderer.domElement.addEventListener('mousemove', (event) => {
             // If a cuboid is clicked, don't update tooltip on mouse move
             if (clickedSphere) return;
@@ -679,9 +750,10 @@ class BitcoinNodeExplorer {
                 
                 if (featureData.name && featureData.url) {
                     // Navigate to the specified URL
-                    window.location.href = featureData.url;
+                    explorerNavigate(featureData.url);
                 }
             }
+        });
         });
     }
 
@@ -1784,6 +1856,14 @@ class BitcoinNodeExplorer {
     }
 }
 
+window.ExplorerPages = window.ExplorerPages || {};
+window.ExplorerPages['node.html'] = {
+    panelTitle: 'Node',
+    panelDomId: 'node-info',
+    create: function (opts) { return new BitcoinNodeExplorer(opts); }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
-    new BitcoinNodeExplorer();
+    if (window.__softNav) return;
+    window.__explorer = new BitcoinNodeExplorer();
 }); 

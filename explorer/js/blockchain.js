@@ -1,6 +1,10 @@
 // Bitcoin Explorer - Blockchain Page
 class BitcoinBlockchainExplorer {
-    constructor() {
+    constructor(opts) {
+        opts = opts || {};
+        this._shell = opts.shell || null;
+        this._ac = new AbortController();
+        this._disposed = false;
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -31,7 +35,9 @@ class BitcoinBlockchainExplorer {
     init() {
         this.setupThreeJS();
 
-        if (typeof VRManager !== 'undefined') {
+        if (this._shell && this._shell.vrManager) {
+            this.vrManager = this._shell.vrManager;
+        } else if (typeof VRManager !== 'undefined') {
             this.vrManager = new VRManager(this, { panelTitle: 'Blockchain', panelDomId: 'chain-info' });
             this.vrManager.init();
         }
@@ -45,14 +51,33 @@ class BitcoinBlockchainExplorer {
     }
 
     setupThreeJS() {
+        const signal = this._ac.signal;
+        this.isPerspective = true;
+        this.orthographicZoom = 20;
+
+        if (this._shell) {
+            this.scene = this._shell.scene;
+            this.camera = this._shell.camera;
+            this.renderer = this._shell.renderer;
+            this.scene.background = new THREE.Color(0x000000);
+            if (this.camera.isPerspectiveCamera) {
+                this.camera.fov = 50;
+                this.camera.near = 0.1;
+                this.camera.far = 1000;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+            }
+            this.camera.position.set(0, 30, 80);
+            this.camera.lookAt(0, 0, 0);
+            window.addEventListener('resize', () => this.onWindowResize(), { signal });
+            return;
+        }
+
         const container = document.getElementById('scene');
         
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);
         
-        // Initialize with perspective camera
-        this.isPerspective = true;
-        this.orthographicZoom = 20; // Store orthographic zoom level
         this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.camera.position.set(0, 30, 80);
         this.camera.lookAt(0, 0, 0);
@@ -62,7 +87,29 @@ class BitcoinBlockchainExplorer {
         this.renderer.shadowMap.enabled = false;
         container.appendChild(this.renderer.domElement);
         
-        window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('resize', () => this.onWindowResize(), { signal });
+    }
+
+    dispose() {
+        if (this._disposed) return;
+        this._disposed = true;
+        this._ac.abort();
+        this.isRotating = false;
+        if (this._hoverTooltipEl && this._hoverTooltipEl.parentNode) {
+            this._hoverTooltipEl.parentNode.removeChild(this._hoverTooltipEl);
+            this._hoverTooltipEl = null;
+        }
+        if (this.blocks) {
+            this.blocks.forEach((b) => {
+                if (b.parent) b.parent.remove(b);
+                if (b.geometry) b.geometry.dispose();
+                if (b.material) {
+                    if (b.material.map) b.material.map.dispose();
+                    b.material.dispose();
+                }
+            });
+            this.blocks = [];
+        }
     }
 
     setupOrbitControls() {
@@ -93,6 +140,7 @@ class BitcoinBlockchainExplorer {
     setupMouseControls() {
         const controls = this.controls;
         
+        const signal = this._ac.signal;
         this.renderer.domElement.addEventListener('mousedown', (e) => {
             controls.isMouseDown = true;
             controls.lastMouseX = e.clientX;
@@ -101,11 +149,11 @@ class BitcoinBlockchainExplorer {
             // Stop automatic rotation when user starts interacting
             this.isRotating = false;
             this.updateRotationButtonState();
-        });
+        }, { signal });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
             controls.isMouseDown = false;
-        });
+        }, { signal });
         
         this.renderer.domElement.addEventListener('mousemove', (e) => {
             if (controls.isMouseDown) {
@@ -138,7 +186,7 @@ class BitcoinBlockchainExplorer {
                 controls.lastMouseX = e.clientX;
                 controls.lastMouseY = e.clientY;
             }
-        });
+        }, { signal });
         
         this.renderer.domElement.addEventListener('wheel', (e) => {
             // Stop automatic rotation when user starts zooming
@@ -164,7 +212,7 @@ class BitcoinBlockchainExplorer {
                 this.camera.bottom = -this.orthographicZoom / 2;
                 this.camera.updateProjectionMatrix();
             }
-        });
+        }, { signal });
 
         // Add touch controls for mobile
         this.setupTouchControls();
@@ -192,6 +240,8 @@ class BitcoinBlockchainExplorer {
         tooltip.style.display = 'none';
         document.body.appendChild(tooltip);
 
+        const signal = this._ac.signal;
+        this._hoverTooltipEl = tooltip;
         this.renderer.domElement.addEventListener('mousemove', (event) => {
             // Calculate mouse position in normalized device coordinates
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -250,7 +300,7 @@ class BitcoinBlockchainExplorer {
                 }
                 tooltip.style.display = 'none';
             }
-        });
+        }, { signal });
 
         this.renderer.domElement.addEventListener('mouseleave', () => {
             // Reset hover state when mouse leaves the canvas
@@ -260,9 +310,9 @@ class BitcoinBlockchainExplorer {
                 this.resetAllDiscsOpacity();
             }
             tooltip.style.display = 'none';
-        });
+        }, { signal });
 
-                // Create milestone tracking tooltips array
+        // Create milestone tracking tooltips array
         this.milestoneTooltips = [];
         this.createMilestoneTooltips();
         
@@ -286,16 +336,16 @@ class BitcoinBlockchainExplorer {
                     // Check if it's the mempool disc
                     if (intersectedObject.userData.isMempool) {
                         console.log(`Double-clicked on mempool disc, redirecting to mempool page...`);
-                        window.location.href = `mempool.html`;
+                        explorerNavigate('mempool.html');
                     } else {
                         console.log(`Double-clicked on disc ${index}, redirecting to difficulty page...`);
                         
                         // Redirect to difficulty page with the disc index as URL parameter
-                        window.location.href = `difficulty.html?adjustment=${index}`;
+                        explorerNavigate(`difficulty.html?adjustment=${index}`);
                     }
                 }
             }
-        });
+        }, { signal });
     }
 
     highlightDisc(disc) {
@@ -378,6 +428,7 @@ class BitcoinBlockchainExplorer {
         let isPinching = false;
         let lastTouchTime = 0;
         let touchCount = 0;
+        const signal = this._ac.signal;
 
         // Touch start
         this.renderer.domElement.addEventListener('touchstart', (e) => {
@@ -410,7 +461,7 @@ class BitcoinBlockchainExplorer {
                 this.resetCamera();
             }
             lastTouchTime = currentTime;
-        });
+        }, { signal });
 
         // Touch move
         this.renderer.domElement.addEventListener('touchmove', (e) => {
@@ -479,7 +530,7 @@ class BitcoinBlockchainExplorer {
                 this.controls.update();
                 touchStartDistance = currentDistance;
             }
-        });
+        }, { signal });
 
         // Touch end
         this.renderer.domElement.addEventListener('touchend', (e) => {
@@ -496,12 +547,12 @@ class BitcoinBlockchainExplorer {
                 this.controls.lastMouseX = touchStartX;
                 this.controls.lastMouseY = touchStartY;
             }
-        });
+        }, { signal });
 
         // Prevent default touch behaviors
         this.renderer.domElement.addEventListener('touchcancel', (e) => {
             e.preventDefault();
-        });
+        }, { signal });
     }
 
     createMilestoneTooltips() {
@@ -1616,7 +1667,15 @@ class BitcoinBlockchainExplorer {
     }
 }
 
+window.ExplorerPages = window.ExplorerPages || {};
+window.ExplorerPages['blockchain.html'] = {
+    panelTitle: 'Blockchain',
+    panelDomId: 'chain-info',
+    create: function (opts) { return new BitcoinBlockchainExplorer(opts); }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.__softNav) return;
     // Check if Three.js is loaded
     if (typeof THREE === 'undefined') {
         console.error('Three.js not loaded! Please check the CDN link.');
@@ -1625,5 +1684,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     console.log('Three.js loaded successfully:', THREE.REVISION);
-    new BitcoinBlockchainExplorer();
+    window.__explorer = new BitcoinBlockchainExplorer();
 }); 

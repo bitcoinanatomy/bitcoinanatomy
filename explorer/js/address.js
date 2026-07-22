@@ -1,6 +1,10 @@
 // Bitcoin Explorer - Address Page
 class BitcoinAddressExplorer {
-    constructor() {
+    constructor(opts) {
+        opts = opts || {};
+        this._shell = opts.shell || null;
+        this._ac = new AbortController();
+        this._disposed = false;
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -74,7 +78,9 @@ class BitcoinAddressExplorer {
     init() {
         this.setupThreeJS();
 
-        if (typeof VRManager !== 'undefined') {
+        if (this._shell && this._shell.vrManager) {
+            this.vrManager = this._shell.vrManager;
+        } else if (typeof VRManager !== 'undefined') {
             this.vrManager = new VRManager(this, { panelTitle: 'Address', panelDomId: 'address-info' });
             this.vrManager.init();
         }
@@ -86,6 +92,25 @@ class BitcoinAddressExplorer {
     }
 
     setupThreeJS() {
+        const signal = this._ac.signal;
+
+        if (this._shell) {
+            this.scene = this._shell.scene;
+            this.camera = this._shell.camera;
+            this.renderer = this._shell.renderer;
+            this.scene.background = new THREE.Color(0x000000);
+            if (this.camera.isPerspectiveCamera) {
+                this.camera.fov = 75;
+                this.camera.near = 0.1;
+                this.camera.far = 2000;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+            }
+            this.updateCameraPosition();
+            window.addEventListener('resize', () => this.onWindowResize(), { signal });
+            return;
+        }
+
         const container = document.getElementById('scene');
         
         this.scene = new THREE.Scene();
@@ -100,10 +125,121 @@ class BitcoinAddressExplorer {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(this.renderer.domElement);
         
-        window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('resize', () => this.onWindowResize(), { signal });
+    }
+
+    _bindWithAbort(target, fn) {
+        const signal = this._ac.signal;
+        const orig = target.addEventListener.bind(target);
+        target.addEventListener = (t, f, o) => {
+            if (o === true) return orig(t, f, { capture: true, signal });
+            if (o && typeof o === 'object') return orig(t, f, Object.assign({}, o, { signal }));
+            return orig(t, f, { signal });
+        };
+        try { fn(); }
+        finally { target.addEventListener = EventTarget.prototype.addEventListener.bind(target); }
+    }
+
+    dispose() {
+        if (this._disposed) return;
+        this._disposed = true;
+        this._ac.abort();
+        this.isRotating = false;
+        if (this._hoverTooltipEl && this._hoverTooltipEl.parentNode) {
+            this._hoverTooltipEl.parentNode.removeChild(this._hoverTooltipEl);
+            this._hoverTooltipEl = null;
+        }
+        // Shared XR shell: router clearContent owns scene teardown — never strip controllers
+        if (this._shell || (this.vrManager && this.renderer && this.renderer.xr && this.renderer.xr.isPresenting)) {
+            return;
+        }
+        if (this.scene) {
+            const toRemove = this.scene.children.slice();
+            toRemove.forEach((child) => {
+                if (child.isLight) return;
+                if (this.vrManager && this.vrManager._shouldKeepInScene &&
+                    this.vrManager._shouldKeepInScene(child)) return;
+                this.scene.remove(child);
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
+                    else child.material.dispose();
+                }
+            });
+        }
     }
 
     setupMouseControls() {
+        this._bindWithAbort(this.renderer.domElement, () => this._setupMouseControlsInner());
+
+        // Button controls
+        document.getElementById('toggle-rotation').addEventListener('click', () => {
+            this.isRotating = !this.isRotating;
+            const button = document.getElementById('toggle-rotation');
+            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+        });
+        
+        const toggleViewButton = document.getElementById('toggle-view');
+        if (toggleViewButton) {
+            toggleViewButton.addEventListener('click', () => {
+                this.toggleCameraView();
+            });
+        }
+        
+        // Navigation controls
+        document.getElementById('rotate-left').addEventListener('click', () => {
+            this.rotateLeft();
+        });
+        
+        document.getElementById('rotate-right').addEventListener('click', () => {
+            this.rotateRight();
+        });
+        
+        document.getElementById('rotate-up').addEventListener('click', () => {
+            this.rotateUp();
+        });
+        
+        document.getElementById('rotate-down').addEventListener('click', () => {
+            this.rotateDown();
+        });
+        
+        document.getElementById('pan-left').addEventListener('click', () => {
+            this.panLeft();
+        });
+        
+        document.getElementById('pan-right').addEventListener('click', () => {
+            this.panRight();
+        });
+        
+        document.getElementById('pan-up').addEventListener('click', () => {
+            this.panUp();
+        });
+        
+        document.getElementById('pan-down').addEventListener('click', () => {
+            this.panDown();
+        });
+        
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            this.zoomIn();
+        });
+        
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            this.zoomOut();
+        });
+        
+        // Load more transactions button
+        document.getElementById('load-more-transactions').addEventListener('click', () => {
+            this.loadMoreTransactions();
+        });
+        
+        // Modal functionality
+        this.setupModal();
+        
+        // Panel toggle functionality
+        this.setupPanelToggle();
+    }
+
+    _setupMouseControlsInner() {
         // Create tooltip element
         const tooltip = document.createElement('div');
         tooltip.style.position = 'absolute';
@@ -118,6 +254,7 @@ class BitcoinAddressExplorer {
         tooltip.style.display = 'none';
         tooltip.style.whiteSpace = 'nowrap';
         document.body.appendChild(tooltip);
+        this._hoverTooltipEl = tooltip;
         
         this.renderer.domElement.addEventListener('mousedown', (e) => {
             this.controls.isMouseDown = true;
@@ -295,79 +432,13 @@ class BitcoinAddressExplorer {
                 
                 if (userData.type === 'transaction') {
                     const tx = userData.data;
-                    window.location.href = `transaction.html?txid=${tx.txid}`;
+                    explorerNavigate(`transaction.html?txid=${tx.txid}`);
                 } else if (userData.type === 'utxo') {
                     const utxo = userData.data;
-                    window.location.href = `transaction.html?txid=${utxo.txid}`;
+                    explorerNavigate(`transaction.html?txid=${utxo.txid}`);
                 }
             }
         });
-        
-        // Button controls
-        document.getElementById('toggle-rotation').addEventListener('click', () => {
-            this.isRotating = !this.isRotating;
-            const button = document.getElementById('toggle-rotation');
-            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
-        });
-        
-        const toggleViewButton = document.getElementById('toggle-view');
-        if (toggleViewButton) {
-            toggleViewButton.addEventListener('click', () => {
-                this.toggleCameraView();
-            });
-        }
-        
-        // Navigation controls
-        document.getElementById('rotate-left').addEventListener('click', () => {
-            this.rotateLeft();
-        });
-        
-        document.getElementById('rotate-right').addEventListener('click', () => {
-            this.rotateRight();
-        });
-        
-        document.getElementById('rotate-up').addEventListener('click', () => {
-            this.rotateUp();
-        });
-        
-        document.getElementById('rotate-down').addEventListener('click', () => {
-            this.rotateDown();
-        });
-        
-        document.getElementById('pan-left').addEventListener('click', () => {
-            this.panLeft();
-        });
-        
-        document.getElementById('pan-right').addEventListener('click', () => {
-            this.panRight();
-        });
-        
-        document.getElementById('pan-up').addEventListener('click', () => {
-            this.panUp();
-        });
-        
-        document.getElementById('pan-down').addEventListener('click', () => {
-            this.panDown();
-        });
-        
-        document.getElementById('zoom-in').addEventListener('click', () => {
-            this.zoomIn();
-        });
-        
-        document.getElementById('zoom-out').addEventListener('click', () => {
-            this.zoomOut();
-        });
-        
-        // Load more transactions button
-        document.getElementById('load-more-transactions').addEventListener('click', () => {
-            this.loadMoreTransactions();
-        });
-        
-        // Modal functionality
-        this.setupModal();
-        
-        // Panel toggle functionality
-        this.setupPanelToggle();
     }
 
     updateCameraPosition() {
@@ -385,6 +456,10 @@ class BitcoinAddressExplorer {
     }
 
     setupTouchControls() {
+        this._bindWithAbort(this.renderer.domElement, () => this._setupTouchControlsInner());
+    }
+
+    _setupTouchControlsInner() {
         let touchStartX = 0;
         let touchStartY = 0;
         let touchStartDistance = 0;
@@ -808,9 +883,21 @@ class BitcoinAddressExplorer {
     createAddressVisualization() {
         if (!this.addressData) return;
 
-        // Clear any existing objects
-        while(this.scene.children.length > 0) {
-            this.scene.remove(this.scene.children[0]);
+        // Clear page meshes only — keep camera / XR controllers / grips / pivot / HUD
+        const keep = (obj) => {
+            if (!obj) return true;
+            if (this.camera && obj === this.camera) return true;
+            if (this.vrManager && typeof this.vrManager._shouldKeepInScene === 'function') {
+                return this.vrManager._shouldKeepInScene(obj);
+            }
+            return false;
+        };
+        this.scene.children.slice().forEach((child) => {
+            if (keep(child)) return;
+            this.scene.remove(child);
+        });
+        if (this.vrManager && typeof this.vrManager._ensureControllersInScene === 'function') {
+            this.vrManager._ensureControllersInScene();
         }
 
         // Re-add lighting
@@ -1281,7 +1368,7 @@ class BitcoinAddressExplorer {
                 // Immediately navigate to the new address
                 const currentUrl = new URL(window.location);
                 currentUrl.searchParams.set('address', address);
-                window.location.href = currentUrl.toString();
+                explorerNavigate(currentUrl.toString());
             });
         });
 
@@ -1325,7 +1412,7 @@ class BitcoinAddressExplorer {
             // Redirect to the same page with new address parameter
             const currentUrl = new URL(window.location);
             currentUrl.searchParams.set('address', newAddress);
-            window.location.href = currentUrl.toString();
+            explorerNavigate(currentUrl.toString());
         });
     }
     
@@ -1843,6 +1930,14 @@ class BitcoinAddressExplorer {
     }
 }
 
+window.ExplorerPages = window.ExplorerPages || {};
+window.ExplorerPages['address.html'] = {
+    panelTitle: 'Address',
+    panelDomId: 'address-info',
+    create: function (opts) { return new BitcoinAddressExplorer(opts); }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
-    new BitcoinAddressExplorer();
+    if (window.__softNav) return;
+    window.__explorer = new BitcoinAddressExplorer();
 }); 

@@ -238,7 +238,10 @@
                     vrBtn.disabled    = false;
                     if (supported) {
                         vrBtn.title = 'Enter immersive VR mode';
-                        startVR();
+                        // Auto-enter only on first boot — not after soft-nav reattach
+                        if (!renderer.xr.isPresenting && !(options && options.skipAutoStart)) {
+                            startVR();
+                        }
                     } else {
                         vrBtn.style.opacity = '0.6';
                         vrBtn.title = 'VR not detected — click for setup instructions';
@@ -274,6 +277,65 @@
             });
 
             return vrBtn;
+        },
+
+        /**
+         * Re-wire #vr-button / #ar-button after ExplorerRouter swaps #ui.
+         * Does not auto-start a session.
+         */
+        reattach: function (renderer) {
+            var vrBtn = document.getElementById('vr-button');
+            var arBtn = document.getElementById('ar-button');
+            if (!vrBtn || !renderer) return;
+
+            var vrInit = { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'bounded-floor'] };
+            var arInit = { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'dom-overlay'] };
+
+            function session() {
+                return renderer.xr.getSession ? renderer.xr.getSession() : null;
+            }
+
+            function syncLabels() {
+                var s = session();
+                if (s) {
+                    var isAR = s.environmentBlendMode !== 'opaque';
+                    vrBtn.textContent = isAR ? 'Enter VR' : 'Exit VR';
+                    if (arBtn) arBtn.textContent = isAR ? 'Exit MR' : 'Enter MR';
+                } else {
+                    vrBtn.textContent = 'Enter VR';
+                    if (arBtn) arBtn.textContent = 'Enter MR';
+                }
+            }
+
+            syncLabels();
+            vrBtn.disabled = false;
+
+            vrBtn.onclick = function () {
+                var s = session();
+                if (s) { s.end(); return; }
+                navigator.xr.requestSession('immersive-vr', vrInit)
+                    .then(function (sess) {
+                        sess.addEventListener('end', syncLabels);
+                        renderer.xr.setSession(sess);
+                        syncLabels();
+                    })
+                    .catch(function (e) { console.warn('[VRButton] VR session failed:', e); });
+            };
+
+            if (arBtn) {
+                arBtn.style.display = '';
+                arBtn.onclick = function () {
+                    var s = session();
+                    if (s) { s.end(); return; }
+                    navigator.xr.requestSession('immersive-ar', arInit)
+                        .then(function (sess) {
+                            sess.addEventListener('end', syncLabels);
+                            renderer.xr.setSession(sess);
+                            syncLabels();
+                        })
+                        .catch(function (e) { console.warn('[VRButton] AR session failed:', e); });
+                };
+            }
         }
     };
 

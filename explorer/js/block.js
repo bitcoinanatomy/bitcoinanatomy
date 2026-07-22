@@ -1,6 +1,10 @@
 // Bitcoin Explorer - Block Page
 class BitcoinBlockExplorer {
-    constructor() {
+    constructor(opts) {
+        opts = opts || {};
+        this._shell = opts.shell || null;
+        this._ac = new AbortController();
+        this._disposed = false;
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -131,7 +135,9 @@ class BitcoinBlockExplorer {
     async init() {
         this.setupThreeJS();
 
-        if (typeof VRManager !== 'undefined') {
+        if (this._shell && this._shell.vrManager) {
+            this.vrManager = this._shell.vrManager;
+        } else if (typeof VRManager !== 'undefined') {
             this.vrManager = new VRManager(this, { panelTitle: 'Block', panelDomId: 'block-info' });
             this.vrManager.init();
         }
@@ -202,6 +208,25 @@ class BitcoinBlockExplorer {
     }
 
     setupThreeJS() {
+        const signal = this._ac.signal;
+
+        if (this._shell) {
+            this.scene = this._shell.scene;
+            this.camera = this._shell.camera;
+            this.renderer = this._shell.renderer;
+            this.scene.background = new THREE.Color(0x000000);
+            if (this.camera.isPerspectiveCamera) {
+                this.camera.fov = 75;
+                this.camera.near = 0.1;
+                this.camera.far = 1000;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+            }
+            this.camera.position.set(0, 10, 20);
+            window.addEventListener('resize', () => this.onWindowResize(), { signal });
+            return;
+        }
+
         const container = document.getElementById('scene');
         
         this.scene = new THREE.Scene();
@@ -216,7 +241,51 @@ class BitcoinBlockExplorer {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(this.renderer.domElement);
         
-        window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('resize', () => this.onWindowResize(), { signal });
+    }
+
+    _bindWithAbort(target, fn) {
+        const signal = this._ac.signal;
+        const orig = target.addEventListener.bind(target);
+        target.addEventListener = (t, f, o) => {
+            if (o === true) return orig(t, f, { capture: true, signal });
+            if (o && typeof o === 'object') return orig(t, f, Object.assign({}, o, { signal }));
+            return orig(t, f, { signal });
+        };
+        try { fn(); }
+        finally { target.addEventListener = EventTarget.prototype.addEventListener.bind(target); }
+    }
+
+    dispose() {
+        if (this._disposed) return;
+        this._disposed = true;
+        this._ac.abort();
+        this.isRotating = false;
+        this.shouldStopLoadingAll = true;
+        this.shouldStopUtxoLoad = true;
+        const drop = (arr) => {
+            (arr || []).forEach((b) => {
+                if (!b) return;
+                if (b.parent) b.parent.remove(b);
+                if (b.geometry) b.geometry.dispose();
+                if (b.material) {
+                    const mats = Array.isArray(b.material) ? b.material : [b.material];
+                    mats.forEach((m) => { if (m) m.dispose(); });
+                }
+            });
+        };
+        drop(this.transactions);
+        drop(this.utxoSpheres);
+        drop(this.merkleTreeLines);
+        drop(this.otherBlocksCuboids);
+        drop(this.otherBlocksHeaders);
+        if (this.headerMesh) {
+            drop([this.headerMesh]);
+            this.headerMesh = null;
+        }
+        this.transactions = [];
+        this.utxoSpheres = [];
+        this.merkleTreeLines = [];
     }
 
     setupControls() {
@@ -246,6 +315,10 @@ class BitcoinBlockExplorer {
     
     setupMouseControls() {
         const controls = this.controls;
+        this._bindWithAbort(this.renderer.domElement, () => this._setupMouseControlsInner(controls));
+    }
+
+    _setupMouseControlsInner(controls) {
         
         this.renderer.domElement.addEventListener('mousedown', (e) => {
             controls.isMouseDown = true;
@@ -337,6 +410,10 @@ class BitcoinBlockExplorer {
     }
 
     setupTouchControls() {
+        this._bindWithAbort(this.renderer.domElement, () => this._setupTouchControlsInner());
+    }
+
+    _setupTouchControlsInner() {
         let touchStartX = 0;
         let touchStartY = 0;
         let touchStartDistance = 0;
@@ -593,7 +670,7 @@ class BitcoinBlockExplorer {
                     const h = parseInt(height, 10);
                     if (!isNaN(h) && h >= 0) {
                         blockModal.style.display = 'none';
-                        window.location.href = `block.html?height=${h}`;
+                        explorerNavigate(`block.html?height=${h}`);
                     }
                 }
             });
@@ -603,7 +680,7 @@ class BitcoinBlockExplorer {
                 const height = btn.getAttribute('data-height');
                 if (height !== null) {
                     blockModal.style.display = 'none';
-                    window.location.href = `block.html?height=${height}`;
+                    explorerNavigate(`block.html?height=${height}`);
                 }
             });
         });
@@ -1124,7 +1201,7 @@ class BitcoinBlockExplorer {
                     
                     // Double-click UTXO sphere: go to transaction page
                     if (intersectedObject.userData?.type === 'blockUtxo' && intersectedObject.userData?.utxo?.txid) {
-                        window.location.href = `transaction.html?txid=${intersectedObject.userData.utxo.txid}`;
+                        explorerNavigate(`transaction.html?txid=${intersectedObject.userData.utxo.txid}`);
                         return;
                     }
                     
@@ -1134,7 +1211,7 @@ class BitcoinBlockExplorer {
                         
                         // Navigate to transaction page with TXID parameter
                         if (txData.txid && !txData.txid.startsWith('dummy_tx_')) {
-                            window.location.href = `transaction.html?txid=${txData.txid}`;
+                            explorerNavigate(`transaction.html?txid=${txData.txid}`);
                         }
                         return; // Exit after handling transaction
                     }
@@ -1161,7 +1238,7 @@ class BitcoinBlockExplorer {
                             // Current block - stay on same page
                         } else {
                             // Past or future block - navigate to that block's height
-                            window.location.href = `block.html?height=${targetHeight}`;
+                            explorerNavigate(`block.html?height=${targetHeight}`);
                         }
                         return; // Exit after handling block
                     }
@@ -3779,7 +3856,7 @@ class BitcoinBlockExplorer {
             span.addEventListener('dblclick', () => {
                 const txid = document.getElementById('find-tx-input').value.trim();
                 if (txid && txid.length === 64) {
-                    window.location.href = `transaction.html?txid=${txid}`;
+                    explorerNavigate(`transaction.html?txid=${txid}`);
                 }
             });
         });
@@ -5868,6 +5945,14 @@ class BitcoinBlockExplorer {
     }
 }
 
+window.ExplorerPages = window.ExplorerPages || {};
+window.ExplorerPages['block.html'] = {
+    panelTitle: 'Block',
+    panelDomId: 'block-info',
+    create: function (opts) { return new BitcoinBlockExplorer(opts); }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
-    new BitcoinBlockExplorer();
+    if (window.__softNav) return;
+    window.__explorer = new BitcoinBlockExplorer();
 }); 

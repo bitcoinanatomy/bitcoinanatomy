@@ -76,6 +76,10 @@
             <div class="header">
                 <h1>Difficulty</h1>
                 <div class="subtitle" id="difficulty-subtitle">Loading...</div>
+                <div class="snapshot-navigation">
+                    <button id="prev-adjustment" class="snapshot-nav-btn" disabled title="Previous difficulty period">← Prev</button>
+                    <button id="next-adjustment" class="snapshot-nav-btn" disabled title="Next difficulty period">Next →</button>
+                </div>
             </div>
             
             <div class="sidebar">
@@ -117,9 +121,9 @@
             
             <div class="controls">
                 <div class="controls-main">
-                    <button id="back-to-blockchain" style="display: none;">Back to Blockchain</button>
                     <button id="vr-button" title="Enter immersive VR mode">Enter VR</button>
                     <button id="ar-button" title="Enter mixed reality (passthrough) mode">Enter MR</button>
+                    <button id="back-to-blockchain" style="display: none;">Back to Blockchain</button>
                 </div>
                 <div id="controls-camera-root" class="controls-camera"></div>
             </div>
@@ -151,6 +155,7 @@
     <script src="js/vr/SpatialPanel.js"></script>
     <script src="js/vr/VRNavMenu.js"></script>
     <script src="js/vr/VRManager.js"></script>
+    <script src="js/vr/ExplorerRouter.js"></script>
     <script src="js/difficulty.js"></script>
     <script>
         // Hamburger menu functionality
