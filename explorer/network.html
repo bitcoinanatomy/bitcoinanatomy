@@ -41,11 +41,17 @@
                 <h1>Network</h1>
                 <div class="subtitle" id="network-subtitle">Loading...</div>
                 <div class="snapshot-navigation">
-                    <button id="prev-snapshot" class="snapshot-nav-btn" disabled title="Previous snapshot">← Prev</button>
-                    <button id="next-snapshot" class="snapshot-nav-btn" disabled title="Next snapshot">Next →</button>
-                    <select id="archive-select" class="archive-dropdown archive-dropdown-prominent" title="Load historical weekly snapshot">
-                        <option value="">Load Archive</option>
-                    </select>
+                    <div class="snapshot-nav-row">
+                        <button id="prev-snapshot" class="snapshot-nav-btn" disabled title="Previous snapshot">← Prev</button>
+                        <button id="next-snapshot" class="snapshot-nav-btn" disabled title="Next snapshot">Next →</button>
+                    </div>
+                    <div class="archive-picker" id="archive-picker">
+                        <button type="button" id="archive-select-btn" class="archive-picker-trigger" aria-haspopup="listbox" aria-expanded="false" title="Load historical weekly snapshot">
+                            <span class="archive-picker-label">Load Archive</span>
+                            <span class="archive-picker-chevron" aria-hidden="true"></span>
+                        </button>
+                        <div class="archive-picker-menu" id="archive-menu" role="listbox" hidden></div>
+                    </div>
                 </div>
             </div>
             
@@ -106,17 +112,18 @@
             </div>
             
             <div class="controls">
+                <div id="controls-camera-root" class="controls-camera"></div>
                 <div class="controls-main">
-                    <button id="vr-button" title="Enter immersive VR mode">Enter VR</button>
-                    <button id="ar-button" title="Enter mixed reality (passthrough) mode">Enter MR</button>
-                    <button id="toggle-2d" title="View clearnet nodes on flat map">2D Map</button>
+                    <button id="vr-button" title="Enter immersive VR mode">VR</button>
+                    <button id="ar-button" title="Enter mixed reality (passthrough) mode">MR</button>
+                    <button id="toggle-2d" title="View clearnet nodes on flat map">2D</button>
                     <button id="toggle-earth" title="Show or hide the Earth geography texture">Hide Map</button>
                     <button id="toggle-connections" title="Show random connections between nodes">Show Connections</button>
                     <button id="toggle-table" title="Show node data table">Table</button>
                     <button id="clear-cache" title="Clear cached data and reload">Clear Cache</button>
                     <button id="toggle-montage" title="Start camera montage loop (5 shots)">Montage</button>
                 </div>
-                <div id="controls-camera-root" class="controls-camera"></div>
+            
             </div>
         </div>
         
@@ -171,7 +178,7 @@
     </div>
 
     <div class="disclaimer">
-        Data sources: Bitnodes.io
+        Data sources: <a class="disclaimer-link" href="https://btcnodes.io/api/" target="_blank" rel="noopener">BTC Nodes API</a><span id="disclaimer-archive" class="disclaimer-archive" hidden> · local bitnode.io archive fallback</span>
     </div>
 
     <!-- Three.js + WebXR addons via importmap -->
