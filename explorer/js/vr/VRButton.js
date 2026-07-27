@@ -35,12 +35,13 @@
         ].join(';');
 
         var box = document.createElement('div');
+        box.className = 'glass-border';
         box.style.cssText = [
-            'background:#000', 'border:1px solid rgba(255,255,255,0.1)',
+            '--glass-fill:#000',
             'border-radius:0', 'padding:0', 'max-width:520px', 'width:100%',
             'color:rgba(255,255,255,0.8)', 'font-family:' + F,
             'font-size:13px', 'font-weight:400', 'line-height:1.6',
-            'position:relative', 'box-shadow:0 10px 40px rgba(0,0,0,0.6)',
+            'position:relative', 'box-shadow:var(--glass-highlight),0 10px 40px rgba(0,0,0,0.6)',
         ].join(';');
 
         var pageUrl = currentUrl || window.location.href;
@@ -48,7 +49,7 @@
         var header = document.createElement('div');
         header.style.cssText = [
             'display:flex', 'justify-content:space-between', 'align-items:center',
-            'padding:14px 20px', 'border-bottom:1px solid rgba(255,255,255,0.1)',
+            'padding:14px 20px', 'border-bottom:1px solid var(--glass-stroke-soft)',
         ].join(';');
 
         var title = document.createElement('span');
@@ -80,7 +81,7 @@
                 label: 'Meta Quest 3 — VR + Mixed Reality',
                 steps: [
                     'Open <strong>Meta Quest Browser</strong> on your headset.',
-                    'Navigate to: <span style="display:inline-block;background:#111;border:1px solid rgba(255,255,255,0.1);padding:2px 6px;word-break:break-all;font-family:monospace;font-size:11px;">' + pageUrl + '</span>',
+                    'Navigate to: <span style="display:inline-block;background:#111;border:1px solid var(--glass-stroke-soft);padding:2px 6px;word-break:break-all;font-family:monospace;font-size:11px;">' + pageUrl + '</span>',
                     'Tap <strong>Enter VR</strong> for full immersion, or <strong>Enter MR</strong> to explore data layered over the real world.',
                 ],
             },
@@ -115,11 +116,11 @@
 
         var note = document.createElement('div');
         note.innerHTML = 'XR requires HTTPS. Locally? Run <code style="background:#111;padding:1px 5px;font-size:11px;">node server.js --https</code> then accept the self-signed cert.';
-        note.style.cssText = 'margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.07);color:rgba(255,255,255,0.3);font-size:11px;line-height:1.5;';
+        note.style.cssText = 'margin-top:20px;padding-top:16px;border-top:1px solid var(--glass-stroke-soft);color:rgba(255,255,255,0.3);font-size:11px;line-height:1.5;';
         body.appendChild(note);
 
         var footer = document.createElement('div');
-        footer.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.1);';
+        footer.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--glass-stroke-soft);';
 
         function dismiss() { overlay.remove(); }
 
@@ -130,7 +131,7 @@
                 'padding:0 20px', 'height:28px',
                 'background:' + (primary ? '#fff' : 'rgba(255,255,255,0.06)'),
                 'color:' + (primary ? '#000' : 'rgba(255,255,255,0.6)'),
-                'border:' + (primary ? 'none' : '1px solid rgba(255,255,255,0.12)'),
+                'border:' + (primary ? 'none' : '1px solid var(--glass-stroke)'),
                 'border-radius:0', 'font-family:' + F,
                 'font-size:0.72rem', 'font-weight:300',
                 'letter-spacing:0.12em', 'text-transform:uppercase', 'cursor:pointer',
@@ -173,8 +174,12 @@
                 vrBtn.id = 'vr-button';
                 vrBtn.style.cssText = [
                     'position:fixed', 'bottom:20px', 'left:calc(50% - 60px)',
-                    'padding:10px 22px', 'border:2px solid rgba(255,255,255,0.15)',
-                    'border-radius:0', 'background:rgba(0,0,0,0.7)',
+                    'position:fixed', 'bottom:20px', 'left:calc(50% - 60px)',
+                    'padding:10px 22px', 'border:1px solid transparent',
+                    'border-radius:0',
+                    'background-image:linear-gradient(rgba(0,0,0,0.7),rgba(0,0,0,0.7)),var(--glass-border-gradient)',
+                    'background-origin:border-box', 'background-clip:padding-box,border-box',
+                    'box-shadow:var(--glass-highlight)',
                     'color:rgba(255,255,255,0.7)', 'font-family:monospace',
                     'font-size:13px', 'cursor:pointer', 'z-index:9999',
                 ].join(';');
@@ -185,8 +190,11 @@
                 arBtn.id = 'ar-button';
                 arBtn.style.cssText = [
                     'position:fixed', 'bottom:20px', 'left:calc(50% + 60px)',
-                    'padding:10px 22px', 'border:2px solid rgba(255,255,255,0.10)',
-                    'border-radius:0', 'background:rgba(0,0,0,0.7)',
+                    'padding:10px 22px', 'border:1px solid transparent',
+                    'border-radius:0',
+                    'background-image:linear-gradient(rgba(0,0,0,0.7),rgba(0,0,0,0.7)),var(--glass-border-gradient)',
+                    'background-origin:border-box', 'background-clip:padding-box,border-box',
+                    'box-shadow:var(--glass-highlight)',
                     'color:rgba(255,255,255,0.5)', 'font-family:monospace',
                     'font-size:13px', 'cursor:pointer', 'z-index:9999',
                     'display:none',
@@ -203,8 +211,8 @@
                 session.addEventListener('end', onSessionEnded);
                 renderer.xr.setSession(session);
                 var isAR = session.environmentBlendMode !== 'opaque';
-                vrBtn.textContent = isAR ? 'Enter VR' : 'Exit VR';
-                arBtn.textContent = isAR ? 'Exit MR'  : 'Enter MR';
+                vrBtn.textContent = isAR ? 'VR' : 'Exit';
+                arBtn.textContent = isAR ? 'Exit' : 'MR';
                 if (isAR) { arBtn.style.color = '#ffffff'; arBtn.style.borderColor = '#ffffff'; }
                 else      { vrBtn.style.color = '#ffffff'; vrBtn.style.borderColor = '#ffffff'; }
             }
@@ -212,8 +220,8 @@
             function onSessionEnded() {
                 currentSession.removeEventListener('end', onSessionEnded);
                 currentSession = null;
-                vrBtn.textContent = 'Enter VR';
-                arBtn.textContent = 'Enter MR';
+                vrBtn.textContent = 'VR';
+                arBtn.textContent = 'MR';
                 vrBtn.style.color = ''; vrBtn.style.borderColor = '';
                 arBtn.style.color = ''; arBtn.style.borderColor = '';
             }
@@ -234,7 +242,7 @@
                 // Check VR support
                 navigator.xr.isSessionSupported('immersive-vr').then(function (supported) {
                     vrSupported = supported;
-                    vrBtn.textContent = 'Enter VR';
+                    vrBtn.textContent = 'VR';
                     vrBtn.disabled    = false;
                     if (supported) {
                         vrBtn.title = 'Enter immersive VR mode';
@@ -254,7 +262,7 @@
                 navigator.xr.isSessionSupported('immersive-ar').then(function (supported) {
                     arSupported = supported;
                     if (supported) {
-                        arBtn.textContent = 'Enter MR';
+                        arBtn.textContent = 'MR';
                         arBtn.style.display = '';
                         arBtn.title = 'Enter mixed reality (passthrough) mode';
                     }
@@ -299,11 +307,11 @@
                 var s = session();
                 if (s) {
                     var isAR = s.environmentBlendMode !== 'opaque';
-                    vrBtn.textContent = isAR ? 'Enter VR' : 'Exit VR';
-                    if (arBtn) arBtn.textContent = isAR ? 'Exit MR' : 'Enter MR';
+                    vrBtn.textContent = isAR ? 'VR' : 'Exit';
+                    if (arBtn) arBtn.textContent = isAR ? 'Exit' : 'MR';
                 } else {
-                    vrBtn.textContent = 'Enter VR';
-                    if (arBtn) arBtn.textContent = 'Enter MR';
+                    vrBtn.textContent = 'VR';
+                    if (arBtn) arBtn.textContent = 'MR';
                 }
             }
 
