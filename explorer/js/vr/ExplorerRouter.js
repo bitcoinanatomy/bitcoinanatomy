@@ -109,6 +109,28 @@
         });
     }
 
+    /** Soft-nav only swaps #ui; disclaimer lives outside it — keep data sources in sync. */
+    function updateDisclaimer(doc) {
+        var next = doc.querySelector('.disclaimer');
+        var cur = document.querySelector('.disclaimer');
+        if (!next) {
+            if (cur) cur.remove();
+            return;
+        }
+        var imported = document.importNode(next, true);
+        // Preserve VR/session visibility hide on the live element
+        if (cur && cur.style && cur.style.visibility) {
+            imported.style.visibility = cur.style.visibility;
+        }
+        if (cur) {
+            cur.replaceWith(imported);
+            return;
+        }
+        var container = document.getElementById('container');
+        if (container) container.insertAdjacentElement('afterend', imported);
+        else document.body.appendChild(imported);
+    }
+
     function rebindChrome(shell) {
         var camRoot = document.getElementById('controls-camera-root');
         if (camRoot && typeof ControlsCamera === 'function') {
@@ -249,6 +271,7 @@
                 oldUi.replaceWith(document.importNode(newUi, true));
                 if (doc.title) document.title = doc.title;
                 updateNavbarActive(file);
+                updateDisclaimer(doc);
 
                 if (!opts.fromPopstate) {
                     if (opts.replace) history.replaceState({ softNav: true }, '', targetPath);

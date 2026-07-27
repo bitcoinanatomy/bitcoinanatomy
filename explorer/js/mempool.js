@@ -48,10 +48,18 @@ class BitcoinMempoolExplorer {
             });
             this.feeBandLabels = [];
         }
+        if (this.remainingTextElement) {
+            if (this.remainingTextElement.parentNode) {
+                this.remainingTextElement.parentNode.removeChild(this.remainingTextElement);
+            }
+            this.remainingTextElement = null;
+        }
         if (this._hoverTooltipEl && this._hoverTooltipEl.parentNode) {
             this._hoverTooltipEl.parentNode.removeChild(this._hoverTooltipEl);
             this._hoverTooltipEl = null;
         }
+        // Safety sweep for any orphaned mempool DOM overlays
+        document.querySelectorAll('.mempool-overlay-label').forEach((el) => el.remove());
         const drop = (arr) => {
             (arr || []).forEach((b) => {
                 if (!b) return;
@@ -655,7 +663,7 @@ class BitcoinMempoolExplorer {
         const content = modal.querySelector('.loading-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             padding: 40px;
             text-align: center;
@@ -804,7 +812,7 @@ class BitcoinMempoolExplorer {
         const content = popup.querySelector('.popup-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             max-width: 350px;
             width: 90%;
@@ -815,7 +823,7 @@ class BitcoinMempoolExplorer {
         const header = popup.querySelector('.popup-header');
         header.style.cssText = `
             padding: 16px 20px;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -854,7 +862,7 @@ class BitcoinMempoolExplorer {
         const footer = popup.querySelector('.popup-footer');
         footer.style.cssText = `
             padding: 16px 20px;
-            border-top: 1px solid #333;
+            border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
             gap: 8px;
             justify-content: flex-end;
@@ -865,7 +873,7 @@ class BitcoinMempoolExplorer {
             if (btn.className.includes('popup-')) {
                 btn.style.cssText = `
                     padding: 6px 12px;
-                    border: 1px solid #555;
+                    border: 1px solid rgba(255,255,255,0.18);
                     background: #000;
                     color: white;
                     border-radius: 2px;
@@ -875,11 +883,11 @@ class BitcoinMempoolExplorer {
                 `;
                 btn.addEventListener('mouseenter', () => {
                     btn.style.background = '#333';
-                    btn.style.borderColor = '#666';
+                    btn.style.borderColor = 'rgba(255,255,255,0.28)';
                 });
                 btn.addEventListener('mouseleave', () => {
                     btn.style.background = '#000';
-                    btn.style.borderColor = '#555';
+                    btn.style.borderColor = 'rgba(255,255,255,0.18)';
                 });
             }
         });
@@ -1088,6 +1096,7 @@ class BitcoinMempoolExplorer {
             
             // Create fee band label similar to remaining transactions text
             const labelContainer = document.createElement('div');
+            labelContainer.className = 'mempool-overlay-label';
             labelContainer.style.position = 'absolute';
             labelContainer.style.color = 'white';
             labelContainer.style.fontSize = '12px';
@@ -1126,8 +1135,14 @@ class BitcoinMempoolExplorer {
     addRemainingTransactionsText(shownCount, totalCount) {
         const remainingCount = totalCount - shownCount;
         
+        if (this.remainingTextElement) {
+            this.remainingTextElement.remove();
+            this.remainingTextElement = null;
+        }
+
         // Create a simple text using CSS overlay instead of 3D text for better performance
         const textContainer = document.createElement('div');
+        textContainer.className = 'mempool-overlay-label';
         textContainer.style.position = 'absolute';
         textContainer.style.color = 'white';
         textContainer.style.fontSize = '14px';
@@ -1213,6 +1228,7 @@ class BitcoinMempoolExplorer {
     }
 
     animate() {
+        if (this._disposed) return;
         // Rotate scene (optional, can be disabled)
         if (this.isRotating) {
             this.scene.rotation.y += 0.001; // Faster rotation
@@ -1229,7 +1245,7 @@ class BitcoinMempoolExplorer {
     }
     
     updateRemainingTextPosition() {
-        if (!this.remainingTextElement || this.transactions.length === 0) return;
+        if (this._disposed || !this.remainingTextElement || this.transactions.length === 0) return;
         
         // Get the last transaction position
         const lastTransaction = this.transactions[this.transactions.length - 1];
@@ -1265,7 +1281,7 @@ class BitcoinMempoolExplorer {
     }
     
     updateFeeBandLabelPositions() {
-        if (!this.feeBandLabels || this.transactions.length === 0 || !this.feeBandLabelsVisible) return;
+        if (this._disposed || !this.feeBandLabels || this.transactions.length === 0 || !this.feeBandLabelsVisible) return;
         
         this.feeBandLabels.forEach(label => {
             if (label.transactionIndex >= this.transactions.length) return;
