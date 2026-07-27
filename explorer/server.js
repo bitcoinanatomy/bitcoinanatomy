@@ -63,7 +63,57 @@ function sendFile(res, filePath) {
     });
 }
 
+// Same-origin proxy for BTC Nodes API (CORS/COEP-safe for local + WebXR)
+const BTCNODES_API = 'https://btcnodes.io/api';
+const BTCNODES_PROXY_PREFIX = '/api/btcnodes';
+
+function proxyBtcnodes(req, res) {
+    var suffix = req.url.slice(BTCNODES_PROXY_PREFIX.length);
+    if (!suffix.startsWith('/')) suffix = '/' + suffix;
+    var target = new URL(BTCNODES_API + suffix);
+
+    var upstream = https.request({
+        hostname: target.hostname,
+        path: target.pathname + target.search,
+        method: req.method,
+        headers: {
+            'Accept': req.headers['accept'] || 'application/json',
+            'User-Agent': 'bitcoinanatomy-explorer-local',
+        },
+    }, function (upRes) {
+        var headers = Object.assign({
+            'Content-Type': upRes.headers['content-type'] || 'application/json',
+            'Cache-Control': 'no-cache',
+        }, XR_HEADERS);
+        if (upRes.headers['ratelimit-remaining'] != null) {
+            headers['ratelimit-remaining'] = upRes.headers['ratelimit-remaining'];
+        }
+        if (upRes.headers['retry-after'] != null) {
+            headers['retry-after'] = upRes.headers['retry-after'];
+        }
+        res.writeHead(upRes.statusCode || 502, headers);
+        upRes.pipe(res);
+    });
+
+    upstream.on('error', function (err) {
+        console.error('[btcnodes proxy]', err.message);
+        res.writeHead(502, Object.assign({ 'Content-Type': 'application/json' }, XR_HEADERS));
+        res.end(JSON.stringify({ error: 'btcnodes proxy failed', detail: err.message }));
+    });
+
+    if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+        req.pipe(upstream);
+    } else {
+        upstream.end();
+    }
+}
+
 function handler(req, res) {
+    if (req.url.split('?')[0].startsWith(BTCNODES_PROXY_PREFIX)) {
+        proxyBtcnodes(req, res);
+        return;
+    }
+
     var filePath = resolvePath(req.url);
 
     fs.stat(filePath, function (err, stat) {
@@ -112,6 +162,8 @@ if (wantsHttps) {
                 console.log(`Quest  URL:  https://${ip}:${HTTPS_PORT}/explorer/`);
             });
             console.log('(Accept the self-signed cert warning in Quest Browser)');
+        }).on('error', function (err) {
+            console.warn(`[HTTPS] port ${HTTPS_PORT} unavailable (${err.code}) — HTTP still running`);
         });
     }
 }

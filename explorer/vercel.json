@@ -1,4 +1,10 @@
 {
+  "rewrites": [
+    {
+      "source": "/api/btcnodes/:path*",
+      "destination": "https://btcnodes.io/api/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
