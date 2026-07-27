@@ -600,10 +600,16 @@ class BitcoinDifficultyExplorer {
 
         const blockVisibilitySlider = document.getElementById('block-visibility-slider');
         const blockVisibilityValue = document.getElementById('block-visibility-value');
+        const syncBlockSliderFill = (el) => {
+            if (!el) return;
+            el.style.setProperty('--slider-pct', `${el.value}%`);
+        };
         if (blockVisibilitySlider && blockVisibilityValue) {
+            syncBlockSliderFill(blockVisibilitySlider);
             blockVisibilitySlider.addEventListener('input', (e) => {
                 const percentage = parseInt(e.target.value, 10);
                 blockVisibilityValue.textContent = `${percentage}%`;
+                syncBlockSliderFill(e.target);
                 this.updateBlockVisibility(percentage);
                 this.updateBlockTimeDisplay(percentage);
             }, { signal });
@@ -1185,7 +1191,7 @@ class BitcoinDifficultyExplorer {
         const content = modal.querySelector('.loading-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             padding: 40px;
             text-align: center;
@@ -1334,7 +1340,7 @@ class BitcoinDifficultyExplorer {
         const content = popup.querySelector('.popup-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             max-width: 350px;
             width: 90%;
@@ -1345,7 +1351,7 @@ class BitcoinDifficultyExplorer {
         const header = popup.querySelector('.popup-header');
         header.style.cssText = `
             padding: 16px 20px;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1384,7 +1390,7 @@ class BitcoinDifficultyExplorer {
         const footer = popup.querySelector('.popup-footer');
         footer.style.cssText = `
             padding: 16px 20px;
-            border-top: 1px solid #333;
+            border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
             gap: 8px;
             justify-content: flex-end;
@@ -1395,7 +1401,7 @@ class BitcoinDifficultyExplorer {
             if (btn.className.includes('popup-')) {
                 btn.style.cssText = `
                     padding: 6px 12px;
-                    border: 1px solid #555;
+                    border: 1px solid rgba(255,255,255,0.18);
                     background: #000;
                     color: white;
                     border-radius: 2px;
@@ -1405,11 +1411,11 @@ class BitcoinDifficultyExplorer {
                 `;
                 btn.addEventListener('mouseenter', () => {
                     btn.style.background = '#333';
-                    btn.style.borderColor = '#666';
+                    btn.style.borderColor = 'rgba(255,255,255,0.28)';
                 });
                 btn.addEventListener('mouseleave', () => {
                     btn.style.background = '#000';
-                    btn.style.borderColor = '#555';
+                    btn.style.borderColor = 'rgba(255,255,255,0.18)';
                 });
             }
         });
@@ -1996,6 +2002,7 @@ class BitcoinDifficultyExplorer {
         if (slider && sliderValue) {
             slider.value = 0;
             sliderValue.textContent = '0%';
+            slider.style.setProperty('--slider-pct', '0%');
         }
         
         // Start the animation sequence
@@ -2049,6 +2056,7 @@ class BitcoinDifficultyExplorer {
         if (slider && sliderValue) {
             slider.value = 100;
             sliderValue.textContent = '100%';
+            slider.style.setProperty('--slider-pct', '100%');
         }
         
         // Reset highest visible block to maximum
@@ -2084,8 +2092,10 @@ class BitcoinDifficultyExplorer {
             const highestVisibleBlockElement = document.getElementById('highest-visible-block');
             
             if (slider && sliderValue) {
-                slider.value = Math.floor(progress);
-                sliderValue.textContent = `${Math.floor(progress)}%`;
+                const pct = Math.floor(progress);
+                slider.value = pct;
+                sliderValue.textContent = `${pct}%`;
+                slider.style.setProperty('--slider-pct', `${pct}%`);
             }
             
             // Update highest visible block number

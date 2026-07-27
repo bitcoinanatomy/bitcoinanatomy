@@ -666,11 +666,18 @@ class BitcoinBlockchainExplorer {
         // Disc visibility slider
         const discVisibilitySlider = document.getElementById('disc-visibility-slider');
         const discVisibilityValue = document.getElementById('disc-visibility-value');
+
+        const syncDiscSliderFill = (el) => {
+            if (!el) return;
+            el.style.setProperty('--slider-pct', `${el.value}%`);
+        };
         
         if (discVisibilitySlider && discVisibilityValue) {
+            syncDiscSliderFill(discVisibilitySlider);
             discVisibilitySlider.addEventListener('input', (e) => {
-                const percentage = parseInt(e.target.value);
+                const percentage = parseInt(e.target.value, 10);
                 discVisibilityValue.textContent = `${percentage}%`;
+                syncDiscSliderFill(e.target);
                 this.updateDiscVisibility(percentage);
             });
         }
@@ -1216,7 +1223,7 @@ class BitcoinBlockchainExplorer {
         const content = popup.querySelector('.popup-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             max-width: 350px;
             width: 90%;
@@ -1227,7 +1234,7 @@ class BitcoinBlockchainExplorer {
         const header = popup.querySelector('.popup-header');
         header.style.cssText = `
             padding: 16px 20px;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1266,7 +1273,7 @@ class BitcoinBlockchainExplorer {
         const footer = popup.querySelector('.popup-footer');
         footer.style.cssText = `
             padding: 16px 20px;
-            border-top: 1px solid #333;
+            border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
             gap: 8px;
             justify-content: flex-end;
@@ -1277,7 +1284,7 @@ class BitcoinBlockchainExplorer {
             if (btn.className.includes('popup-')) {
                 btn.style.cssText = `
                     padding: 6px 12px;
-                    border: 1px solid #555;
+                    border: 1px solid rgba(255,255,255,0.18);
                     background: #000;
                     color: white;
                     border-radius: 2px;
@@ -1287,11 +1294,11 @@ class BitcoinBlockchainExplorer {
                 `;
                 btn.addEventListener('mouseenter', () => {
                     btn.style.background = '#333';
-                    btn.style.borderColor = '#666';
+                    btn.style.borderColor = 'rgba(255,255,255,0.28)';
                 });
                 btn.addEventListener('mouseleave', () => {
                     btn.style.background = '#000';
-                    btn.style.borderColor = '#555';
+                    btn.style.borderColor = 'rgba(255,255,255,0.18)';
                 });
             }
         });
@@ -1508,7 +1515,7 @@ class BitcoinBlockchainExplorer {
         const content = modal.querySelector('.loading-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             padding: 40px;
             text-align: center;

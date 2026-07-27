@@ -1660,7 +1660,7 @@ class BitcoinAddressExplorer {
         const content = modal.querySelector('.loading-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             padding: 40px;
             text-align: center;
@@ -1809,7 +1809,7 @@ class BitcoinAddressExplorer {
         const content = popup.querySelector('.popup-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             max-width: 350px;
             width: 90%;
@@ -1820,7 +1820,7 @@ class BitcoinAddressExplorer {
         const header = popup.querySelector('.popup-header');
         header.style.cssText = `
             padding: 16px 20px;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1859,7 +1859,7 @@ class BitcoinAddressExplorer {
         const footer = popup.querySelector('.popup-footer');
         footer.style.cssText = `
             padding: 16px 20px;
-            border-top: 1px solid #333;
+            border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
             gap: 8px;
             justify-content: flex-end;
@@ -1870,7 +1870,7 @@ class BitcoinAddressExplorer {
             if (btn.className.includes('popup-')) {
                 btn.style.cssText = `
                     padding: 6px 12px;
-                    border: 1px solid #555;
+                    border: 1px solid rgba(255,255,255,0.18);
                     background: #000;
                     color: white;
                     border-radius: 2px;
@@ -1880,11 +1880,11 @@ class BitcoinAddressExplorer {
                 `;
                 btn.addEventListener('mouseenter', () => {
                     btn.style.background = '#333';
-                    btn.style.borderColor = '#666';
+                    btn.style.borderColor = 'rgba(255,255,255,0.28)';
                 });
                 btn.addEventListener('mouseleave', () => {
                     btn.style.background = '#000';
-                    btn.style.borderColor = '#555';
+                    btn.style.borderColor = 'rgba(255,255,255,0.18)';
                 });
             }
         });
