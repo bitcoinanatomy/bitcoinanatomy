@@ -228,6 +228,53 @@
                     kind: 'toggle',
                     getState: function () { return explorerProp(vrManager, 'montageActive'); },
                     onSelect: click('toggle-montage')
+                },
+                {
+                    label: '1K +1K',
+                    kind: 'action',
+                    getLabel: function () {
+                        var ex = vrManager && vrManager.explorer;
+                        if (!ex) return 'NODES';
+                        if (ex._loadingMoreNodes) return 'LOADING…';
+                        var n = ex.nodes ? ex.nodes.length : 0;
+                        var total = 0;
+                        if (ex.nodeData) {
+                            total = ex.nodeData.total_nodes ||
+                                (ex.nodeData.nodes ? Object.keys(ex.nodeData.nodes).length : 0);
+                        }
+                        var fmt = function (v) {
+                            if (v >= 1000) {
+                                var k = v / 1000;
+                                return (Math.abs(k - Math.round(k)) < 0.05 ? Math.round(k) : k.toFixed(1)) + 'K';
+                            }
+                            return String(v);
+                        };
+                        if (total > 0 && n >= total) return fmt(n) + ' MAX';
+                        if (ex._btcnodesListExhausted && ex.nodeData && ex.nodeData.nodes &&
+                            n >= Object.keys(ex.nodeData.nodes).length) {
+                            return fmt(n) + ' MAX';
+                        }
+                        return fmt(n) + ' +1K';
+                    },
+                    getState: function () { return false; },
+                    onSelect: function (mesh) {
+                        var ex = vrManager && vrManager.explorer;
+                        if (!ex || typeof ex.loadMoreNodes !== 'function') return;
+                        if (ex._loadingMoreNodes) return;
+                        Promise.resolve(ex.loadMoreNodes(1000)).then(function () {
+                            if (mesh && vrManager && vrManager.navMenu) {
+                                vrManager.navMenu._refreshToggle(mesh);
+                            }
+                        }).catch(function (err) {
+                            console.warn('[VRNavMenu] loadMoreNodes failed:', err);
+                            if (mesh && vrManager && vrManager.navMenu) {
+                                vrManager.navMenu._refreshToggle(mesh);
+                            }
+                        });
+                        if (mesh && vrManager && vrManager.navMenu) {
+                            vrManager.navMenu._refreshToggle(mesh);
+                        }
+                    }
                 }
             ],
             'mempool.html': [
@@ -554,9 +601,10 @@
                 var tx = startX + ti * (TOGGLE_W + TOGGLE_GAP);
                 var kind = def.kind || 'toggle';
                 var active = kind === 'toggle' ? !!def.getState() : false;
+                var labelText = typeof def.getLabel === 'function' ? def.getLabel() : def.label;
 
                 var tMat = new THREE.MeshBasicMaterial({
-                    map: makeToggleLabel(def.label, active, kind),
+                    map: makeToggleLabel(labelText, active, kind),
                     transparent: true,
                     side: THREE.DoubleSide,
                     opacity: 0.9
@@ -565,6 +613,7 @@
                 tMesh.position.set(tx, rowY, 0.001);
                 tMesh.userData.onSelect  = def.onSelect;
                 tMesh.userData.getState  = def.getState || function () { return false; };
+                tMesh.userData.getLabel  = def.getLabel || null;
                 tMesh.userData.defLabel  = def.label;
                 tMesh.userData.defKind   = kind;
                 tMesh.userData.baseY     = rowY;
@@ -583,7 +632,8 @@
         if (mesh.material.map) mesh.material.map.dispose();
         var kind = mesh.userData.defKind || 'toggle';
         var active = kind === 'toggle' && mesh.userData.getState ? !!mesh.userData.getState() : false;
-        mesh.material.map = makeToggleLabel(mesh.userData.defLabel, active, kind);
+        var label = mesh.userData.getLabel ? mesh.userData.getLabel() : mesh.userData.defLabel;
+        mesh.material.map = makeToggleLabel(label, active, kind);
         mesh.material.needsUpdate = true;
     };
 

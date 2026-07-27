@@ -14,7 +14,7 @@
  *   Left  grip (tap)               — toggle wrist nav menu  (hold both grips → reset)
  *   Right grip (tap)               — toggle HUD (staggered reveal; both grips → reset)
  *   Pointers                       — rays on both controllers; hover/select per-page whitelist
- *   HUD                            — staggered corner reveal on show / pointer select
+ *   HUD                            — TL page identity, TR page stats, BL+BR selection data
  *
  * Note: getController(0/1) is connection order only. Quest and the Immersive Web
  * Emulator often disagree on which index is left/right; handedness keeps them aligned.
@@ -816,11 +816,21 @@
             lines.push('I/O: ' + (vinN || 0) + ' in / ' + (voutN || 0) + ' out');
         }
 
+        if (feeSats != null && tx.vsize) {
+            lines.push('Rate: ' + (feeSats / tx.vsize).toFixed(2) + ' sat/vB');
+        } else if (feeSats != null && tx.weight) {
+            lines.push('Rate: ' + (feeSats / (tx.weight / 4)).toFixed(2) + ' sat/vB');
+        }
+
+        if (tx.version != null) lines.push('Version: ' + tx.version);
+        if (tx.locktime != null) lines.push('Locktime: ' + tx.locktime);
+
         if (tx.status) {
             if (tx.status.confirmed) {
                 if (tx.status.block_height != null) lines.push('Block: ' + this._fmtNum(tx.status.block_height));
                 var t = this._fmtTime(tx.status.block_time);
                 if (t) lines.push('Time: ' + t);
+                if (tx.status.block_hash) lines.push('Block hash: ' + this._shortHash(tx.status.block_hash));
             } else {
                 lines.push('Status: Unconfirmed');
             }
@@ -860,38 +870,34 @@
         var lines;
         var kind;
 
-        // ── Blockchain epochs ─────────────────────────────────────────────────
-        if (ud.isMempool) {
-            kind = 'Mempool';
-            lines = ['Tip: Pending', 'Pending transactions', 'Unconfirmed set', 'Tip of the chain'];
-        } else if (ud.isGenesis || (ud.index === 0 && ud.t != null)) {
-            kind = 'Genesis';
-            lines = ['Epoch: 0', 'Blocks: 0 – 2,015', 'Date: Jan 3, 2009', 'First difficulty epoch'];
-        } else if (typeof ud.index === 'number' && ud.t != null) {
-            kind = 'Epoch';
-            var start = ud.index * 2016;
-            var end = start + 2015;
-            lines = ['Epoch: ' + ud.index];
-            lines.push('Blocks: ' + start.toLocaleString() + ' – ' + end.toLocaleString());
-            if (ud.isMilestone) lines.push('Milestone: Halving');
-            if (ud.progress != null) lines.push('Progress: ' + Math.round(ud.progress * 100) + '%');
-
         // ── Difficulty spiral block (nested blockInfo) ────────────────────────
-        } else if (ud.isBlock && ud.blockInfo) {
+        if (ud.isBlock && ud.blockInfo) {
             kind = 'Block';
             var bi = ud.blockInfo;
             lines = ['Height: ' + this._fmtNum(bi.height)];
             if (bi.nTx != null) lines.push('Txs: ' + this._fmtNum(bi.nTx));
-            if (bi.size != null) lines.push('Size: ' + this._fmtNum(bi.size) + ' B');
+            if (bi.size != null) {
+                lines.push(bi.size >= 1024
+                    ? ('Size: ' + (bi.size / 1024).toFixed(1) + ' KB')
+                    : ('Size: ' + this._fmtNum(bi.size) + ' B'));
+            }
             var bt = this._fmtTime(bi.time);
             if (bt) lines.push('Time: ' + bt);
+            var bdShort = this._fmtShortDate(bi.time);
+            if (bdShort) lines.push('Date: ' + bdShort);
             if (bi.timeDifference != null) {
                 var secs = Math.abs(bi.timeDifference);
                 var mins = Math.round(secs / 60);
                 lines.push('Δ prev: ' + (mins >= 60
                     ? (Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm')
                     : (mins + 'm')));
+                lines.push('Δ secs: ' + this._fmtNum(Math.round(secs)));
             }
+            if (bi.id || bi.hash) lines.push('Hash: ' + this._shortHash(bi.id || bi.hash));
+            if (bi.difficulty != null) lines.push('Diff: ' + (bi.difficulty / 1e12).toFixed(2) + ' T');
+            if (bi.weight != null) lines.push('Weight: ' + this._fmtNum(bi.weight) + ' WU');
+            var epochOf = bi.height != null ? Math.floor(bi.height / 2016) : null;
+            if (epochOf != null) lines.push('Epoch: ' + epochOf);
 
         // ── Difficulty adjacent adjustment discs ──────────────────────────────
         } else if (ud.isDisc && ud.adjustmentIndex != null) {
@@ -901,8 +907,37 @@
             var aEnd = aStart + 2015;
             lines = ['Epoch: ' + adj];
             lines.push('Blocks: ' + aStart.toLocaleString() + ' – ' + aEnd.toLocaleString());
+            lines.push('Start height: ' + this._fmtNum(aStart));
+            lines.push('End height: ' + this._fmtNum(aEnd));
             if (ud.isFuture) lines.push('Period: Future');
             else if (ud.isPast) lines.push('Period: Previous');
+            lines.push('Length: 2,016 blocks');
+
+        // ── Blockchain epochs ─────────────────────────────────────────────────
+        } else if (ud.isMempool) {
+            kind = 'Mempool';
+            lines = ['Tip: Pending', 'Pending transactions', 'Unconfirmed set', 'Tip of the chain'];
+        } else if (ud.isGenesis || (ud.index === 0 && ud.t != null)) {
+            kind = 'Genesis';
+            lines = [
+                'Epoch: 0',
+                'Blocks: 0 – 2,015',
+                'Date: Jan 3, 2009',
+                'First difficulty epoch',
+                'Start height: 0',
+                'End height: 2,015'
+            ];
+        } else if (typeof ud.index === 'number' && ud.t != null) {
+            kind = 'Epoch';
+            var start = ud.index * 2016;
+            var end = start + 2015;
+            lines = ['Epoch: ' + ud.index];
+            lines.push('Blocks: ' + start.toLocaleString() + ' – ' + end.toLocaleString());
+            lines.push('Start height: ' + this._fmtNum(start));
+            lines.push('End height: ' + this._fmtNum(end));
+            if (ud.isMilestone) lines.push('Milestone: Halving');
+            if (ud.progress != null) lines.push('Progress: ' + Math.round(ud.progress * 100) + '%');
+            lines.push('Length: 2,016 blocks');
 
         // ── Block page: transaction cuboid ────────────────────────────────────
         } else if (ud.txid && (ud.transactionData || !ud.type || ud.type === 'transaction')) {
@@ -1031,11 +1066,19 @@
             }
             var h = ud.height != null ? ud.height : ud.latestHeight;
             if (h != null) lines.push('Height: ' + this._fmtNum(h));
+            if (ud.latestHeight != null && ud.height != null && ud.latestHeight !== ud.height) {
+                lines.push('Tip: ' + this._fmtNum(ud.latestHeight));
+            }
             if (ud.org) lines.push('Org: ' + ud.org);
+            if (ud.asn) lines.push('ASN: ' + ud.asn);
+            if (ud.timezone) lines.push('TZ: ' + ud.timezone);
             if (ud.userAgent) {
                 var ua = String(ud.userAgent);
                 if (ua.length > 40) ua = ua.slice(0, 38) + '…';
                 lines.push('UA: ' + ua);
+            }
+            if (ud.lat != null && ud.lng != null) {
+                lines.push('Coords: ' + Number(ud.lat).toFixed(2) + ', ' + Number(ud.lng).toFixed(2));
             }
 
         // ── Protocol feature (node.html) ──────────────────────────────────────
@@ -1112,12 +1155,15 @@
                 obj.userData.blockInfo.nTx = data.tx_count;
                 obj.userData.blockInfo.size = data.size;
                 if (data.timestamp != null) obj.userData.blockInfo.time = data.timestamp;
+                if (data.id) obj.userData.blockInfo.id = data.id;
+                if (data.difficulty != null) obj.userData.blockInfo.difficulty = data.difficulty;
+                if (data.weight != null) obj.userData.blockInfo.weight = data.weight;
             }
 
-            var lines = self._getObjectLines(obj);
+            var lines = self._prepareSelectionLines(obj);
             self._selectionLines = lines;
             self._selectionUntil = performance.now() + HUD_SELECT_HOLD_MS;
-            var changed = self._drawHud(lines);
+            var changed = self._drawHud();
             if (changed && changed.length) self._startHudReveal(changed);
         }).catch(function () {
             if (token !== self._selectionToken) return;
@@ -1131,25 +1177,30 @@
                     }
                 }
                 self._selectionLines = next;
-                self._drawHud(next);
+                self._drawHud();
             }
         });
     };
 
-    VRManager.prototype._showSelectionOnHud = function (obj) {
+    /** Build selection lines + optional double-trigger hint. */
+    VRManager.prototype._prepareSelectionLines = function (obj) {
         var lines = this._getObjectLines(obj).slice();
-        // Hint when a second trigger tap would soft-navigate
         var canNav = false;
         try { canNav = !!this._resolveNavigateUrl(obj); } catch (e) { canNav = false; }
         if (canNav && lines.indexOf('Double-trigger → open') < 0) {
             lines.push('Double-trigger → open');
         }
+        return lines;
+    };
+
+    VRManager.prototype._showSelectionOnHud = function (obj) {
+        var lines = this._prepareSelectionLines(obj);
         this._selectionLines = lines;
         this._selectionUntil = performance.now() + HUD_SELECT_HOLD_MS;
         this._selectionToken = (this._selectionToken || 0) + 1;
         var token = this._selectionToken;
 
-        // Selection lives on the HUD — hide the floating info panel if open
+        // Selection fills bottom HUD corners — hide floating info panel if open
         if (this.spatialPanel) this.spatialPanel.setVisible(false);
 
         if (!this._hudTL) this._attachHud();
@@ -1157,24 +1208,275 @@
             if (m) m.visible = true;
         });
 
-        // Only re-reveal corners whose content actually changed
-        var changed = this._drawHud(lines);
+        var changed = this._drawHud();
         if (changed && changed.length) this._startHudReveal(changed);
 
         // Enrich incomplete bitcoin payloads from mempool.space
         this._enrichSelection(obj, token);
     };
 
-    VRManager.prototype._hudLines = function () {
-        if (this._selectionLines && performance.now() < this._selectionUntil) {
-            return this._selectionLines;
-        }
+    /** Expire stale selection; returns whether a selection is currently active. */
+    VRManager.prototype._selectionActive = function () {
+        if (this._selectionLines && performance.now() < this._selectionUntil) return true;
         if (this._selectionLines && performance.now() >= this._selectionUntil) {
             this._selectionLines = null;
             this._selectionUntil = 0;
             this._selectionKind = null;
         }
+        return false;
+    };
+
+    /** @deprecated kept for spatial-panel fallback callers */
+    VRManager.prototype._hudLines = function () {
+        if (this._selectionActive()) return this._selectionLines;
         return this._readPanelLines();
+    };
+
+    VRManager.prototype._fmtShortDate = function (unixSec) {
+        if (unixSec == null || isNaN(Number(unixSec))) return null;
+        try {
+            var d = new Date(Number(unixSec) * 1000);
+            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return months[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear();
+        } catch (e) { return null; }
+    };
+
+    VRManager.prototype._estimatedSubsidyBtc = function (height) {
+        if (height == null || isNaN(Number(height))) return null;
+        var era = Math.floor(Number(height) / 210000);
+        var subsidy = 50;
+        for (var i = 0; i < era && subsidy > 0; i++) subsidy /= 2;
+        return subsidy;
+    };
+
+    /**
+     * Page identity (TL) + page stats (TR). Selection never overrides these.
+     * Pages may override via explorer.getVRPageHud() → { title, identity, stats }.
+     */
+    VRManager.prototype._getPageHudContext = function () {
+        var ex = this.explorer;
+        if (ex && typeof ex.getVRPageHud === 'function') {
+            try {
+                var custom = ex.getVRPageHud();
+                if (custom && custom.title) return custom;
+            } catch (e) { /* fall through */ }
+        }
+
+        var page = this._pageId();
+        var title = 'Explorer';
+        var identity = '';
+        var stats = [];
+        var el;
+
+        function textOf(id) {
+            el = document.getElementById(id);
+            return el ? String(el.textContent || '').trim() : '';
+        }
+
+        switch (page) {
+            case 'network.html': {
+                title = 'Network';
+                var ts = ex && ex.nodeData && ex.nodeData.timestamp;
+                identity = this._fmtShortDate(ts) || textOf('network-subtitle') || 'Live';
+                var total = ex && ex.nodeData && ex.nodeData.total_nodes;
+                if (total != null) stats.push('Nodes: ' + this._fmtNum(total));
+                else if (textOf('total-nodes')) stats.push('Nodes: ' + textOf('total-nodes'));
+                if (ex && ex.nodes && ex.nodes.length) {
+                    var counts = {};
+                    ex.nodes.forEach(function (n) {
+                        var t = (n.userData && n.userData.type) || 'other';
+                        counts[t] = (counts[t] || 0) + 1;
+                    });
+                    var order = ['bitcoin-core', 'knots', 'bcoin', 'btcd', 'other'];
+                    var labels = {
+                        'bitcoin-core': 'Core',
+                        knots: 'Knots',
+                        bcoin: 'bcoin',
+                        btcd: 'btcd',
+                        other: 'Other'
+                    };
+                    order.forEach(function (k) {
+                        if (counts[k]) stats.push(labels[k] + ': ' + counts[k].toLocaleString());
+                    });
+                }
+                if (ex && ex.nodeData && ex.nodeData.latest_height != null) {
+                    stats.push('Height: ' + this._fmtNum(ex.nodeData.latest_height));
+                }
+                break;
+            }
+            case 'node.html': {
+                title = 'Node';
+                identity = (ex && (ex.nodeData && ex.nodeData.address || ex.nodeAddress)) || textOf('node-address') || '—';
+                var nd = ex && ex.nodeData && ex.nodeData.data;
+                if (nd) {
+                    if (nd[0]) stats.push('Version: ' + nd[0]);
+                    if (ex.nodeData.status) stats.push('Status: ' + ex.nodeData.status);
+                    if (nd[3] != null) stats.push('Height: ' + this._fmtNum(nd[3]));
+                    if (nd[4] != null) stats.push('Tip: ' + this._fmtNum(nd[4]));
+                    if (nd[6] || nd[7]) stats.push('Loc: ' + [nd[6], nd[7]].filter(Boolean).join(', '));
+                    if (ex.nodeData.mbps) stats.push('BW: ' + ex.nodeData.mbps + ' Mbps');
+                } else {
+                    if (textOf('node-version')) stats.push('Version: ' + textOf('node-version'));
+                    if (textOf('node-status-display')) stats.push('Status: ' + textOf('node-status-display'));
+                }
+                break;
+            }
+            case 'blockchain.html': {
+                title = 'Blockchain';
+                var h = textOf('chain-height') || textOf('block-height');
+                identity = h && h !== 'Loading...' ? ('Height ' + h) : 'Chain tip';
+                if (ex && ex.difficultyAdjustments != null) {
+                    stats.push('Epochs: ' + this._fmtNum(ex.difficultyAdjustments));
+                } else if (textOf('total-transactions') && textOf('total-transactions') !== 'Loading...') {
+                    stats.push('Epochs: ' + textOf('total-transactions'));
+                }
+                if (textOf('last-block') && textOf('last-block') !== 'Loading...') {
+                    stats.push('Tip: ' + textOf('last-block'));
+                }
+                if (textOf('avg-block-time') && textOf('avg-block-time') !== 'Loading...') {
+                    stats.push('Avg time: ' + textOf('avg-block-time'));
+                }
+                if (textOf('chain-difficulty') && textOf('chain-difficulty') !== 'Loading...') {
+                    stats.push('Diff: ' + textOf('chain-difficulty'));
+                }
+                if (textOf('chain-hashrate') && textOf('chain-hashrate') !== 'Loading...') {
+                    stats.push('Hashrate: ' + textOf('chain-hashrate'));
+                }
+                break;
+            }
+            case 'difficulty.html': {
+                title = 'Difficulty';
+                var epoch = ex && ex.selectedAdjustment != null ? String(ex.selectedAdjustment) : textOf('adjustment-period');
+                var startDate = textOf('start-date');
+                var endDate = textOf('end-date');
+                identity = (epoch ? ('Epoch ' + epoch) : 'Epoch') +
+                    (startDate && startDate !== 'Loading...' ? (' · ' + startDate) : '');
+                if (textOf('avg-change') && textOf('avg-change') !== 'Loading...') {
+                    stats.push('Avg block: ' + textOf('avg-change'));
+                }
+                if (ex && ex.blockData && ex.blockData[0] && ex.blockData[0].length) {
+                    var blocks = ex.blockData[0];
+                    var totalTx = 0;
+                    for (var bi = 0; bi < blocks.length; bi++) {
+                        totalTx += (blocks[bi][2] && blocks[bi][2].nTx) || 0;
+                    }
+                    var avgTx = Math.round(totalTx / blocks.length);
+                    stats.push('Avg txs/block: ' + this._fmtNum(avgTx));
+                    stats.push('Total txs: ' + this._fmtNum(totalTx));
+                    stats.push('Blocks: ' + this._fmtNum(blocks.length));
+                }
+                if (textOf('block-range') && textOf('block-range') !== 'Loading...') {
+                    stats.push('Range: ' + textOf('block-range'));
+                }
+                if (endDate && endDate !== 'Loading...') stats.push('End: ' + endDate);
+                break;
+            }
+            case 'block.html': {
+                title = 'Block';
+                var bd = ex && ex.blockData;
+                var height = bd && bd.height != null ? bd.height : (ex && ex.blockHeight);
+                var id = bd && bd.id ? this._shortHash(bd.id, 10, 6) : '';
+                identity = height != null
+                    ? (this._fmtNum(height) + (id ? (' · ' + id) : ''))
+                    : '—';
+                if (bd) {
+                    if (bd.size != null) stats.push('Size: ' + (bd.size / 1024).toFixed(1) + ' KB');
+                    var bDate = this._fmtShortDate(bd.timestamp);
+                    if (bDate) stats.push('Date: ' + bDate);
+                    if (bd.tx_count != null) stats.push('Txs: ' + this._fmtNum(bd.tx_count));
+                    var rewardSats = bd.extras && bd.extras.reward;
+                    var rewardBtc = rewardSats != null
+                        ? (Number(rewardSats) / 1e8)
+                        : this._estimatedSubsidyBtc(bd.height);
+                    if (rewardBtc != null) stats.push('Reward: ' + Number(rewardBtc).toFixed(8) + ' BTC');
+                    if (bd.difficulty != null) {
+                        stats.push('Diff: ' + (bd.difficulty / 1e12).toFixed(2) + ' T');
+                    }
+                }
+                break;
+            }
+            case 'transaction.html': {
+                title = 'Transaction';
+                var tx = ex && (ex.transactionData || null);
+                var txid = (tx && tx.txid) || (ex && ex.txid) || '';
+                identity = txid ? this._shortHash(txid, 12, 8) : '—';
+                if (tx) {
+                    if (tx.fee != null) stats.push('Fee: ' + this._fmtNum(tx.fee) + ' sats');
+                    if (tx.size != null) stats.push('Size: ' + this._fmtNum(tx.size) + ' B');
+                    if (tx.vin && tx.vout) {
+                        stats.push('I/O: ' + tx.vin.length + ' / ' + tx.vout.length);
+                    }
+                    if (tx.status) {
+                        if (tx.status.confirmed && tx.status.block_height != null) {
+                            stats.push('Block: ' + this._fmtNum(tx.status.block_height));
+                        } else {
+                            stats.push('Status: Unconfirmed');
+                        }
+                    }
+                }
+                break;
+            }
+            case 'address.html': {
+                title = 'Address';
+                var addr = (ex && (ex.address || (ex.addressData && ex.addressData.address))) || '';
+                identity = addr ? this._shortHash(addr, 12, 8) : '—';
+                var cs = ex && ex.addressData && ex.addressData.chain_stats;
+                if (cs) {
+                    if (cs.funded_txo_sum != null) {
+                        stats.push('Balance: ' + (cs.funded_txo_sum / 1e8).toFixed(8) + ' BTC');
+                    }
+                    if (cs.tx_count != null) stats.push('Txs: ' + this._fmtNum(cs.tx_count));
+                    if (cs.funded_txo_count != null) {
+                        stats.push('Funded: ' + this._fmtNum(cs.funded_txo_count));
+                    }
+                }
+                if (ex && ex.utxoData) stats.push('UTXOs: ' + this._fmtNum(ex.utxoData.length));
+                break;
+            }
+            case 'mempool.html': {
+                title = 'Mempool';
+                var md = ex && ex.mempoolData;
+                identity = md && md.count != null
+                    ? (this._fmtNum(md.count) + ' txs')
+                    : 'Live';
+                if (md) {
+                    if (md.count != null) stats.push('Txs: ' + this._fmtNum(md.count));
+                    if (md.vsize != null) stats.push('Size: ' + this._fmtNum(md.vsize) + ' vB');
+                    if (md.total_fee != null) {
+                        stats.push('Fees: ' + (md.total_fee / 1e8).toFixed(4) + ' BTC');
+                    }
+                }
+                break;
+            }
+            default:
+                title = page.replace('.html', '').replace(/-/g, ' ');
+                title = title.charAt(0).toUpperCase() + title.slice(1);
+                identity = 'Anatomy of Bitcoin';
+        }
+
+        return { title: title, identity: identity, stats: stats.slice(0, 6) };
+    };
+
+    /**
+     * Full HUD model:
+     *   TL = page title + identity
+     *   TR = page stats
+     *   BL+BR = all selection lines when active; else idle panel/meta
+     */
+    VRManager.prototype._getHudModel = function () {
+        var page = this._getPageHudContext();
+        var selecting = this._selectionActive();
+        var selection = selecting ? (this._selectionLines || []).slice() : null;
+        var idle = !selecting ? this._readPanelLines().slice(0, 8) : null;
+        return {
+            title: page.title || 'Explorer',
+            identity: page.identity || '',
+            pageStats: page.stats || [],
+            selection: selection,
+            selectionKind: selecting ? this._selectionKind : null,
+            idleLines: idle
+        };
     };
 
     // -------------------------------------------------------------------------
@@ -1903,13 +2205,12 @@
         var self = this;
         this._stopPanelUpdate();
         this._panelInterval = setInterval(function () {
-            var lines = self._hudLines();
             if (self.spatialPanel && self.spatialPanel.getMesh().visible) {
                 self.spatialPanel.update(self._readPanelLines());
             }
-            self._drawHud(lines);
+            self._drawHud();
         }, 1000);
-        this._drawHud(this._hudLines());
+        this._drawHud();
     };
 
     VRManager.prototype._stopPanelUpdate = function () {
@@ -1921,11 +2222,35 @@
         if (!sourceEl) sourceEl = document.querySelector('.panel-content');
         if (!sourceEl) return [];
         var lines = [];
+        var skipIds = {
+            'block-visibility-slider': 1,
+            'block-visibility-value': 1,
+            'highest-visible-block': 1,
+            'current-block-time': 1,
+            'animate-1000x': 1,
+            'animate-10000x': 1,
+            'animate-100000x': 1,
+            'toggle-sound': 1,
+            'toggle-metronome': 1,
+            'disc-visibility-slider': 1,
+            'disc-visibility-value': 1,
+            'highest-visible-disc': 1
+        };
         sourceEl.querySelectorAll('div').forEach(function (div) {
+            if (div.querySelector('button, input, a')) return;
+            if (div.id && skipIds[div.id]) return;
             var text = div.textContent.trim().replace(/\s+/g, ' ');
             if (text.length > 0 && text.length < 80) lines.push(text);
         });
-        return lines.slice(0, 10);
+        // Prefer leaf-ish unique lines
+        var seen = {};
+        var out = [];
+        for (var i = 0; i < lines.length; i++) {
+            if (seen[lines[i]]) continue;
+            seen[lines[i]] = 1;
+            out.push(lines[i]);
+        }
+        return out.slice(0, 12);
     };
 
     // -------------------------------------------------------------------------
@@ -1942,166 +2267,213 @@
         }
         function mkCanvas(w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
 
-        // Top-left — page title
+        // Top-left — page title + identity
         this._hudTLCanvas = mkCanvas(HUD_CW, HUD_CH_TOP);
         this._hudTLCtx    = this._hudTLCanvas.getContext('2d');
         this._hudTLTex    = new THREE.CanvasTexture(this._hudTLCanvas);
         this._hudTL       = new THREE.Mesh(new THREE.PlaneGeometry(HUD_W, HUD_H_TOP), mkMat(this._hudTLTex));
 
-        // Top-right — primary stat
+        // Top-right — page stats
         this._hudTRCanvas = mkCanvas(HUD_CW, HUD_CH_TOP);
         this._hudTRCtx    = this._hudTRCanvas.getContext('2d');
         this._hudTRTex    = new THREE.CanvasTexture(this._hudTRCanvas);
         this._hudTR       = new THREE.Mesh(new THREE.PlaneGeometry(HUD_W, HUD_H_TOP), mkMat(this._hudTRTex));
 
-        // Bottom-left — secondary stats
+        // Bottom-left — selection / idle details
         this._hudBLCanvas = mkCanvas(HUD_CW, HUD_CH_BOT);
         this._hudBLCtx    = this._hudBLCanvas.getContext('2d');
         this._hudBLTex    = new THREE.CanvasTexture(this._hudBLCanvas);
         this._hudBL       = new THREE.Mesh(new THREE.PlaneGeometry(HUD_W, HUD_H_BOT), mkMat(this._hudBLTex));
 
-        // Bottom-right — data source + timestamp
+        // Bottom-right — selection overflow / meta
         this._hudBRCanvas = mkCanvas(HUD_CW, HUD_CH_BOT);
         this._hudBRCtx    = this._hudBRCanvas.getContext('2d');
         this._hudBRTex    = new THREE.CanvasTexture(this._hudBRCanvas);
         this._hudBR       = new THREE.Mesh(new THREE.PlaneGeometry(HUD_W, HUD_H_BOT), mkMat(this._hudBRTex));
 
         [this._hudTL, this._hudTR, this._hudBL, this._hudBR].forEach(function (m) { m.renderOrder = 9999; });
-        this._drawHud([]);
+        this._drawHud();
+    };
+
+    /** Draw label:value rows into a corner (left or right aligned). */
+    VRManager.prototype._drawStatRows = function (ctx, canvas, rows, opts) {
+        opts = opts || {};
+        var W = canvas.width;
+        var PAD = opts.pad != null ? opts.pad : 18;
+        var align = opts.align || 'left';
+        var fontSize = opts.fontSize || 20;
+        var lineH = opts.lineH || 34;
+        var startY = opts.startY != null ? opts.startY : PAD;
+        var maxLines = opts.maxLines != null ? opts.maxLines : 6;
+        var maxChars = opts.maxChars || 42;
+
+        ctx.textAlign = align;
+        ctx.font = '300 ' + fontSize + 'px "Inter", sans-serif';
+        var x = align === 'right' ? (W - PAD) : PAD;
+
+        rows.slice(0, maxLines).forEach(function (line, i) {
+            var y = startY + i * lineH;
+            var text = String(line || '');
+            if (text.length > maxChars) text = text.slice(0, maxChars - 1) + '…';
+            var colon = text.indexOf(':');
+            if (colon > -1 && align === 'left') {
+                var sl = text.slice(0, colon + 1) + ' ';
+                var sv = text.slice(colon + 1).trim();
+                var lblW = ctx.measureText(sl).width;
+                ctx.fillStyle = 'rgba(255,255,255,0.32)';
+                ctx.fillText(sl, x, y);
+                ctx.fillStyle = 'rgba(255,255,255,0.90)';
+                ctx.fillText(sv, x + lblW, y);
+            } else if (colon > -1 && align === 'right') {
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fillText(text, x, y);
+            } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.70)';
+                ctx.fillText(text, x, y);
+            }
+        });
     };
 
     // Draw one corner panel.  corner: 'TL' | 'TR' | 'BL' | 'BR'
-    VRManager.prototype._drawCorner = function (ctx, canvas, corner, lines) {
+    VRManager.prototype._drawCorner = function (ctx, canvas, corner, model) {
         var W   = canvas.width;
         var H   = canvas.height;
         var PAD = 18;
+        model = model || {};
 
         ctx.clearRect(0, 0, W, H);
         ctx.textBaseline = 'top';
 
         if (corner === 'TL') {
-            var selecting = this._selectionLines && performance.now() < this._selectionUntil;
-            var title = selecting && this._selectionKind
-                ? String(this._selectionKind).toUpperCase()
-                : (window.location.pathname.split('/').pop().replace('.html', '').toUpperCase() || 'EXPLORER');
-            var sub = selecting ? 'SELECTED' : 'ANATOMY OF BITCOIN';
+            // Page type title + identity (id / date / address…)
+            var title = String(model.title || 'Explorer').toUpperCase();
+            var identity = String(model.identity || '');
 
             ctx.fillStyle = 'rgba(255,255,255,0.95)';
-            ctx.font      = '400 58px "BureauGrotesque", sans-serif';
+            ctx.font      = '400 52px "BureauGrotesque", sans-serif';
             ctx.textAlign = 'left';
-            ctx.fillText(title, PAD, PAD - 4);
+            ctx.fillText(title, PAD, PAD - 2);
 
-            // Thin rule
             ctx.fillStyle = 'rgba(255,255,255,0.10)';
-            ctx.fillRect(PAD, PAD + 64, W - PAD * 2, 1);
+            ctx.fillRect(PAD, PAD + 56, W - PAD * 2, 1);
 
-            // Sub-label
-            ctx.fillStyle = 'rgba(255,255,255,0.26)';
-            ctx.font      = '300 17px "Inter", sans-serif';
-            ctx.fillText(sub, PAD, PAD + 74);
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            ctx.font      = '300 18px "Inter", sans-serif';
+            if (identity.length > 40) identity = identity.slice(0, 38) + '…';
+            ctx.fillText(identity || 'Anatomy of Bitcoin', PAD, PAD + 66);
 
         } else if (corner === 'TR') {
-            // Primary stat — right-aligned, value large
-            var primary = lines[0] || '';
-            var col     = primary.indexOf(':');
+            // Page-level stats — compact right-aligned stack
+            var stats = model.pageStats || [];
             ctx.textAlign = 'right';
-            if (col > -1) {
-                var lbl = primary.slice(0, col + 1);
-                var val = primary.slice(col + 1).trim();
-                ctx.font      = '300 17px "Inter", sans-serif';
-                ctx.fillStyle = 'rgba(255,255,255,0.32)';
-                ctx.fillText(lbl, W - PAD, PAD);
-                ctx.font      = '400 48px "BureauGrotesque", sans-serif';
-                ctx.fillStyle = 'rgba(255,255,255,0.95)';
-                ctx.fillText(val, W - PAD, PAD + 22);
-            } else if (primary) {
-                ctx.font      = '400 36px "BureauGrotesque", sans-serif';
-                ctx.fillStyle = 'rgba(255,255,255,0.90)';
-                ctx.fillText(primary, W - PAD, PAD + 22);
+            if (stats.length === 0) {
+                ctx.fillStyle = 'rgba(255,255,255,0.22)';
+                ctx.font = '300 17px "Inter", sans-serif';
+                ctx.fillText('Loading…', W - PAD, PAD + 20);
+            } else if (stats.length === 1) {
+                var primary = stats[0];
+                var col = primary.indexOf(':');
+                if (col > -1) {
+                    ctx.font = '300 17px "Inter", sans-serif';
+                    ctx.fillStyle = 'rgba(255,255,255,0.32)';
+                    ctx.fillText(primary.slice(0, col + 1), W - PAD, PAD);
+                    ctx.font = '400 40px "BureauGrotesque", sans-serif';
+                    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                    ctx.fillText(primary.slice(col + 1).trim(), W - PAD, PAD + 24);
+                } else {
+                    ctx.font = '400 32px "BureauGrotesque", sans-serif';
+                    ctx.fillStyle = 'rgba(255,255,255,0.90)';
+                    ctx.fillText(primary, W - PAD, PAD + 22);
+                }
+            } else {
+                this._drawStatRows(ctx, canvas, stats, {
+                    align: 'right', fontSize: 18, lineH: 28, startY: PAD - 2, maxLines: 5, maxChars: 36
+                });
             }
 
         } else if (corner === 'BL') {
-            // Secondary stats — left-aligned label:value pairs
-            var secondary = lines.slice(1, 5);
-            ctx.textAlign = 'left';
-            ctx.font      = '300 22px "Inter", sans-serif';
-            secondary.forEach(function (line, i) {
-                var y    = PAD + i * 52;
-                var colon = line.indexOf(':');
-                if (colon > -1) {
-                    var sl   = line.slice(0, colon + 1) + ' ';
-                    var sv   = line.slice(colon + 1).trim();
-                    var lblW = ctx.measureText(sl).width;
-                    ctx.fillStyle = 'rgba(255,255,255,0.32)';
-                    ctx.fillText(sl, PAD, y);
-                    ctx.fillStyle = 'rgba(255,255,255,0.90)';
-                    ctx.fillText(sv, PAD + lblW, y);
-                } else {
-                    ctx.fillStyle = 'rgba(255,255,255,0.70)';
-                    ctx.fillText(line, PAD, y);
-                }
-            });
+            var leftRows;
+            if (model.selection && model.selection.length) {
+                // Pack first chunk of selected-object fields (rest → BR)
+                leftRows = model.selection.slice(0, 6);
+                ctx.fillStyle = 'rgba(255,255,255,0.28)';
+                ctx.font = '300 15px "Inter", sans-serif';
+                ctx.textAlign = 'left';
+                var kind = model.selectionKind ? String(model.selectionKind).toUpperCase() : 'SELECTED';
+                ctx.fillText(kind, PAD, PAD - 4);
+                this._drawStatRows(ctx, canvas, leftRows, {
+                    align: 'left', fontSize: 19, lineH: 30, startY: PAD + 22, maxLines: 6, maxChars: 40
+                });
+            } else {
+                leftRows = model.idleLines || [];
+                ctx.fillStyle = 'rgba(255,255,255,0.28)';
+                ctx.font = '300 15px "Inter", sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('PAGE DATA', PAD, PAD - 4);
+                this._drawStatRows(ctx, canvas, leftRows, {
+                    align: 'left', fontSize: 19, lineH: 30, startY: PAD + 22, maxLines: 6, maxChars: 40
+                });
+            }
 
         } else if (corner === 'BR') {
-            ctx.textAlign = 'right';
-            if (this._selectionLines && performance.now() < this._selectionUntil) {
-                // Pointer-select mode — show selection context instead of feed meta
-                var extra = lines.slice(5, 8);
-                ctx.font      = '300 17px "Inter", sans-serif';
-                ctx.fillStyle = 'rgba(255,255,255,0.32)';
-                ctx.fillText('BITCOIN DATA', W - PAD, PAD);
-                ctx.font      = '300 20px "Inter", sans-serif';
-                ctx.fillStyle = 'rgba(255,255,255,0.78)';
-                extra.forEach(function (line, i) {
-                    var text = line.length > 36 ? line.slice(0, 34) + '…' : line;
-                    ctx.fillText(text, W - PAD, PAD + 34 + i * 28);
-                });
-                if (extra.length === 0) {
+            if (model.selection && model.selection.length) {
+                // Remaining selected-object fields — always dump the rest here
+                var rightRows = model.selection.slice(6);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = 'rgba(255,255,255,0.28)';
+                ctx.font = '300 15px "Inter", sans-serif';
+                ctx.fillText('DETAILS', W - PAD, PAD - 4);
+                if (rightRows.length === 0) {
                     ctx.fillStyle = 'rgba(255,255,255,0.22)';
-                    ctx.font      = '300 17px "Inter", sans-serif';
-                    ctx.fillText('Details on left / top', W - PAD, PAD + 34);
+                    ctx.font = '300 17px "Inter", sans-serif';
+                    ctx.fillText('All fields on left', W - PAD, PAD + 28);
+                } else {
+                    this._drawStatRows(ctx, canvas, rightRows, {
+                        align: 'right', fontSize: 18, lineH: 28, startY: PAD + 22, maxLines: 7, maxChars: 38
+                    });
                 }
             } else {
-                // Data source + timestamp — right-aligned, dim
+                // Idle meta: data source + live clock
+                ctx.textAlign = 'right';
                 var discEl = document.querySelector('.disclaimer');
-                var src    = discEl ? discEl.textContent.trim().replace(/\s+/g, ' ') : 'Data: Mempool.space';
-                var now    = new Date();
-                var ts     = now.toUTCString().replace(/:\d\d GMT$/, ' UTC');
+                var src = discEl ? discEl.textContent.trim().replace(/\s+/g, ' ') : 'Data: Mempool.space';
+                var now = new Date();
+                var ts = now.toUTCString().replace(/:\d\d GMT$/, ' UTC');
 
-                ctx.font      = '300 19px "Inter", sans-serif';
+                ctx.font = '300 18px "Inter", sans-serif';
                 ctx.fillStyle = 'rgba(255,255,255,0.28)';
-                ctx.fillText(src, W - PAD, PAD);
-                ctx.font      = '300 17px "Inter", sans-serif';
+                ctx.fillText(src.length > 42 ? src.slice(0, 40) + '…' : src, W - PAD, PAD);
+                ctx.font = '300 16px "Inter", sans-serif';
                 ctx.fillStyle = 'rgba(255,255,255,0.18)';
-                ctx.fillText(ts, W - PAD, PAD + 30);
+                ctx.fillText(ts, W - PAD, PAD + 28);
             }
         }
     };
 
-    /** Stable content fingerprint per corner (ignores live clock on BR meta). */
-    VRManager.prototype._hudCornerSig = function (corner, lines) {
-        lines = lines || [];
-        if (corner === 'TL') {
-            if (this._selectionLines && performance.now() < this._selectionUntil && this._selectionKind) {
-                return 'SEL|' + this._selectionKind;
+    /** Stable content fingerprint per corner. */
+    VRManager.prototype._hudCornerSig = function (corner, model) {
+        model = model || {};
+        if (corner === 'TL') return 'P|' + (model.title || '') + '|' + (model.identity || '');
+        if (corner === 'TR') return 'S|' + (model.pageStats || []).join('\n');
+        if (corner === 'BL') {
+            if (model.selection) {
+                return 'SEL|' + (model.selectionKind || '') + '|' + model.selection.slice(0, 6).join('\n');
             }
-            return (window.location.pathname.split('/').pop() || 'explorer').replace('.html', '');
+            return 'IDLE|' + (model.idleLines || []).join('\n');
         }
-        if (corner === 'TR') return String(lines[0] || '');
-        if (corner === 'BL') return lines.slice(1, 5).join('\n');
         if (corner === 'BR') {
-            if (this._selectionLines && performance.now() < this._selectionUntil) {
-                return 'SEL|' + lines.slice(5, 8).join('\n');
+            if (model.selection) {
+                return 'SEL|' + model.selection.slice(6).join('\n');
             }
             return 'META';
         }
         return '';
     };
 
-    /** Draw HUD; returns list of corner keys whose content changed ('TL'|'TR'|'BL'|'BR'). */
-    VRManager.prototype._drawHud = function (lines) {
+    /** Draw HUD; returns list of corner keys whose content changed. */
+    VRManager.prototype._drawHud = function () {
         if (!this._hudTL) return [];
-        lines = lines || [];
+        var model = this._getHudModel();
         var corners = [
             { key: 'TL', ctx: this._hudTLCtx, canvas: this._hudTLCanvas, tex: this._hudTLTex },
             { key: 'TR', ctx: this._hudTRCtx, canvas: this._hudTRCanvas, tex: this._hudTRTex },
@@ -2111,12 +2483,12 @@
         var changed = [];
         for (var i = 0; i < corners.length; i++) {
             var c = corners[i];
-            var sig = this._hudCornerSig(c.key, lines);
+            var sig = this._hudCornerSig(c.key, model);
             if (sig !== this._hudSigs[c.key]) {
                 this._hudSigs[c.key] = sig;
                 changed.push(c.key);
             }
-            this._drawCorner(c.ctx, c.canvas, c.key, lines);
+            this._drawCorner(c.ctx, c.canvas, c.key, model);
             c.tex.needsUpdate = true;
         }
         return changed;
