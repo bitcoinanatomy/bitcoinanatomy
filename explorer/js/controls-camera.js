@@ -1,19 +1,44 @@
 /**
- * Shared controls-camera component: View (rotation, ortho, hide UI, reset) + Rotate + Pan + Zoom.
+ * Shared controls-camera component: camera bar + optional Rotate/Pan/Zoom popup.
  * Renders into a container; each page wires up #toggle-rotation, #toggle-view, #toggle-ui, #reset-camera,
  * #rotate-left, #rotate-right, etc. in its own JS.
  * @param {HTMLElement} container - Element to append the controls into (e.g. #controls-camera-root).
- * @param {{ viewGroup?: boolean }} [options] - viewGroup: true to show View group (default true).
+ * @param {{ viewGroup?: boolean }} [options] - viewGroup: true to show camera bar (default true).
  */
 function ControlsCamera(container, options) {
     if (!container) return;
     const viewGroup = options && options.viewGroup !== undefined ? options.viewGroup : true;
     const iconPath = 'imgs/icons';
 
+    const cameraNavPopupHtml = `
+    <div class="camera-nav-popup" id="camera-nav-popup" hidden>
+        <div class="control-group">
+            <div class="control-buttons">
+                <button id="rotate-left" title="Rotate left" aria-label="Rotate left"><img class="control-icon-svg" src="${iconPath}/rotate-left.svg" alt=""></button>
+                <button id="rotate-right" title="Rotate right" aria-label="Rotate right"><img class="control-icon-svg" src="${iconPath}/rotate-right.svg" alt=""></button>
+                <button id="rotate-up" title="Rotate up" aria-label="Rotate up"><img class="control-icon-svg" src="${iconPath}/rotate-up.svg" alt=""></button>
+                <button id="rotate-down" title="Rotate down" aria-label="Rotate down"><img class="control-icon-svg" src="${iconPath}/rotate-down.svg" alt=""></button>
+            </div>
+        </div>
+        <div class="control-group">
+            <div class="control-buttons">
+                <button id="pan-left" title="Pan left" aria-label="Pan left"><img class="control-icon-svg" src="${iconPath}/arrow-left.svg" alt=""></button>
+                <button id="pan-right" title="Pan right" aria-label="Pan right"><img class="control-icon-svg" src="${iconPath}/arrow-right.svg" alt=""></button>
+                <button id="pan-up" title="Pan up" aria-label="Pan up"><img class="control-icon-svg" src="${iconPath}/arrow-up.svg" alt=""></button>
+                <button id="pan-down" title="Pan down" aria-label="Pan down"><img class="control-icon-svg" src="${iconPath}/arrow-down.svg" alt=""></button>
+            </div>
+        </div>
+        <div class="control-group">
+            <div class="control-buttons">
+                <button id="zoom-in" title="Zoom in" aria-label="Zoom in"><img class="control-icon-svg" src="${iconPath}/zoom-in.svg" alt=""></button>
+                <button id="zoom-out" title="Zoom out" aria-label="Zoom out"><img class="control-icon-svg" src="${iconPath}/zoom-out.svg" alt=""></button>
+            </div>
+        </div>
+    </div>`;
+
     const viewGroupHtml = viewGroup
         ? `
-    <div class="control-group">
-        <div class="control-label">View</div>
+    <div class="control-group control-group-camera">
         <div class="control-buttons">
             <button id="toggle-rotation" title="Pause rotation" aria-label="Pause rotation">
                 <img id="toggle-rotation-icon" class="control-icon-svg" src="${iconPath}/pause.svg" alt="">
@@ -30,42 +55,38 @@ function ControlsCamera(container, options) {
             <button id="toggle-fullscreen" title="Full screen" aria-label="Full screen">
                 <svg id="toggle-fullscreen-icon" class="control-icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
             </button>
+            <button id="toggle-camera-nav" class="control-text-btn" title="Show rotate, pan, and zoom" aria-label="View" aria-expanded="false" aria-controls="camera-nav-popup">View</button>
         </div>
     </div>`
-        : '';
-
-    const html = `
-<div class="navigation-controls">
-    ${viewGroupHtml}
-    <div class="control-group">
-            <div class="control-label">Rotate</div>
-            <div class="control-buttons">
-                <button id="rotate-left" title="Rotate left" aria-label="Rotate left"><img class="control-icon-svg" src="${iconPath}/arrow-left.svg" alt=""></button>
-                <button id="rotate-right" title="Rotate right" aria-label="Rotate right"><img class="control-icon-svg" src="${iconPath}/arrow-right.svg" alt=""></button>
-                <button id="rotate-up" title="Rotate up" aria-label="Rotate up"><img class="control-icon-svg" src="${iconPath}/arrow-up.svg" alt=""></button>
-                <button id="rotate-down" title="Rotate down" aria-label="Rotate down"><img class="control-icon-svg" src="${iconPath}/arrow-down.svg" alt=""></button>
-            </div>
-        </div>
-        <div class="control-group">
-            <div class="control-label">Pan</div>
-            <div class="control-buttons">
-                <button id="pan-left" title="Pan left" aria-label="Pan left"><img class="control-icon-svg" src="${iconPath}/arrow-left.svg" alt=""></button>
-                <button id="pan-right" title="Pan right" aria-label="Pan right"><img class="control-icon-svg" src="${iconPath}/arrow-right.svg" alt=""></button>
-                <button id="pan-up" title="Pan up" aria-label="Pan up"><img class="control-icon-svg" src="${iconPath}/arrow-up.svg" alt=""></button>
-                <button id="pan-down" title="Pan down" aria-label="Pan down"><img class="control-icon-svg" src="${iconPath}/arrow-down.svg" alt=""></button>
-            </div>
-        </div>
-        <div class="control-group">
-            <div class="control-label">Zoom</div>
-            <div class="control-buttons">
-                <button id="zoom-in" title="Zoom in" aria-label="Zoom in"><img class="control-icon-svg" src="${iconPath}/zoom-in.svg" alt=""></button>
-                <button id="zoom-out" title="Zoom out" aria-label="Zoom out"><img class="control-icon-svg" src="${iconPath}/zoom-out.svg" alt=""></button>
-            </div>
+        : `
+    <div class="control-group control-group-camera">
+        <div class="control-buttons">
+            <button id="toggle-camera-nav" class="control-text-btn" title="Show rotate, pan, and zoom" aria-label="View" aria-expanded="false" aria-controls="camera-nav-popup">View</button>
         </div>
     </div>`;
 
+    const html = `
+<div class="navigation-controls">
+    ${cameraNavPopupHtml}
+    ${viewGroupHtml}
+</div>`;
+
     container.innerHTML = html;
     container.classList.add('controls-camera');
+
+    var navRoot = container.querySelector('.navigation-controls');
+    var navPopup = document.getElementById('camera-nav-popup');
+    var navToggle = document.getElementById('toggle-camera-nav');
+    if (navRoot && navPopup && navToggle) {
+        navToggle.addEventListener('click', function () {
+            var open = !navRoot.classList.contains('camera-nav-open');
+            navRoot.classList.toggle('camera-nav-open', open);
+            navPopup.hidden = !open;
+            navToggle.classList.toggle('active', open);
+            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            navToggle.title = open ? 'Hide rotate, pan, and zoom' : 'Show rotate, pan, and zoom';
+        });
+    }
 
     if (viewGroup) {
         var toggleUi = document.getElementById('toggle-ui');
