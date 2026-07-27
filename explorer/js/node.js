@@ -13,8 +13,25 @@ class BitcoinNodeExplorer {
         this.nodeAddress = null;
         this.nodeData = null;
         this.vrManager = null;
+        this.API_BASE = '/api/btcnodes';
 
         this.init();
+    }
+
+    apiUrl(pathOrUrl) {
+        if (!pathOrUrl) return this.API_BASE + '/';
+        if (/^https?:\/\//i.test(pathOrUrl)) {
+            try {
+                const u = new URL(pathOrUrl);
+                if (u.hostname === 'btcnodes.io' && u.pathname.startsWith('/api')) {
+                    return this.API_BASE + u.pathname.slice('/api'.length) + u.search;
+                }
+            } catch (e) { /* fall through */ }
+            return pathOrUrl;
+        }
+        if (pathOrUrl.startsWith('/api/')) return this.API_BASE + pathOrUrl.slice('/api'.length);
+        if (pathOrUrl.charAt(0) !== '/') pathOrUrl = '/' + pathOrUrl;
+        return this.API_BASE + pathOrUrl;
     }
 
     init() {
@@ -38,7 +55,7 @@ class BitcoinNodeExplorer {
         this.renderer.setAnimationLoop(() => this.animate());
 
         if (!this.nodeAddress) {
-            // Load a random node from the network data
+            // Load any reachable node when opened without ?node=
             this.loadRandomNode();
         } else {
             // Format the node address for API call
@@ -48,47 +65,65 @@ class BitcoinNodeExplorer {
     }
     
     async loadRandomNode() {
+        this.showLoadingModal('Picking a node...');
         try {
-            // First, get the latest snapshot from Bitnodes.io
-            const snapshotsResponse = await fetch('https://bitnodes.io/api/v1/snapshots/');
-            const snapshotsData = await snapshotsResponse.json();
-            
-            if (snapshotsData.results && snapshotsData.results.length > 0) {
-                const latestSnapshot = snapshotsData.results[0];
-                
-                // Fetch the detailed snapshot data
-                const snapshotResponse = await fetch(latestSnapshot.url);
-                const nodeData = await snapshotResponse.json();
-                
-                if (nodeData.nodes && Object.keys(nodeData.nodes).length > 0) {
-                    // Filter out TOR nodes (.onion addresses) as they're not supported by the API
-                    const nodeAddresses = Object.keys(nodeData.nodes).filter(address => 
-                        !address.includes('.onion')
-                    );
-                    
-                    if (nodeAddresses.length === 0) {
-                        console.log('No non-TOR nodes available');
-                        this.showNoNodesError();
-                        return;
-                    }
-                    
-                    // Get a random node from the filtered data
-                    const randomIndex = Math.floor(Math.random() * nodeAddresses.length);
-                    const randomNodeAddress = nodeAddresses[randomIndex];
-                    
-                    // Set the random node address
-                    this.nodeAddress = randomNodeAddress;
-                    this.apiNodeAddress = this.formatNodeAddress(randomNodeAddress);
-                    
-                    console.log('Loading random node:', randomNodeAddress);
-                    this.fetchData();
-                } else {
-                    this.showNoNodesError();
-                }
-            } else {
-                this.showNoNodesError();
+            this.updateLoadingProgress('Fetching node list...', 20);
+            const probeUrl = this.apiUrl('/v1/nodes/?page=1&limit=1');
+            const probeRes = await fetch(probeUrl);
+            if (probeRes.status === 429) {
+                this.hideLoadingModal();
+                this.showRateLimitError('BTC Nodes API');
+                return;
             }
+            if (!probeRes.ok) throw new Error(`HTTP ${probeRes.status}`);
+            const probe = await probeRes.json();
+            const total = typeof probe.count === 'number' ? probe.count : 0;
+            if (total <= 0) {
+                this.hideLoadingModal();
+                this.showNoNodesError();
+                return;
+            }
+
+            const pageSize = 50;
+            const maxPage = Math.max(1, Math.ceil(total / pageSize));
+            // Try a few random pages until we get a non-onion node
+            let chosen = null;
+            for (let attempt = 0; attempt < 5 && !chosen; attempt++) {
+                const page = 1 + Math.floor(Math.random() * maxPage);
+                this.updateLoadingProgress(`Sampling nodes… page ${page}`, 30 + attempt * 10);
+                const listRes = await fetch(this.apiUrl(`/v1/nodes/?page=${page}&limit=${pageSize}`));
+                if (!listRes.ok) continue;
+                const list = await listRes.json();
+                const rows = (list.results || []).filter((r) => {
+                    const addr = r && r.address;
+                    return addr && typeof addr === 'string' && !addr.includes('.onion');
+                });
+                if (rows.length === 0) continue;
+                chosen = rows[Math.floor(Math.random() * rows.length)];
+            }
+
+            if (!chosen) {
+                this.hideLoadingModal();
+                this.showNoNodesError();
+                return;
+            }
+
+            const isIpv6 = chosen.address.includes(':');
+            const displayKey = isIpv6
+                ? `[${chosen.address}]:${chosen.port}`
+                : `${chosen.address}:${chosen.port}`;
+            this.nodeAddress = displayKey;
+            this.apiNodeAddress = this.formatNodeAddress(displayKey);
+            // Keep URL shareable without forcing a reload
+            try {
+                const next = `node.html?node=${encodeURIComponent(this.apiNodeAddress)}`;
+                history.replaceState({ softNav: true }, '', next);
+            } catch (e) { /* ignore */ }
+
+            console.log('Loading random node:', this.apiNodeAddress);
+            await this.fetchData();
         } catch (error) {
+            this.hideLoadingModal();
             console.error('Error loading random node:', error);
             this.showNoNodesError();
         }
@@ -111,7 +146,7 @@ class BitcoinNodeExplorer {
                     <button class="popup-close">&times;</button>
                 </div>
                 <div class="popup-body">
-                    <p>Unable to load network data from Bitnodes.io</p>
+                    <p>Unable to load network data from BTC Nodes API</p>
                     <p>Please try again later or check your internet connection.</p>
                 </div>
                 <div class="popup-footer">
@@ -139,7 +174,7 @@ class BitcoinNodeExplorer {
         const content = popup.querySelector('.popup-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             max-width: 400px;
             width: 90%;
@@ -150,7 +185,7 @@ class BitcoinNodeExplorer {
         const header = popup.querySelector('.popup-header');
         header.style.cssText = `
             padding: 16px 20px;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -189,7 +224,7 @@ class BitcoinNodeExplorer {
         const footer = popup.querySelector('.popup-footer');
         footer.style.cssText = `
             padding: 16px 20px;
-            border-top: 1px solid #333;
+            border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
             gap: 8px;
             justify-content: space-between;
@@ -199,7 +234,7 @@ class BitcoinNodeExplorer {
         const dismissBtn = popup.querySelector('.popup-dismiss');
         dismissBtn.style.cssText = `
             padding: 6px 12px;
-            border: 1px solid #555;
+            border: 1px solid rgba(255,255,255,0.18);
             background: #000;
             color: white;
             border-radius: 2px;
@@ -209,11 +244,11 @@ class BitcoinNodeExplorer {
         `;
         dismissBtn.addEventListener('mouseenter', () => {
             dismissBtn.style.background = '#333';
-            dismissBtn.style.borderColor = '#666';
+            dismissBtn.style.borderColor = 'rgba(255,255,255,0.28)';
         });
         dismissBtn.addEventListener('mouseleave', () => {
             dismissBtn.style.background = '#000';
-            dismissBtn.style.borderColor = '#555';
+            dismissBtn.style.borderColor = 'rgba(255,255,255,0.18)';
         });
         
         // Add event listeners
@@ -238,19 +273,13 @@ class BitcoinNodeExplorer {
     }
     
     formatNodeAddress(address) {
-        // Handle IPv6 addresses with square brackets
-        if (address.includes('[') && address.includes(']')) {
-            // Extract IPv6 address and port
-            const match = address.match(/\[([^\]]+)\]-(\d+)/);
-            if (match) {
-                const ipv6 = match[1];
-                const port = match[2];
-                // Return IPv6 address without brackets, with hyphen separator
-                return `${ipv6}-${port}`;
-            }
-        }
-        
-        // For regular IPv4 addresses, just return as is (already in ADDRESS-PORT format)
+        if (!address) return address;
+        // [ipv6]:port or [ipv6]-port → ipv6-port
+        const bracket = address.match(/\[([^\]]+)\][:\-](\d+)/);
+        if (bracket) return `${bracket[1]}-${bracket[2]}`;
+        // ipv4:port → ipv4-port
+        if (/^\d+\.\d+\.\d+\.\d+:\d+$/.test(address)) return address.replace(':', '-');
+        // Already ADDRESS-PORT (incl. bare ipv6-port)
         return address;
     }
 
@@ -313,6 +342,15 @@ class BitcoinNodeExplorer {
             this._hoverTooltipEl.parentNode.removeChild(this._hoverTooltipEl);
             this._hoverTooltipEl = null;
         }
+        // BIP / feature labels are DOM nodes on document.body — remove before dropping meshes
+        if (this.scene) {
+            this.scene.traverse((child) => {
+                const label = child.userData && child.userData.label;
+                if (label && label.parentNode) label.parentNode.removeChild(label);
+                if (child.userData) child.userData.label = null;
+            });
+        }
+        document.querySelectorAll('.feature-label').forEach((el) => el.remove());
         // Dispose scene meshes created by this page (do not dispose shared renderer)
         if (this.scene) {
             const toRemove = this.scene.children.slice();
@@ -1119,17 +1157,17 @@ class BitcoinNodeExplorer {
         
         try {
             this.updateLoadingProgress('Fetching node information...', 30);
-            const response = await fetch(`https://bitnodes.io/api/v1/nodes/${this.apiNodeAddress}/`);
+            const path = `/v1/nodes/${encodeURIComponent(this.apiNodeAddress)}/`;
+            const response = await fetch(this.apiUrl(path));
             
             if (response.status === 429) {
                 this.hideLoadingModal();
-                this.showRateLimitError('Bitnodes.io API');
+                this.showRateLimitError('BTC Nodes API');
                 return;
             }
             
             if (!response.ok) {
                 if (response.status === 404) {
-                    // Node not found or not activated - show error message
                     console.error('Node not found or not activated:', this.apiNodeAddress);
                     this.hideLoadingModal();
                     this.showNodeNotFoundError();
@@ -1141,6 +1179,12 @@ class BitcoinNodeExplorer {
             this.updateLoadingProgress('Processing node data...', 70);
             this.nodeData = await response.json();
             console.log('Fetched node data:', this.nodeData);
+
+            if (this.nodeData && this.nodeData.found === false) {
+                this.hideLoadingModal();
+                this.showNodeNotFoundError();
+                return;
+            }
             
             this.updateLoadingProgress('Creating visualization...', 90);
             this.updateUI();
@@ -1216,7 +1260,7 @@ class BitcoinNodeExplorer {
         const content = popup.querySelector('.popup-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             max-width: 350px;
             width: 90%;
@@ -1227,7 +1271,7 @@ class BitcoinNodeExplorer {
         const header = popup.querySelector('.popup-header');
         header.style.cssText = `
             padding: 16px 20px;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1266,7 +1310,7 @@ class BitcoinNodeExplorer {
         const footer = popup.querySelector('.popup-footer');
         footer.style.cssText = `
             padding: 16px 20px;
-            border-top: 1px solid #333;
+            border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
             gap: 8px;
             justify-content: flex-end;
@@ -1277,7 +1321,7 @@ class BitcoinNodeExplorer {
             if (btn.className.includes('popup-')) {
                 btn.style.cssText = `
                     padding: 6px 12px;
-                    border: 1px solid #555;
+                    border: 1px solid rgba(255,255,255,0.18);
                     background: #000;
                     color: white;
                     border-radius: 2px;
@@ -1287,11 +1331,11 @@ class BitcoinNodeExplorer {
                 `;
                 btn.addEventListener('mouseenter', () => {
                     btn.style.background = '#333';
-                    btn.style.borderColor = '#666';
+                    btn.style.borderColor = 'rgba(255,255,255,0.28)';
                 });
                 btn.addEventListener('mouseleave', () => {
                     btn.style.background = '#000';
-                    btn.style.borderColor = '#555';
+                    btn.style.borderColor = 'rgba(255,255,255,0.18)';
                 });
             }
         });
@@ -1343,8 +1387,8 @@ class BitcoinNodeExplorer {
                 <div class="popup-body">
                     <p>The node <strong>${this.nodeAddress}</strong> ${isTorNode ? 'is a TOR node' : 'was not found or is not activated'}.</p>
                     ${isTorNode ? 
-                        '<p>TOR nodes (.onion addresses) are not supported by the Bitnodes.io API for individual node queries.</p>' :
-                        '<p>This can happen with:</p><ul style="text-align: left; margin: 10px 0; padding-left: 20px;"><li>Nodes that are currently offline</li><li>Nodes that haven\'t been activated on Bitnodes.io</li></ul>'
+                        '<p>TOR nodes (.onion addresses) are not supported for individual node queries.</p>' :
+                        '<p>This can happen with:</p><ul style="text-align: left; margin: 10px 0; padding-left: 20px;"><li>Nodes that are currently offline</li><li>Nodes not present in the latest BTC Nodes snapshot</li></ul>'
                     }
                 </div>
                 <div class="popup-footer">
@@ -1372,7 +1416,7 @@ class BitcoinNodeExplorer {
         const content = popup.querySelector('.popup-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             max-width: 400px;
             width: 90%;
@@ -1383,7 +1427,7 @@ class BitcoinNodeExplorer {
         const header = popup.querySelector('.popup-header');
         header.style.cssText = `
             padding: 16px 20px;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1422,7 +1466,7 @@ class BitcoinNodeExplorer {
         const footer = popup.querySelector('.popup-footer');
         footer.style.cssText = `
             padding: 16px 20px;
-            border-top: 1px solid #333;
+            border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
             gap: 8px;
             justify-content: space-between;
@@ -1432,7 +1476,7 @@ class BitcoinNodeExplorer {
         const dismissBtn = popup.querySelector('.popup-dismiss');
         dismissBtn.style.cssText = `
             padding: 6px 12px;
-            border: 1px solid #555;
+            border: 1px solid rgba(255,255,255,0.18);
             background: #000;
             color: white;
             border-radius: 2px;
@@ -1442,11 +1486,11 @@ class BitcoinNodeExplorer {
         `;
         dismissBtn.addEventListener('mouseenter', () => {
             dismissBtn.style.background = '#333';
-            dismissBtn.style.borderColor = '#666';
+            dismissBtn.style.borderColor = 'rgba(255,255,255,0.28)';
         });
         dismissBtn.addEventListener('mouseleave', () => {
             dismissBtn.style.background = '#000';
-            dismissBtn.style.borderColor = '#555';
+            dismissBtn.style.borderColor = 'rgba(255,255,255,0.18)';
         });
         
         // Add event listeners
@@ -1494,31 +1538,43 @@ class BitcoinNodeExplorer {
             return;
         }
         
-        // Extract data from the node response
-        const [version, userAgent, timestamp, height, latestHeight, hostname, city, country, lat, lng, timezone, asn, org] = this.nodeData.data || [];
-        
-        // Calculate uptime (current time - timestamp)
-        const uptimeMs = Date.now() - (timestamp * 1000);
-        const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
-        const uptimeHours = Math.floor((uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const uptimeText = `${uptimeDays} days, ${uptimeHours} hours`;
-        
-        // Format coordinates
-        const coordinatesText = (lat && lng) ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'N/A';
-        
-        // Update all UI fields with real data
+        // BTC Nodes status `data`: version, userAgent, connectedSince, services, height,
+        // hostname, city, country, lat, lng, timezone, asn, org
+        const [
+            version, userAgent, connectedSince, services, height,
+            hostname, city, country, lat, lng, timezone, asn, org
+        ] = this.nodeData.data || [];
+
+        let uptimeText = 'N/A';
+        if (connectedSince) {
+            const uptimeMs = Date.now() - (connectedSince * 1000);
+            if (uptimeMs > 0) {
+                const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
+                const uptimeHours = Math.floor((uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                uptimeText = `${uptimeDays} days, ${uptimeHours} hours`;
+            }
+        }
+
+        const coordinatesText = (lat != null && lng != null && lat !== 0 && lng !== 0)
+            ? `${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}`
+            : 'N/A';
+
         const updateField = (id, value) => {
             const element = document.getElementById(id);
-            if (element) element.textContent = value || 'N/A';
+            if (element) element.textContent = (value || value === 0) ? String(value) : 'N/A';
         };
-        
-        updateField('node-address', this.nodeData.address);
-        updateField('node-status-display', this.nodeData.status);
+
+        const displayAddress = this.nodeData.address
+            ? (this.nodeAddress || this.nodeData.address)
+            : (this.nodeAddress || 'N/A');
+
+        updateField('node-address', displayAddress);
+        updateField('node-status-display', this.nodeData.status || (this.nodeData.found ? 'UP' : 'DOWN'));
         updateField('node-version', version);
         updateField('node-user-agent', userAgent);
         updateField('node-height', height);
-        updateField('node-latest-height', latestHeight);
-        updateField('node-hostname', hostname);
+        updateField('node-latest-height', height);
+        updateField('node-hostname', hostname || this.nodeData.hostname);
         updateField('node-city', city);
         updateField('node-country', country);
         updateField('node-coordinates', coordinatesText);
@@ -1527,13 +1583,13 @@ class BitcoinNodeExplorer {
         updateField('node-org', org);
         updateField('node-uptime', uptimeText);
         updateField('bandwidth', this.nodeData.mbps ? `${this.nodeData.mbps} Mbps` : 'N/A');
-        
-        // Update subtitle with node address and status
-        const subtitle = `${this.nodeData.address} • ${this.nodeData.status}`;
-        document.getElementById('node-subtitle').textContent = subtitle;
+
+        const status = this.nodeData.status || (this.nodeData.found ? 'UP' : 'DOWN');
+        document.getElementById('node-subtitle').textContent = `${displayAddress} • ${status}`;
     }
 
     animate() {
+        if (this._disposed) return;
         if (this.isRotating) {
             this.scene.rotation.y += 0.001;
         }
@@ -1546,6 +1602,7 @@ class BitcoinNodeExplorer {
     }
     
     updateTextLabels() {
+        if (this._disposed || !this.scene) return;
         // Get all feature cuboids (excluding the main node)
         const featureCuboids = this.scene.children.filter(child => 
             child.geometry && child.geometry.type === 'BoxGeometry' && 
@@ -1555,6 +1612,10 @@ class BitcoinNodeExplorer {
         featureCuboids.forEach(cuboid => {
             if (cuboid.userData.label) {
                 const label = cuboid.userData.label;
+                if (!label.isConnected) {
+                    cuboid.userData.label = null;
+                    return;
+                }
                 
                 // Get the world position of the cuboid (accounting for scene rotation)
                 const worldPosition = cuboid.getWorldPosition(new THREE.Vector3());
@@ -1627,7 +1688,7 @@ class BitcoinNodeExplorer {
         const content = modal.querySelector('.loading-content');
         content.style.cssText = `
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 4px;
             padding: 40px;
             text-align: center;
