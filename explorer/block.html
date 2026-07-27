@@ -62,9 +62,10 @@
             </div>
             
             <div class="controls">
+                <div id="controls-camera-root" class="controls-camera"></div>
                 <div class="controls-main">
-                    <button id="vr-button" title="Enter immersive VR mode">Enter VR</button>
-                    <button id="ar-button" title="Enter mixed reality (passthrough) mode">Enter MR</button>
+                    <button id="vr-button" title="Enter immersive VR mode">VR</button>
+                    <button id="ar-button" title="Enter mixed reality (passthrough) mode">MR</button>
                     <button id="show-more-blocks">Show more</button>
                     <button id="load-all-transactions">Load TXs</button>
                     <button id="show-utxos" disabled>Show UTXO</button>
@@ -72,7 +73,7 @@
                     <button id="show-merkle-tree">Merkle Tree</button>
                     <button id="go-to-block">Go to</button>
                 </div>
-                <div id="controls-camera-root" class="controls-camera"></div>
+            
             </div>
         </div>
     </div>
@@ -153,7 +154,7 @@
                 <form id="block-form">
                     <label for="new-block-height">Block height:</label>
                     <div class="input-group">
-                        <input type="number" id="new-block-height" name="height" min="0" placeholder="e.g. 0 or 210000" required>
+                        <input type="number" id="new-block-height" name="height" min="0" placeholder="e.g. 0 or 210000" required spellcheck="false" autocomplete="off">
                         <button type="submit" id="block-modal-submit">Go to Block</button>
                     </div>
                     <div class="famous-transactions">

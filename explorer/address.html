@@ -62,13 +62,14 @@
             </div>
             
             <div class="controls">
+                <div id="controls-camera-root" class="controls-camera"></div>
                 <div class="controls-main">
-                    <button id="vr-button" title="Enter immersive VR mode">Enter VR</button>
-                    <button id="ar-button" title="Enter mixed reality (passthrough) mode">Enter MR</button>
+                    <button id="vr-button" title="Enter immersive VR mode">VR</button>
+                    <button id="ar-button" title="Enter mixed reality (passthrough) mode">MR</button>
                     <button id="load-more-transactions">Load Next 50 TXs</button>
                     <button id="change-address">Select Address</button>
                 </div>
-                <div id="controls-camera-root" class="controls-camera"></div>
+            
             </div>
         </div>
     </div>
@@ -88,7 +89,7 @@
                 <form id="address-form">
                     <label for="new-address">Enter Bitcoin Address:</label>
                     <div class="input-group">
-                        <input type="text" id="new-address" name="address" placeholder="e.g., 1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv" required>
+                        <input type="text" id="new-address" name="address" placeholder="e.g., 1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv" required spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off">
                         <button type="button" id="paste-button" title="Paste from clipboard">📋</button>
                     </div>
                     
