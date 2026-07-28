@@ -3204,6 +3204,14 @@ body.table-open .sidebar {
 body.table-open .controls {
     right: auto;
     left: 10px;
+    flex-wrap: wrap;
+    max-width: calc(100% - 20px);
+}
+
+body.table-open .controls-main {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 6px;
 }
 
 .node-table-pane {
@@ -3279,6 +3287,7 @@ body.table-open .controls {
     font-size: 0.65rem;
     --glass-fill: transparent;
     --glass-fill-hover: rgba(255, 255, 255, 0.06);
+    background-color: #000;
     border: 1px solid transparent;
     background-image:
         linear-gradient(transparent, transparent),
@@ -3330,6 +3339,7 @@ body.table-open .controls {
     height: 26px;
     padding: 0 8px;
     --glass-fill: rgba(255, 255, 255, 0.02);
+    background-color: #000;
     border: 1px solid transparent;
     background-image:
         linear-gradient(var(--glass-fill), var(--glass-fill)),
@@ -3338,7 +3348,7 @@ body.table-open .controls {
     background-clip: padding-box, border-box;
     box-shadow: var(--glass-highlight);
     border-radius: 2px;
-    color: rgba(255, 255, 255, 0.85);
+    color: #fff;
     font-size: 0.72rem;
     font-family: inherit;
     outline: none;
@@ -3376,6 +3386,36 @@ body.table-open .controls {
 .close-table-pane:hover {
     color: rgba(255, 255, 255, 0.85);
     background: rgba(255, 255, 255, 0.07);
+}
+
+/* Mobile: wrap the header so the search field isn't squeezed into a tight row.
+   Row 1: title + count + filters + close. Row 2: full-width search. */
+@media (max-width: 768px) {
+    .table-pane-header {
+        flex-wrap: wrap;
+        gap: 8px 10px;
+        padding: 12px 12px 10px;
+    }
+    .close-table-pane {
+        margin-left: auto;
+        width: 32px;
+        height: 32px;
+        font-size: 1.15rem;
+    }
+    .table-type-filter {
+        gap: 4px;
+    }
+    .table-filter-btn {
+        height: 30px;
+        padding: 0 12px;
+        font-size: 0.72rem;
+    }
+    .table-search {
+        order: 5;
+        flex-basis: 100%;
+        height: 34px;
+        font-size: 0.85rem;
+    }
 }
 
 .table-pane-body {
@@ -3542,6 +3582,7 @@ body.table-open .controls {
     height: 22px;
     padding: 0 4px;
     --glass-fill: rgba(255, 255, 255, 0.02);
+    background-color: #000;
     border: 1px solid transparent;
     background-image:
         linear-gradient(var(--glass-fill), var(--glass-fill)),
@@ -3563,6 +3604,11 @@ body.table-open .controls {
         var(--glass-border-gradient-hover);
 }
 
+.table-page-size option {
+    background: #000;
+    color: #fff;
+}
+
 .table-pagination {
     display: flex;
     align-items: center;
@@ -3573,6 +3619,7 @@ body.table-open .controls {
 .table-page-btn {
     --glass-fill: rgba(255, 255, 255, 0.02);
     --glass-fill-hover: rgba(255, 255, 255, 0.05);
+    background-color: #000;
     border: 1px solid transparent;
     background-image:
         linear-gradient(var(--glass-fill), var(--glass-fill)),
