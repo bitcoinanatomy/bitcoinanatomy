@@ -83,7 +83,8 @@ class BitcoinNetworkExplorer {
         
         // Mobile optimization flags
         this.isMobile = this.detectMobile();
-        this.maxNodes = this.isMobile ? 1000 : 10000; // Limit nodes on mobile
+        // Desktop: no render/fetch cap (network is ~20–30k). Mobile: keep a hard cap.
+        this.maxNodes = this.isMobile ? 1000 : 50000;
         this.nodeComplexity = this.isMobile ? 3 : 6; // Reduce sphere complexity on mobile
         
         if (this.isMobile) {
@@ -93,7 +94,7 @@ class BitcoinNetworkExplorer {
             console.log(`  - Batch processing enabled`);
         } else {
             console.log('💻 Desktop device detected:');
-            console.log(`  - Maximum nodes: ${this.maxNodes}`);
+            console.log(`  - Maximum nodes: ${this.maxNodes} (full network)`);
             console.log(`  - Node complexity: ${this.nodeComplexity} segments`);
         }
         
@@ -269,7 +270,8 @@ class BitcoinNetworkExplorer {
             (arr || []).forEach((b) => {
                 if (!b) return;
                 if (b.parent) b.parent.remove(b);
-                if (b.geometry) b.geometry.dispose();
+                // Shared node sphere is disposed once below — don't free it per mesh
+                if (b.geometry && b.geometry !== this._sharedNodeGeometry) b.geometry.dispose();
                 if (b.material) {
                     if (Array.isArray(b.material)) b.material.forEach((m) => { if (m) m.dispose(); });
                     else b.material.dispose();
@@ -278,6 +280,10 @@ class BitcoinNetworkExplorer {
         };
         drop(this.nodes);
         this.nodes = [];
+        if (this._sharedNodeGeometry) {
+            this._sharedNodeGeometry.dispose();
+            this._sharedNodeGeometry = null;
+        }
         drop(this.connections);
         this.connections = [];
         this.connectionsMesh = null;
@@ -918,15 +924,40 @@ class BitcoinNetworkExplorer {
             raycaster.setFromCamera(mouse, this.camera);
 
             // Calculate objects intersecting the picking ray
-            const intersects = raycaster.intersectObjects(this.nodes);
+            let intersects = raycaster.intersectObjects(this.nodes);
+
+            // Nodes render as small dots, so the exact ray often misses. Fall back
+            // to the closest node in screen space (same approach as hover picking).
+            if (intersects.length === 0 && this.nodes.length > 0) {
+                const worldPos = new THREE.Vector3();
+                const ndc = new THREE.Vector3();
+                const MAX_PICK_PIXELS = 32;
+                let bestNode = null;
+                let bestDist = MAX_PICK_PIXELS;
+                for (let i = 0; i < this.nodes.length; i++) {
+                    const node = this.nodes[i];
+                    if (!node.visible) continue;
+                    node.getWorldPosition(worldPos);
+                    ndc.copy(worldPos).project(this.camera);
+                    if (ndc.z < -1 || ndc.z > 1) continue;
+                    const sx = (ndc.x * 0.5 + 0.5) * window.innerWidth;
+                    const sy = (-ndc.y * 0.5 + 0.5) * window.innerHeight;
+                    const dist = Math.hypot(event.clientX - sx, event.clientY - sy);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestNode = node;
+                    }
+                }
+                if (bestNode) intersects = [{ object: bestNode }];
+            }
 
             if (intersects.length > 0) {
                 const intersectedObject = intersects[0].object;
                 const nodeData = intersectedObject.userData;
-                
+
                 // Format address for URL parameter
                 const formattedAddress = this.formatNodeAddress(nodeData.address);
-                
+
                 // Navigate to node page with address as URL parameter
                 explorerNavigate(`node.html?node=${formattedAddress}`);
             }
@@ -1099,11 +1130,21 @@ class BitcoinNetworkExplorer {
         }
     }
 
-    updateDataSourceDisclaimer(usingArchive) {
+    updateDataSourceDisclaimer(usingArchive, errorMsg) {
         const el = document.getElementById('disclaimer-archive');
-        if (!el) return;
-        if (usingArchive) el.removeAttribute('hidden');
-        else el.setAttribute('hidden', '');
+        if (el) {
+            if (usingArchive) el.removeAttribute('hidden');
+            else el.setAttribute('hidden', '');
+        }
+        const errEl = document.getElementById('disclaimer-error');
+        if (errEl) {
+            if (errorMsg) {
+                errEl.textContent = ` · ${errorMsg}`;
+                errEl.removeAttribute('hidden');
+            } else {
+                errEl.setAttribute('hidden', '');
+            }
+        }
     }
 
     showGenericError(dataType) {
@@ -1349,17 +1390,34 @@ class BitcoinNetworkExplorer {
         
         console.log(`Creating ${nodeEntries.length} nodes (mobile: ${this.isMobile})`);
         
+        // One shared sphere — every implementation currently uses the same radius.
+        // Creating 27k SphereGeometry instances was the bottleneck for full-network loads.
+        if (this._sharedNodeGeometry) this._sharedNodeGeometry.dispose();
+        this._sharedNodeGeometry = new THREE.SphereGeometry(0.06, this.nodeComplexity, this.nodeComplexity);
+
+        // Pause the render loop while we flood the scene — otherwise each frame
+        // gets slower as meshes accumulate and setTimeout batches crawl.
+        this._buildingNodes = true;
+        this.renderer.setAnimationLoop(null);
+
         // Process nodes in batches to prevent UI blocking
         this.createNodesBatch(nodeEntries, 0);
+    }
+
+    _resumeAfterBuildingNodes() {
+        if (!this._buildingNodes) return;
+        this._buildingNodes = false;
+        if (this.renderer && !this._disposed) {
+            this.renderer.setAnimationLoop(() => this.animate());
+        }
     }
 
     createNodesBatch(nodeEntries, startIndex, options) {
         options = options || {};
         const silent = !!options.silent;
-        const batchSize = this.isMobile ? 50 : 200; // Smaller batches on mobile
+        const batchSize = this.isMobile ? 50 : 2000;
         const endIndex = Math.min(startIndex + batchSize, nodeEntries.length);
-        
-        console.log(`🔧 createNodesBatch called: startIndex=${startIndex}, endIndex=${endIndex}, batchSize=${batchSize}`);
+        const sharedGeo = this._sharedNodeGeometry;
         
         try {
             // Process current batch
@@ -1368,30 +1426,9 @@ class BitcoinNetworkExplorer {
             // [version, userAgent, connectedSince, services, height, hostname, city, country, lat, lng, timezone, asn, org]
             const [version, userAgent, connectedSince, services, height, hostname, city, country, lat, lng, timezone, asn, org] = nodeInfo;
             
-            // Only log details for first 3 nodes and every 1000th node to reduce console spam
-            const shouldLog = i < 3 || i % 1000 === 0;
-            
-            if (shouldLog) {
-                console.log(`📍 Processing node ${i}:`, {
-                    address,
-                    userAgent,
-                    height,
-                    services,
-                    lat,
-                    lng,
-                    city,
-                    country
-                });
-            }
-            
             // Determine node implementation based on user agent
             const nodeImplementation = this.getNodeType(userAgent);
             const nodeColor = this.getNodeColor(nodeImplementation);
-            const nodeSize = this.getNodeSize(nodeImplementation);
-            
-            if (shouldLog) {
-                console.log(`  └─ Node ${i} type: ${nodeImplementation}, color: ${nodeColor.toString(16)}, size: ${nodeSize}`);
-            }
             
             // Calculate position
             let x, y, z;
@@ -1407,10 +1444,6 @@ class BitcoinNetworkExplorer {
                 x = radius * Math.sin(phi) * Math.cos(theta);
                 y = radius * Math.cos(phi);
                 z = radius * Math.sin(phi) * Math.sin(theta);
-                
-                if (shouldLog) {
-                    console.log(`  └─ Node ${i} position (geo): lat=${lat}, lng=${lng} → x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}`);
-                }
             } else {
                 // TOR nodes or nodes without coordinates - distribute randomly across entire sphere surface
                 const baseRadius = 65; // Base distance from Earth sphere
@@ -1422,21 +1455,16 @@ class BitcoinNetworkExplorer {
                 x = radius * Math.sin(phi) * Math.cos(theta);
                 y = radius * Math.cos(phi);
                 z = radius * Math.sin(phi) * Math.sin(theta);
-                
-                if (shouldLog) {
-                    console.log(`  └─ Node ${i} position (random - no coords): x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}`);
-                }
             }
             
-            // Create node geometry with mobile-optimized complexity
-            const geometry = new THREE.SphereGeometry(nodeSize, this.nodeComplexity, this.nodeComplexity);
+            // Shared geometry + per-node material (filters mutate opacity/color)
             const material = new THREE.MeshBasicMaterial({
                 color: nodeColor,
                 transparent: true,
                 opacity: 1.0
             });
             
-            const node = new THREE.Mesh(geometry, material);
+            const node = new THREE.Mesh(sharedGeo, material);
             node.position.set(x, y, z);
             
             const hasLocation = lat != null && lng != null && !isNaN(lat) && !isNaN(lng) && lat !== 0.0 && lng !== 0.0;
@@ -1457,15 +1485,6 @@ class BitcoinNetworkExplorer {
                 hasLocation: hasLocation
             };
             
-            if (shouldLog) {
-                console.log(`  └─ Node ${i} userData:`, {
-                    type: nodeImplementation,
-                    height: height,
-                    city: city,
-                    country: country
-                });
-            }
-            
             this.scene.add(node);
             this.nodes.push(node);
         }
@@ -1481,17 +1500,12 @@ class BitcoinNetworkExplorer {
             // Continue with next batch or finish
             if (endIndex < nodeEntries.length) {
                 // Schedule next batch to prevent UI blocking
-                console.log(`⏭️ Batch complete. Scheduling next batch...`);
                 setTimeout(() => {
                     this.createNodesBatch(nodeEntries, endIndex, options);
-                }, this.isMobile ? 10 : 1); // Longer delay on mobile
+                }, this.isMobile ? 10 : 0);
             } else {
                 console.log(`🎉 ALL BATCHES COMPLETE! Created ${this.nodes.length} nodes total`);
-                console.log(`🎬 Final scene info:`, {
-                    sceneChildren: this.scene.children.length,
-                    nodesArray: this.nodes.length,
-                    sceneChildrenTypes: this.scene.children.map(child => child.type)
-                });
+                this._resumeAfterBuildingNodes();
 
                 if (typeof options.onComplete === 'function') {
                     options.onComplete();
@@ -1499,7 +1513,6 @@ class BitcoinNetworkExplorer {
                 }
                 
                 // Update UI with node counts now that nodes are created
-                console.log('📊 Updating UI with node implementation counts...');
                 this.updateUI();
                 this.applyUrlParams();
                 
@@ -1507,10 +1520,14 @@ class BitcoinNetworkExplorer {
                 setTimeout(() => {
                     this.hideLoadingModal();
                 }, 500);
+
+                // Geo enrichment after the globe is up — avoids competing with mesh creation
+                this.enrichNodeLocationsInBackground();
             }
         } catch (error) {
             console.error('Error creating nodes batch:', error);
             console.log(`Successfully created ${this.nodes.length} nodes before error`);
+            this._resumeAfterBuildingNodes();
 
             if (typeof options.onComplete === 'function') {
                 options.onComplete(error);
@@ -1590,6 +1607,33 @@ class BitcoinNetworkExplorer {
             return { added: toAdd.length, showing: this.nodes.length };
         } finally {
             this._loadingMoreNodes = false;
+            this._refreshVrNodeLoadButton();
+        }
+    }
+
+    /**
+     * VR: load every available node, bypassing the mobile/headset node cap.
+     * Repeatedly fetches + renders in large batches until no more nodes remain.
+     */
+    async loadAllNodes() {
+        if (this._loadingAllNodes || this._loadingMoreNodes) {
+            return { added: 0, showing: this.nodes.length, busy: true };
+        }
+        this._loadingAllNodes = true;
+        this._refreshVrNodeLoadButton();
+
+        let totalAdded = 0;
+        try {
+            // Safety cap: 60 × 2000 = 120k nodes, far beyond the ~6k network size.
+            for (let i = 0; i < 60; i++) {
+                const res = await this.loadMoreNodes(2000);
+                totalAdded += (res && res.added) || 0;
+                if (!res || res.added === 0) break;
+            }
+            console.log(`✅ loadAllNodes done — showing ${this.nodes.length} (+${totalAdded})`);
+            return { added: totalAdded, showing: this.nodes.length };
+        } finally {
+            this._loadingAllNodes = false;
             this._refreshVrNodeLoadButton();
         }
     }
@@ -1718,8 +1762,19 @@ class BitcoinNetworkExplorer {
                 return null;
             }
             
-            console.log(`✅ Using cached data (${ageMinutes} minutes old)`);
-            return JSON.parse(cachedData);
+            const parsed = JSON.parse(cachedData);
+            const have = parsed && parsed.nodes ? Object.keys(parsed.nodes).length : 0;
+            const claimed = (parsed && parsed.total_nodes) || have;
+            // Partial caches (e.g. rate-limited mid-pagination) used to stick for an hour
+            // and leave the globe showing only a fraction of the network.
+            if (!this.isMobile && claimed > 0 && have < claimed * 0.9) {
+                console.warn(`📦 Incomplete cache (${have.toLocaleString()}/${claimed.toLocaleString()}); refetching`);
+                this.clearCache();
+                return null;
+            }
+
+            console.log(`✅ Using cached data (${ageMinutes} minutes old, ${have.toLocaleString()} nodes)`);
+            return parsed;
         } catch (error) {
             console.error('❌ Error reading cache:', error);
             this.clearCache();
@@ -1834,91 +1889,114 @@ class BitcoinNetworkExplorer {
                 this.currentSnapshotIndex = 0;
                 this.latestSnapshot = this.snapshotsData.results[0];
                 
-                // Prefer paginated /nodes/ (includes lat/lon); fall back to raw snapshot export
-                this.updateLoadingProgress('Loading node data...', 40);
-                let nodeData = null;
-                try {
-                    nodeData = await this.fetchLatestNodesSnapshot((msg, pct) => {
-                        this.updateLoadingProgress(msg, pct);
-                    });
-                } catch (nodesErr) {
-                    if (nodesErr && (nodesErr.status === 429 || nodesErr.status === 502 || nodesErr.status === 503)) {
-                        throw nodesErr;
-                    }
-                    console.warn('Geo node list failed; will try raw snapshot export', nodesErr);
-                }
-                if (!nodeData) {
-                    console.log('📡 Geo node list unavailable; using raw snapshot export');
-                    this.updateLoadingProgress('Loading snapshot export...', 60);
-                    nodeData = await this.fetchSnapshotByUrl(this.latestSnapshot.url);
-                }
+                // Snapshot export = complete node set (~1s). Show everyone immediately;
+                // geo enrichment (rate-limited) runs in the background and repositions nodes.
+                this.updateLoadingProgress('Loading snapshot export...', 40);
+                let nodeData = await this.fetchSnapshotByUrl(this.latestSnapshot.url);
                 if (!nodeData || !nodeData.nodes) {
                     throw new Error('No node data in BTC Nodes response');
                 }
-                
+
                 this.nodeData = nodeData;
                 this.subtitlePrefix = '';
                 this.updateDataSourceDisclaimer(false);
-                
+
                 this.updateLoadingProgress('Creating visualization...', 80);
+                const loadedCount = Object.keys(this.nodeData.nodes).length;
                 console.log('✅ Fetched node data from btcnodes.io');
-                console.log(`📊 Total nodes in dataset: ${Object.keys(this.nodeData.nodes).length}`);
-                
-                // Cache the data
+                console.log(`📊 Loaded ${loadedCount.toLocaleString()} / ${(this.nodeData.total_nodes || loadedCount).toLocaleString()} nodes`);
+
                 this.setCachedData(this.nodeData);
-                
-                // Sample first few nodes to check structure
-                const sampleNodes = Object.entries(this.nodeData.nodes).slice(0, 3);
-                console.log('📍 Sample nodes to verify structure:');
-                sampleNodes.forEach(([address, nodeInfo], idx) => {
-                    console.log(`  Node ${idx}:`, {
-                        address,
-                        arrayLength: nodeInfo.length,
-                        version: nodeInfo[0],
-                        userAgent: nodeInfo[1],
-                        connectedSince: nodeInfo[2],
-                        services: nodeInfo[3],
-                        height: nodeInfo[4],
-                        hostname: nodeInfo[5],
-                        city: nodeInfo[6],
-                        country: nodeInfo[7],
-                        lat: nodeInfo[8],
-                        lng: nodeInfo[9],
-                        timezone: nodeInfo[10],
-                        asn: nodeInfo[11],
-                        org: nodeInfo[12]
-                    });
-                });
-                
+
                 // Start node creation (this will handle progress updates and modal hiding)
                 // updateUI() will be called AFTER nodes are created
                 this.createNetworkVisualization();
-                
+
                 // Update snapshot navigation buttons
                 this.updateSnapshotNavButtons();
             }
         } catch (error) {
             console.error('Error fetching network data:', error);
             this.hideLoadingModal();
+            this.updateDataSourceDisclaimer(false, 'live API unavailable');
             if (error && error.status === 429) {
                 this.showRateLimitError('BTC Nodes API');
                 return;
             }
-            // Upstream busy / unavailable → local archive fallback
-            if (error && (error.status === 502 || error.status === 503 || error.status === 504)) {
-                console.log('📦 BTC Nodes unavailable; loading local archive fallback...');
-                await this.loadLocalArchive();
-                return;
-            }
+            // Upstream busy / unavailable → always ask before loading the archive
             const self = this;
+            const busy = error && (error.status === 502 || error.status === 503 || error.status === 504);
             this.showPopupMessage(
-                'Failed to load BTC Nodes data',
-                `${error && error.message ? error.message : 'Network request failed'}.`,
-                'error',
+                busy ? 'BTC Nodes API Unavailable' : 'Failed to load BTC Nodes data',
+                busy
+                    ? 'The live BTC Nodes API is temporarily unavailable. Load the local archive snapshot instead?'
+                    : `${error && error.message ? error.message : 'Network request failed'}.`,
+                busy ? 'warning' : 'error',
                 [{ label: 'Load Archive', onClick: function () { self.loadLocalArchive(); } }],
                 null,
                 'Local archive is available if the live API stays down.'
             );
+        }
+    }
+
+    /**
+     * Pull /v1/nodes/ pages for lat/lon and move already-rendered meshes onto the globe.
+     * Safe to call after createNetworkVisualization(); ignores failures (rate limits).
+     */
+    async enrichNodeLocationsInBackground() {
+        if (this._enrichingLocations || this._disposed) return;
+        this._enrichingLocations = true;
+        try {
+            const geo = await this.fetchLatestNodesSnapshot(null);
+            if (this._disposed || !geo || !geo.nodes || !this.nodeData || !this.nodeData.nodes) return;
+
+            let enriched = 0;
+            for (const [addr, info] of Object.entries(geo.nodes)) {
+                this.nodeData.nodes[addr] = info;
+                enriched += 1;
+            }
+            if (geo.latest_height) this.nodeData.latest_height = geo.latest_height;
+            console.log(`✅ Geo-enriched ${enriched.toLocaleString()} nodes in background`);
+
+            const byAddr = new Map();
+            for (let i = 0; i < this.nodes.length; i++) {
+                const n = this.nodes[i];
+                if (n.userData && n.userData.address) byAddr.set(n.userData.address, n);
+            }
+
+            let moved = 0;
+            for (const [addr, info] of Object.entries(geo.nodes)) {
+                const mesh = byAddr.get(addr);
+                if (!mesh) continue;
+                const lat = info[8];
+                const lng = info[9];
+                if (lat == null || lng == null || isNaN(lat) || isNaN(lng) || lat === 0.0 || lng === 0.0) continue;
+
+                const radius = 33.1;
+                const phi = (90 - lat) * (Math.PI / 180);
+                const theta = (-lng + 180) * (Math.PI / 180);
+                mesh.position.set(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.cos(phi),
+                    radius * Math.sin(phi) * Math.sin(theta)
+                );
+                mesh.userData.lat = lat;
+                mesh.userData.lng = lng;
+                mesh.userData.hasLocation = true;
+                mesh.userData.city = info[6];
+                mesh.userData.country = info[7];
+                mesh.userData.asn = info[11];
+                mesh.userData.org = info[12];
+                moved += 1;
+            }
+            console.log(`📍 Repositioned ${moved.toLocaleString()} nodes onto the globe`);
+
+            this.setCachedData(this.nodeData);
+            this.updateUI();
+        } catch (err) {
+            console.warn('Background geo enrichment skipped', err);
+        } finally {
+            this._enrichingLocations = false;
         }
     }
 
@@ -2042,6 +2120,8 @@ class BitcoinNetworkExplorer {
 
     /**
      * Build a geo-enriched snapshot from the paginated /v1/nodes/ list.
+     * Desktop fetches every page until exhausted; mobile stops at maxNodes.
+     * Retries on 429 with backoff — the API rate-limits aggressive pagination.
      * Returns null if the endpoint is unavailable (caller should use raw snapshot).
      */
     async fetchLatestNodesSnapshot(onProgress) {
@@ -2049,21 +2129,52 @@ class BitcoinNetworkExplorer {
         let page = 1;
         let total = null;
         let latestHeight = 0;
-        const targetCount = this.maxNodes || 10000;
-        const maxPages = Math.ceil(targetCount / this.NODES_PAGE_LIMIT) + 1;
+        // Mobile keeps the performance cap; desktop loads the full reachable set.
+        const targetCount = this.isMobile ? (this.maxNodes || 1000) : Number.POSITIVE_INFINITY;
+        const maxPages = this.isMobile
+            ? Math.ceil(targetCount / this.NODES_PAGE_LIMIT) + 1
+            : 100; // safety: 100 × 1000 ≫ current network size
+
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
         while (page <= maxPages && Object.keys(nodes).length < targetCount) {
             const url = this.apiUrl(`/v1/nodes/?page=${page}&limit=${this.NODES_PAGE_LIMIT}`);
             if (onProgress) {
                 const loaded = Object.keys(nodes).length;
-                const pct = total ? Math.min(75, 40 + Math.floor((loaded / Math.min(total, targetCount)) * 35)) : 40 + Math.min(page * 3, 30);
-                onProgress(`Loading nodes… page ${page}${total ? ` (${loaded.toLocaleString()}/${Math.min(total, targetCount).toLocaleString()})` : ''}`, pct);
+                const goal = total != null ? (this.isMobile ? Math.min(total, targetCount) : total) : null;
+                const pct = goal
+                    ? Math.min(75, 40 + Math.floor((loaded / goal) * 35))
+                    : 40 + Math.min(page * 2, 30);
+                onProgress(
+                    `Loading nodes… page ${page}${goal != null ? ` (${loaded.toLocaleString()}/${goal.toLocaleString()})` : ''}`,
+                    pct
+                );
             }
             console.log('📡 Fetching nodes page', page, url);
-            const response = await fetch(url);
+
+            let response = null;
+            let rateLimited = false;
+            // A couple of short retries — if the budget is spent, caller merges the
+            // raw snapshot so we still render the full network instead of waiting
+            // half a minute on exponential backoff.
+            for (let attempt = 0; attempt < 2; attempt++) {
+                response = await fetch(url);
+                if (response.status !== 429 && response.status !== 503) break;
+                rateLimited = true;
+                const retryAfter = parseInt(response.headers.get('retry-after') || '', 10);
+                const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+                    ? Math.min(retryAfter * 1000, 8000)
+                    : 2000 * (attempt + 1);
+                console.warn(`⏳ Rate limited on page ${page}; retry ${attempt + 1}/2 in ${waitMs}ms`);
+                if (onProgress) {
+                    onProgress(`Rate limited — retrying page ${page} in ${Math.ceil(waitMs / 1000)}s…`, 40);
+                }
+                await sleep(waitMs);
+            }
+
             if (response.status === 429) {
                 if (Object.keys(nodes).length > 0) {
-                    console.warn('Rate limited mid-pagination; using', Object.keys(nodes).length, 'nodes already fetched');
+                    console.warn('Rate limited mid-pagination after retries; using', Object.keys(nodes).length, 'nodes already fetched');
                     break;
                 }
                 const err = new Error('Rate limited');
@@ -2102,6 +2213,17 @@ class BitcoinNetworkExplorer {
             page += 1;
             this._btcnodesNextPage = page;
             this._btcnodesListExhausted = false;
+
+            // Desktop: stop once we have the reported total
+            if (!this.isMobile && total != null && Object.keys(nodes).length >= total) {
+                this._btcnodesListExhausted = true;
+                this._btcnodesNextPage = null;
+                break;
+            }
+
+            // Small pause between pages to stay under the API rate budget
+            // (aggressive back-to-back 1MB pages trip 429 around page 6–7).
+            if (!rateLimited) await sleep(350);
         }
 
         const count = Object.keys(nodes).length;
@@ -2312,9 +2434,11 @@ class BitcoinNetworkExplorer {
         // Update subtitle with timestamp and node count
         let subtitle = `${this.subtitlePrefix}${totalNodes.toLocaleString()} nodes • ${this.formatDate(timestamp)}`;
         
-        // Add mobile optimization notice
-        if (this.isMobile && this.nodes.length < totalNodes) {
-            subtitle += ` • Showing ${this.nodes.length.toLocaleString()} (mobile optimized)`;
+        // Surface partial loads (mobile cap, or incomplete API pagination)
+        if (this.nodes.length < totalNodes) {
+            subtitle += this.isMobile
+                ? ` • Showing ${this.nodes.length.toLocaleString()} (mobile optimized)`
+                : ` • Showing ${this.nodes.length.toLocaleString()}`;
         }
         
         document.getElementById('network-subtitle').textContent = subtitle;

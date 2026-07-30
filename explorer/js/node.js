@@ -9,7 +9,7 @@ class BitcoinNodeExplorer {
         this.camera = null;
         this.renderer = null;
         this.isRotating = true;
-        this.showDetails = true;
+        this.showDetails = false;
         this.nodeAddress = null;
         this.nodeData = null;
         this.vrManager = null;
@@ -32,6 +32,44 @@ class BitcoinNodeExplorer {
         if (pathOrUrl.startsWith('/api/')) return this.API_BASE + pathOrUrl.slice('/api'.length);
         if (pathOrUrl.charAt(0) !== '/') pathOrUrl = '/' + pathOrUrl;
         return this.API_BASE + pathOrUrl;
+    }
+
+    _delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    /**
+     * fetch() with backoff on transient upstream errors. The BTC Nodes list
+     * endpoints intermittently return 503 "server busy" under load; a single
+     * blip shouldn't blow up the page. Retries 429/502/503/504 and network
+     * errors, then throws a `{ retriable: true }` error. Non-retryable
+     * responses (e.g. 404) are returned to the caller unchanged.
+     */
+    async _fetchRetry(url, { tries = 3, baseDelay = 800 } = {}) {
+        for (let attempt = 1; attempt <= tries; attempt++) {
+            let res = null;
+            try {
+                res = await fetch(url, { signal: this._ac.signal });
+            } catch (e) {
+                if (this._disposed) throw e;
+                if (attempt < tries) { await this._delay(baseDelay * attempt); continue; }
+                const err = new Error('BTC Nodes API unreachable');
+                err.retriable = true; err.status = 0;
+                throw err;
+            }
+            const busy = res.status === 429 || res.status === 502 ||
+                         res.status === 503 || res.status === 504;
+            if (busy && attempt < tries) {
+                await this._delay(baseDelay * attempt);
+                continue;
+            }
+            if (busy) {
+                const err = new Error(`BTC Nodes API busy (HTTP ${res.status})`);
+                err.retriable = true; err.status = res.status;
+                throw err;
+            }
+            return res;
+        }
     }
 
     init() {
@@ -69,7 +107,7 @@ class BitcoinNodeExplorer {
         try {
             this.updateLoadingProgress('Fetching node list...', 20);
             const probeUrl = this.apiUrl('/v1/nodes/?page=1&limit=1');
-            const probeRes = await fetch(probeUrl);
+            const probeRes = await this._fetchRetry(probeUrl);
             if (probeRes.status === 429) {
                 this.hideLoadingModal();
                 this.showRateLimitError('BTC Nodes API');
@@ -91,7 +129,12 @@ class BitcoinNodeExplorer {
             for (let attempt = 0; attempt < 5 && !chosen; attempt++) {
                 const page = 1 + Math.floor(Math.random() * maxPage);
                 this.updateLoadingProgress(`Sampling nodes… page ${page}`, 30 + attempt * 10);
-                const listRes = await fetch(this.apiUrl(`/v1/nodes/?page=${page}&limit=${pageSize}`));
+                let listRes;
+                try {
+                    listRes = await this._fetchRetry(this.apiUrl(`/v1/nodes/?page=${page}&limit=${pageSize}`));
+                } catch (e) {
+                    continue; // transient failure on one page — try another
+                }
                 if (!listRes.ok) continue;
                 const list = await listRes.json();
                 const rows = (list.results || []).filter((r) => {
@@ -125,36 +168,90 @@ class BitcoinNodeExplorer {
         } catch (error) {
             this.hideLoadingModal();
             console.error('Error loading random node:', error);
-            this.showNoNodesError();
+            this.showNoNodesError({ busy: !!(error && error.retriable) });
         }
     }
     
-    showNoNodesError() {
+    showNoNodesError(opts = {}) {
+        const busy = !!opts.busy;
+        const onRetry = (typeof opts.onRetry === 'function') ? opts.onRetry : () => this.loadRandomNode();
         // Remove existing popup if any
         const existingPopup = document.querySelector('.api-popup');
         if (existingPopup) {
             existingPopup.remove();
         }
-        
+
+        const title = busy ? 'BTC Nodes API Busy' : 'No Nodes Available';
+        const bodyHtml = busy
+            ? `<p>The BTC Nodes API is temporarily busy (server overloaded).</p>
+               <p>This usually clears in a few seconds — try again.</p>`
+            : `<p>Unable to load network data from BTC Nodes API</p>
+               <p>Please try again later or check your internet connection.</p>`;
+
         // Create popup element
         const popup = document.createElement('div');
         popup.className = 'api-popup';
         popup.innerHTML = `
             <div class="popup-content">
                 <div class="popup-header">
-                    <h3>No Nodes Available</h3>
+                    <h3>${title}</h3>
                     <button class="popup-close">&times;</button>
                 </div>
                 <div class="popup-body">
-                    <p>Unable to load network data from BTC Nodes API</p>
-                    <p>Please try again later or check your internet connection.</p>
+                    ${bodyHtml}
                 </div>
                 <div class="popup-footer">
-                    <a href="network.html" style="color: #4CAF50; text-decoration: none; margin-right: 10px;">← Back to Network</a>
+                    <a href="network.html" style="color: #ffffff; text-decoration: none; margin-right: 10px;">← Back to Network</a>
+                    ${opts.onArchive ? '<button class="popup-archive">Load Archive</button>' : ''}
+                    <button class="popup-retry">Retry</button>
                     <button class="popup-dismiss">Dismiss</button>
                 </div>
             </div>
         `;
+
+        // Load Archive button — ask before falling back to the local snapshot
+        const archiveBtn = popup.querySelector('.popup-archive');
+        if (archiveBtn) {
+            archiveBtn.style.cssText = `
+                padding: 6px 12px;
+                border: 1px solid rgba(255,255,255,0.18);
+                background: #000;
+                color: #fff;
+                border-radius: 2px;
+                cursor: pointer;
+                font-size: 12px;
+                margin-left: auto;
+                transition: all 0.2s;
+            `;
+            archiveBtn.addEventListener('mouseenter', () => { archiveBtn.style.background = '#333'; });
+            archiveBtn.addEventListener('mouseleave', () => { archiveBtn.style.background = '#000'; });
+            archiveBtn.addEventListener('click', () => {
+                popup.remove();
+                opts.onArchive();
+            });
+        }
+
+        // Retry button — re-run the random-node picker (styled + wired below)
+        const retryBtn = popup.querySelector('.popup-retry');
+        if (retryBtn) {
+            retryBtn.style.cssText = `
+                padding: 6px 12px;
+                border: 1px solid rgba(255,255,255,0.5);
+                background: #fff;
+                color: #000;
+                border-radius: 2px;
+                cursor: pointer;
+                font-size: 12px;
+                margin-left: auto;
+                transition: all 0.2s;
+            `;
+            retryBtn.addEventListener('mouseenter', () => { retryBtn.style.background = '#ddd'; });
+            retryBtn.addEventListener('mouseleave', () => { retryBtn.style.background = '#fff'; });
+            retryBtn.addEventListener('click', () => {
+                popup.remove();
+                onRetry();
+            });
+        }
         
         // Add styles
         popup.style.cssText = `
@@ -651,15 +748,14 @@ class BitcoinNodeExplorer {
                 if (featureData.name) {
                     // Format the tooltip content
                     let tooltipContent = `
-                        <strong>${featureData.name}</strong><br>
+                        <strong>${featureData.name}</strong>${featureData.bip ? ` &nbsp;<span style="opacity:0.6">BIP ${featureData.bip}</span>` : ''}<br>
                         ${featureData.description}<br>
-                        Type: ${featureData.type}<br>
-                        Year: ${featureData.year}
+                        ${featureData.supported ? '✓ Supported by this node' : '✗ Not supported by this node'}
                     `;
                     
                     // Only add "View Details" link for non-navigation objects (feature cuboids)
                     if (featureData.type === 'Bitcoin Protocol') {
-                        tooltipContent += `<br><a href="${featureData.url}" target="_blank" style="color: #4CAF50; text-decoration: none;">View Details →</a>`;
+                        tooltipContent += `<br><a href="${featureData.url}" target="_blank" style="color: #ffffff; text-decoration: none;">View Details →</a>`;
                     } else {
                         tooltipContent += `<br><em>Double-click to navigate</em>`;
                     }
@@ -717,15 +813,14 @@ class BitcoinNodeExplorer {
                     
                     // Format the tooltip content
                     let tooltipContent = `
-                        <strong>${featureData.name}</strong><br>
+                        <strong>${featureData.name}</strong>${featureData.bip ? ` &nbsp;<span style="opacity:0.6">BIP ${featureData.bip}</span>` : ''}<br>
                         ${featureData.description}<br>
-                        Type: ${featureData.type}<br>
-                        Year: ${featureData.year}
+                        ${featureData.supported ? '✓ Supported by this node' : '✗ Not supported by this node'}
                     `;
                     
                     // Only add "View Details" link for non-navigation objects (feature cuboids)
                     if (featureData.type === 'Bitcoin Protocol') {
-                        tooltipContent += `<br><a href="${featureData.url}" target="_blank" style="color: #4CAF50; text-decoration: none;">View Details →</a>`;
+                        tooltipContent += `<br><a href="${featureData.url}" target="_blank" style="color: #ffffff; text-decoration: none;">View Details →</a>`;
                     } else {
                         tooltipContent += `<br><em>Double-click to navigate</em>`;
                     }
@@ -799,8 +894,13 @@ class BitcoinNodeExplorer {
         // Button controls
         document.getElementById('toggle-rotation').addEventListener('click', () => {
             this.isRotating = !this.isRotating;
-            const button = document.getElementById('toggle-rotation');
-            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+            // The button holds an <img> icon (from ControlsCamera) — swap its src,
+            // don't overwrite textContent (which would destroy the icon).
+            const icon = document.getElementById('toggle-rotation-icon');
+            if (icon) icon.src = this.isRotating ? 'imgs/icons/pause.svg' : 'imgs/icons/play.svg';
+            const btn = document.getElementById('toggle-rotation');
+            const label = this.isRotating ? 'Pause rotation' : 'Start rotation';
+            if (btn) { btn.title = label; btn.setAttribute('aria-label', label); }
         });
         
         document.getElementById('reset-camera').addEventListener('click', () => {
@@ -884,27 +984,26 @@ class BitcoinNodeExplorer {
         const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
         node.position.set(0, 0, 0);
         this.scene.add(node);
-        
-        // Create network connection lines radiating from the center
-        this.createNetworkConnections();
-        
+
+        // Network context is data-driven — only drawn for UP nodes once data
+        // loads (see updateUI → createNetworkConnections).
+
         // Create blockchain helix inside the sphere
         this.createBlockchainHelix();
         
         // Create mempool spiral next to the sphere
         this.createMempoolSpiral();
-        
-        // Create Bitcoin node version features visualization
-        this.createVersionFeatures();
+
+        // Feature ring is data-driven and built once the node loads (renderNodeFeatures).
     }
     
-    createTextLabel(sphere, text) {
+    createTextLabel(sphere, text, supported = true) {
         // Create HTML element for text label
         const label = document.createElement('div');
         label.className = 'feature-label';
         label.textContent = text;
         label.style.position = 'absolute';
-        label.style.color = 'white';
+        label.style.color = supported ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.4)';
         label.style.fontSize = '10px';
         label.style.fontFamily = 'monospace';
         label.style.fontWeight = 'bold';
@@ -916,137 +1015,177 @@ class BitcoinNodeExplorer {
         label.style.borderRadius = '3px';
         label.style.whiteSpace = 'nowrap';
         label.style.display = 'none';
-        
+
         document.body.appendChild(label);
-        
+
         // Store reference to label in sphere
         sphere.userData.label = label;
     }
     
-    createVersionFeatures() {
-        // Bitcoin protocol features and BIPs
-        const bitcoinFeatures = [
-            { 
-                name: "SegWit", 
-                description: "Segregated Witness - Transaction format upgrade",
-                url: "https://bips.dev/141/",
-                year: 2016, 
-                color: 0x00ff00 
+    /**
+     * Derive which BIPs / P2P features this node supports from its protocol
+     * version, service-flag bitfield, and software (user-agent) version.
+     * Returns an ordered list of { name, description, url, supported }.
+     */
+    computeNodeFeatures(version, services, userAgent) {
+        const proto = Number(version) || 0;
+        const bits = Number(services) || 0;
+        const hasBit = (b) => (bits & b) === b;
+
+        // Parse Bitcoin Core version out of a "/Satoshi:30.0.0/" user agent.
+        // Returns a comparable number: 30.0.0 -> 30.0, 0.21.1 -> 0.21.
+        let coreVer = 0;
+        const m = /Satoshi:(\d+)\.(\d+)/.exec(String(userAgent || ''));
+        if (m) coreVer = parseInt(m[1], 10) + parseInt(m[2], 10) / 100;
+
+        // `shape` groups BIPs by the KIND of function they add, so each family
+        // gets a distinct organelle geometry:
+        //   box=structure  octa=consensus/crypto  icosa=filtering
+        //   cone=relay/messaging  tetra=policy  dodeca=addressing
+        //   torus=transport  cylinder=resource/storage
+        return [
+            {
+                name: 'SegWit', bip: '141', shape: 'box',
+                description: 'Segregated Witness — moves signatures out of the tx body (NODE_WITNESS service)',
+                url: 'https://bips.dev/141/', supported: hasBit(8)
             },
-            { 
-                name: "BIP 157", 
-                description: "Client Side Block Filtering - Light client protocol",
-                url: "https://bips.dev/157/",
-                year: 2018, 
-                color: 0x00ff00 
+            {
+                name: 'Bloom', bip: '37 / 111', shape: 'icosa',
+                description: 'Bloom filter serving for light clients (NODE_BLOOM service)',
+                url: 'https://bips.dev/111/', supported: hasBit(4)
             },
-            { 
-                name: "BIP 158", 
-                description: "Compact Block Filters - Golomb-Rice coded sets",
-                url: "https://bips.dev/158/",
-                year: 2018, 
-                color: 0x00ff00 
+            {
+                name: 'Cmpct Filters', bip: '157 / 158', shape: 'icosa',
+                description: 'Compact block filters for private light clients (NODE_COMPACT_FILTERS)',
+                url: 'https://bips.dev/158/', supported: hasBit(64)
             },
-            { 
-                name: "BIP 339", 
-                description: "Erlay - Bandwidth-efficient transaction relay",
-                url: "https://bips.dev/339/",
-                year: 2020, 
-                color: 0x00ff00 
+            {
+                name: 'Limited', bip: '159', shape: 'cylinder',
+                description: 'Pruned / limited peer serving only recent blocks (NODE_NETWORK_LIMITED)',
+                url: 'https://bips.dev/159/', supported: hasBit(1024)
             },
-            { 
-                name: "BIP 340", 
-                description: "Schnorr Signatures - Elliptic curve signature scheme",
-                url: "https://bips.dev/340/",
-                year: 2020, 
-                color: 0x00ff00 
+            {
+                name: 'V2 Transport', bip: '324', shape: 'torus',
+                description: 'Encrypted v2 peer-to-peer transport (NODE_P2P_V2)',
+                url: 'https://bips.dev/324/', supported: hasBit(2048)
             },
-            { 
-                name: "BIP 341", 
-                description: "Taproot - Merkle tree upgrade for privacy",
-                url: "https://bips.dev/341/",
-                year: 2020, 
-                color: 0x00ff00 
+            {
+                name: 'SendHeaders', bip: '130', shape: 'cone',
+                description: 'Direct headers announcement (protocol ≥ 70012)',
+                url: 'https://bips.dev/130/', supported: proto >= 70012
             },
-            { 
-                name: "BIP 342", 
-                description: "Tapscript - Script upgrade for Taproot",
-                url: "https://bips.dev/342/",
-                year: 2020, 
-                color: 0x00ff00 
+            {
+                name: 'FeeFilter', bip: '133', shape: 'tetra',
+                description: 'feefilter message — advertise minimum relay fee (protocol ≥ 70013)',
+                url: 'https://bips.dev/133/', supported: proto >= 70013
+            },
+            {
+                name: 'Cmpct Blocks', bip: '152', shape: 'cone',
+                description: 'Compact block relay — bandwidth-efficient block propagation (protocol ≥ 70014)',
+                url: 'https://bips.dev/152/', supported: proto >= 70014
+            },
+            {
+                name: 'AddrV2', bip: '155', shape: 'dodeca',
+                description: 'addrv2 gossip — richer peer address types (protocol ≥ 70016)',
+                url: 'https://bips.dev/155/', supported: proto >= 70016
+            },
+            {
+                name: 'WTXID Relay', bip: '339', shape: 'cone',
+                description: 'wtxid-based transaction relay (protocol ≥ 70016)',
+                url: 'https://bips.dev/339/', supported: proto >= 70016
+            },
+            {
+                name: 'Taproot', bip: '340–342', shape: 'octa',
+                description: 'Taproot — Schnorr signatures & Tapscript enforcement (Bitcoin Core ≥ 22.0)',
+                url: 'https://bips.dev/341/', supported: coreVer >= 22
             }
         ];
-        
-        // Create feature cuboids around the main node
-        const allFeatures = [...bitcoinFeatures];
-        
-        allFeatures.forEach((feature, index) => {
-            const angle = (index / allFeatures.length) * Math.PI * 2;
-            const radius = 5; // Reduced from 8 to 5 to bring features closer
-            const height = (index % 3) * 2 - 2; // Distribute in 3 layers
-            
-            // Calculate position on the sphere
-            const x = Math.cos(angle) * radius;
-            const y = height;
-            const z = Math.sin(angle) * radius;
-            
-            // Calculate the tangent vector (perpendicular to the radius from center)
-            const tangentX = -Math.sin(angle);
-            const tangentZ = Math.cos(angle);
-            
-            // Create cuboid geometry (rectangular prism)
-            const width = 0.9;
-            const height_cuboid = 0.9;
-            const depth = 0.3;
-            const geometry = new THREE.BoxGeometry(width, height_cuboid, depth);
-            const material = new THREE.MeshBasicMaterial({ 
+    }
+
+    /** (Re)build the ring of BIP "organelles" from this node's real capabilities. */
+    renderNodeFeatures(version, services, userAgent) {
+        if (this._disposed || !this.scene) return;
+        if (!this.featureCuboids) this.featureCuboids = [];
+
+        // Tear down any previously rendered organelles + their labels
+        this.featureCuboids.forEach((organelle) => {
+            if (organelle.userData && organelle.userData.label && organelle.userData.label.remove) {
+                organelle.userData.label.remove();
+            }
+            this.scene.remove(organelle);
+            if (organelle.geometry) organelle.geometry.dispose();
+            if (organelle.material) organelle.material.dispose();
+        });
+        this.featureCuboids = [];
+
+        const features = this.computeNodeFeatures(version, services, userAgent);
+        const n = features.length;
+        const golden = Math.PI * (3 - Math.sqrt(5)); // golden angle
+
+        features.forEach((feature, index) => {
+            // Fibonacci-sphere distribution suspends the organelles evenly through
+            // the cytoplasm (inside the ~6-radius membrane) for a cell-like look.
+            const yUnit = 1 - (index / Math.max(1, n - 1)) * 2; // 1 .. -1
+            const rUnit = Math.sqrt(Math.max(0, 1 - yUnit * yUnit));
+            const phi = index * golden;
+            const shellR = 3.2 + (Math.random() - 0.5) * 0.8; // slight radial jitter
+
+            const x = Math.cos(phi) * rUnit * shellR;
+            const y = yUnit * shellR;
+            const z = Math.sin(phi) * rUnit * shellR;
+
+            // Simple cuboids for every feature; monochrome, with unsupported
+            // features shown as faint wireframe "ghost" cuboids.
+            const geometry = new THREE.BoxGeometry(0.9, 0.9, 0.3);
+            const material = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
                 transparent: true,
-                opacity: 0.5
+                opacity: feature.supported ? 0.7 : 0.12,
+                wireframe: !feature.supported
             });
-            
-            const featureCuboid = new THREE.Mesh(geometry, material);
-            featureCuboid.position.set(x, y, z);
-            
-            // Orient the cuboid perpendicular to the tangent
-            // First, rotate to face the tangent direction
-            featureCuboid.lookAt(new THREE.Vector3(x + tangentX, y, z + tangentZ));
-            
-            // Then rotate 90 degrees around the Y-axis to make it perpendicular
-            featureCuboid.rotateY(Math.PI / 2);
-            
-            // Store feature info for tooltip and text positioning
-            featureCuboid.userData = {
+
+            const organelle = new THREE.Mesh(geometry, material);
+            organelle.position.set(x, y, z);
+            // Static orientation, standing perpendicular to the sphere surface
+            // (long axis aligned with the radial direction from the center).
+            const radial = new THREE.Vector3(x, y, z).normalize();
+            organelle.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), radial);
+
+            organelle.userData = {
                 name: feature.name,
+                bip: feature.bip,
                 description: feature.description,
                 url: feature.url,
-                year: feature.year,
+                supported: feature.supported,
                 type: 'Bitcoin Protocol',
                 index: index
             };
-            
-            this.scene.add(featureCuboid);
-            
-            // Create HTML text label
-            this.createTextLabel(featureCuboid, feature.name);
+
+            this.scene.add(organelle);
+            this.featureCuboids.push(organelle);
+            this.createTextLabel(organelle, feature.name, feature.supported);
         });
     }
     
     createBlockchainHelix() {
-        // Create a helix inside the sphere representing the blockchain
+        // Create a helix inside the sphere representing the blockchain.
+        // Laid down along the X axis (horizontal) rather than standing vertical.
         const points = [];
         const segments = 250; // More segments for longer helix
         const radius = 0.5; // Even smaller radius for more compression
-        const height = 5; // Taller for longer helix
-        
+        const length = 5; // Length of the chain along its (horizontal) axis
+
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
             const angle = t * Math.PI * 10; // 5 full rotations for more compression
-            const x = Math.cos(angle) * radius;
-            const y = (t - 0.5) * height;
+            const x = (t - 0.5) * length;   // long axis is now horizontal (X)
+            const y = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
             points.push(new THREE.Vector3(x, y, z));
         }
+
+        // Tip = latest block (t = 1) at the +X end; used to anchor the mempool spiral.
+        this.blockchainTipX = length / 2;
         
         // Create a path from the points
         const path = new THREE.CatmullRomCurve3(points);
@@ -1076,17 +1215,22 @@ class BitcoinNodeExplorer {
     }
     
     createMempoolSpiral() {
-        // Create a flat white spiral next to the sphere representing the mempool
+        // Create a flat white spiral positioned just past the blockchain tip,
+        // representing the mempool feeding the next block.
         const spiralGeometry = new THREE.BufferGeometry();
         const points = [];
         const segments = 120; // More segments for longer spiral
         const radius = 0.8;
-        
+
+        // Sit just beyond the latest-block tip of the (horizontal) blockchain.
+        const tipX = (this.blockchainTipX != null) ? this.blockchainTipX : 2.5;
+        const offsetX = tipX + radius + 0.8;
+
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
             const angle = t * Math.PI * 4; // 2 full rotations for longer spiral
             const currentRadius = radius * (1 - t * 0.6); // Slower radius decrease
-            const x = Math.cos(angle) * currentRadius + 3; // Offset to the right
+            const x = Math.cos(angle) * currentRadius + offsetX; // anchored to the tip
             const y = 0; // Keep it flat (no height variation)
             const z = Math.sin(angle) * currentRadius;
             points.push(new THREE.Vector3(x, y, z));
@@ -1115,41 +1259,175 @@ class BitcoinNodeExplorer {
         this.scene.add(spiral);
     }
     
-    createNetworkConnections() {
-        // Create 9 network connection lines radiating from the sphere surface
-        const lineMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x666666,
-            transparent: true,
-            opacity: 0.4
+    /**
+     * Render the node in the context of the surrounding network — a closeup crop
+     * of the wider graph. Bright connections radiate to peer nodes that fade to
+     * dark (reading as distance), peers interconnect, and a few links continue
+     * further out into the faint background.
+     */
+    /** Remove any previously drawn network-context meshes (lines + peer nodes). */
+    clearNetworkConnections() {
+        if (!this.networkMeshes) { this.networkMeshes = []; return; }
+        this.networkMeshes.forEach((m) => {
+            this.scene.remove(m);
+            if (m.geometry) m.geometry.dispose();
+            if (m.material) m.material.dispose();
         });
-        
-        for (let i = 0; i < 9; i++) {
-            const angle = (i / 9) * Math.PI * 2;
-            const sphereRadius = 6; // Updated radius of the sphere
-            const distance = 80; // 4 times longer connections (from 20 to 80)
-            
-            const points = [
-                new THREE.Vector3(
-                    Math.cos(angle) * sphereRadius, // Start from sphere surface
-                    0, // Keep lines horizontal
-                    Math.sin(angle) * sphereRadius
-                ),
-                new THREE.Vector3(
-                    Math.cos(angle) * distance,
-                    0, // Keep lines horizontal
-                    Math.sin(angle) * distance
-                )
-            ];
-            
-            // Create a path from the points
-            const path = new THREE.CatmullRomCurve3(points);
-            
-            // Create a tube geometry for thickness
-            const tubeGeometry = new THREE.TubeGeometry(path, 8, 0.08, 6, false);
-            
-            const line = new THREE.Mesh(tubeGeometry, lineMaterial);
+        this.networkMeshes = [];
+    }
+
+    createNetworkConnections() {
+        // Rebuild from scratch (a previous node's network may still be present).
+        this.clearNetworkConnections();
+
+        const sphereRadius = 6;
+        const peerCount = 20;
+
+        // Brightness as a function of distance from the node's centre: bright at
+        // the surface (light emanating from the node) fading to black in the
+        // distance. Every colour in the scene is derived from this so depth reads
+        // consistently — the farther from the node, the darker.
+        const MAX_DIST = 850;
+        const shadeForDistance = (dist) => {
+            const t = Math.max(0, 1 - dist / MAX_DIST);
+            const b = Math.pow(t, 1.5); // eased falloff for a glow-like gradient
+            return new THREE.Color(b, b, b);
+        };
+        const nearColor = shadeForDistance(sphereRadius); // bright at the surface
+
+        // Peer node size shrinks with distance to exaggerate the depth/scale.
+        const sizeForDistance = (dist) => Math.max(0.4, 1.2 - dist / 500);
+
+        // A line whose colour fades between its two endpoints. Against the black
+        // background, fading toward dark grey reads as "receding into the distance".
+        const addFadingLine = (a, colorA, b, colorB, opacity) => {
+            const geom = new THREE.BufferGeometry().setFromPoints([a, b]);
+            geom.setAttribute('color', new THREE.BufferAttribute(new Float32Array([
+                colorA.r, colorA.g, colorA.b,
+                colorB.r, colorB.g, colorB.b
+            ]), 3));
+            const mat = new THREE.LineBasicMaterial({
+                vertexColors: true, transparent: true, opacity: opacity
+            });
+            const line = new THREE.Line(geom, mat);
             this.scene.add(line);
+            this.networkMeshes.push(line);
+            return line;
+        };
+
+        const addPeerNode = (pos, color, size) => {
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(size, 12, 12),
+                new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.9 })
+            );
+            mesh.position.copy(pos);
+            this.scene.add(mesh);
+            this.networkMeshes.push(mesh);
+            return mesh;
+        };
+
+        const peers = [];
+
+        // 1) Primary connections: node -> a ring of peers pushed well out, so the
+        //    surrounding network feels vast. Bright gradient = light emanating.
+        for (let i = 0; i < peerCount; i++) {
+            const angle = (i / peerCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+            const elevation = (Math.random() - 0.5) * Math.PI * 0.55;
+            const distance = 150 + Math.random() * 210; // 150–360
+
+            const dir = new THREE.Vector3(
+                Math.cos(angle) * Math.cos(elevation),
+                Math.sin(elevation),
+                Math.sin(angle) * Math.cos(elevation)
+            );
+
+            const start = dir.clone().multiplyScalar(sphereRadius);
+            const end = dir.clone().multiplyScalar(distance);
+
+            // Gradient darkens with distance → the node appears to emanate light.
+            const farColor = shadeForDistance(distance);
+
+            addFadingLine(start, nearColor, end, farColor, 0.5);
+            addPeerNode(end, farColor, sizeForDistance(distance));
+            peers.push({ pos: end, color: farColor, dir: dir });
         }
+
+        // 2) Connections between peers — a denser faint mesh. Each peer links to
+        //    its 2 nearest neighbours plus 1–2 random peers (deduped).
+        const linkKey = (a, b) => (a < b ? `${a}-${b}` : `${b}-${a}`);
+        const linked = new Set();
+        for (let i = 0; i < peers.length; i++) {
+            const others = peers
+                .map((p, j) => ({ j, d: peers[i].pos.distanceTo(p.pos) }))
+                .filter((o) => o.j !== i)
+                .sort((a, b) => a.d - b.d);
+            if (!others.length) continue;
+
+            const targets = others.slice(0, 2); // 2 nearest
+            const extra = 1 + Math.floor(Math.random() * 2); // + 1–2 random
+            for (let k = 0; k < extra; k++) {
+                targets.push(others[Math.floor(Math.random() * others.length)]);
+            }
+            targets.forEach((t) => {
+                const key = linkKey(i, t.j);
+                if (linked.has(key)) return;
+                linked.add(key);
+                addFadingLine(peers[i].pos, peers[i].color, peers[t.j].pos, peers[t.j].color, 0.12);
+            });
+        }
+
+        // 3) Second tier: each peer spawns 1–3 children further out, extending the
+        //    network into the distance.
+        const tier2 = [];
+        peers.forEach((p) => {
+            const kids = 1 + Math.floor(Math.random() * 3);
+            for (let k = 0; k < kids; k++) {
+                const jitter = new THREE.Vector3(
+                    (Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)
+                ).multiplyScalar(0.85);
+                const outDir = p.dir.clone().add(jitter).normalize();
+                const childPos = p.pos.clone().add(outDir.multiplyScalar(90 + Math.random() * 170));
+                const childColor = shadeForDistance(childPos.length());
+                addFadingLine(p.pos, p.color, childPos, childColor, 0.16);
+                addPeerNode(childPos, childColor, sizeForDistance(childPos.length()));
+                tier2.push({ pos: childPos, color: childColor });
+            }
+        });
+
+        // 4) Deep background field — a faint dome of distant nodes filling the
+        //    volume, so the node sits inside a vast network receding into black.
+        const golden = Math.PI * (3 - Math.sqrt(5));
+        const fieldCount = 46;
+        const field = [];
+        for (let i = 0; i < fieldCount; i++) {
+            const yUnit = 1 - (i / (fieldCount - 1)) * 2;
+            const rUnit = Math.sqrt(Math.max(0, 1 - yUnit * yUnit));
+            const phi = i * golden;
+            const R = 380 + Math.random() * 320; // 380–700
+            const pos = new THREE.Vector3(
+                Math.cos(phi) * rUnit * R,
+                yUnit * R,
+                Math.sin(phi) * rUnit * R
+            );
+            const color = shadeForDistance(pos.length());
+            addPeerNode(pos, color, sizeForDistance(pos.length()));
+            field.push({ pos: pos, color: color });
+        }
+
+        // Sparse links within the field and from tier-2 into it, tying the far
+        // network together as a dim web.
+        for (let i = 0; i < field.length; i++) {
+            if (Math.random() < 0.5) {
+                const j = Math.floor(Math.random() * field.length);
+                if (j !== i) addFadingLine(field[i].pos, field[i].color, field[j].pos, field[j].color, 0.06);
+            }
+        }
+        tier2.forEach((t) => {
+            if (Math.random() < 0.5 && field.length) {
+                const f = field[Math.floor(Math.random() * field.length)];
+                addFadingLine(t.pos, t.color, f.pos, f.color, 0.06);
+            }
+        });
     }
 
     async fetchData() {
@@ -1158,14 +1436,8 @@ class BitcoinNodeExplorer {
         try {
             this.updateLoadingProgress('Fetching node information...', 30);
             const path = `/v1/nodes/${encodeURIComponent(this.apiNodeAddress)}/`;
-            const response = await fetch(this.apiUrl(path));
-            
-            if (response.status === 429) {
-                this.hideLoadingModal();
-                this.showRateLimitError('BTC Nodes API');
-                return;
-            }
-            
+            const response = await this._fetchRetry(this.apiUrl(path));
+
             if (!response.ok) {
                 if (response.status === 404) {
                     console.error('Node not found or not activated:', this.apiNodeAddress);
@@ -1187,8 +1459,9 @@ class BitcoinNodeExplorer {
             }
             
             this.updateLoadingProgress('Creating visualization...', 90);
+            this.updateDataSourceDisclaimer(false); // live data OK — clear any archive/error flags
             this.updateUI();
-            
+
             this.updateLoadingProgress('Complete!', 100);
             setTimeout(() => {
                 this.hideLoadingModal();
@@ -1196,10 +1469,84 @@ class BitcoinNodeExplorer {
         } catch (error) {
             this.hideLoadingModal();
             console.error('Error fetching node data:', error);
-            this.showGenericError('Node data');
+            this.updateDataSourceDisclaimer(false, 'live API unavailable');
+            // Always ask before falling back to the local archive
+            this.showNoNodesError({
+                busy: !!(error && error.retriable),
+                onRetry: () => this.fetchData(),
+                onArchive: () => this.loadLocalArchive()
+            });
         }
     }
-    
+
+    updateDataSourceDisclaimer(usingArchive, errorMsg) {
+        const el = document.getElementById('disclaimer-archive');
+        if (el) {
+            if (usingArchive) el.removeAttribute('hidden');
+            else el.setAttribute('hidden', '');
+        }
+        const errEl = document.getElementById('disclaimer-error');
+        if (errEl) {
+            if (errorMsg) {
+                errEl.textContent = ` · ${errorMsg}`;
+                errEl.removeAttribute('hidden');
+            } else {
+                errEl.setAttribute('hidden', '');
+            }
+        }
+    }
+
+    /**
+     * Fallback: load a node from the bundled local snapshot archive. Prefers the
+     * requested address if present; otherwise picks a random archive node.
+     */
+    async loadLocalArchive() {
+        const ARCHIVE_PATH = 'js/bitnodes-snapshot-1772712282.json';
+        this.showLoadingModal('Loading archive snapshot...');
+        try {
+            this.updateLoadingProgress('Loading archive snapshot...', 20);
+            const response = await fetch(ARCHIVE_PATH);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+
+            const nodes = (data && data.nodes) || {};
+            const keys = Object.keys(nodes).filter((k) => k && !k.includes('.onion'));
+            if (keys.length === 0) throw new Error('No nodes in archive');
+
+            // Prefer the requested node; otherwise a random one.
+            let key = null;
+            if (this.apiNodeAddress) {
+                key = keys.find((k) => this.formatNodeAddress(k) === this.apiNodeAddress) || null;
+            }
+            if (!key && this.nodeAddress) key = keys.find((k) => k === this.nodeAddress) || null;
+            if (!key) key = keys[Math.floor(Math.random() * keys.length)];
+
+            const arr = nodes[key];
+            this.nodeAddress = key;
+            this.apiNodeAddress = this.formatNodeAddress(key);
+            this.nodeData = {
+                found: true,
+                status: 'UP',
+                address: key,
+                hostname: arr[5],
+                data: arr,
+                node: { rank: 0, service_flags: [] },
+                rtt: 0,
+                _archive: true
+            };
+
+            this.updateLoadingProgress('Creating visualization...', 80);
+            this.updateDataSourceDisclaimer(true);
+            this.updateUI();
+            this.updateLoadingProgress('Complete!', 100);
+            setTimeout(() => this.hideLoadingModal(), 400);
+        } catch (error) {
+            console.error('Failed to load node archive:', error);
+            this.hideLoadingModal();
+            this.showGenericError('local archive data');
+        }
+    }
+
     showRateLimitError(apiName) {
         this.showPopupMessage(
             'Rate Limit Exceeded',
@@ -1392,7 +1739,7 @@ class BitcoinNodeExplorer {
                     }
                 </div>
                 <div class="popup-footer">
-                    <a href="network.html" style="color: #4CAF50; text-decoration: none; margin-right: 10px;">← Back to Network</a>
+                    <a href="network.html" style="color: #ffffff; text-decoration: none; margin-right: 10px;">← Back to Network</a>
                     <button class="popup-dismiss">Dismiss</button>
                 </div>
             </div>
@@ -1521,23 +1868,24 @@ class BitcoinNodeExplorer {
         if (!this.nodeData || this.nodeData.detail) {
             // Set all fields to error state
             const fields = [
-                'node-address', 'node-status-display', 'node-version', 'node-user-agent',
-                'node-height', 'node-latest-height', 'node-hostname', 'node-city',
-                'node-country', 'node-coordinates', 'node-timezone', 'node-asn',
-                'node-org', 'node-uptime', 'bandwidth'
+                'node-address', 'node-status-display', 'node-rank', 'node-version',
+                'node-user-agent', 'node-height', 'node-latency', 'node-services',
+                'node-hostname', 'node-city', 'node-country', 'node-coordinates',
+                'node-timezone', 'node-asn', 'node-org', 'node-uptime'
             ];
             fields.forEach(field => {
                 const element = document.getElementById(field);
                 if (element) element.textContent = 'Not Available';
             });
-            
+
             // Update subtitle for error state
             const subtitle = `${this.nodeAddress || 'Unknown'} • Not Found`;
             document.getElementById('node-subtitle').textContent = subtitle;
-            
+
+            this.clearNetworkConnections();
             return;
         }
-        
+
         // BTC Nodes status `data`: version, userAgent, connectedSince, services, height,
         // hostname, city, country, lat, lng, timezone, asn, org
         const [
@@ -1568,12 +1916,21 @@ class BitcoinNodeExplorer {
             ? (this.nodeAddress || this.nodeData.address)
             : (this.nodeAddress || 'N/A');
 
+        // Rank and latency come from the node sub-object / top-level rtt
+        const rank = this.nodeData.node && this.nodeData.node.rank;
+        const rtt = this.nodeData.rtt;
+        const rankText = (rank && rank > 0) ? `#${rank}` : 'N/A';
+        const latencyText = (rtt && rtt > 0) ? `${Math.round(rtt)} ms` : 'N/A';
+        const servicesText = this.decodeServices(services) || 'N/A';
+
         updateField('node-address', displayAddress);
         updateField('node-status-display', this.nodeData.status || (this.nodeData.found ? 'UP' : 'DOWN'));
+        updateField('node-rank', rankText);
         updateField('node-version', version);
         updateField('node-user-agent', userAgent);
         updateField('node-height', height);
-        updateField('node-latest-height', height);
+        updateField('node-latency', latencyText);
+        updateField('node-services', servicesText);
         updateField('node-hostname', hostname || this.nodeData.hostname);
         updateField('node-city', city);
         updateField('node-country', country);
@@ -1582,10 +1939,53 @@ class BitcoinNodeExplorer {
         updateField('node-asn', asn);
         updateField('node-org', org);
         updateField('node-uptime', uptimeText);
-        updateField('bandwidth', this.nodeData.mbps ? `${this.nodeData.mbps} Mbps` : 'N/A');
 
         const status = this.nodeData.status || (this.nodeData.found ? 'UP' : 'DOWN');
-        document.getElementById('node-subtitle').textContent = `${displayAddress} • ${status}`;
+        const uaPrefix = userAgent ? `${userAgent} • ` : '';
+        const archivePrefix = this.nodeData._archive ? 'ARCHIVE · ' : '';
+        document.getElementById('node-subtitle').textContent = `${archivePrefix}${uaPrefix}${displayAddress} • ${status}`;
+
+        // Rebuild the 3D feature ring from this node's real capabilities
+        this.renderNodeFeatures(version, services, userAgent);
+
+        // Only an UP node participates in the network — hide connections if down
+        if (String(status).toUpperCase() === 'UP') {
+            this.createNetworkConnections();
+        } else {
+            this.clearNetworkConnections();
+        }
+    }
+
+    /**
+     * Human-readable P2P service flags. Prefers the API's decoded
+     * `node.service_flags` (with labels); falls back to decoding the raw
+     * `services` bitfield from the status `data` array.
+     */
+    decodeServices(services) {
+        // Prefer the API-provided labelled flags when available
+        const flags = this.nodeData && this.nodeData.node && this.nodeData.node.service_flags;
+        if (Array.isArray(flags) && flags.length) {
+            const labels = flags
+                .map((f) => f && (f.label || f.name))
+                .filter(Boolean);
+            if (labels.length) return labels.join(', ');
+        }
+
+        // Fallback: decode the raw bitfield
+        const bits = Number(services) || 0;
+        if (!bits) return '';
+        const MAP = [
+            [1, 'NETWORK'],
+            [2, 'GETUTXO'],
+            [4, 'BLOOM'],
+            [8, 'WITNESS'],
+            [16, 'XTHIN'],
+            [64, 'COMPACT_FILTERS'],
+            [1024, 'NETWORK_LIMITED'],
+            [2048, 'P2P_V2']
+        ];
+        const labels = MAP.filter(([bit]) => (bits & bit) === bit).map(([, name]) => name);
+        return labels.join(', ');
     }
 
     animate() {
@@ -1593,22 +1993,19 @@ class BitcoinNodeExplorer {
         if (this.isRotating) {
             this.scene.rotation.y += 0.001;
         }
-        
+
         // Update text label positions
         this.updateTextLabels();
 
         this.vrManager && this.vrManager.update();
         this.renderer.render(this.scene, this.camera);
     }
-    
+
     updateTextLabels() {
         if (this._disposed || !this.scene) return;
-        // Get all feature cuboids (excluding the main node)
-        const featureCuboids = this.scene.children.filter(child => 
-            child.geometry && child.geometry.type === 'BoxGeometry' && 
-            child.geometry.parameters.width === 0.9
-        );
-        
+        // Position labels over the BIP organelles tracked in featureCuboids
+        const featureCuboids = this.featureCuboids || [];
+
         featureCuboids.forEach(cuboid => {
             if (cuboid.userData.label) {
                 const label = cuboid.userData.label;
@@ -1628,8 +2025,8 @@ class BitcoinNodeExplorer {
                 const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
                 const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
                 
-                // Check if cuboid is in front of camera
-                if (vector.z < 1) {
+                // Show labels only when "Details" is on and the cuboid faces the camera
+                if (this.showDetails && vector.z < 1) {
                     label.style.display = 'block';
                     label.style.left = x + 'px';
                     label.style.top = (y - 20) + 'px'; // Position above cuboid

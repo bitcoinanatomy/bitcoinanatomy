@@ -139,13 +139,17 @@
         if (shell && shell.renderer && typeof VRButton !== 'undefined' && VRButton.reattach) {
             VRButton.reattach(shell.renderer);
         }
-        // Hamburger (rebind after nav stays; menu itself is outside #ui)
+        // Hamburger. The .navbar persists across soft-nav (only #ui is swapped),
+        // so the page's inline listener stays bound. Clone the node to strip any
+        // existing listeners (inline + prior rebinds) and bind exactly once —
+        // otherwise stacked listeners toggle .active twice and the menu "dies".
         var hamburger = document.querySelector('.hamburger');
         var navMenu = document.querySelector('.nav-menu');
-        if (hamburger && navMenu && !hamburger.dataset.softNavBound) {
-            hamburger.dataset.softNavBound = '1';
-            hamburger.addEventListener('click', function () {
-                hamburger.classList.toggle('active');
+        if (hamburger && navMenu && hamburger.parentNode) {
+            var fresh = hamburger.cloneNode(true);
+            hamburger.parentNode.replaceChild(fresh, hamburger);
+            fresh.addEventListener('click', function () {
+                fresh.classList.toggle('active');
                 navMenu.classList.toggle('active');
             });
         }

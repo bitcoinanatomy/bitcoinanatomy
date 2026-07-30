@@ -51,10 +51,12 @@
                     <div id="node-info" class="panel-content">
                         <div>Address: <span id="node-address">Loading...</span></div>
                         <div>Status: <span id="node-status-display">Loading...</span></div>
-                        <div>Version: <span id="node-version">Loading...</span></div>
+                        <div>Rank: <span id="node-rank">Loading...</span></div>
+                        <div>Protocol: <span id="node-version">Loading...</span></div>
                         <div>User Agent: <span id="node-user-agent">Loading...</span></div>
                         <div>Height: <span id="node-height">Loading...</span></div>
-                        <div>Latest Height: <span id="node-latest-height">Loading...</span></div>
+                        <div>Latency: <span id="node-latency">Loading...</span></div>
+                        <div>Services: <span id="node-services">Loading...</span></div>
                         <div>Hostname: <span id="node-hostname">Loading...</span></div>
                         <div>City: <span id="node-city">Loading...</span></div>
                         <div>Country: <span id="node-country">Loading...</span></div>
@@ -63,7 +65,6 @@
                         <div>ASN: <span id="node-asn">Loading...</span></div>
                         <div>Organization: <span id="node-org">Loading...</span></div>
                         <div>Uptime: <span id="node-uptime">Loading...</span></div>
-                        <div>Bandwidth: <span id="bandwidth">Loading...</span></div>
                     </div>
                 </div>
             </div>
@@ -82,7 +83,7 @@
     </div>
     
     <div class="disclaimer">
-        Data sources: <a class="disclaimer-link" href="https://btcnodes.io/api/" target="_blank" rel="noopener">BTC Nodes API</a>
+        Data sources: <a class="disclaimer-link" href="https://btcnodes.io/api/" target="_blank" rel="noopener">BTC Nodes API</a><span id="disclaimer-error" class="disclaimer-error" hidden> · unavailable</span><span id="disclaimer-archive" class="disclaimer-archive" hidden> · local bitnode.io archive fallback</span>
     </div>
 
     <!-- Three.js + WebXR addons via importmap -->

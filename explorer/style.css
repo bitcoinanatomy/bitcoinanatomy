@@ -1424,7 +1424,11 @@ button:active {
 }
 
 .disclaimer .disclaimer-archive {
-    color: #555;
+    color: #e0b000; /* yellow — local archive fallback is active */
+}
+
+.disclaimer .disclaimer-error {
+    color: #e06666; /* red — live API is unavailable */
 }
 
 /* ================================
