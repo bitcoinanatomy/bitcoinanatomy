@@ -1,0 +1,5 @@
+# Same-origin proxy for the BTC Nodes API (Netlify).
+# Kept here as well as the repo-root _redirects so deploys that publish
+# only the explorer/ folder still get the proxy rewrite.
+# Status 200 = rewrite (proxy), not a redirect. Query strings pass through.
+/api/btcnodes/*  https://btcnodes.io/api/:splat  200

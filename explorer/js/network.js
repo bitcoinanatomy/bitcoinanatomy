@@ -72,14 +72,21 @@ class BitcoinNetworkExplorer {
         this.vrManager = null;
 
         // Cache configuration (btcnodes.io via same-origin proxy)
+        // v2: invalidate pre-fix caches that only held ~6k rate-limited geo pages
         this.API_BASE = '/api/btcnodes';
-        this.CACHE_KEY = 'btcnodes_data_cache';
-        this.CACHE_TIMESTAMP_KEY = 'btcnodes_cache_timestamp';
+        this.CACHE_KEY = 'btcnodes_data_cache_v2';
+        this.CACHE_TIMESTAMP_KEY = 'btcnodes_cache_timestamp_v2';
         this.CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 hour in milliseconds
         this.NODES_PAGE_LIMIT = 1000;
         this._btcnodesNextPage = null;
         this._btcnodesListExhausted = false;
         this._loadingMoreNodes = false;
+
+        // Drop legacy incomplete caches (v1 stopped at ~6k when the geo API rate-limited)
+        try {
+            localStorage.removeItem('btcnodes_data_cache');
+            localStorage.removeItem('btcnodes_cache_timestamp');
+        } catch (_) { /* ignore */ }
         
         // Mobile optimization flags
         this.isMobile = this.detectMobile();
