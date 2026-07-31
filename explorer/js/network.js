@@ -1359,6 +1359,7 @@ class BitcoinNetworkExplorer {
         // Clear existing nodes and connections
         this.nodes.forEach(node => this.scene.remove(node));
         this.nodes = [];
+        this._nodeMeshByAddr = null;
         this.clearConnections();
         this.showConnections = false;
         const connBtn = document.getElementById('toggle-connections');
@@ -1857,6 +1858,22 @@ class BitcoinNetworkExplorer {
             this.updateLoadingProgress('Creating visualization...', 80);
             this.createNetworkVisualization();
             this.updateDataSourceDisclaimer(false);
+
+            // If the cache predates geo enrichment, keep filling clearnet locations
+            const sample = Object.values(this.nodeData.nodes);
+            let withGeo = 0;
+            for (let i = 0; i < sample.length; i++) {
+                const info = sample[i];
+                if (info && info[8] != null && info[9] != null && info[8] !== 0.0 && info[9] !== 0.0) withGeo += 1;
+            }
+            if (withGeo < sample.length * 0.25) {
+                this._btcnodesListExhausted = false;
+                this._btcnodesNextPage = 1;
+            } else {
+                // Cache already has clearnet coords — don't re-paginate on every load
+                this._btcnodesListExhausted = true;
+                this._btcnodesNextPage = null;
+            }
             
             // Still fetch snapshots list for navigation (lightweight call)
             this.fetchSnapshotsList();
@@ -1896,12 +1913,33 @@ class BitcoinNetworkExplorer {
                 this.currentSnapshotIndex = 0;
                 this.latestSnapshot = this.snapshotsData.results[0];
                 
-                // Snapshot export = complete node set (~1s). Show everyone immediately;
-                // geo enrichment (rate-limited) runs in the background and repositions nodes.
-                this.updateLoadingProgress('Loading snapshot export...', 40);
-                let nodeData = await this.fetchSnapshotByUrl(this.latestSnapshot.url);
+                // Snapshot (all nodes) + first geo pages (clearnet coords) in parallel so
+                // clearnet land on the globe at first paint — snapshot rows have no lat/lon.
+                this.updateLoadingProgress('Loading nodes + locations...', 40);
+                const snapPromise = this.fetchSnapshotByUrl(this.latestSnapshot.url);
+                const geoBootstrapPromise = this.fetchLatestNodesSnapshot(
+                    (msg, pct) => this.updateLoadingProgress(msg, Math.min(70, pct)),
+                    { maxPages: 5, pageDelayMs: 80 }
+                ).catch((geoErr) => {
+                    console.warn('Location bootstrap skipped; clearnet will fill in shortly', geoErr);
+                    return null;
+                });
+
+                const [nodeData, bootstrap] = await Promise.all([snapPromise, geoBootstrapPromise]);
                 if (!nodeData || !nodeData.nodes) {
                     throw new Error('No node data in BTC Nodes response');
+                }
+
+                if (bootstrap && bootstrap.nodes) {
+                    let n = 0;
+                    for (const [addr, info] of Object.entries(bootstrap.nodes)) {
+                        nodeData.nodes[addr] = info;
+                        n += 1;
+                    }
+                    if (bootstrap.latest_height) {
+                        nodeData.latest_height = bootstrap.latest_height;
+                    }
+                    console.log(`✅ Bootstrapped locations for ${n.toLocaleString()} nodes`);
                 }
 
                 this.nodeData = nodeData;
@@ -1947,57 +1985,33 @@ class BitcoinNetworkExplorer {
     }
 
     /**
-     * Pull /v1/nodes/ pages for lat/lon and move already-rendered meshes onto the globe.
-     * Safe to call after createNetworkVisualization(); ignores failures (rate limits).
+     * Pull remaining /v1/nodes/ pages for lat/lon and move meshes onto the globe
+     * as each page arrives (so clearnet fills in progressively, not all at once).
      */
     async enrichNodeLocationsInBackground() {
         if (this._enrichingLocations || this._disposed) return;
+        if (this._btcnodesListExhausted) return;
         this._enrichingLocations = true;
         try {
-            const geo = await this.fetchLatestNodesSnapshot(null);
-            if (this._disposed || !geo || !geo.nodes || !this.nodeData || !this.nodeData.nodes) return;
-
-            let enriched = 0;
-            for (const [addr, info] of Object.entries(geo.nodes)) {
-                this.nodeData.nodes[addr] = info;
-                enriched += 1;
+            const startPage = this._btcnodesNextPage || 1;
+            const geo = await this.fetchLatestNodesSnapshot(null, {
+                startPage,
+                onPage: (pageNodes) => {
+                    if (this._disposed || !pageNodes) return;
+                    for (const [addr, info] of Object.entries(pageNodes)) {
+                        if (this.nodeData && this.nodeData.nodes) {
+                            this.nodeData.nodes[addr] = info;
+                        }
+                    }
+                    this.repositionMeshesFromGeo(pageNodes);
+                }
+            });
+            if (this._disposed) return;
+            if (geo && geo.latest_height && this.nodeData) {
+                this.nodeData.latest_height = geo.latest_height;
             }
-            if (geo.latest_height) this.nodeData.latest_height = geo.latest_height;
-            console.log(`✅ Geo-enriched ${enriched.toLocaleString()} nodes in background`);
-
-            const byAddr = new Map();
-            for (let i = 0; i < this.nodes.length; i++) {
-                const n = this.nodes[i];
-                if (n.userData && n.userData.address) byAddr.set(n.userData.address, n);
-            }
-
-            let moved = 0;
-            for (const [addr, info] of Object.entries(geo.nodes)) {
-                const mesh = byAddr.get(addr);
-                if (!mesh) continue;
-                const lat = info[8];
-                const lng = info[9];
-                if (lat == null || lng == null || isNaN(lat) || isNaN(lng) || lat === 0.0 || lng === 0.0) continue;
-
-                const radius = 33.1;
-                const phi = (90 - lat) * (Math.PI / 180);
-                const theta = (-lng + 180) * (Math.PI / 180);
-                mesh.position.set(
-                    radius * Math.sin(phi) * Math.cos(theta),
-                    radius * Math.cos(phi),
-                    radius * Math.sin(phi) * Math.sin(theta)
-                );
-                mesh.userData.lat = lat;
-                mesh.userData.lng = lng;
-                mesh.userData.hasLocation = true;
-                mesh.userData.city = info[6];
-                mesh.userData.country = info[7];
-                mesh.userData.asn = info[11];
-                mesh.userData.org = info[12];
-                moved += 1;
-            }
-            console.log(`📍 Repositioned ${moved.toLocaleString()} nodes onto the globe`);
-
+            const moved = geo && geo.nodes ? Object.keys(geo.nodes).length : 0;
+            console.log(`✅ Background location enrichment done (+${moved.toLocaleString()} rows)`);
             this.setCachedData(this.nodeData);
             this.updateUI();
         } catch (err) {
@@ -2005,6 +2019,49 @@ class BitcoinNetworkExplorer {
         } finally {
             this._enrichingLocations = false;
         }
+    }
+
+    /** Move already-rendered meshes onto the globe using geo-enriched node rows. */
+    repositionMeshesFromGeo(geoNodes) {
+        if (!geoNodes || !this.nodes || !this.nodes.length) return 0;
+        const byAddr = this._nodeMeshByAddr || null;
+        // Rebuild index if missing or stale
+        if (!byAddr || byAddr.size !== this.nodes.length) {
+            this._nodeMeshByAddr = new Map();
+            for (let i = 0; i < this.nodes.length; i++) {
+                const n = this.nodes[i];
+                if (n.userData && n.userData.address) {
+                    this._nodeMeshByAddr.set(n.userData.address, n);
+                }
+            }
+        }
+        let moved = 0;
+        for (const [addr, info] of Object.entries(geoNodes)) {
+            const mesh = this._nodeMeshByAddr.get(addr);
+            if (!mesh || !Array.isArray(info)) continue;
+            const lat = info[8];
+            const lng = info[9];
+            if (lat == null || lng == null || isNaN(lat) || isNaN(lng) || lat === 0.0 || lng === 0.0) continue;
+            if (mesh.userData.hasLocation && mesh.userData.lat === lat && mesh.userData.lng === lng) continue;
+
+            const radius = 33.1;
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (-lng + 180) * (Math.PI / 180);
+            mesh.position.set(
+                radius * Math.sin(phi) * Math.cos(theta),
+                radius * Math.cos(phi),
+                radius * Math.sin(phi) * Math.sin(theta)
+            );
+            mesh.userData.lat = lat;
+            mesh.userData.lng = lng;
+            mesh.userData.hasLocation = true;
+            mesh.userData.city = info[6];
+            mesh.userData.country = info[7];
+            mesh.userData.asn = info[11];
+            mesh.userData.org = info[12];
+            moved += 1;
+        }
+        return moved;
     }
 
     /** Resolve a BTC Nodes API path or absolute/relative URL through the same-origin proxy. */
@@ -2126,25 +2183,26 @@ class BitcoinNetworkExplorer {
     }
 
     /**
-     * Build a geo-enriched snapshot from the paginated /v1/nodes/ list.
-     * Desktop fetches every page until exhausted; mobile stops at maxNodes.
-     * Retries on 429 with backoff — the API rate-limits aggressive pagination.
-     * Returns null if the endpoint is unavailable (caller should use raw snapshot).
+     * Build a geo-enriched node map from the paginated /v1/nodes/ list.
+     * Desktop fetches until exhausted (or maxPages); mobile stops at maxNodes.
+     * options: { maxPages, startPage, onPage(pageNodes) }
      */
-    async fetchLatestNodesSnapshot(onProgress) {
+    async fetchLatestNodesSnapshot(onProgress, options) {
+        options = options || {};
         const nodes = {};
-        let page = 1;
+        let page = Math.max(1, options.startPage || 1);
         let total = null;
         let latestHeight = 0;
-        // Mobile keeps the performance cap; desktop loads the full reachable set.
+        const pagesBudget = typeof options.maxPages === 'number'
+            ? options.maxPages
+            : (this.isMobile ? Math.ceil((this.maxNodes || 1000) / this.NODES_PAGE_LIMIT) + 1 : 100);
         const targetCount = this.isMobile ? (this.maxNodes || 1000) : Number.POSITIVE_INFINITY;
-        const maxPages = this.isMobile
-            ? Math.ceil(targetCount / this.NODES_PAGE_LIMIT) + 1
-            : 100; // safety: 100 × 1000 ≫ current network size
+        const endPage = page + pagesBudget - 1;
+        const onPage = typeof options.onPage === 'function' ? options.onPage : null;
 
         const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-        while (page <= maxPages && Object.keys(nodes).length < targetCount) {
+        while (page <= endPage && Object.keys(nodes).length < targetCount) {
             const url = this.apiUrl(`/v1/nodes/?page=${page}&limit=${this.NODES_PAGE_LIMIT}`);
             if (onProgress) {
                 const loaded = Object.keys(nodes).length;
@@ -2161,9 +2219,6 @@ class BitcoinNetworkExplorer {
 
             let response = null;
             let rateLimited = false;
-            // A couple of short retries — if the budget is spent, caller merges the
-            // raw snapshot so we still render the full network instead of waiting
-            // half a minute on exponential backoff.
             for (let attempt = 0; attempt < 2; attempt++) {
                 response = await fetch(url);
                 if (response.status !== 429 && response.status !== 503) break;
@@ -2204,12 +2259,17 @@ class BitcoinNetworkExplorer {
             if (!data.results || !Array.isArray(data.results)) return null;
             if (typeof data.count === 'number') total = data.count;
 
+            const pageNodes = {};
             for (const row of data.results) {
                 if (Object.keys(nodes).length >= targetCount) break;
                 const mapped = this.nodeRowFromListItem(row);
                 if (!mapped) continue;
                 nodes[mapped.key] = mapped.info;
+                pageNodes[mapped.key] = mapped.info;
                 if (mapped.info[4] > latestHeight) latestHeight = mapped.info[4];
+            }
+            if (onPage && Object.keys(pageNodes).length) {
+                try { onPage(pageNodes); } catch (e) { console.warn('onPage handler error', e); }
             }
 
             if (!data.next || data.results.length === 0) {
@@ -2221,16 +2281,17 @@ class BitcoinNetworkExplorer {
             this._btcnodesNextPage = page;
             this._btcnodesListExhausted = false;
 
-            // Desktop: stop once we have the reported total
             if (!this.isMobile && total != null && Object.keys(nodes).length >= total) {
                 this._btcnodesListExhausted = true;
                 this._btcnodesNextPage = null;
                 break;
             }
 
-            // Small pause between pages to stay under the API rate budget
-            // (aggressive back-to-back 1MB pages trip 429 around page 6–7).
-            if (!rateLimited) await sleep(350);
+            // Hit maxPages budget (bootstrap) — leave next page set for background continue
+            if (page > endPage) break;
+
+            const delay = typeof options.pageDelayMs === 'number' ? options.pageDelayMs : 350;
+            if (!rateLimited && delay > 0) await sleep(delay);
         }
 
         const count = Object.keys(nodes).length;
