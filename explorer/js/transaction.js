@@ -22,7 +22,15 @@ class BitcoinTransactionExplorer {
         this.orthographicZoom = 20; // Store orthographic zoom level
         this.transactionData = null;
         this.txid = null;
-        
+
+        // Parent-transaction tracing ("Trace Inputs")
+        this.parentMeshes = [];      // flat-added parent geometry, tracked for cleanup
+        this.parentsLoaded = false;  // whether parents are currently shown
+        this._tracing = false;       // guard against re-entrant clicks during load
+        this.traceNodes = [];        // all traced nodes across levels {tx, level, centerY, links, blockHeight}
+        this.traceDepth = 0;         // number of input-trace levels currently loaded
+        this.parentsSpread = false;  // whether traced nodes are spread out by block age
+
         // Raw transaction data
         this.rawTxData = null;
         this.rawViewMode = 'hex'; // 'hex', 'ascii', or 'binary'
@@ -124,7 +132,7 @@ class BitcoinTransactionExplorer {
             if (this.camera.isPerspectiveCamera) {
                 this.camera.fov = 75;
                 this.camera.near = 0.1;
-                this.camera.far = 5000;
+                this.camera.far = 60000;
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.camera.updateProjectionMatrix();
             }
@@ -138,7 +146,7 @@ class BitcoinTransactionExplorer {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);
         
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 60000);
         this.updateCameraPosition();
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -235,6 +243,24 @@ class BitcoinTransactionExplorer {
         const toggleFlowButton = document.getElementById('toggle-flow');
         if (toggleFlowButton) {
             toggleFlowButton.style.display = 'none';
+        }
+
+        // Trace Inputs: load the parent transaction of each input, one level deep
+        const traceBtn = document.getElementById('trace-inputs');
+        if (traceBtn) {
+            traceBtn.addEventListener('click', () => this.toggleTraceInputs());
+        }
+
+        // Spread by Age: push older parent transactions further away by block height
+        const spreadBtn = document.getElementById('spread-parents');
+        if (spreadBtn) {
+            spreadBtn.addEventListener('click', () => this.toggleSpreadParents());
+        }
+
+        // Load Deeper: trace one more level of inputs
+        const deeperBtn = document.getElementById('trace-deeper');
+        if (deeperBtn) {
+            deeperBtn.addEventListener('click', () => this.loadDeeperTrace());
         }
         
         // Navigation controls
@@ -569,9 +595,11 @@ class BitcoinTransactionExplorer {
             const deltaY = e.clientY - lastMouseY;
 
             if (e.shiftKey) {
-                // Panning - inverted for natural feel
-                this.controls.panX -= deltaX * 0.05;
-                this.controls.panY += deltaY * 0.05;
+                // Panning - inverted for natural feel; scale proportionally with zoom distance so
+                // it's strong when far out and fine-grained when very close (baseline at ~130).
+                const panScale = 0.05 * (this.controls.distance / 130);
+                this.controls.panX -= deltaX * panScale;
+                this.controls.panY += deltaY * panScale;
             } else {
                 // Rotation - inverted for natural feel
                 this.controls.theta -= deltaX * 0.01;
@@ -614,15 +642,15 @@ class BitcoinTransactionExplorer {
             this.updateRotationButtonState();
             // Zoom in/out with inverted scroll direction
             if (this.isPerspective) {
-                // Perspective camera zoom
-                this.controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
-                this.controls.distance = Math.max(1, Math.min(1000, this.controls.distance)); // Allow much further zoom out
+                // Multiplicative (proportional) zoom: constant feel at every scale — fast when
+                // far out, fine-grained when very close. Scroll down (deltaY>0) zooms out.
+                this.controls.distance *= Math.exp(e.deltaY * 0.001);
+                this.controls.distance = Math.max(0.2, Math.min(20000, this.controls.distance));
                 this.updateCameraPosition();
             } else {
-                // Orthographic camera zoom
-                const zoomSpeed = 0.1;
-                this.orthographicZoom -= e.deltaY * zoomSpeed; // Inverted: was +=, now -=
-                this.orthographicZoom = Math.max(1, Math.min(2000, this.orthographicZoom)); // Allow much further zoom out
+                // Orthographic camera zoom (multiplicative; preserves prior direction)
+                this.orthographicZoom *= Math.exp(-e.deltaY * 0.001);
+                this.orthographicZoom = Math.max(0.5, Math.min(30000, this.orthographicZoom)); // Allow much further zoom out
                 
                 const aspect = window.innerWidth / window.innerHeight;
                 this.camera.left = -this.orthographicZoom * aspect / 2;
@@ -756,8 +784,8 @@ class BitcoinTransactionExplorer {
                 const sensitivity = 0.02;
                 
                 if (e.shiftKey || e.altKey) {
-                    // Panning
-                    const panSpeed = 0.002;
+                    // Panning - scale proportionally with zoom distance (strong far, fine when close)
+                    const panSpeed = 0.002 * (this.controls.distance / 130);
                     this.controls.panX += deltaX * panSpeed;
                     this.controls.panY -= deltaY * panSpeed;
                 } else {
@@ -781,11 +809,11 @@ class BitcoinTransactionExplorer {
                 
                 if (this.isPerspective) {
                     this.controls.distance *= zoomFactor;
-                    this.controls.distance = Math.max(1, Math.min(1000, this.controls.distance));
+                    this.controls.distance = Math.max(0.2, Math.min(20000, this.controls.distance));
                     this.updateCameraPosition();
                 } else {
                     this.orthographicZoom *= zoomFactor;
-                    this.orthographicZoom = Math.max(1, Math.min(2000, this.orthographicZoom));
+                    this.orthographicZoom = Math.max(0.5, Math.min(30000, this.orthographicZoom));
                     
                     const aspect = window.innerWidth / window.innerHeight;
                     this.camera.left = -this.orthographicZoom * aspect / 2;
@@ -1034,9 +1062,11 @@ class BitcoinTransactionExplorer {
         const titleHash = data.txid ? data.txid : 'Not Found';
         const subtitleEl = document.getElementById('tx-title-hash');
         
-        // Add "Back to Block" link if transaction is confirmed (include txid so block page highlights this transaction)
+        // Add "Block ######" link to the parent block if the transaction is confirmed
+        // (include txid so the block page highlights this transaction)
         if (data.status?.block_height && data.txid) {
-            const backToBlockLink = `<br><a href="block.html?height=${data.status.block_height}&txid=${encodeURIComponent(data.txid)}" class="back-to-block-link">Back to Block</a>`;
+            const height = data.status.block_height;
+            const backToBlockLink = `<br><a href="block.html?height=${height}&txid=${encodeURIComponent(data.txid)}" class="back-to-block-link">Block ${height.toLocaleString()}</a>`;
             subtitleEl.innerHTML = titleHash + backToBlockLink;
         } else {
             subtitleEl.textContent = titleHash;
@@ -1099,6 +1129,9 @@ class BitcoinTransactionExplorer {
             if (keep(child)) return;
             this.scene.remove(child);
         });
+        // The sweep above already removed any traced parent geometry from the scene;
+        // dispose the tracked meshes and reset the Trace Inputs state/UI so it works fresh.
+        this._resetParentState();
         if (this.vrManager && typeof this.vrManager._ensureControllersInScene === 'function') {
             this.vrManager._ensureControllersInScene();
         }
@@ -1270,6 +1303,8 @@ class BitcoinTransactionExplorer {
         // Store output params for later use
         this.outputParams = outputParams;
         this.yPositionsOutputs = yPositionsOutputs;
+        // Store input Y positions so "Trace Inputs" can align each parent to the input it funds
+        this.yPositionsInputs = yPositions;
 
         // Create central transaction cuboid
         const width = 2; // Fixed width
@@ -1461,6 +1496,575 @@ class BitcoinTransactionExplorer {
         });
     }
     
+    // ---- Trace Inputs: load parent transactions one level deep -------------
+
+    // Logarithmic radius from a satoshi amount (matches input/output tube sizing)
+    _radiusForSats(sats) {
+        const amountBTC = (sats || 0) / 100000000;
+        const logValue = Math.log10(amountBTC + 1);
+        const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
+        return 1 * sizeScale;
+    }
+
+    // Stack a set of radii vertically, centered on 0, avoiding overlap.
+    // Mirrors the input/output Y-stacking used by createInputOutputVisualization.
+    computeStackYPositions(radii, minSpacing = 0.5) {
+        const yPositions = [];
+        if (!radii || radii.length === 0) return { yPositions, totalHeight: 0 };
+        if (radii.length === 1) { yPositions[0] = 0; return { yPositions, totalHeight: radii[0] * 2 }; }
+        let totalHeight = 0;
+        for (let i = 0; i < radii.length; i++) {
+            if (i === 0) totalHeight += radii[i];
+            else totalHeight += Math.max(minSpacing, radii[i - 1] + radii[i] + 0.5);
+        }
+        let currentY = totalHeight / 2;
+        for (let i = 0; i < radii.length; i++) {
+            if (i === 0) { yPositions[i] = currentY; currentY -= radii[i]; }
+            else {
+                const spacing = Math.max(minSpacing, radii[i - 1] + radii[i] + 0.5);
+                currentY -= spacing;
+                yPositions[i] = currentY;
+            }
+        }
+        return { yPositions, totalHeight };
+    }
+
+    // Fetch a set of parent transactions with a small concurrency pool.
+    async _fetchParents(txids) {
+        const results = new Map();
+        const queue = txids.slice();
+        const worker = async () => {
+            while (queue.length) {
+                const txid = queue.shift();
+                try {
+                    const resp = await fetch(`https://mempool.space/api/tx/${txid}`, { signal: this._ac.signal });
+                    if (!resp.ok) { console.warn('Trace Inputs: fetch failed', txid, resp.status); continue; }
+                    results.set(txid, await resp.json());
+                } catch (e) {
+                    if (e && e.name === 'AbortError') return;
+                    console.warn('Trace Inputs: fetch error', txid, e);
+                }
+            }
+        };
+        const workers = [];
+        const n = Math.min(8, txids.length);
+        for (let i = 0; i < n; i++) workers.push(worker());
+        await Promise.all(workers);
+        return results;
+    }
+
+    // Build a tube mesh, tag it, add it flat to the scene, and track it for cleanup.
+    _addParentTube(curvePath, radius, gradStart, gradEnd, userData) {
+        const geometry = new THREE.TubeGeometry(curvePath, 64, Math.max(radius, 0.02), 12, false);
+        const material = new THREE.MeshLambertMaterial({
+            color: 0xffffff,
+            map: this.createHorizontalGradientTexture(gradStart, gradEnd),
+            opacity: 1.0,
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            depthTest: true
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.renderOrder = 0;
+        mesh.userData = userData;
+        this.scene.add(mesh);
+        this.parentMeshes.push(mesh);
+        return mesh;
+    }
+
+    // Approximate half the vertical extent a parent will occupy (for de-overlap stacking).
+    _parentHalfHeight(parentTx) {
+        const vins = parentTx.vin || [];
+        const vouts = parentTx.vout || [];
+        const isCb = vins.length > 0 && (vins[0].coinbase !== undefined ||
+            vins[0].txid === '0000000000000000000000000000000000000000000000000000000000000000');
+        const totalOut = vouts.reduce((s, o) => s + (o.value || 0), 0);
+        const inRadii = vins.map((v, i) => this._radiusForSats(isCb && i === 0 ? totalOut : (v.prevout?.value || 0)));
+        const outRadii = vouts.map(o => this._radiusForSats(o.value || 0));
+        const inH = this.computeStackYPositions(inRadii).totalHeight;
+        const outH = this.computeStackYPositions(outRadii).totalHeight;
+        return Math.max(inH, outH, 2) / 2;
+    }
+
+    // Button handler: toggle parent transactions on/off.
+    async toggleTraceInputs() {
+        if (this._tracing) return;
+        const btn = document.getElementById('trace-inputs');
+        if (this.parentsLoaded) {
+            this.clearParentTransactions();
+            if (btn) { btn.textContent = 'Trace Inputs'; btn.title = 'Load the parent transaction of each input, one level deep'; }
+            return;
+        }
+        this._tracing = true;
+        if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+        try {
+            const count = await this.loadParentTransactions();
+            if (this._disposed) return;
+            if (count > 0) {
+                this.parentsLoaded = true;
+                if (btn) { btn.textContent = 'Clear Parents'; }
+                this._setSpreadButtonVisible(true);
+                this._setDeeperButtonVisible(true);
+            } else if (btn) {
+                btn.textContent = 'Trace Inputs';
+            }
+        } catch (e) {
+            console.error('Trace Inputs failed', e);
+            if (btn) { btn.textContent = 'Trace Inputs'; btn.title = 'Failed to load parent transactions'; }
+        } finally {
+            this._tracing = false;
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    // Load the next level of the input trace. Level 1 = parents of the current tx's inputs;
+    // deeper levels = parents of the previous level's inputs. Nodes are stored in
+    // this.traceNodes (with the funding links needed to reconnect on re-layout) and drawn by
+    // _layoutParents. Returns the number of new transactions added this level.
+    async loadParentTransactions() {
+        const isCoinbaseVin = (v) => v.coinbase !== undefined ||
+            v.txid === '0000000000000000000000000000000000000000000000000000000000000000';
+
+        // Build the frontier of parents to fetch: parentTxid -> [{ shallowKey, vout, desiredY }].
+        // shallowKey = "<shallowTxid>:<vinIndex>" identifies the shallower input this parent funds.
+        const frontier = new Map();
+        const addLink = (txid, shallowKey, vout, desiredY) => {
+            if (!txid) return;
+            if (!frontier.has(txid)) frontier.set(txid, []);
+            frontier.get(txid).push({ shallowKey, vout, desiredY });
+        };
+
+        if (this.traceDepth === 0) {
+            // Frontier = the current transaction's own inputs.
+            const inputs = this.transactionData?.vin || [];
+            inputs.forEach((input, i) => {
+                if (isCoinbaseVin(input)) return;
+                addLink(input.txid, `${this.txid}:${i}`, input.vout, this.yPositionsInputs?.[i] ?? 0);
+            });
+        } else {
+            // Frontier = the inputs of the deepest level currently drawn.
+            const deepest = this.traceNodes.filter((n) => n.level === this.traceDepth);
+            deepest.forEach((node) => {
+                const vins = node.tx.vin || [];
+                const vouts = node.tx.vout || [];
+                const isCb = vins.length > 0 && isCoinbaseVin(vins[0]);
+                const totalOut = vouts.reduce((s, o) => s + (o.value || 0), 0);
+                const inRadii = vins.map((v, i) => this._radiusForSats(isCb && i === 0 ? totalOut : (v.prevout?.value || 0)));
+                const { yPositions: inY } = this.computeStackYPositions(inRadii);
+                vins.forEach((v, j) => {
+                    if (isCoinbaseVin(v)) return;
+                    addLink(v.txid, `${node.tx.txid}:${j}`, v.vout, node.centerY + (inY[j] ?? 0));
+                });
+            });
+        }
+
+        if (frontier.size === 0) return 0;
+
+        // Cap per level as a safety valve against pathological txs.
+        let txids = Array.from(frontier.keys());
+        const MAX_PARENTS = 250;
+        if (txids.length > MAX_PARENTS) {
+            console.warn(`Trace Inputs: capping level at ${MAX_PARENTS} of ${txids.length} parents`);
+            txids = txids.slice(0, MAX_PARENTS);
+        }
+
+        const fetched = await this._fetchParents(txids);
+        if (this._disposed) return 0;
+
+        // Build + vertically stack the new nodes for this level.
+        const entries = [];
+        for (const txid of txids) {
+            const tx = fetched.get(txid);
+            if (!tx) continue;
+            const links = frontier.get(txid);
+            const desiredY = links.reduce((s, l) => s + l.desiredY, 0) / links.length;
+            entries.push({
+                tx,
+                links: links.map((l) => ({ shallowKey: l.shallowKey, vout: l.vout })),
+                desiredY,
+                halfHeight: this._parentHalfHeight(tx),
+                blockHeight: tx.status?.block_height
+            });
+        }
+        if (entries.length === 0) return 0;
+
+        entries.sort((a, b) => b.desiredY - a.desiredY);
+        const GAP = 6;
+        let prevBottom = Infinity;
+        const newLevel = this.traceDepth + 1;
+        for (const e of entries) {
+            let centerY = e.desiredY;
+            if (centerY + e.halfHeight > prevBottom - GAP) centerY = prevBottom - GAP - e.halfHeight;
+            prevBottom = centerY - e.halfHeight;
+            this.traceNodes.push({ tx: e.tx, level: newLevel, centerY, links: e.links, blockHeight: e.blockHeight });
+        }
+        this.traceDepth = newLevel;
+
+        // Level 1 flattens the current-tx inputs that now have a parent (uninterrupted path).
+        if (newLevel === 1) {
+            const tracedInputs = new Set();
+            entries.forEach((e) => e.links.forEach((l) => {
+                const parts = l.shallowKey.split(':');
+                if (parts[0] === this.txid) tracedInputs.add(parseInt(parts[1], 10));
+            }));
+            this._flattenTracedInputs(tracedInputs);
+        }
+
+        this._layoutParents(this.parentsSpread);
+        return entries.length;
+    }
+
+    // Draw one traced transaction node (cuboid + inputs + outputs). fundingLinks are this node's
+    // outputs that fund a shallower input: [{ vout, target: {x,y} }]. fundedInputKeys is the set of
+    // "<txid>:<vinIndex>" that a deeper level funds — those inputs are drawn flat (no gradient) so
+    // the traced path stays uninterrupted. Returns the per-vin input anchor points [{x,y}].
+    drawTraceNode(tx, centerX, centerY, fundingLinks, fundedInputKeys) {
+        const STUB = 20;
+        // Older (parent) tubes are greyer/dimmer than the current tx so generations read as depth.
+        const PARENT_INPUT_GRAD = ['#0a0a0a00', '#6a6a6a99'];
+        const PARENT_OUTPUT_GRAD = ['#8a8a8a99', '#8a8a8a00'];
+        const FLAT_TONE = '#aaaaaacc'; // uninterrupted funding path (matches flattened input)
+
+        const vins = tx.vin || [];
+        const vouts = tx.vout || [];
+        const isCb = vins.length > 0 && (vins[0].coinbase !== undefined ||
+            vins[0].txid === '0000000000000000000000000000000000000000000000000000000000000000');
+        const totalOut = vouts.reduce((s, o) => s + (o.value || 0), 0);
+
+        // Cuboid
+        const width = 2;
+        const depth = width / 10;
+        const height = Math.max(0.01, (tx.size || 250) / 3360);
+        const cuboid = new THREE.Mesh(
+            new THREE.BoxGeometry(width, height, depth),
+            new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: true, depthTest: true })
+        );
+        cuboid.renderOrder = 0;
+        cuboid.position.set(centerX, centerY, 0);
+        cuboid.userData = { type: 'parent-transaction', group: 'parent', data: tx };
+        this.scene.add(cuboid);
+        this.parentMeshes.push(cuboid);
+
+        // Inputs (extend left); record anchors for deeper levels.
+        const inRadii = vins.map((v, i) => this._radiusForSats(isCb && i === 0 ? totalOut : (v.prevout?.value || 0)));
+        const { yPositions: inY } = this.computeStackYPositions(inRadii);
+        const inputAnchors = [];
+        vins.forEach((vin, i) => {
+            const radius = inRadii[i];
+            const y = centerY + (inY[i] ?? 0);
+            const farPoint = new THREE.Vector3(centerX - 35 - STUB, y, 0);
+            const connectionPoint = new THREE.Vector3(centerX - 35, y, 0);
+            const endPoint = new THREE.Vector3(centerX - 1, centerY, 0);
+            const path = new THREE.CurvePath();
+            path.add(new THREE.LineCurve3(farPoint, connectionPoint));
+            const cAmt = Math.abs(y - centerY) < 0.1 ? 0 : 1;
+            path.add(new THREE.CubicBezierCurve3(
+                connectionPoint,
+                new THREE.Vector3(centerX - 15, y + cAmt, 0),
+                new THREE.Vector3(centerX - 8, centerY + cAmt * 0.5, 0),
+                endPoint
+            ));
+            // If a deeper level funds this input, draw it flat (matching the funding tube) so the
+            // path is uninterrupted; otherwise keep the dim gradient stub (origin not traced).
+            const funded = fundedInputKeys && fundedInputKeys.has(`${tx.txid}:${i}`);
+            const gradA = funded ? FLAT_TONE : PARENT_INPUT_GRAD[0];
+            const gradB = funded ? FLAT_TONE : PARENT_INPUT_GRAD[1];
+            this._addParentTube(path, radius, gradA, gradB,
+                { type: 'parent-input', group: 'parent', index: i, data: vin, radius, originalColor: 0x555555, parentTxid: tx.txid });
+            inputAnchors[i] = { x: farPoint.x, y };
+        });
+
+        // Outputs (extend right). Funding outputs -> one continuous flat tube to each target.
+        const fundingByVout = new Map();
+        (fundingLinks || []).forEach((fl) => {
+            if (!fl.target) return;
+            if (!fundingByVout.has(fl.vout)) fundingByVout.set(fl.vout, []);
+            fundingByVout.get(fl.vout).push(fl.target);
+        });
+        const outRadii = vouts.map((o) => this._radiusForSats(o.value || 0));
+        const { yPositions: outY } = this.computeStackYPositions(outRadii);
+        vouts.forEach((vout, i) => {
+            const radius = outRadii[i];
+            const y = centerY + (outY[i] ?? 0);
+            const startPoint = new THREE.Vector3(centerX + 1, centerY, 0);
+            const connectionPoint = new THREE.Vector3(centerX + 35, y, 0);
+            const farPoint = new THREE.Vector3(centerX + 35 + STUB, y, 0);
+            const cAmt = Math.abs(y - centerY) < 0.1 ? 0 : 1;
+            const outCurveA = new THREE.Vector3(centerX + 8, centerY + cAmt * 0.5, 0);
+            const outCurveB = new THREE.Vector3(centerX + 15, y + cAmt, 0);
+
+            const targets = fundingByVout.get(i);
+            if (targets && targets.length) {
+                targets.forEach((target) => {
+                    const midX = (farPoint.x + target.x) / 2;
+                    const path = new THREE.CurvePath();
+                    path.add(new THREE.CubicBezierCurve3(startPoint, outCurveA, outCurveB, connectionPoint));
+                    path.add(new THREE.LineCurve3(connectionPoint, farPoint));
+                    path.add(new THREE.CubicBezierCurve3(
+                        farPoint.clone(),
+                        new THREE.Vector3(midX, y, 0),
+                        new THREE.Vector3(midX, target.y, 0),
+                        new THREE.Vector3(target.x, target.y, 0)
+                    ));
+                    this._addParentTube(path, radius, FLAT_TONE, FLAT_TONE,
+                        { type: 'parent-connection', group: 'parent', data: { parentTxid: tx.txid, vout: i }, radius });
+                });
+            } else {
+                const path = new THREE.CurvePath();
+                path.add(new THREE.CubicBezierCurve3(startPoint, outCurveA, outCurveB, connectionPoint));
+                path.add(new THREE.LineCurve3(connectionPoint, farPoint));
+                this._addParentTube(path, radius, PARENT_OUTPUT_GRAD[0], PARENT_OUTPUT_GRAD[1],
+                    { type: 'parent-output', group: 'parent', index: i, data: vout, radius, originalColor: 0x8a8a8a, originalOpacity: 1.0, parentTxid: tx.txid });
+            }
+        });
+
+        return inputAnchors;
+    }
+
+    // Replace the fading gradient on the given current-tx input tubes with a flat tone,
+    // so a traced input reads as a solid continuation from its parent (not a fade-to-nothing).
+    // Stashes the original texture on userData so clearParentTransactions can restore it.
+    _flattenTracedInputs(inputIndices) {
+        if (!inputIndices || inputIndices.size === 0) return;
+        this.scene.children.forEach((child) => {
+            if (child.userData.type !== 'input') return;
+            if (!inputIndices.has(child.userData.index)) return;
+            if (child.material && child.material.map && child.userData._origMap === undefined) {
+                child.userData._origMap = child.material.map;
+                // Uniform (no-fade) version of the input tone.
+                child.material.map = this.createHorizontalGradientTexture('#aaaaaacc', '#aaaaaacc');
+                child.material.needsUpdate = true;
+            }
+        });
+    }
+
+    // Restore the original fading gradient on any inputs flattened by _flattenTracedInputs.
+    _restoreTracedInputs() {
+        this.scene.children.forEach((child) => {
+            if (child.userData.type !== 'input') return;
+            if (child.userData._origMap === undefined) return;
+            if (child.material) {
+                if (child.material.map) child.material.map.dispose(); // dispose the flat map
+                child.material.map = child.userData._origMap;
+                child.material.needsUpdate = true;
+            }
+            delete child.userData._origMap;
+        });
+    }
+
+    // Remove + dispose all tracked parent meshes (geometry, materials, textures). Leaves
+    // this.tracedParents (the data) intact so a re-layout can redraw without re-fetching.
+    _disposeParentMeshes() {
+        (this.parentMeshes || []).forEach((mesh) => {
+            this.scene.remove(mesh);
+            // Sprites share a module-level geometry in three.js — don't dispose it.
+            if (mesh.geometry && !mesh.isSprite) mesh.geometry.dispose();
+            if (mesh.material) {
+                const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                mats.forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); });
+            }
+        });
+        this.parentMeshes = [];
+    }
+
+    // Show/hide the "Spread by Age" button and reset its label.
+    _setSpreadButtonVisible(visible) {
+        const btn = document.getElementById('spread-parents');
+        if (!btn) return;
+        btn.style.display = visible ? '' : 'none';
+        if (!visible) btn.textContent = 'Spread by Age';
+    }
+
+    // Show/hide the "Load Deeper" button and reset its label/state.
+    _setDeeperButtonVisible(visible) {
+        const btn = document.getElementById('trace-deeper');
+        if (!btn) return;
+        btn.style.display = visible ? '' : 'none';
+        if (!visible) { btn.textContent = 'Load Deeper'; btn.disabled = false; btn.title = 'Trace one more level of inputs'; }
+    }
+
+    // Button handler: fetch + draw one more level of the input trace.
+    async loadDeeperTrace() {
+        if (this._tracing || !this.parentsLoaded) return;
+        const MAX_DEPTH = 6;
+        const btn = document.getElementById('trace-deeper');
+        if (this.traceDepth >= MAX_DEPTH) { if (btn) { btn.disabled = true; btn.title = `Max depth ${MAX_DEPTH} reached`; } return; }
+        this._tracing = true;
+        if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+        let added = 0;
+        try {
+            added = await this.loadParentTransactions();
+        } catch (e) {
+            console.error('Load Deeper failed', e);
+        }
+        if (this._disposed) return;
+        this._tracing = false;
+        if (btn) {
+            btn.textContent = 'Load Deeper';
+            const exhausted = added === 0 || this.traceDepth >= MAX_DEPTH;
+            btn.disabled = exhausted;
+            btn.title = added > 0
+                ? `Depth ${this.traceDepth} loaded (+${added} tx)`
+                : 'No deeper parents to load';
+        }
+    }
+
+    // Render all traced levels. Disposes current parent meshes, then redraws from this.traceNodes
+    // shallow-to-deep, threading an anchor map so each level's funding outputs connect to the
+    // previous level's input far ends. No re-fetching.
+    //   spread=false: compact — each level shifted left by a fixed gap.
+    //   spread=true:  older nodes (by block height vs the current tx) pushed further left, log-scaled.
+    _layoutParents(spread) {
+        this._disposeParentMeshes();
+
+        // Seed anchors with the current tx's input far ends (fixed at x=-155).
+        const anchorMap = new Map();
+        const inputs = this.transactionData?.vin || [];
+        inputs.forEach((input, i) => {
+            anchorMap.set(`${this.txid}:${i}`, { x: -155, y: this.yPositionsInputs?.[i] ?? 0 });
+        });
+
+        // Every input that some node funds (across all levels) — these get a flat, uninterrupted
+        // tube instead of the dim gradient stub, so deeper funding paths connect seamlessly.
+        const fundedInputKeys = new Set();
+        (this.traceNodes || []).forEach((n) => n.links.forEach((l) => fundedInputKeys.add(l.shallowKey)));
+
+        const currentHeight = this.transactionData?.status?.block_height;
+        const BASE_X = -230;
+        const LEVEL_GAP = 340;     // compact spacing between levels
+        const SPREAD_SCALE = 320;  // world units per order-of-magnitude of block age
+        let minX = BASE_X;
+
+        // In spread mode, collect one block/date label per column (rounded X). Same X ⇒ same
+        // block+level, so keying by X gives one label per block generation.
+        const labelCols = new Map();
+        const noteColumn = (x, height, time, topY) => {
+            if (!spread) return;
+            const key = Math.round(x);
+            const existing = labelCols.get(key);
+            if (!existing) labelCols.set(key, { x, height, time, topY });
+            else if (topY > existing.topY) existing.topY = topY;
+        };
+        // Anchor the timeline with the current transaction's own block at x=0.
+        noteColumn(0, currentHeight, this.transactionData?.status?.block_time,
+            this._parentHalfHeight(this.transactionData));
+
+        for (let lvl = 1; lvl <= this.traceDepth; lvl++) {
+            const nodes = this.traceNodes.filter((n) => n.level === lvl);
+            nodes.forEach((node) => {
+                let centerX;
+                if (spread && currentHeight && node.blockHeight) {
+                    // Spread by block age, plus a per-level offset so deeper levels stay
+                    // separated even when their block ages are similar.
+                    const age = Math.max(0, currentHeight - node.blockHeight);
+                    centerX = BASE_X - (lvl - 1) * LEVEL_GAP - Math.log10(age + 1) * SPREAD_SCALE;
+                } else {
+                    centerX = BASE_X - (lvl - 1) * LEVEL_GAP;
+                }
+                minX = Math.min(minX, centerX);
+                const fundingLinks = node.links
+                    .map((l) => ({ vout: l.vout, target: anchorMap.get(l.shallowKey) }))
+                    .filter((x) => x.target);
+                const anchors = this.drawTraceNode(node.tx, centerX, node.centerY, fundingLinks, fundedInputKeys);
+                anchors.forEach((pt, j) => anchorMap.set(`${node.tx.txid}:${j}`, pt));
+                noteColumn(centerX, node.blockHeight, node.tx.status?.block_time, node.centerY + this._parentHalfHeight(node.tx));
+            });
+        }
+
+        // Draw block/date labels above each column (spread mode only).
+        labelCols.forEach((c) => {
+            const line1 = c.height ? `Block ${c.height.toLocaleString()}` : 'Unconfirmed';
+            const line2 = c.time ? this._shortDate(c.time) : '';
+            const sprite = this._makeLabelSprite(line1, line2);
+            sprite.position.set(c.x, c.topY + 25, 0);
+            sprite.userData = { type: 'parent-label', group: 'parent' };
+            this.scene.add(sprite);
+            this.parentMeshes.push(sprite);
+        });
+
+        // Frame everything from the current tx (x=0) out to the furthest node.
+        const leftEdge = minX - 80;
+        this.controls.target.x = leftEdge / 2;
+        this.controls.distance = Math.max(300, Math.abs(leftEdge) * 1.2);
+        this.updateCameraPosition();
+    }
+
+    // Short date "May 22, 2010" from a unix (seconds) block time.
+    _shortDate(unixSec) {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const d = new Date(unixSec * 1000);
+        return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+
+    // Build a two-line text label sprite (canvas texture) for a block column.
+    _makeLabelSprite(line1, line2) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 160;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 54px Helvetica, Arial, sans-serif';
+        ctx.fillText(line1, 256, 52);
+        ctx.fillStyle = '#bbbbbb';
+        ctx.font = '42px Helvetica, Arial, sans-serif';
+        ctx.fillText(line2, 256, 116);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false });
+        const sprite = new THREE.Sprite(material);
+        const W = 170;
+        sprite.scale.set(W, W * (canvas.height / canvas.width), 1);
+        sprite.renderOrder = 10;
+        return sprite;
+    }
+
+    // Button handler: toggle traced nodes between compact and spread-by-block-age layouts.
+    toggleSpreadParents() {
+        if (!this.parentsLoaded || !(this.traceNodes || []).length) return;
+        this.parentsSpread = !this.parentsSpread;
+        this._layoutParents(this.parentsSpread);
+        const btn = document.getElementById('spread-parents');
+        if (btn) btn.textContent = this.parentsSpread ? 'Collapse' : 'Spread by Age';
+    }
+
+    // Remove and dispose all traced geometry and reset the traced-input gradients.
+    clearParentTransactions() {
+        this._restoreTracedInputs();
+        this._disposeParentMeshes();
+        this.traceNodes = [];
+        this.traceDepth = 0;
+        this.parentsLoaded = false;
+        this.parentsSpread = false;
+        this._setSpreadButtonVisible(false);
+        this._setDeeperButtonVisible(false);
+        // Restore the camera framing to the current transaction.
+        this.controls.target.x = 0;
+        this.updateCameraPosition();
+    }
+
+    // Dispose tracked meshes and reset all trace state/UI (called on new-tx load; the scene
+    // sweep has already removed the meshes, so this only frees GPU resources + refs).
+    _resetParentState() {
+        this._disposeParentMeshes();
+        this.traceNodes = [];
+        this.traceDepth = 0;
+        this.parentsLoaded = false;
+        this.parentsSpread = false;
+        this._tracing = false;
+        this._setSpreadButtonVisible(false);
+        this._setDeeperButtonVisible(false);
+        const btn = document.getElementById('trace-inputs');
+        if (btn) {
+            btn.textContent = 'Trace Inputs';
+            btn.title = 'Load the parent transaction of each input, one level deep';
+            btn.disabled = false;
+        }
+    }
+
     // Note: Input tubes are now unified objects (straight + curved as one)
     // Repositioning is handled during creation based on input radii
 
@@ -1607,7 +2211,7 @@ class BitcoinTransactionExplorer {
             this.isPerspective = false;
         } else {
             // Switch to perspective
-            this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+            this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 60000);
             this.isPerspective = true;
         }
         
@@ -1805,47 +2409,53 @@ class BitcoinTransactionExplorer {
         this.updateCameraPosition();
     }
     
+    _panStep() {
+        // Scale the button pan step proportionally with zoom distance (strong far, fine when close).
+        return 0.5 * (this.controls.distance / 130);
+    }
+
     panLeft() {
         this.isRotating = false;
         this.updateRotationButtonState();
-        this.controls.panX -= 0.5;
+        this.controls.panX -= this._panStep();
         this.updateCameraPosition();
     }
-    
+
     panRight() {
         this.isRotating = false;
         this.updateRotationButtonState();
-        this.controls.panX += 0.5;
+        this.controls.panX += this._panStep();
         this.updateCameraPosition();
     }
-    
+
     panUp() {
         this.isRotating = false;
         this.updateRotationButtonState();
-        this.controls.panY += 0.5;
+        this.controls.panY += this._panStep();
         this.updateCameraPosition();
     }
-    
+
     panDown() {
         this.isRotating = false;
         this.updateRotationButtonState();
-        this.controls.panY -= 0.5;
+        this.controls.panY -= this._panStep();
         this.updateCameraPosition();
     }
     
     zoomIn() {
         this.isRotating = false;
         this.updateRotationButtonState();
-        this.controls.distance -= 2;
-        this.controls.distance = Math.max(10, Math.min(200, this.controls.distance));
+        // Multiplicative step so it stays proportional at any scale, over the full zoom range.
+        this.controls.distance *= 0.88;
+        this.controls.distance = Math.max(0.2, Math.min(20000, this.controls.distance));
         this.updateCameraPosition();
     }
-    
+
     zoomOut() {
         this.isRotating = false;
         this.updateRotationButtonState();
-        this.controls.distance += 2;
-        this.controls.distance = Math.max(10, Math.min(200, this.controls.distance));
+        this.controls.distance /= 0.88;
+        this.controls.distance = Math.max(0.2, Math.min(20000, this.controls.distance));
         this.updateCameraPosition();
     }
     
