@@ -582,13 +582,7 @@ class BitcoinBlockchainExplorer {
     }
 
     updateRotationButtonState() {
-        const button = document.getElementById('toggle-rotation');
-        const icon = document.getElementById('toggle-rotation-icon');
-        if (button && icon) {
-            icon.src = this.isRotating ? 'imgs/icons/pause.svg' : 'imgs/icons/play.svg';
-            button.title = this.isRotating ? 'Pause rotation' : 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(this.isRotating);
     }
 
     setupControls() {

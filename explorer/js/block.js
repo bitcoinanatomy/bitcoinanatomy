@@ -327,13 +327,7 @@ class BitcoinBlockExplorer {
             
             // Stop automatic rotation when user starts interacting
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                const icon = document.getElementById('toggle-rotation-icon');
-                if (icon) icon.src = 'imgs/icons/play.svg';
-                button.title = 'Start rotation';
-                button.setAttribute('aria-label', button.title);
-            }
+            setRotationButtonState(false);
         });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
@@ -376,13 +370,7 @@ class BitcoinBlockExplorer {
         this.renderer.domElement.addEventListener('wheel', (e) => {
             // Stop automatic rotation when user starts zooming
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                const icon = document.getElementById('toggle-rotation-icon');
-                if (icon) icon.src = 'imgs/icons/play.svg';
-                button.title = 'Start rotation';
-                button.setAttribute('aria-label', button.title);
-            }
+            setRotationButtonState(false);
             
             // Zoom in/out with inverted scroll direction
             if (this.isPerspective) {
@@ -426,13 +414,7 @@ class BitcoinBlockExplorer {
             e.preventDefault();
             
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                const icon = document.getElementById('toggle-rotation-icon');
-                if (icon) icon.src = 'imgs/icons/play.svg';
-                button.title = 'Start rotation';
-                button.setAttribute('aria-label', button.title);
-            }
+            setRotationButtonState(false);
 
             if (e.touches.length === 1) {
                 // Single touch - rotation/panning
@@ -560,11 +542,7 @@ class BitcoinBlockExplorer {
     setupButtonControls() {
         document.getElementById('toggle-rotation').addEventListener('click', () => {
             this.isRotating = !this.isRotating;
-            const button = document.getElementById('toggle-rotation');
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = this.isRotating ? 'imgs/icons/pause.svg' : 'imgs/icons/play.svg';
-            button.title = this.isRotating ? 'Pause rotation' : 'Start rotation';
-            button.setAttribute('aria-label', button.title);
+            setRotationButtonState(this.isRotating);
         });
         
 
@@ -3193,39 +3171,21 @@ class BitcoinBlockExplorer {
     // Navigation methods
     rotateLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         this.controls.theta -= 0.2;
         this.controls.update();
     }
     
     rotateRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         this.controls.theta += 0.2;
         this.controls.update();
     }
     
     rotateUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         this.controls.phi -= 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.controls.update();
@@ -3233,13 +3193,7 @@ class BitcoinBlockExplorer {
     
     rotateDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         this.controls.phi += 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.controls.update();
@@ -3247,65 +3201,35 @@ class BitcoinBlockExplorer {
     
     panLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         this.controls.panX -= 0.5;
         this.controls.update();
     }
     
     panRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         this.controls.panX += 0.5;
         this.controls.update();
     }
     
     panUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         this.controls.panY += 0.5;
         this.controls.update();
     }
     
     panDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         this.controls.panY -= 0.5;
         this.controls.update();
     }
     
     zoomIn() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         
         if (this.isPerspective) {
         this.controls.distance -= 2;
@@ -3327,13 +3251,7 @@ class BitcoinBlockExplorer {
     
     zoomOut() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            const icon = document.getElementById('toggle-rotation-icon');
-            if (icon) icon.src = 'imgs/icons/play.svg';
-            button.title = 'Start rotation';
-            button.setAttribute('aria-label', button.title);
-        }
+        setRotationButtonState(false);
         
         if (this.isPerspective) {
         this.controls.distance += 2;

@@ -431,10 +431,7 @@ class BitcoinDifficultyExplorer {
             e.preventDefault();
             
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            setRotationButtonState(false);
 
             if (e.touches.length === 1) {
                 // Single touch - rotation/panning
@@ -568,8 +565,7 @@ class BitcoinDifficultyExplorer {
 
         on('toggle-rotation', 'click', () => {
             this.isRotating = !this.isRotating;
-            const button = document.getElementById('toggle-rotation');
-            if (button) button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+            setRotationButtonState(this.isRotating);
         });
 
         on('reset-camera', 'click', () => {
@@ -1684,30 +1680,21 @@ class BitcoinDifficultyExplorer {
     // Navigation methods
     rotateLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.theta -= 0.2;
         this.controls.update();
     }
     
     rotateRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.theta += 0.2;
         this.controls.update();
     }
     
     rotateUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.phi -= 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.controls.update();
@@ -1715,10 +1702,7 @@ class BitcoinDifficultyExplorer {
     
     rotateDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.phi += 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.controls.update();
@@ -1726,10 +1710,7 @@ class BitcoinDifficultyExplorer {
     
     panLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
         right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
@@ -1739,10 +1720,7 @@ class BitcoinDifficultyExplorer {
     
     panRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
         right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
@@ -1752,10 +1730,7 @@ class BitcoinDifficultyExplorer {
     
     panUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
         this.controls.target.add(up.multiplyScalar(0.5));
@@ -1764,10 +1739,7 @@ class BitcoinDifficultyExplorer {
     
     panDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
         this.controls.target.add(up.multiplyScalar(-0.5));
@@ -1776,10 +1748,7 @@ class BitcoinDifficultyExplorer {
     
     zoomIn() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.distance -= 2;
         this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
         this.controls.update();
@@ -1787,10 +1756,7 @@ class BitcoinDifficultyExplorer {
     
     zoomOut() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.distance += 2;
         this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
         this.controls.update();

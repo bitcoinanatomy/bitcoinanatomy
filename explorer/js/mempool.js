@@ -174,10 +174,7 @@ class BitcoinMempoolExplorer {
             
             // Stop automatic rotation when user starts interacting
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            setRotationButtonState(false);
         });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
@@ -220,10 +217,7 @@ class BitcoinMempoolExplorer {
         this.renderer.domElement.addEventListener('wheel', (e) => {
             // Stop automatic rotation when user starts zooming
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            setRotationButtonState(false);
             
             if (this.isPerspective) {
                 // Perspective zoom: adjust distance
@@ -263,10 +257,7 @@ class BitcoinMempoolExplorer {
             e.preventDefault();
             
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            setRotationButtonState(false);
 
             if (e.touches.length === 1) {
                 // Single touch - rotation/panning
@@ -392,8 +383,7 @@ class BitcoinMempoolExplorer {
         // Button controls
         document.getElementById('toggle-rotation').addEventListener('click', () => {
             this.isRotating = !this.isRotating;
-            const button = document.getElementById('toggle-rotation');
-            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+            setRotationButtonState(this.isRotating);
         });
         
         document.getElementById('reset-camera').addEventListener('click', () => {
@@ -1353,30 +1343,21 @@ class BitcoinMempoolExplorer {
     // Navigation methods
     rotateLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.theta -= 0.2;
         this.controls.update();
     }
     
     rotateRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.theta += 0.2;
         this.controls.update();
     }
     
     rotateUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.phi -= 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.controls.update();
@@ -1384,10 +1365,7 @@ class BitcoinMempoolExplorer {
     
     rotateDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.phi += 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.controls.update();
@@ -1395,10 +1373,7 @@ class BitcoinMempoolExplorer {
     
     panLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
         right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
@@ -1408,10 +1383,7 @@ class BitcoinMempoolExplorer {
     
     panRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
         right.crossVectors(this.camera.up, this.camera.getWorldDirection(new THREE.Vector3())).normalize();
@@ -1421,10 +1393,7 @@ class BitcoinMempoolExplorer {
     
     panUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
         this.controls.target.add(up.multiplyScalar(0.5));
@@ -1433,10 +1402,7 @@ class BitcoinMempoolExplorer {
     
     panDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
         this.controls.target.add(up.multiplyScalar(-0.5));
@@ -1445,10 +1411,7 @@ class BitcoinMempoolExplorer {
     
     zoomIn() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.distance -= 2;
         this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
         this.controls.update();
@@ -1456,10 +1419,7 @@ class BitcoinMempoolExplorer {
     
     zoomOut() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.distance += 2;
         this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
         this.controls.update();

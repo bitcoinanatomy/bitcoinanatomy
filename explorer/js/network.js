@@ -560,13 +560,7 @@ class BitcoinNetworkExplorer {
     }
 
     updateRotationButton(rotating) {
-        const btn = document.getElementById('toggle-rotation');
-        if (!btn) return;
-        const icon = document.getElementById('toggle-rotation-icon');
-        if (icon) icon.src = rotating ? 'imgs/icons/pause.svg' : 'imgs/icons/play.svg';
-        const label = rotating ? 'Pause rotation' : 'Start rotation';
-        btn.title = label;
-        btn.setAttribute('aria-label', label);
+        setRotationButtonState(rotating);
     }
 
     setupControls() {

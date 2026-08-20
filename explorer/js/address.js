@@ -175,8 +175,7 @@ class BitcoinAddressExplorer {
         // Button controls
         document.getElementById('toggle-rotation').addEventListener('click', () => {
             this.isRotating = !this.isRotating;
-            const button = document.getElementById('toggle-rotation');
-            button.textContent = this.isRotating ? 'Pause Rotation' : 'Start Rotation';
+            setRotationButtonState(this.isRotating);
         });
         
         const toggleViewButton = document.getElementById('toggle-view');
@@ -263,10 +262,7 @@ class BitcoinAddressExplorer {
             
             // Stop automatic rotation when user starts interacting
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            setRotationButtonState(false);
         });
         
         this.renderer.domElement.addEventListener('mouseup', () => {
@@ -385,10 +381,7 @@ class BitcoinAddressExplorer {
         this.renderer.domElement.addEventListener('wheel', (e) => {
             // Stop automatic rotation when user starts zooming
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            setRotationButtonState(false);
             
             // Zoom in/out with inverted scroll direction
             if (this.isPerspective) {
@@ -472,10 +465,7 @@ class BitcoinAddressExplorer {
             e.preventDefault();
             
             this.isRotating = false;
-            const button = document.getElementById('toggle-rotation');
-            if (button) {
-                button.textContent = 'Start Rotation';
-            }
+            setRotationButtonState(false);
 
             if (e.touches.length === 1) {
                 // Single touch - rotation/panning
@@ -1365,7 +1355,8 @@ class BitcoinAddressExplorer {
         famousAddresses.forEach(button => {
             button.addEventListener('click', () => {
                 const address = button.getAttribute('data-address');
-                // Immediately navigate to the new address
+                if (!address) return;
+                closeModal();
                 const currentUrl = new URL(window.location);
                 currentUrl.searchParams.set('address', address);
                 explorerNavigate(currentUrl.toString());
@@ -1419,30 +1410,21 @@ class BitcoinAddressExplorer {
     // Navigation methods
     rotateLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.theta -= 0.2;
         this.updateCameraPosition();
     }
     
     rotateRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.theta += 0.2;
         this.updateCameraPosition();
     }
     
     rotateUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.phi -= 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.updateCameraPosition();
@@ -1450,10 +1432,7 @@ class BitcoinAddressExplorer {
     
     rotateDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         this.controls.phi += 0.2;
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.updateCameraPosition();
@@ -1461,10 +1440,7 @@ class BitcoinAddressExplorer {
     
     panLeft() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
@@ -1475,10 +1451,7 @@ class BitcoinAddressExplorer {
     
     panRight() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(new THREE.Vector3());
@@ -1489,10 +1462,7 @@ class BitcoinAddressExplorer {
     
     panUp() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
@@ -1502,10 +1472,7 @@ class BitcoinAddressExplorer {
     
     panDown() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         
         const up = new THREE.Vector3();
         up.setFromMatrixColumn(this.camera.matrix, 1);
@@ -1515,10 +1482,7 @@ class BitcoinAddressExplorer {
     
     zoomIn() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         
         if (this.isPerspective) {
             this.controls.distance -= 2;
@@ -1539,10 +1503,7 @@ class BitcoinAddressExplorer {
     
     zoomOut() {
         this.isRotating = false;
-        const button = document.getElementById('toggle-rotation');
-        if (button) {
-            button.textContent = 'Start Rotation';
-        }
+        setRotationButtonState(false);
         
         if (this.isPerspective) {
             this.controls.distance += 2;

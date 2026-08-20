@@ -153,9 +153,21 @@ function ControlsCamera(container, options) {
     }
 }
 
+/** Keep #toggle-rotation as an icon button; never set textContent (that destroys the <img>). */
+function setRotationButtonState(isRotating) {
+    const button = document.getElementById('toggle-rotation');
+    if (!button) return;
+    const icon = document.getElementById('toggle-rotation-icon');
+    if (icon) icon.src = isRotating ? 'imgs/icons/pause.svg' : 'imgs/icons/play.svg';
+    const label = isRotating ? 'Pause rotation' : 'Start rotation';
+    button.title = label;
+    button.setAttribute('aria-label', label);
+}
+
 // Support both global (script tag) and module usage
 if (typeof window !== 'undefined') {
     window.ControlsCamera = ControlsCamera;
+    window.setRotationButtonState = setRotationButtonState;
 }
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ControlsCamera;
