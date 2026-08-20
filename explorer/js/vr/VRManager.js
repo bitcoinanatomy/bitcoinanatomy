@@ -12,6 +12,8 @@
  *   Right / left trigger (double)  — navigate to the pointed object's page
  *   Left / right grip (hold+drag)  — grab and pan / move the scene in space
  *   Left  grip (tap)               — toggle wrist nav menu  (hold both grips → reset)
+ *   Wrist MENU chip (pinch/trigger)— toggle nav menu (hand tracking has no grip)
+ *   Left pinch, no target (hands)  — toggle nav menu
  *   Right grip (tap)               — toggle HUD (staggered reveal; both grips → reset)
  *   Pointers                       — rays on both controllers; hover/select per-page whitelist
  *   HUD                            — TL page identity, TR page stats, BL+BR selection data
@@ -363,9 +365,7 @@
         this._triggerTravel0 = 0;
         this.controller0.getWorldPosition(this._prevPos0);
         this._pinchInitDist = 0;
-        if (this.navMenu && this.navMenu.group.visible) {
-            this.navMenu.selectHighlighted();
-            this._haptic('right', 50, 0.4);
+        if (this._tryNavUiSelect(this.controller0, 'right')) {
             this._triggerTravel0 = TAP_MOVE_MAX + 1;
         }
     };
@@ -384,14 +384,49 @@
         this._triggerTravel1 = 0;
         this.controller1.getWorldPosition(this._prevPos1);
         this._pinchInitDist = 0;
+        if (this._tryNavUiSelect(this.controller1, 'left')) {
+            this._triggerTravel1 = TAP_MOVE_MAX + 1;
+        }
     };
 
     VRManager.prototype._onLeftSelectEnd = function () {
         var wasTap = this._trigger1 && !this._trigger0 && this._triggerTravel1 < TAP_MOVE_MAX;
         this._trigger1 = false;
         this._pinchInitDist = 0;
-        if (wasTap) this._trySelectObject(this.controller1, 'left');
+        if (wasTap) {
+            var hit = this._castFromController(this.controller1, this._raycasterL);
+            if (hit) {
+                this._trySelectObject(this.controller1, 'left');
+            } else if (this.navMenu && this._usingHands()) {
+                this.navMenu.toggle();
+            }
+        }
         this._triggerTravel1 = 0;
+    };
+
+    VRManager.prototype._usingHands = function () {
+        var session = this.explorer && this.explorer.renderer && this.explorer.renderer.xr.getSession();
+        if (!session || !session.inputSources) return false;
+        for (var i = 0; i < session.inputSources.length; i++) {
+            if (session.inputSources[i].hand) return true;
+        }
+        return false;
+    };
+
+    /** Wrist MENU chip or open nav-menu card/toggle. Returns true if the pinch was consumed. */
+    VRManager.prototype._tryNavUiSelect = function (controller, hand) {
+        if (!this.navMenu || !controller) return false;
+        if (this.navMenu.hitWristChip(controller)) {
+            this.navMenu.toggle();
+            this._haptic(hand || 'right', 50, 0.4);
+            return true;
+        }
+        if (this.navMenu.group.visible) {
+            this.navMenu.selectHighlighted();
+            this._haptic(hand || 'right', 50, 0.4);
+            return true;
+        }
+        return false;
     };
 
     // ── Left grip — hold+drag = pan; tap = nav menu; both grips = reset ───────
@@ -1576,6 +1611,10 @@
             var el = sel[0] === '#' ? document.getElementById(sel.slice(1)) : document.querySelector(sel);
             if (el) el.style.visibility = 'hidden';
         });
+
+        if (this.navMenu && typeof this.navMenu._refreshAllToggles === 'function') {
+            this.navMenu._refreshAllToggles();
+        }
     };
 
     // Controllers, grips, HUD host camera, spatial panel, focus marker, ray tips stay at scene root
@@ -2201,6 +2240,21 @@
         }
     };
 
+    VRManager.prototype._togglePassthrough = function () {
+        var renderer = this.explorer && this.explorer.renderer;
+        if (!renderer || typeof VRButton === 'undefined' || !VRButton.togglePassthrough) return;
+        VRButton.togglePassthrough(renderer);
+    };
+
+    VRManager.prototype._reloadPage = function () {
+        var file = this._pageId() || 'network.html';
+        if (typeof window.explorerNavigate === 'function') {
+            window.explorerNavigate(file, { force: true, replace: true });
+            return;
+        }
+        window.location.reload();
+    };
+
     VRManager.prototype._startPanelUpdate = function () {
         var self = this;
         this._stopPanelUpdate();
@@ -2308,7 +2362,7 @@
         var maxChars = opts.maxChars || 42;
 
         ctx.textAlign = align;
-        ctx.font = '300 ' + fontSize + 'px "Inter", sans-serif';
+        ctx.font = '400 ' + fontSize + 'px "Inter", sans-serif';
         var x = align === 'right' ? (W - PAD) : PAD;
 
         rows.slice(0, maxLines).forEach(function (line, i) {
@@ -2320,15 +2374,15 @@
                 var sl = text.slice(0, colon + 1) + ' ';
                 var sv = text.slice(colon + 1).trim();
                 var lblW = ctx.measureText(sl).width;
-                ctx.fillStyle = 'rgba(255,255,255,0.32)';
+                ctx.fillStyle = 'rgba(255,255,255,0.62)';
                 ctx.fillText(sl, x, y);
-                ctx.fillStyle = 'rgba(255,255,255,0.90)';
+                ctx.fillStyle = 'rgba(255,255,255,0.98)';
                 ctx.fillText(sv, x + lblW, y);
             } else if (colon > -1 && align === 'right') {
-                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fillStyle = 'rgba(255,255,255,0.95)';
                 ctx.fillText(text, x, y);
             } else {
-                ctx.fillStyle = 'rgba(255,255,255,0.70)';
+                ctx.fillStyle = 'rgba(255,255,255,0.88)';
                 ctx.fillText(text, x, y);
             }
         });
@@ -2349,16 +2403,16 @@
             var title = String(model.title || 'Explorer').toUpperCase();
             var identity = String(model.identity || '');
 
-            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            ctx.fillStyle = 'rgba(255,255,255,1)';
             ctx.font      = '400 52px "BureauGrotesque", sans-serif';
             ctx.textAlign = 'left';
             ctx.fillText(title, PAD, PAD - 2);
 
-            ctx.fillStyle = 'rgba(255,255,255,0.10)';
+            ctx.fillStyle = 'rgba(255,255,255,0.22)';
             ctx.fillRect(PAD, PAD + 56, W - PAD * 2, 1);
 
-            ctx.fillStyle = 'rgba(255,255,255,0.55)';
-            ctx.font      = '300 18px "Inter", sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.82)';
+            ctx.font      = '400 18px "Inter", sans-serif';
             if (identity.length > 40) identity = identity.slice(0, 38) + '…';
             ctx.fillText(identity || 'Anatomy of Bitcoin', PAD, PAD + 66);
 
@@ -2367,22 +2421,22 @@
             var stats = model.pageStats || [];
             ctx.textAlign = 'right';
             if (stats.length === 0) {
-                ctx.fillStyle = 'rgba(255,255,255,0.22)';
-                ctx.font = '300 17px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.55)';
+                ctx.font = '400 17px "Inter", sans-serif';
                 ctx.fillText('Loading…', W - PAD, PAD + 20);
             } else if (stats.length === 1) {
                 var primary = stats[0];
                 var col = primary.indexOf(':');
                 if (col > -1) {
-                    ctx.font = '300 17px "Inter", sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.32)';
+                    ctx.font = '400 17px "Inter", sans-serif';
+                    ctx.fillStyle = 'rgba(255,255,255,0.62)';
                     ctx.fillText(primary.slice(0, col + 1), W - PAD, PAD);
                     ctx.font = '400 40px "BureauGrotesque", sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                    ctx.fillStyle = 'rgba(255,255,255,1)';
                     ctx.fillText(primary.slice(col + 1).trim(), W - PAD, PAD + 24);
                 } else {
                     ctx.font = '400 32px "BureauGrotesque", sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.90)';
+                    ctx.fillStyle = 'rgba(255,255,255,0.98)';
                     ctx.fillText(primary, W - PAD, PAD + 22);
                 }
             } else {
@@ -2396,8 +2450,8 @@
             if (model.selection && model.selection.length) {
                 // Pack first chunk of selected-object fields (rest → BR)
                 leftRows = model.selection.slice(0, 6);
-                ctx.fillStyle = 'rgba(255,255,255,0.28)';
-                ctx.font = '300 15px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.62)';
+                ctx.font = '400 15px "Inter", sans-serif';
                 ctx.textAlign = 'left';
                 var kind = model.selectionKind ? String(model.selectionKind).toUpperCase() : 'SELECTED';
                 ctx.fillText(kind, PAD, PAD - 4);
@@ -2406,8 +2460,8 @@
                 });
             } else {
                 leftRows = model.idleLines || [];
-                ctx.fillStyle = 'rgba(255,255,255,0.28)';
-                ctx.font = '300 15px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.62)';
+                ctx.font = '400 15px "Inter", sans-serif';
                 ctx.textAlign = 'left';
                 ctx.fillText('PAGE DATA', PAD, PAD - 4);
                 this._drawStatRows(ctx, canvas, leftRows, {
@@ -2420,12 +2474,12 @@
                 // Remaining selected-object fields — always dump the rest here
                 var rightRows = model.selection.slice(6);
                 ctx.textAlign = 'right';
-                ctx.fillStyle = 'rgba(255,255,255,0.28)';
-                ctx.font = '300 15px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.62)';
+                ctx.font = '400 15px "Inter", sans-serif';
                 ctx.fillText('DETAILS', W - PAD, PAD - 4);
                 if (rightRows.length === 0) {
-                    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-                    ctx.font = '300 17px "Inter", sans-serif';
+                    ctx.fillStyle = 'rgba(255,255,255,0.50)';
+                    ctx.font = '400 17px "Inter", sans-serif';
                     ctx.fillText('All fields on left', W - PAD, PAD + 28);
                 } else {
                     this._drawStatRows(ctx, canvas, rightRows, {
@@ -2440,11 +2494,11 @@
                 var now = new Date();
                 var ts = now.toUTCString().replace(/:\d\d GMT$/, ' UTC');
 
-                ctx.font = '300 18px "Inter", sans-serif';
-                ctx.fillStyle = 'rgba(255,255,255,0.28)';
+                ctx.font = '400 18px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.62)';
                 ctx.fillText(src.length > 42 ? src.slice(0, 40) + '…' : src, W - PAD, PAD);
-                ctx.font = '300 16px "Inter", sans-serif';
-                ctx.fillStyle = 'rgba(255,255,255,0.18)';
+                ctx.font = '400 16px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.48)';
                 ctx.fillText(ts, W - PAD, PAD + 28);
             }
         }
@@ -2736,11 +2790,17 @@
         // Dual pointers: hover scale + tip cursors
         this._updatePointers();
 
-        // Nav menu hover + haptic tick on new hover
+        // Nav menu hover + haptic tick on new hover (right ray; left can also hit wrist chip)
         if (this.controller0 && this.navMenu) {
             var prevHighlight = this.navMenu.highlighted;
+            var prevChip = this.navMenu._chipHovered;
             this.navMenu.updateHover(this.controller0);
+            if (this.controller1 && this.navMenu.hitWristChip(this.controller1)) {
+                this.navMenu._setChipHover(true);
+            }
             if (this.navMenu.highlighted && this.navMenu.highlighted !== prevHighlight) {
+                this._haptic('right', 20, 0.2);
+            } else if (this.navMenu._chipHovered && !prevChip) {
                 this._haptic('right', 20, 0.2);
             }
         }

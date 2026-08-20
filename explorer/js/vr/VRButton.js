@@ -205,6 +205,9 @@
             var currentSession = null;
             var vrSupported    = false;
             var arSupported    = false;
+            VRButton._renderer = renderer;
+            VRButton._vrInit   = vrInit;
+            VRButton._arInit   = arInit;
 
             function onSessionStarted(session) {
                 currentSession = session;
@@ -224,6 +227,7 @@
                 arBtn.textContent = 'MR';
                 vrBtn.style.color = ''; vrBtn.style.borderColor = '';
                 arBtn.style.color = ''; arBtn.style.borderColor = '';
+                VRButton._startPendingSession();
             }
 
             function startVR() {
@@ -262,6 +266,7 @@
                 navigator.xr.isSessionSupported('immersive-ar').then(function (supported) {
                     arSupported = supported;
                     if (supported) {
+                        VRButton.arSupported = true;
                         arBtn.textContent = 'MR';
                         arBtn.style.display = '';
                         arBtn.title = 'Enter mixed reality (passthrough) mode';
@@ -288,6 +293,61 @@
         },
 
         /**
+         * End the current XR session and start VR or AR (passthrough).
+         * Used by the wrist-menu PASSTHRU toggle.
+         */
+        togglePassthrough: function (renderer) {
+            renderer = renderer || VRButton._renderer;
+            if (!renderer || !navigator.xr) return;
+            var session = renderer.xr.getSession && renderer.xr.getSession();
+            var isAR = !!(session && session.environmentBlendMode !== 'opaque');
+            var wantAR = !isAR;
+            if (wantAR && VRButton.arSupported === false) return;
+            VRButton._pendingMode = wantAR ? 'ar' : 'vr';
+            VRButton._renderer = renderer;
+            if (session) {
+                try { session.end(); } catch (e) {
+                    console.warn('[VRButton] session.end failed:', e);
+                    VRButton._pendingMode = null;
+                }
+            } else {
+                VRButton._startPendingSession();
+            }
+        },
+
+        _startPendingSession: function () {
+            var mode = VRButton._pendingMode;
+            VRButton._pendingMode = null;
+            var renderer = VRButton._renderer;
+            if (!mode || !renderer || !navigator.xr) return;
+            var vrInit = VRButton._vrInit || {
+                requiredFeatures: ['local-floor'],
+                optionalFeatures: ['hand-tracking', 'bounded-floor']
+            };
+            var arInit = VRButton._arInit || {
+                requiredFeatures: ['local-floor'],
+                optionalFeatures: ['hand-tracking', 'dom-overlay']
+            };
+            var type = mode === 'ar' ? 'immersive-ar' : 'immersive-vr';
+            var init = mode === 'ar' ? arInit : vrInit;
+            navigator.xr.requestSession(type, init)
+                .then(function (sess) {
+                    sess.addEventListener('end', function () {
+                        VRButton._startPendingSession();
+                    });
+                    renderer.xr.setSession(sess);
+                    var vrBtn = document.getElementById('vr-button');
+                    var arBtn = document.getElementById('ar-button');
+                    var isAR = sess.environmentBlendMode !== 'opaque';
+                    if (vrBtn) vrBtn.textContent = isAR ? 'VR' : 'Exit';
+                    if (arBtn) arBtn.textContent = isAR ? 'Exit' : 'MR';
+                })
+                .catch(function (e) {
+                    console.warn('[VRButton] passthrough switch failed:', e);
+                });
+        },
+
+        /**
          * Re-wire #vr-button / #ar-button after ExplorerRouter swaps #ui.
          * Does not auto-start a session.
          */
@@ -298,6 +358,9 @@
 
             var vrInit = { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'bounded-floor'] };
             var arInit = { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'dom-overlay'] };
+            VRButton._renderer = renderer;
+            VRButton._vrInit = vrInit;
+            VRButton._arInit = arInit;
 
             function session() {
                 return renderer.xr.getSession ? renderer.xr.getSession() : null;

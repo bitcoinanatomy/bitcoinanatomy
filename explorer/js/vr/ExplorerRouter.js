@@ -222,7 +222,7 @@
                 return;
             }
 
-            if (!opts.fromPopstate && sameDocumentUrl(url)) return;
+            if (!opts.fromPopstate && !opts.force && sameDocumentUrl(url)) return;
 
             _navigating = true;
             window.__softNav = true;
@@ -311,14 +311,14 @@
         },
     };
 
-    function explorerNavigate(url) {
+    function explorerNavigate(url, opts) {
         // External / non-explorer links always hard-navigate
         var file = pageFileFromUrl(url);
         if (!isExplorerFile(file)) {
             window.location.href = url;
             return;
         }
-        if (window.ExplorerRouter) return window.ExplorerRouter.navigate(url);
+        if (window.ExplorerRouter) return window.ExplorerRouter.navigate(url, opts);
         window.location.href = url;
     }
 

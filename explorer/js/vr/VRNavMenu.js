@@ -1,6 +1,8 @@
 /**
  * VRNavMenu — wrist-anchored grid navigation menu for moving between explorer pages.
- * Parented to the left XR controller. Toggle with left controller grip.
+ * Parented to the left XR controller. Toggle with left controller grip,
+ * the always-visible wrist MENU chip (pinch / trigger), or — with hand
+ * tracking — an empty left pinch.
  * Cards reveal with a staggered fade + slide-up animation.
  * Below page cards: global toggles (HUD / Info Panel / Rotation) plus
  * page-specific action toggles (UTXOs, Merkle, Load TXs, etc.).
@@ -419,6 +421,30 @@
 
     // -------------------------------------------------------------------------
 
+    function makeChipLabel(text, hover) {
+        var W = 320, H = 72;
+        var canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = hover ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.12)';
+        ctx.roundRect(0, 0, W, H, 10);
+        ctx.fill();
+        ctx.strokeStyle = hover ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)';
+        ctx.lineWidth = 3;
+        ctx.roundRect(2, 2, W - 4, H - 4, 8);
+        ctx.stroke();
+        ctx.fillStyle = hover ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.88)';
+        ctx.font = '500 32px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.letterSpacing = '3px';
+        ctx.fillText(text, W / 2, H / 2);
+        var tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        return tex;
+    }
+
     function VRNavMenu(vrManager) {
         this.vrManager      = vrManager;
         this.group          = new THREE.Group();
@@ -433,6 +459,12 @@
         this._animStartTime = null;
         this.highlighted    = null;
         this.raycaster      = new THREE.Raycaster();
+
+        // Always-visible wrist chip so hand-tracking (no grip) can open the menu
+        this.wristChipGroup = new THREE.Group();
+        this.wristChip      = null;
+        this._chipHovered   = false;
+        this._buildWristChip();
     }
 
     // -------------------------------------------------------------------------
@@ -486,6 +518,26 @@
                     if (!ex || typeof ex.isRotating === 'undefined') return;
                     ex.isRotating = !ex.isRotating;
                     self._refreshToggle(mesh);
+                },
+            },
+            {
+                label:    'PASSTHRU',
+                kind:     'toggle',
+                getState: function () {
+                    var vm = self.vrManager;
+                    return !!(vm && vm._isAR);
+                },
+                onSelect: function (mesh) {
+                    if (self.vrManager) self.vrManager._togglePassthrough();
+                    self._refreshToggle(mesh);
+                },
+            },
+            {
+                label:    'RELOAD',
+                kind:     'action',
+                getState: function () { return false; },
+                onSelect: function () {
+                    if (self.vrManager) self.vrManager._reloadPage();
                 },
             },
         ];
@@ -642,14 +694,63 @@
         this._toggleButtons.forEach(function (t) { self._refreshToggle(t); });
     };
 
+    VRNavMenu.prototype._buildWristChip = function () {
+        var CHIP_W = 0.052;
+        var CHIP_H = 0.018;
+        var mat = new THREE.MeshBasicMaterial({
+            map: makeChipLabel('MENU', false),
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthTest: false,
+            depthWrite: false,
+            opacity: 0.95
+        });
+        var mesh = new THREE.Mesh(new THREE.PlaneGeometry(CHIP_W, CHIP_H), mat);
+        mesh.renderOrder = 1002;
+        mesh.userData.isNavChip = true;
+        this.wristChip = mesh;
+        this.wristChipGroup.add(mesh);
+        this.wristChipGroup.visible = true;
+    };
+
+    VRNavMenu.prototype._setChipHover = function (hover) {
+        if (!this.wristChip || !this.wristChip.material) return;
+        if (this._chipHovered === hover) return;
+        this._chipHovered = hover;
+        if (this.wristChip.material.map) this.wristChip.material.map.dispose();
+        this.wristChip.material.map = makeChipLabel(this.group.visible ? 'CLOSE' : 'MENU', hover);
+        this.wristChip.material.needsUpdate = true;
+    };
+
+    VRNavMenu.prototype._refreshChipLabel = function () {
+        if (!this.wristChip || !this.wristChip.material) return;
+        if (this.wristChip.material.map) this.wristChip.material.map.dispose();
+        this.wristChip.material.map = makeChipLabel(this.group.visible ? 'CLOSE' : 'MENU', this._chipHovered);
+        this.wristChip.material.needsUpdate = true;
+    };
+
+    VRNavMenu.prototype.hitWristChip = function (controller) {
+        if (!controller || !this.wristChip || !this.wristChipGroup.visible) return false;
+        var tempMatrix = new THREE.Matrix4();
+        tempMatrix.identity().extractRotation(controller.matrixWorld);
+        this.raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+        this.raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+        var hits = this.raycaster.intersectObject(this.wristChip, false);
+        return hits.length > 0;
+    };
+
     // -------------------------------------------------------------------------
     // Attach / visibility
     // -------------------------------------------------------------------------
 
     VRNavMenu.prototype.attachToController = function (controller) {
         controller.add(this.group);
+        controller.add(this.wristChipGroup);
         this.group.position.set(0, 0.28, -0.05);
         this.group.rotation.x = -0.35;
+        // Sit on the inner wrist / controller body so a pinch ray can hit it
+        this.wristChipGroup.position.set(0, 0.045, 0.02);
+        this.wristChipGroup.rotation.x = -1.05;
     };
 
     VRNavMenu.prototype.show = function () {
@@ -670,12 +771,14 @@
         });
         this._animStartTime = Date.now();
         this.group.visible  = true;
+        this._refreshChipLabel();
     };
 
     VRNavMenu.prototype.hide = function () {
         this.group.visible  = false;
         this._animStartTime = null;
         this.highlighted    = null;
+        this._refreshChipLabel();
     };
 
     VRNavMenu.prototype.toggle = function () {
@@ -687,9 +790,11 @@
     // -------------------------------------------------------------------------
 
     VRNavMenu.prototype.updateHover = function (controller0) {
-        if (!this.group.visible) return null;
+        var self = this;
+        var chipHit = this.hitWristChip(controller0);
+        this._setChipHover(chipHit);
+        if (!this.group.visible) return chipHit ? this.wristChip : null;
 
-        var self    = this;
         var elapsed = this._animStartTime ? (Date.now() - this._animStartTime) / 1000 : Infinity;
         var allDone = true;
         var totalItems = this.buttons.length + this._toggleButtons.length;
@@ -723,6 +828,11 @@
         });
 
         if (allDone) this._animStartTime = null;
+
+        if (chipHit) {
+            this.highlighted = null;
+            return this.wristChip;
+        }
 
         // ── Raycast hover ─────────────────────────────────────────────────────
         var tempMatrix = new THREE.Matrix4();
