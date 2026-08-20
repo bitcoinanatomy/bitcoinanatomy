@@ -30,6 +30,7 @@ class BitcoinTransactionExplorer {
         this.traceNodes = [];        // all traced nodes across levels {tx, level, centerY, links, blockHeight}
         this.traceDepth = 0;         // number of input-trace levels currently loaded
         this.parentsSpread = false;  // whether traced nodes are spread out by block age
+        this.showTraceLabels = false; // block height + date sprites; only after Show Labels
 
         // Child-transaction tracing ("Trace Outputs")
         this.childMeshes = [];
@@ -253,25 +254,33 @@ class BitcoinTransactionExplorer {
             toggleFlowButton.style.display = 'none';
         }
 
-        // Trace Inputs: load the parent transaction of each input, one level deep
-        const traceBtn = document.getElementById('trace-inputs');
-        if (traceBtn) {
-            traceBtn.addEventListener('click', () => this.toggleTraceInputs());
+        // Trace menu: reveal deeper / spread / label controls
+        const traceMenuToggle = document.getElementById('trace-menu-toggle');
+        const traceMenu = document.getElementById('trace-menu');
+        if (traceMenuToggle && traceMenu) {
+            traceMenuToggle.addEventListener('click', () => {
+                const open = !traceMenu.classList.contains('is-open');
+                traceMenu.classList.toggle('is-open', open);
+                traceMenu.hidden = !open;
+                traceMenuToggle.classList.toggle('active', open);
+            });
         }
 
-        // Trace Outputs: load the spending transaction of each output, one level deep
-        const traceOutBtn = document.getElementById('trace-outputs');
-        if (traceOutBtn) {
-            traceOutBtn.addEventListener('click', () => this.toggleTraceOutputs());
-        }
-
-        // Spread by Age: push older/newer traced transactions further away by block height
         const spreadBtn = document.getElementById('spread-parents');
         if (spreadBtn) {
             spreadBtn.addEventListener('click', () => this.toggleSpreadParents());
         }
 
-        // Load Deeper: trace one more level of inputs
+        const labelsBtn = document.getElementById('toggle-trace-labels');
+        if (labelsBtn) {
+            labelsBtn.addEventListener('click', () => this.toggleTraceLabels());
+        }
+
+        const frameBtn = document.getElementById('frame-trace');
+        if (frameBtn) {
+            frameBtn.addEventListener('click', () => this.frameTraceHistory());
+        }
+
         const deeperBtn = document.getElementById('trace-deeper');
         if (deeperBtn) {
             deeperBtn.addEventListener('click', () => this.loadDeeperTrace());
@@ -281,6 +290,7 @@ class BitcoinTransactionExplorer {
         if (deeperOutBtn) {
             deeperOutBtn.addEventListener('click', () => this.loadDeeperOutputTrace());
         }
+        this._syncTraceMenuButtons();
         
         // Navigation controls
         document.getElementById('rotate-left').addEventListener('click', () => {
@@ -616,7 +626,7 @@ class BitcoinTransactionExplorer {
             if (e.shiftKey) {
                 // Panning - inverted for natural feel; scale proportionally with zoom distance so
                 // it's strong when far out and fine-grained when very close (baseline at ~130).
-                const panScale = 0.05 * (this.controls.distance / 130);
+                const panScale = 0.14 * (this.controls.distance / 130);
                 this.controls.panX -= deltaX * panScale;
                 this.controls.panY += deltaY * panScale;
             } else {
@@ -677,6 +687,7 @@ class BitcoinTransactionExplorer {
                 this.camera.top = this.orthographicZoom / 2;
                 this.camera.bottom = -this.orthographicZoom / 2;
                 this.camera.updateProjectionMatrix();
+                this._updateTraceLabelScales();
             }
         });
 
@@ -804,7 +815,7 @@ class BitcoinTransactionExplorer {
                 
                 if (e.shiftKey || e.altKey) {
                     // Panning - scale proportionally with zoom distance (strong far, fine when close)
-                    const panSpeed = 0.002 * (this.controls.distance / 130);
+                    const panSpeed = 0.006 * (this.controls.distance / 130);
                     this.controls.panX += deltaX * panSpeed;
                     this.controls.panY -= deltaY * panSpeed;
                 } else {
@@ -840,6 +851,7 @@ class BitcoinTransactionExplorer {
                     this.camera.top = this.orthographicZoom / 2;
                     this.camera.bottom = -this.orthographicZoom / 2;
                     this.camera.updateProjectionMatrix();
+                    this._updateTraceLabelScales();
                 }
                 
                 touchStartDistance = currentDistance;
@@ -924,6 +936,7 @@ class BitcoinTransactionExplorer {
             this.controls.target.y + this.controls.panY,
             this.controls.target.z + this.controls.panZ
         );
+        this._updateTraceLabelScales();
     }
 
     createScene() {
@@ -1606,37 +1619,6 @@ class BitcoinTransactionExplorer {
         return Math.max(inH, outH, 2) / 2;
     }
 
-    // Button handler: toggle parent transactions on/off.
-    async toggleTraceInputs() {
-        if (this._tracing) return;
-        const btn = document.getElementById('trace-inputs');
-        if (this.parentsLoaded) {
-            this.clearParentTransactions();
-            if (btn) { btn.textContent = 'Trace Inputs'; btn.title = 'Load the parent transaction of each input, one level deep'; }
-            return;
-        }
-        this._tracing = true;
-        if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
-        try {
-            const count = await this.loadParentTransactions();
-            if (this._disposed) return;
-            if (count > 0) {
-                this.parentsLoaded = true;
-                if (btn) { btn.textContent = 'Clear Parents'; }
-                this._syncSpreadButton();
-                this._setDeeperButtonVisible(true);
-            } else if (btn) {
-                btn.textContent = 'Trace Inputs';
-            }
-        } catch (e) {
-            console.error('Trace Inputs failed', e);
-            if (btn) { btn.textContent = 'Trace Inputs'; btn.title = 'Failed to load parent transactions'; }
-        } finally {
-            this._tracing = false;
-            if (btn) btn.disabled = false;
-        }
-    }
-
     // Load the next level of the input trace. Level 1 = parents of the current tx's inputs;
     // deeper levels = parents of the previous level's inputs. Nodes are stored in
     // this.traceNodes (with the funding links needed to reconnect on re-layout) and drawn by
@@ -1961,56 +1943,79 @@ class BitcoinTransactionExplorer {
         });
     }
 
-    // Show/hide the "Spread by Age" button and reset its label.
-    _setSpreadButtonVisible(visible) {
-        const btn = document.getElementById('spread-parents');
-        if (!btn) return;
-        btn.style.display = visible ? '' : 'none';
-        if (!visible) btn.textContent = 'Spread by Age';
-    }
-
-    _syncSpreadButton() {
-        this._setSpreadButtonVisible(this.parentsLoaded || this.childrenLoaded);
-    }
-
-    // Show/hide the "Load Deeper" button and reset its label/state.
-    _setDeeperButtonVisible(visible) {
-        const btn = document.getElementById('trace-deeper');
-        if (!btn) return;
-        btn.style.display = visible ? '' : 'none';
-        if (!visible) { btn.textContent = 'Load Deeper'; btn.disabled = false; btn.title = 'Trace one more level of inputs'; }
-    }
-
-    _setDeeperOutButtonVisible(visible) {
-        const btn = document.getElementById('trace-deeper-outputs');
-        if (!btn) return;
-        btn.style.display = visible ? '' : 'none';
-        if (!visible) { btn.textContent = 'Load Deeper Outputs'; btn.disabled = false; btn.title = 'Trace one more level of outputs'; }
-    }
-
-    // Button handler: fetch + draw one more level of the input trace.
-    async loadDeeperTrace() {
-        if (this._tracing || !this.parentsLoaded) return;
+    _syncTraceMenuButtons() {
         const MAX_DEPTH = 6;
+        const hasTrace = this.parentsLoaded || this.childrenLoaded;
+        const inBtn = document.getElementById('trace-deeper');
+        if (inBtn) {
+            inBtn.textContent = 'Deeper Inputs';
+            const inMax = this.traceDepth >= MAX_DEPTH;
+            inBtn.disabled = !!this._tracing || inMax;
+            inBtn.title = inMax
+                ? `Max depth ${MAX_DEPTH} reached`
+                : (this.traceDepth > 0
+                    ? `Trace one more level backward (depth ${this.traceDepth})`
+                    : 'Trace one more level backward');
+        }
+        const outBtn = document.getElementById('trace-deeper-outputs');
+        if (outBtn) {
+            outBtn.textContent = 'Deeper Outputs';
+            const outMax = this.traceOutDepth >= MAX_DEPTH;
+            outBtn.disabled = !!this._tracing || outMax;
+            outBtn.title = outMax
+                ? `Max depth ${MAX_DEPTH} reached`
+                : (this.traceOutDepth > 0
+                    ? `Trace one more level forward (depth ${this.traceOutDepth})`
+                    : 'Trace one more level forward');
+        }
+        const spreadBtn = document.getElementById('spread-parents');
+        if (spreadBtn) {
+            spreadBtn.disabled = !hasTrace;
+            spreadBtn.textContent = this.parentsSpread ? 'Collapse' : 'Spread';
+            spreadBtn.title = this.parentsSpread
+                ? 'Collapse traced transactions'
+                : 'Spread traced transactions by block age';
+        }
+        const labelsBtn = document.getElementById('toggle-trace-labels');
+        if (labelsBtn) {
+            labelsBtn.disabled = !this.parentsSpread;
+            if (this.showTraceLabels) {
+                labelsBtn.textContent = 'Hide Labels';
+                labelsBtn.title = 'Hide block numbers and dates';
+            } else {
+                labelsBtn.textContent = 'Show Labels';
+                labelsBtn.title = 'Show block numbers and dates';
+            }
+        }
+        const frameBtn = document.getElementById('frame-trace');
+        if (frameBtn) {
+            frameBtn.disabled = !hasTrace;
+            frameBtn.title = hasTrace
+                ? 'Fit the camera to the visible transaction history'
+                : 'Trace inputs or outputs first';
+        }
+    }
+
+    // Fetch + draw one more ancestor level (first click loads the immediate parents).
+    async loadDeeperTrace() {
+        if (this._tracing) return;
+        const MAX_DEPTH = 6;
+        if (this.traceDepth >= MAX_DEPTH) { this._syncTraceMenuButtons(); return; }
         const btn = document.getElementById('trace-deeper');
-        if (this.traceDepth >= MAX_DEPTH) { if (btn) { btn.disabled = true; btn.title = `Max depth ${MAX_DEPTH} reached`; } return; }
         this._tracing = true;
         if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
         let added = 0;
         try {
             added = await this.loadParentTransactions();
         } catch (e) {
-            console.error('Load Deeper failed', e);
+            console.error('Deeper Inputs failed', e);
         }
         if (this._disposed) return;
         this._tracing = false;
-        if (btn) {
-            btn.textContent = 'Load Deeper';
-            const exhausted = added === 0 || this.traceDepth >= MAX_DEPTH;
-            btn.disabled = exhausted;
-            btn.title = added > 0
-                ? `Depth ${this.traceDepth} loaded (+${added} tx)`
-                : 'No deeper parents to load';
+        if (added > 0) this.parentsLoaded = true;
+        this._syncTraceMenuButtons();
+        if (btn && added === 0 && this.traceDepth < MAX_DEPTH) {
+            btn.title = 'No deeper parents to load';
         }
     }
 
@@ -2023,35 +2028,52 @@ class BitcoinTransactionExplorer {
         this.updateCameraPosition();
     }
 
-    async toggleTraceOutputs() {
-        if (this._tracing) return;
-        const btn = document.getElementById('trace-outputs');
-        if (this.childrenLoaded) {
-            this.clearChildTransactions();
-            if (btn) { btn.textContent = 'Trace Outputs'; btn.title = 'Load the spending transaction of each output, one level deep'; }
-            return;
-        }
-        this._tracing = true;
-        if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
-        try {
-            const count = await this.loadChildTransactions();
-            if (this._disposed) return;
-            if (count > 0) {
-                this.childrenLoaded = true;
-                if (btn) { btn.textContent = 'Clear Children'; }
-                this._syncSpreadButton();
-                this._setDeeperOutButtonVisible(true);
-            } else if (btn) {
-                btn.textContent = 'Trace Outputs';
-                btn.title = 'No spent outputs to trace';
+    // Fit the camera so the current tx plus all visible traced history is in view.
+    frameTraceHistory() {
+        if (!this.scene) return;
+        const box = new THREE.Box3();
+        const include = (obj) => {
+            if (!obj || !obj.visible) return;
+            if (obj.isSprite && obj.userData && obj.userData.type === 'parent-label' && !this.showTraceLabels) return;
+            box.expandByObject(obj);
+        };
+        (this.parentMeshes || []).forEach(include);
+        (this.childMeshes || []).forEach(include);
+        this.scene.traverse((obj) => {
+            const t = obj.userData && obj.userData.type;
+            if (t === 'transaction' || t === 'input' || t === 'output') include(obj);
+        });
+        if (box.isEmpty()) return;
+
+        const size = new THREE.Vector3();
+        const center = new THREE.Vector3();
+        box.getSize(size);
+        box.getCenter(center);
+
+        this.controls.target.set(center.x, center.y, 0);
+        this.controls.panX = 0;
+        this.controls.panY = 0;
+        this.controls.panZ = 0;
+
+        const aspect = window.innerWidth / Math.max(window.innerHeight, 1);
+        const pad = 1.2;
+        if (this.isPerspective) {
+            const fov = ((this.camera && this.camera.fov) || 75) * Math.PI / 180;
+            const distY = (size.y * 0.5 * pad) / Math.max(Math.tan(fov / 2), 0.01);
+            const distX = (size.x * 0.5 * pad) / Math.max(Math.tan(fov / 2) * aspect, 0.01);
+            this.controls.distance = Math.max(80, Math.max(distX, distY), Math.max(size.x, size.y) * 0.9);
+        } else {
+            this.orthographicZoom = Math.max(size.y * pad, size.x * pad / aspect, 8);
+            if (this.camera && this.camera.isOrthographicCamera) {
+                this.camera.left = -this.orthographicZoom * aspect / 2;
+                this.camera.right = this.orthographicZoom * aspect / 2;
+                this.camera.top = this.orthographicZoom / 2;
+                this.camera.bottom = -this.orthographicZoom / 2;
+                this.camera.updateProjectionMatrix();
             }
-        } catch (e) {
-            console.error('Trace Outputs failed', e);
-            if (btn) { btn.textContent = 'Trace Outputs'; btn.title = 'Failed to load spending transactions'; }
-        } finally {
-            this._tracing = false;
-            if (btn) btn.disabled = false;
+            this.controls.distance = Math.max(this.controls.distance, 80);
         }
+        this.updateCameraPosition();
     }
 
     async _fetchOutspends(txid) {
@@ -2163,27 +2185,24 @@ class BitcoinTransactionExplorer {
     }
 
     async loadDeeperOutputTrace() {
-        if (this._tracing || !this.childrenLoaded) return;
+        if (this._tracing) return;
         const MAX_DEPTH = 6;
+        if (this.traceOutDepth >= MAX_DEPTH) { this._syncTraceMenuButtons(); return; }
         const btn = document.getElementById('trace-deeper-outputs');
-        if (this.traceOutDepth >= MAX_DEPTH) { if (btn) { btn.disabled = true; btn.title = `Max depth ${MAX_DEPTH} reached`; } return; }
         this._tracing = true;
         if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
         let added = 0;
         try {
             added = await this.loadChildTransactions();
         } catch (e) {
-            console.error('Load Deeper Outputs failed', e);
+            console.error('Deeper Outputs failed', e);
         }
         if (this._disposed) return;
         this._tracing = false;
-        if (btn) {
-            btn.textContent = 'Load Deeper Outputs';
-            const exhausted = added === 0 || this.traceOutDepth >= MAX_DEPTH;
-            btn.disabled = exhausted;
-            btn.title = added > 0
-                ? `Depth ${this.traceOutDepth} loaded (+${added} tx)`
-                : 'No deeper spending transactions to load';
+        if (added > 0) this.childrenLoaded = true;
+        this._syncTraceMenuButtons();
+        if (btn && added === 0 && this.traceOutDepth < MAX_DEPTH) {
+            btn.title = 'No deeper spending transactions to load';
         }
     }
 
@@ -2210,17 +2229,14 @@ class BitcoinTransactionExplorer {
         const SPREAD_SCALE = 320;
         let maxX = BASE_X;
 
-        const labelCols = new Map();
-        const noteColumn = (x, height, time, topY) => {
+        const labelCols = [];
+        const noteColumn = (x, height, time, topY, txid) => {
             if (!spread) return;
-            const key = Math.round(x);
-            const existing = labelCols.get(key);
-            if (!existing) labelCols.set(key, { x, height, time, topY });
-            else if (topY > existing.topY) existing.topY = topY;
+            labelCols.push({ x, height, time, topY, txid });
         };
         if (!this.parentsLoaded) {
             noteColumn(0, currentHeight, this.transactionData?.status?.block_time,
-                this._parentHalfHeight(this.transactionData));
+                this._parentHalfHeight(this.transactionData), this.txid);
         }
 
         for (let lvl = 1; lvl <= this.traceOutDepth; lvl++) {
@@ -2246,18 +2262,13 @@ class BitcoinTransactionExplorer {
                 (drawn.outputAnchors || []).forEach((pt, j) => {
                     outputAnchorMap.set(`${node.tx.txid}:vout:${j}`, pt);
                 });
-                noteColumn(centerX, node.blockHeight, node.tx.status?.block_time, node.centerY + this._parentHalfHeight(node.tx));
+                noteColumn(centerX, node.blockHeight, node.tx.status?.block_time,
+                    node.centerY + this._parentHalfHeight(node.tx), node.tx.txid);
             });
         }
 
         labelCols.forEach((c) => {
-            const line1 = c.height ? `Block ${c.height.toLocaleString()}` : 'Unconfirmed';
-            const line2 = c.time ? this._shortDate(c.time) : '';
-            const sprite = this._makeLabelSprite(line1, line2);
-            sprite.position.set(c.x, c.topY + 25, 0);
-            sprite.userData = { type: 'parent-label', group: 'child' };
-            this.scene.add(sprite);
-            this.childMeshes.push(sprite);
+            this._addTraceLabelSprite(c, this.childMeshes, 'child');
         });
 
         this._traceMaxX = maxX + 80;
@@ -2271,8 +2282,7 @@ class BitcoinTransactionExplorer {
         this.traceOutDepth = 0;
         this.childrenLoaded = false;
         this._traceMaxX = 0;
-        this._setDeeperOutButtonVisible(false);
-        this._syncSpreadButton();
+        this._syncTraceMenuButtons();
         if (this.parentsLoaded) this._updateTraceCamera();
         else {
             this.controls.target.x = 0;
@@ -2306,19 +2316,14 @@ class BitcoinTransactionExplorer {
         const SPREAD_SCALE = 320;  // world units per order-of-magnitude of block age
         let minX = BASE_X;
 
-        // In spread mode, collect one block/date label per column (rounded X). Same X ⇒ same
-        // block+level, so keying by X gives one label per block generation.
-        const labelCols = new Map();
-        const noteColumn = (x, height, time, topY) => {
+        const labelCols = [];
+        const noteColumn = (x, height, time, topY, txid) => {
             if (!spread) return;
-            const key = Math.round(x);
-            const existing = labelCols.get(key);
-            if (!existing) labelCols.set(key, { x, height, time, topY });
-            else if (topY > existing.topY) existing.topY = topY;
+            labelCols.push({ x, height, time, topY, txid });
         };
-        // Anchor the timeline with the current transaction's own block at x=0.
+        // Anchor the timeline with the current transaction at x=0.
         noteColumn(0, currentHeight, this.transactionData?.status?.block_time,
-            this._parentHalfHeight(this.transactionData));
+            this._parentHalfHeight(this.transactionData), this.txid);
 
         for (let lvl = 1; lvl <= this.traceDepth; lvl++) {
             const nodes = this.traceNodes.filter((n) => n.level === lvl);
@@ -2338,19 +2343,14 @@ class BitcoinTransactionExplorer {
                     .filter((x) => x.target);
                 const drawn = this.drawTraceNode(node.tx, centerX, node.centerY, fundingLinks, fundedInputKeys);
                 (drawn.inputAnchors || []).forEach((pt, j) => anchorMap.set(`${node.tx.txid}:${j}`, pt));
-                noteColumn(centerX, node.blockHeight, node.tx.status?.block_time, node.centerY + this._parentHalfHeight(node.tx));
+                noteColumn(centerX, node.blockHeight, node.tx.status?.block_time,
+                    node.centerY + this._parentHalfHeight(node.tx), node.tx.txid);
             });
         }
 
         // Draw block/date labels above each column (spread mode only).
         labelCols.forEach((c) => {
-            const line1 = c.height ? `Block ${c.height.toLocaleString()}` : 'Unconfirmed';
-            const line2 = c.time ? this._shortDate(c.time) : '';
-            const sprite = this._makeLabelSprite(line1, line2);
-            sprite.position.set(c.x, c.topY + 25, 0);
-            sprite.userData = { type: 'parent-label', group: 'parent' };
-            this.scene.add(sprite);
-            this.parentMeshes.push(sprite);
+            this._addTraceLabelSprite(c, this.parentMeshes, 'parent');
         });
 
         // Frame everything from the current tx (x=0) out to the furthest node.
@@ -2365,27 +2365,36 @@ class BitcoinTransactionExplorer {
         return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
     }
 
-    // Build a two-line text label sprite (canvas texture) for a block column.
+    _shortTxid(txid) {
+        if (!txid) return '';
+        return txid.length > 16 ? `${txid.substring(0, 16)}...` : txid;
+    }
+
+    // Two-line sprite: txid, then block height + date in the same style.
     _makeLabelSprite(line1, line2) {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
-        canvas.height = 160;
+        canvas.height = 128;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 54px Helvetica, Arial, sans-serif';
-        ctx.fillText(line1, 256, 52);
-        ctx.fillStyle = '#bbbbbb';
-        ctx.font = '42px Helvetica, Arial, sans-serif';
-        ctx.fillText(line2, 256, 116);
+        ctx.fillStyle = '#dddddd';
+        if (line1) {
+            ctx.font = '36px Helvetica, Arial, sans-serif';
+            ctx.fillText(line1, 256, 40);
+        }
+        if (line2) {
+            ctx.font = '28px Helvetica, Arial, sans-serif';
+            ctx.fillText(line2, 256, 88);
+        }
         const texture = new THREE.CanvasTexture(canvas);
         texture.needsUpdate = true;
         const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false });
         const sprite = new THREE.Sprite(material);
-        const W = 170;
-        sprite.scale.set(W, W * (canvas.height / canvas.width), 1);
+        sprite.userData.labelAspect = canvas.height / canvas.width;
+        sprite.userData.labelBaseW = 95;
+        this._applyTraceLabelScale(sprite);
         sprite.renderOrder = 10;
         return sprite;
     }
@@ -2397,8 +2406,61 @@ class BitcoinTransactionExplorer {
         this.parentsSpread = !this.parentsSpread;
         if (this.parentsLoaded) this._layoutParents(this.parentsSpread);
         if (this.childrenLoaded) this._layoutChildren(this.parentsSpread);
-        const btn = document.getElementById('spread-parents');
-        if (btn) btn.textContent = this.parentsSpread ? 'Collapse' : 'Spread by Age';
+        this._syncTraceMenuButtons();
+    }
+
+    _traceLabelZoomScale() {
+        // Sprites shrink on screen as the camera recedes; grow world scale with distance
+        // so labels stay readable far out and don't dominate in close-up.
+        const t = this.isPerspective
+            ? this.controls.distance / 280
+            : this.orthographicZoom / 70;
+        return Math.max(0.18, Math.min(10, Math.pow(Math.max(t, 0.02), 0.92)));
+    }
+
+    _applyTraceLabelScale(sprite) {
+        if (!sprite || !sprite.userData) return;
+        const w = (sprite.userData.labelBaseW || 95) * this._traceLabelZoomScale();
+        const aspect = sprite.userData.labelAspect || (128 / 512);
+        sprite.scale.set(w, w * aspect, 1);
+    }
+
+    _updateTraceLabelScales() {
+        if (!this.parentsSpread) return;
+        const apply = (mesh) => {
+            if (mesh && mesh.userData && mesh.userData.type === 'parent-label') {
+                this._applyTraceLabelScale(mesh);
+            }
+        };
+        (this.parentMeshes || []).forEach(apply);
+        (this.childMeshes || []).forEach(apply);
+    }
+
+    _addTraceLabelSprite(col, meshList, group) {
+        const heightPart = col.height ? col.height.toLocaleString() : 'Unconfirmed';
+        const datePart = col.time ? this._shortDate(col.time) : '';
+        const meta = datePart ? `${heightPart}  ${datePart}` : heightPart;
+        const sprite = this._makeLabelSprite(this._shortTxid(col.txid), meta);
+        sprite.position.set(col.x, col.topY + 16, 0);
+        sprite.visible = !!this.showTraceLabels;
+        sprite.userData.type = 'parent-label';
+        sprite.userData.group = group;
+        this.scene.add(sprite);
+        meshList.push(sprite);
+        return sprite;
+    }
+
+    toggleTraceLabels() {
+        if (!this.parentsSpread) return;
+        this.showTraceLabels = !this.showTraceLabels;
+        const apply = (mesh) => {
+            if (mesh && mesh.userData && mesh.userData.type === 'parent-label') {
+                mesh.visible = this.showTraceLabels;
+            }
+        };
+        (this.parentMeshes || []).forEach(apply);
+        (this.childMeshes || []).forEach(apply);
+        this._syncTraceMenuButtons();
     }
 
     // Remove and dispose all traced geometry and reset the traced-input gradients.
@@ -2409,8 +2471,7 @@ class BitcoinTransactionExplorer {
         this.traceDepth = 0;
         this.parentsLoaded = false;
         this._traceMinX = 0;
-        this._setDeeperButtonVisible(false);
-        this._syncSpreadButton();
+        this._syncTraceMenuButtons();
         if (this.childrenLoaded) this._updateTraceCamera();
         else {
             this.parentsSpread = false;
@@ -2431,24 +2492,15 @@ class BitcoinTransactionExplorer {
         this.traceOutDepth = 0;
         this.childrenLoaded = false;
         this.parentsSpread = false;
+        this.showTraceLabels = false;
         this._tracing = false;
         this._traceMinX = 0;
         this._traceMaxX = 0;
-        this._setSpreadButtonVisible(false);
-        this._setDeeperButtonVisible(false);
-        this._setDeeperOutButtonVisible(false);
-        const btn = document.getElementById('trace-inputs');
-        if (btn) {
-            btn.textContent = 'Trace Inputs';
-            btn.title = 'Load the parent transaction of each input, one level deep';
-            btn.disabled = false;
-        }
-        const outBtn = document.getElementById('trace-outputs');
-        if (outBtn) {
-            outBtn.textContent = 'Trace Outputs';
-            outBtn.title = 'Load the spending transaction of each output, one level deep';
-            outBtn.disabled = false;
-        }
+        const menu = document.getElementById('trace-menu');
+        const toggle = document.getElementById('trace-menu-toggle');
+        if (menu) { menu.classList.remove('is-open'); menu.hidden = true; }
+        if (toggle) toggle.classList.remove('active');
+        this._syncTraceMenuButtons();
     }
 
     // Note: Input tubes are now unified objects (straight + curved as one)
@@ -2605,6 +2657,7 @@ class BitcoinTransactionExplorer {
         this.camera.position.copy(currentPosition);
         this.controls.target.copy(currentTarget);
         this.camera.lookAt(this.controls.target);
+        this._updateTraceLabelScales();
         
         // Update the button text
         const button = document.getElementById('toggle-view');
@@ -2797,7 +2850,7 @@ class BitcoinTransactionExplorer {
     
     _panStep() {
         // Scale the button pan step proportionally with zoom distance (strong far, fine when close).
-        return 0.5 * (this.controls.distance / 130);
+        return 1.4 * (this.controls.distance / 130);
     }
 
     panLeft() {

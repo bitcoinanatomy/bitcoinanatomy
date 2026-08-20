@@ -5,7 +5,8 @@
  * #ar-button  → immersive-ar  (passthrough / mixed reality, Quest 3 / compatible devices)
  *
  * If the DOM elements already exist they are reused; otherwise floating fallbacks
- * are created. AR button is hidden when the device does not support immersive-ar.
+ * are created. VR / MR buttons stay hidden unless the matching WebXR session
+ * is supported on this device.
  * Exposed as window.VRButton.
  */
 (function () {
@@ -154,9 +155,18 @@
         document.body.appendChild(overlay);
     }
 
+    function setXrButtonReady(btn, ready) {
+        if (!btn) return;
+        if (ready) btn.classList.add('xr-ready');
+        else btn.classList.remove('xr-ready');
+    }
+
     // -------------------------------------------------------------------------
 
     var VRButton = {
+        vrSupported: false,
+        arSupported: false,
+
         createButton: function (renderer, options) {
             var vrInit = Object.assign(
                 { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking', 'bounded-floor'] },
@@ -197,7 +207,6 @@
                     'box-shadow:var(--glass-highlight)',
                     'color:rgba(255,255,255,0.5)', 'font-family:monospace',
                     'font-size:13px', 'cursor:pointer', 'z-index:9999',
-                    'display:none',
                 ].join(';');
                 document.body.appendChild(arBtn);
             }
@@ -242,39 +251,42 @@
                     .catch(function (e) { console.warn('[VRButton] AR session failed:', e); });
             }
 
+            setXrButtonReady(vrBtn, false);
+            setXrButtonReady(arBtn, false);
+
             if ('xr' in navigator) {
-                // Check VR support
                 navigator.xr.isSessionSupported('immersive-vr').then(function (supported) {
                     vrSupported = supported;
+                    VRButton.vrSupported = supported;
                     vrBtn.textContent = 'VR';
-                    vrBtn.disabled    = false;
+                    vrBtn.disabled = false;
+                    setXrButtonReady(vrBtn, supported);
                     if (supported) {
                         vrBtn.title = 'Enter immersive VR mode';
                         // Auto-enter only on first boot — not after soft-nav reattach
                         if (!renderer.xr.isPresenting && !(options && options.skipAutoStart)) {
                             startVR();
                         }
-                    } else {
-                        vrBtn.style.opacity = '0.6';
-                        vrBtn.title = 'VR not detected — click for setup instructions';
                     }
                 }).catch(function () {
-                    vrBtn.disabled = false; vrBtn.style.opacity = '0.6';
+                    vrSupported = false;
+                    VRButton.vrSupported = false;
+                    setXrButtonReady(vrBtn, false);
                 });
 
-                // Check AR support
                 navigator.xr.isSessionSupported('immersive-ar').then(function (supported) {
                     arSupported = supported;
+                    VRButton.arSupported = supported;
+                    setXrButtonReady(arBtn, supported);
                     if (supported) {
-                        VRButton.arSupported = true;
                         arBtn.textContent = 'MR';
-                        arBtn.style.display = '';
                         arBtn.title = 'Enter mixed reality (passthrough) mode';
                     }
-                }).catch(function () {});
-            } else {
-                vrBtn.disabled = false; vrBtn.style.opacity = '0.6';
-                vrBtn.title = 'WebXR unavailable — click for setup instructions';
+                }).catch(function () {
+                    arSupported = false;
+                    VRButton.arSupported = false;
+                    setXrButtonReady(arBtn, false);
+                });
             }
 
             vrBtn.addEventListener('click', function () {
@@ -380,10 +392,13 @@
 
             syncLabels();
             vrBtn.disabled = false;
+            setXrButtonReady(vrBtn, !!VRButton.vrSupported);
+            setXrButtonReady(arBtn, !!VRButton.arSupported);
 
             vrBtn.onclick = function () {
                 var s = session();
                 if (s) { s.end(); return; }
+                if (!VRButton.vrSupported) return;
                 navigator.xr.requestSession('immersive-vr', vrInit)
                     .then(function (sess) {
                         sess.addEventListener('end', syncLabels);
@@ -394,10 +409,10 @@
             };
 
             if (arBtn) {
-                arBtn.style.display = '';
                 arBtn.onclick = function () {
                     var s = session();
                     if (s) { s.end(); return; }
+                    if (!VRButton.arSupported) return;
                     navigator.xr.requestSession('immersive-ar', arInit)
                         .then(function (sess) {
                             sess.addEventListener('end', syncLabels);

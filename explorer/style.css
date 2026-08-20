@@ -1016,6 +1016,43 @@ button:active {
         var(--glass-border-gradient);
 }
 
+.trace-menu-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+}
+
+.trace-menu {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 6px);
+    z-index: 2;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.trace-menu.is-open {
+    display: flex;
+}
+
+.trace-menu[hidden] {
+    display: none !important;
+}
+
+.controls-main button:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* Hidden until WebXR reports a matching immersive session */
+#vr-button:not(.xr-ready),
+#ar-button:not(.xr-ready) {
+    display: none;
+}
+
 /* Filter Controls */
 .filter-controls {
     position: absolute;
@@ -1960,15 +1997,20 @@ button:active {
 
 /* Navigation controls */
 .navigation-controls {
+    position: relative;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 6px;
     margin-left: 0;
     padding-left: 0;
 }
 
 .camera-nav-popup {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 6px);
+    z-index: 2;
     display: none;
     flex-direction: row;
     align-items: center;

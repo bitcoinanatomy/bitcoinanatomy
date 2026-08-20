@@ -74,11 +74,16 @@
                     <button id="vr-button" title="Enter immersive VR mode">VR</button>
                     <button id="ar-button" title="Enter mixed reality (passthrough) mode">MR</button>
                     <button id="toggle-flow">Show Flow</button>
-                    <button id="trace-inputs" title="Load the parent transaction of each input, one level deep">Trace Inputs</button>
-                    <button id="trace-outputs" title="Load the spending transaction of each output, one level deep">Trace Outputs</button>
-                    <button id="spread-parents" title="Spread traced transactions by block age relative to this transaction" style="display:none">Spread by Age</button>
-                    <button id="trace-deeper" title="Trace one more level of inputs" style="display:none">Load Deeper</button>
-                    <button id="trace-deeper-outputs" title="Trace one more level of outputs" style="display:none">Load Deeper Outputs</button>
+                    <div class="trace-menu-wrap">
+                        <button id="trace-menu-toggle" title="Show transaction tracing controls">Trace</button>
+                        <div id="trace-menu" class="trace-menu" hidden>
+                            <button id="trace-deeper" title="Trace one more level backward">Deeper Inputs</button>
+                            <button id="trace-deeper-outputs" title="Trace one more level forward">Deeper Outputs</button>
+                            <button id="spread-parents" title="Spread traced transactions by block age">Spread</button>
+                            <button id="toggle-trace-labels" title="Show block numbers and dates">Show Labels</button>
+                            <button id="frame-trace" title="Fit the camera to the visible transaction history">Frame</button>
+                        </div>
+                    </div>
                     <button id="show-raw-data">Raw Data</button>
                     <button id="show-treemap">Treemap</button>
                     <button id="change-transaction">Go to</button>
