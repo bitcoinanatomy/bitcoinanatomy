@@ -63,7 +63,7 @@
                         <div data-tip="Current construction: family parameter z, addition formula, or kG hop.">Op: <span id="crypto-op-label">—</span></div>
                         <div id="crypto-k-row" hidden data-tip="256-bit private scalar k. Loaded from hex, a 64-byte BIP32 seed (HMAC-SHA512 “Bitcoin seed”), or SHA-256 of any other text. Never sent anywhere.">k: <span id="crypto-k-label">—</span></div>
                         <div id="crypto-q-row" hidden data-tip="Compressed secp256k1 public key Q = kG, 33 bytes, computed with a real curve multiply — not the 𝔽₁₇ toy hops.">Q: <span id="crypto-q-label">—</span></div>
-                        <div class="panel-row-muted" id="crypto-drawn-row" data-tip="Spheres actually drawn. Tiny primes keep every affine point and pad with extra scatter so Field+ always densifies; larger fields are schematic.">Drawn: <span id="crypto-point-count">—</span></div>
+                        <div class="panel-row-muted" id="crypto-drawn-row" data-tip="Spheres actually drawn. Tiny primes show every affine point. 32–128-bit fields are a denser schematic sample (not more real points). At 256-bit the domain is drawn as a solid white surface.">Drawn: <span id="crypto-point-count">—</span></div>
                         <div class="panel-slider" id="crypto-slice-row" hidden data-tip="How many Weierstrass curves y² = x³ + (7+z) to draw. Spacing along z stays 0.5; the interval grows or shrinks. z = 0 is secp256k1.">
                             <div class="panel-slider-label">
                                 Curves <span id="crypto-slice-value">45</span>
@@ -94,7 +94,7 @@
                     </span>
                     <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-field">
                     <button id="prime-prev" data-tip="Halve the bit length of 𝔽_p (256 → 128 → … → 2). Drawn scatter thins until every point is visible. Group and Scalar stay on 𝔽₁₇ so labels remain readable.">Field−</button>
-                    <button id="prime-next" data-tip="Click: double the bit length (2, 4, 8, …, 256) and always add more scatter so the cloud densifies (padded past the real 𝔽_p count). After 256 bits, click still densifies. Double-click: add more dots without changing the field (up to 768k). Entropy and search time follow the field, not the draw cap.">Field+</button>
+                    <button id="prime-next" data-tip="Click: double the bit length (2, 4, 8, …, 256). Exact fields show every affine point; 32–128-bit rungs densify a schematic sample (128-bit uses the old 256-bit dot count). At 256-bit the domain is a solid white surface. Double-click: more scatter on schematic rungs (up to 768k). Entropy and search time follow the field.">Field+</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-ops">
                     <button id="op-add" data-tip="Addition P ⊕ Q: chord through P and Q meets the curve at R′; reflect R′ across y = p/2 to land on R. On the torus that chord wraps.">+</button>

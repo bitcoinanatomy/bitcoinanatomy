@@ -7,8 +7,8 @@
 
     var A = 0;
     var B = 7;
-    var INSTANCE_CAP = 1500;
-    var SCHEMATIC_DOTS = 1500;
+    var INSTANCE_CAP = 192000;
+    var SCHEMATIC_DOTS = 192000;
     var INSTANCE_CAP_MAX = 768000;
     var ENUM_MAX_P = 70000;
     var SEARCH_RATE = 1e12;
@@ -169,6 +169,22 @@
         return sumDistinctFp(P, Q, p);
     }
 
+    function lineSlopeFp(P, Q, p) {
+        if (!P || !Q || P.inf || Q.inf) return null;
+        if (P.x === Q.x) return Infinity;
+        var inv = modInv(mod(Q.x - P.x, p), p);
+        if (inv == null) return null;
+        var lam = mod((Q.y - P.y) * inv, p);
+        if (lam > p / 2) lam -= p;
+        return lam;
+    }
+
+    function shortenFp(n, p) {
+        var r = mod(n, p);
+        if (r > p / 2) r -= p;
+        return r;
+    }
+
     function pointOrder(P, p) {
         if (P.inf) return 1;
         var Q = P;
@@ -301,20 +317,32 @@
         };
     }
 
-    var _schematicPool = [];
-    var _schematicRand = null;
+    function schematicCountForBits(bits, cap) {
+        if (bits >= 256) return 0;
+        var bitN = INSTANCE_CAP;
+        if (bits >= 128) bitN = INSTANCE_CAP_MAX;
+        else if (bits >= 64) bitN = Math.round((INSTANCE_CAP + INSTANCE_CAP_MAX) / 2);
+        var n = Math.max(cap || INSTANCE_CAP, bitN);
+        return Math.min(INSTANCE_CAP_MAX, Math.max(INSTANCE_CAP, n));
+    }
 
     function schematicPoints(n) {
         n = Math.min(Math.max(1, n || SCHEMATIC_DOTS), INSTANCE_CAP_MAX);
-        if (!_schematicRand) _schematicRand = mulberry32(0x9e3779b9);
-        while (_schematicPool.length < n) {
-            _schematicPool.push({
-                u: _schematicRand(),
-                v: _schematicRand(),
-                schematic: true
-            });
+        var rand = mulberry32(0x9e3779b9);
+        var pts = [];
+        var side = Math.ceil(Math.sqrt(n));
+        var i, j, u, v;
+        for (j = 0; j < side; j++) {
+            for (i = 0; i < side; i++) {
+                if (pts.length >= n) break;
+                u = (i + rand()) / side;
+                v = (j + rand()) / side;
+                if (u > 1) u = 1;
+                if (v > 1) v = 1;
+                pts.push({ u: u, v: v, schematic: true });
+            }
         }
-        return _schematicPool.slice(0, n);
+        return pts;
     }
 
     function downsample(pts, cap) {
@@ -329,7 +357,19 @@
         cap = Math.min(Math.max(1, cap || INSTANCE_CAP), INSTANCE_CAP_MAX);
         var bits = entry && entry.bits;
         if (!entry || entry.schematic || !entry.p || entry.p > ENUM_MAX_P) {
-            var scatter = schematicPoints(cap);
+            var n = schematicCountForBits(bits, cap);
+            if (n <= 0) {
+                return {
+                    points: [],
+                    count: 0,
+                    total: null,
+                    exact: false,
+                    solid: true,
+                    p: entry && entry.p,
+                    bits: bits
+                };
+            }
+            var scatter = schematicPoints(n);
             return {
                 points: scatter,
                 count: scatter.length,
@@ -344,9 +384,6 @@
             return { x: q.x, y: q.y, u: q.x / entry.p, v: q.y / entry.p };
         });
         var drawn = downsample(pts, cap);
-        if (drawn.length < cap) {
-            drawn = drawn.concat(schematicPoints(cap - drawn.length));
-        }
         return {
             points: drawn,
             count: drawn.length,
@@ -509,6 +546,7 @@
         B: B,
         INSTANCE_CAP: INSTANCE_CAP,
         INSTANCE_CAP_MAX: INSTANCE_CAP_MAX,
+        schematicCountForBits: schematicCountForBits,
         PRIME_LADDER: PRIME_LADDER,
         fieldScale: fieldScale,
         formatPow2: formatPow2,
@@ -531,6 +569,8 @@
         schematicPoints: schematicPoints,
         chordWraps: chordWraps,
         wrapLineSamples: wrapLineSamples,
+        lineSlopeFp: lineSlopeFp,
+        shortenFp: shortenFp,
         pickGenerator: pickGenerator,
         multiplesOf: multiplesOf,
         F17: F17,

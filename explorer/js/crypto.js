@@ -10,7 +10,7 @@ class BitcoinCryptoExplorer {
         this.renderer = null;
         this.controls = null;
         this.vrManager = null;
-        this.isRotating = true;
+        this.isRotating = false;
         this.isPerspective = true;
         this.clock = new THREE.Clock();
         this.content = null;
@@ -33,7 +33,7 @@ class BitcoinCryptoExplorer {
         this.hudOp = '—';
         this.useColor = false;
         this.showGrid = true;
-        this.drawCap = (window.ECC && ECC.INSTANCE_CAP) || 1500;
+        this.drawCap = (window.ECC && ECC.INSTANCE_CAP) || 192000;
         this._primeNextTimer = null;
         this._realKey = null;
 
@@ -60,6 +60,7 @@ class BitcoinCryptoExplorer {
         }
         this.setupOrbitControls();
         this.setupControls();
+        if (typeof setRotationButtonState === 'function') setRotationButtonState(this.isRotating);
         this.setupPanelToggle();
         this.setupExplainers();
         this.rebuildView();
@@ -246,15 +247,10 @@ class BitcoinCryptoExplorer {
         }, { signal });
     }
 
-    _growDrawCap() {
-        const max = ECC.INSTANCE_CAP_MAX;
-        if (this.drawCap >= max) return false;
-        this.drawCap = Math.min(max, Math.max(this.drawCap, 1) * 2);
-        return true;
-    }
-
     addMorePoints() {
-        if (!this._growDrawCap()) return;
+        const max = ECC.INSTANCE_CAP_MAX;
+        if (this.drawCap >= max) return;
+        this.drawCap = Math.min(max, this.drawCap * 2);
         this._fieldCache = null;
         if (this.view === 'family') this.setView('domain');
         else this.rebuildView();
@@ -567,10 +563,8 @@ class BitcoinCryptoExplorer {
     stepPrime(dir) {
         if (this.view === 'group' || this.view === 'scalar') return;
         const next = Math.max(0, Math.min(ECC.PRIME_LADDER.length - 1, this.primeIndex + dir));
-        let changed = next !== this.primeIndex;
+        if (next === this.primeIndex) return;
         this.primeIndex = next;
-        if (dir > 0) changed = this._growDrawCap() || changed;
-        if (!changed) return;
         this._fieldCache = null;
         if (this.view === 'family') this.setView('domain');
         else {
@@ -839,7 +833,7 @@ class BitcoinCryptoExplorer {
         const col = new THREE.Color(this._tone('grid'));
         const xMin = -56, xMax = 56;
         const yMin = -80, yMax = 80;
-        const step = 2;
+        const step = 1;
         const rMax = 78;
         const addFadeLine = (x0, y0, x1, y1, axisBoost) => {
             const steps = 96;
@@ -859,7 +853,7 @@ class BitcoinCryptoExplorer {
             }
             const g = new THREE.BufferGeometry().setFromPoints(pts);
             g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            this.content.add(new THREE.Line(g, this._matLine(col, 1, { vertexColors: true })));
+            this.content.add(new THREE.Line(g, this._matLine(col, 0.5, { vertexColors: true })));
         };
         for (let x = Math.ceil(xMin / step) * step; x <= xMax + 1e-9; x += step) {
             addFadeLine(x, yMin, x, yMax, x === 0 ? 1 : 0.42);
@@ -1033,6 +1027,49 @@ class BitcoinCryptoExplorer {
         return { geom: geom, nu: nu, nv: nv, mesh: mesh, geoA: geoA, geoB: geoB, geoMid: geoMid };
     }
 
+    _makeDomainFillGeom(nu, nv, t) {
+        const verts = [];
+        const idx = [];
+        let i, j, u, v, p, a, b, c, d;
+        for (j = 0; j <= nv; j++) {
+            for (i = 0; i <= nu; i++) {
+                u = i / nu;
+                v = j / nv;
+                p = ECC.sampleDomain(u, v, t);
+                verts.push(p.x, p.y, p.z);
+            }
+        }
+        for (j = 0; j < nv; j++) {
+            for (i = 0; i < nu; i++) {
+                a = j * (nu + 1) + i;
+                b = a + 1;
+                c = a + (nu + 1);
+                d = c + 1;
+                idx.push(a, c, b, b, c, d);
+            }
+        }
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+        geom.setIndex(idx);
+        geom.computeVertexNormals();
+        return geom;
+    }
+
+    _addDomainFill(group, t) {
+        const nu = 96, nv = 48;
+        const geom = this._makeDomainFillGeom(nu, nv, t);
+        const mat = new THREE.MeshBasicMaterial({
+            color: this._tone('pt'),
+            side: THREE.DoubleSide,
+            polygonOffset: true,
+            polygonOffsetFactor: 1,
+            polygonOffsetUnits: 1
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        group.add(mesh);
+        return { geom: geom, mesh: mesh, nu: nu, nv: nv };
+    }
+
     _v3(p) {
         return new THREE.Vector3(p.x, p.y, p.z);
     }
@@ -1110,10 +1147,14 @@ class BitcoinCryptoExplorer {
         const t = this.morphT;
         const field = this._ensureField();
         const surf = this._buildDomainSurface(this.content, t);
-        const r = field.exact ? (field.p <= 17 ? 0.028 : field.p <= 251 ? 0.014 : 0.007) : 0.0055;
-        const inst = this._makeInstances(field.points.length, r);
-        this.content.add(inst);
-        this._placeInstances(inst, field.points, t, -1);
+        let inst = null;
+        if (!field.solid && field.points.length) {
+            const r = field.exact ? (field.p <= 17 ? 0.028 : field.p <= 251 ? 0.014 : 0.007) : 0.0055;
+            inst = this._makeInstances(field.points.length, r);
+            this.content.add(inst);
+            this._placeInstances(inst, field.points, t, -1);
+        }
+        const fill = field.solid ? this._addDomainFill(this.content, t) : null;
         this._domainState = {
             geom: surf.geom,
             nu: surf.nu,
@@ -1122,7 +1163,10 @@ class BitcoinCryptoExplorer {
             points: field.points,
             geoA: surf.geoA,
             geoB: surf.geoB,
-            geoMid: surf.geoMid
+            geoMid: surf.geoMid,
+            fillGeom: fill && fill.geom,
+            fillNu: fill && fill.nu,
+            fillNv: fill && fill.nv
         };
         if (this.dimIndex === 0 && field.exact && field.p === 17) {
             this._addRealCurveOverlay(0.15);
@@ -1197,46 +1241,53 @@ class BitcoinCryptoExplorer {
 
     _addWrappedChord(P, Q, color) {
         if (!P || !Q || P.inf || Q.inf) return;
-        const p = this._fieldOpP();
-        const extend = 2;
+        const fieldP = this._fieldOpP();
         const dx = Q.x - P.x;
         const dy = Q.y - P.y;
         if (dx === 0 && dy === 0) return;
+        const span = Math.hypot(dx, dy) || 1;
+        const extend = Math.max(1.6, (5 * fieldP / span - 1) / 2);
         const x0 = P.x - dx * extend;
         const y0 = P.y - dy * extend;
         const x1 = Q.x + dx * extend;
         const y1 = Q.y + dy * extend;
-        const steps = 192;
+        const steps = Math.max(160, Math.min(512, Math.ceil((1 + 2 * extend) * span * 10)));
         const col = new THREE.Color(color);
-        let pts = [];
-        let rgb = [];
-        let prevU = null;
-        let prevV = null;
+        let buf = [];
+        let prevX = null;
+        let prevY = null;
         const flush = () => {
-            if (pts.length < 2) {
-                pts = [];
-                rgb = [];
+            const n = buf.length;
+            if (n < 2) {
+                buf = [];
                 return;
             }
-            const g = new THREE.BufferGeometry().setFromPoints(pts);
-            g.setAttribute('color', new THREE.Float32BufferAttribute(rgb, 3));
+            const colors = new Float32Array(n * 3);
+            for (let k = 0; k < n; k++) {
+                const t = n <= 1 ? 0.5 : k / (n - 1);
+                const edge = Math.min(t, 1 - t) * 2;
+                const along = Math.pow(Math.min(1, edge / 0.32), 1.7);
+                colors[k * 3] = col.r * along;
+                colors[k * 3 + 1] = col.g * along;
+                colors[k * 3 + 2] = col.b * along;
+            }
+            const g = new THREE.BufferGeometry().setFromPoints(buf);
+            g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
             this.content.add(new THREE.Line(g, this._matLine(0xffffff, 1, { vertexColors: true })));
-            pts = [];
-            rgb = [];
+            buf = [];
         };
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
             const x = x0 + (x1 - x0) * t;
             const y = y0 + (y1 - y0) * t;
-            const u = ECC.mod(x, p) / p;
-            const v = ECC.mod(y, p) / p;
-            if (prevU != null && (Math.abs(u - prevU) > 0.45 || Math.abs(v - prevV) > 0.45)) flush();
-            const edge = Math.min(t, 1 - t) * 2;
-            const along = Math.pow(Math.min(1, edge / 0.38), 1.85);
-            pts.push(this._v3(ECC.sampleDomain(u, v, this.morphT)));
-            rgb.push(col.r * along, col.g * along, col.b * along);
-            prevU = u;
-            prevV = v;
+            const xm = ECC.mod(x, fieldP);
+            const ym = ECC.mod(y, fieldP);
+            if (prevX != null && (Math.abs(xm - prevX) > fieldP * 0.45 || Math.abs(ym - prevY) > fieldP * 0.45)) {
+                flush();
+            }
+            buf.push(this._v3(ECC.sampleDomain(xm / fieldP, ym / fieldP, this.morphT)));
+            prevX = xm;
+            prevY = ym;
         }
         flush();
     }
@@ -1276,11 +1327,7 @@ class BitcoinCryptoExplorer {
             return;
         }
         const field = this._ensureField();
-        if (!field.exact || !field.p) {
-            this.hudOp = '—';
-            return;
-        }
-        const p = field.p;
+        const p = (field && field.exact && field.p) ? field.p : 17;
         const demo = ECC.demoAddPair(p);
         const P = demo.P;
         const Q = demo.Q;
@@ -1289,7 +1336,7 @@ class BitcoinCryptoExplorer {
         if (this.groupOp === 'add') {
             R = demo.R;
             Rp = demo.Rp;
-            this._addWrappedChord(P, Q, this._tone('chord'));
+            this._addWrappedChord(P, Q, this._tone('chord'), Rp.inf ? [] : [Rp]);
             if (!R.inf && !Rp.inf) this._addWrappedChord(Rp, R, this._tone('reflect'));
             this._addLabeledPoint(P, this._tone('white'), 'P');
             this._addLabeledPoint(Q, this._tone('ptQ'), 'Q');
@@ -1300,7 +1347,7 @@ class BitcoinCryptoExplorer {
             R = ECC.sumDoubleFp(P, p);
             Rp = R.inf ? ECC.INF : { x: R.x, y: ECC.mod(-R.y, p) };
             const Q2 = { x: ECC.mod(P.x + 1, p), y: P.y };
-            this._addWrappedChord(P, R.inf ? Q2 : Rp, this._tone('tangent'));
+            this._addWrappedChord(P, R.inf ? Q2 : Rp, this._tone('tangent'), R.inf ? [] : [Rp]);
             if (!R.inf && !Rp.inf) this._addWrappedChord(Rp, R, this._tone('reflect'));
             this._addLabeledPoint(P, this._tone('white'), 'P');
             if (!Rp.inf) this._addLabeledPoint(Rp, this._tone('ptRp'), "R′");
@@ -1314,7 +1361,7 @@ class BitcoinCryptoExplorer {
             nQ = ECC.negPt(Q, p);
             R = ECC.addFp(P, nQ, p);
             Rp = R.inf ? ECC.INF : { x: R.x, y: ECC.mod(-R.y, p) };
-            this._addWrappedChord(P, nQ, this._tone('chord'));
+            this._addWrappedChord(P, nQ, this._tone('chord'), Rp.inf ? [] : [Rp]);
             if (!R.inf && !Rp.inf) this._addWrappedChord(Rp, R, this._tone('reflect'));
             this._addLabeledPoint(P, this._tone('white'), 'P');
             this._addLabeledPoint(Q, this._tone('muted'), 'Q');
@@ -1409,6 +1456,7 @@ class BitcoinCryptoExplorer {
             return r.n + (r.n === 1 ? ' curve ' : ' curves ') + this._formatZRange(r);
         }
         const field = this._ensureField();
+        if (field.solid) return 'full surface';
         return field.count + (field.exact ? '' : ' schematic');
     }
 
@@ -1470,6 +1518,9 @@ class BitcoinCryptoExplorer {
         this.morphT = t;
         if (!this._domainState) return;
         this._updateSurfacePositions(this._domainState.geom, this._domainState.nu, this._domainState.nv, t);
+        if (this._domainState.fillGeom) {
+            this._updateSurfacePositions(this._domainState.fillGeom, this._domainState.fillNu, this._domainState.fillNv, t);
+        }
         if (this._domainState.instances && this._domainState.points) {
             this._placeInstances(this._domainState.instances, this._domainState.points, t, -1);
         }
