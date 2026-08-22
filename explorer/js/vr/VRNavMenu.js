@@ -182,6 +182,12 @@
                     onSelect: click('toggle-labels')
                 },
                 {
+                    label: 'DISCS',
+                    kind: 'toggle',
+                    getState: function () { return explorerProp(vrManager, 'showDiscs'); },
+                    onSelect: click('toggle-discs')
+                },
+                {
                     label: 'LOAD ALL',
                     kind: 'action',
                     getState: function () { return false; },

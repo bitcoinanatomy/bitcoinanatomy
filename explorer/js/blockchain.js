@@ -13,6 +13,7 @@ class BitcoinBlockchainExplorer {
         this.isRotating = true;
         this.showUTXOs = false;
         this.showLabels = false;
+        this.showDiscs = true;
         this.clock = new THREE.Clock();
         
         // Get adjustment index from URL parameter for highlighting
@@ -525,6 +526,7 @@ class BitcoinBlockchainExplorer {
         disc.material.opacity = 0.12;
         disc.material.depthWrite = false;
         disc.material.side = THREE.DoubleSide;
+        disc.material.visible = this.showDiscs !== false;
         disc.material.needsUpdate = true;
     }
 
@@ -535,6 +537,7 @@ class BitcoinBlockchainExplorer {
         disc.material.transparent = false;
         disc.material.depthWrite = true;
         disc.material.side = THREE.FrontSide;
+        disc.material.visible = this.showDiscs !== false;
         disc.material.needsUpdate = true;
     }
 
@@ -1043,6 +1046,11 @@ class BitcoinBlockchainExplorer {
             this.toggleLabels();
         });
 
+        const toggleDiscsBtn = document.getElementById('toggle-discs');
+        if (toggleDiscsBtn) {
+            toggleDiscsBtn.addEventListener('click', () => this.toggleDiscs());
+        }
+
         const loadAllBtn = document.getElementById('load-all-epochs');
         const loadMenu = document.getElementById('load-epochs-menu');
         const loadWrap = document.getElementById('load-epochs-wrap');
@@ -1172,6 +1180,22 @@ class BitcoinBlockchainExplorer {
         button.textContent = this.isPerspective ? 'Orthographic' : 'Perspective';
     }
     
+    toggleDiscs() {
+        this.showDiscs = !this.showDiscs;
+        const button = document.getElementById('toggle-discs');
+        if (button) {
+            button.textContent = this.showDiscs ? 'Hide discs' : 'Show discs';
+        }
+        this._applyDiscShellVisibility();
+    }
+
+    _applyDiscShellVisibility() {
+        (this.blocks || []).forEach((disc) => {
+            if (!disc || disc.userData.special || !disc.material) return;
+            disc.material.visible = !!this.showDiscs;
+        });
+    }
+
     toggleLabels() {
         this.showLabels = !this.showLabels;
         
@@ -1539,7 +1563,7 @@ class BitcoinBlockchainExplorer {
         
         // Store sphere data for later creation
         this.sphereData = specialSpheres;
-        
+        this._applyDiscShellVisibility();
         this._log('Created', this.blocks.length, 'total objects');
     }
 
