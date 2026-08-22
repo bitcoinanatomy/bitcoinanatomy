@@ -218,6 +218,46 @@ body:not(.homepage) {
     content: none;
 }
 
+.nav-dropdown {
+    position: relative;
+}
+
+.nav-dropdown-toggle {
+    appearance: none;
+    border: 0;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.nav-dropdown-panel {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    min-width: 200px;
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    background: rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-stroke-soft);
+    border-radius: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    z-index: 40001;
+}
+
+.nav-dropdown.open .nav-dropdown-panel,
+.nav-dropdown:hover .nav-dropdown-panel {
+    display: block;
+}
+
+.nav-dropdown-panel .nav-link {
+    display: block;
+    width: 100%;
+    border-radius: 0;
+    padding: 8px 16px;
+}
+
 /* Hamburger Menu */
 .hamburger {
     display: none;
@@ -762,6 +802,17 @@ body:not(.homepage) {
     font-weight: 500;
 }
 
+.panel-content .panel-row-muted {
+    color: #555555;
+    font-size: 0.7rem;
+    margin-top: 4px;
+}
+
+.panel-content .panel-row-muted span {
+    color: #666666;
+    font-weight: 400;
+}
+
 /* Panel range slider (disc / block visibility) */
 .panel-slider {
     margin-top: 12px;
@@ -980,6 +1031,20 @@ button:active {
     height: 26px;
 }
 
+.controls-cluster {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.controls-cluster[hidden] {
+    display: none !important;
+}
+
+.controls-cluster-gap {
+    margin-left: 18px;
+}
+
 .controls-main button {
     height: 26px;
     padding: 0 10px;
@@ -1009,11 +1074,45 @@ button:active {
     color: #ccc;
 }
 
+.controls-main button[hidden] {
+    display: none !important;
+}
+
+.controls-main button[aria-pressed="true"],
+.controls-main button.active {
+    --glass-fill: #2a2a2a;
+    --glass-fill-hover: #333;
+    background-color: #2a2a2a;
+    background-image:
+        linear-gradient(var(--glass-fill), var(--glass-fill)),
+        var(--glass-border-gradient-hover);
+    color: #fff;
+}
+
 .controls-main button:active {
     --glass-fill: #161616;
     background-image:
         linear-gradient(#161616, #161616),
         var(--glass-border-gradient);
+}
+
+.explainer-tooltip {
+    position: fixed;
+    z-index: 100000;
+    max-width: 280px;
+    padding: 8px 11px;
+    background: rgba(8, 8, 8, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 12px;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    pointer-events: none;
+    display: none;
+}
+
+.panel-content [data-tip] {
+    cursor: help;
 }
 
 .trace-menu-wrap {
@@ -1263,6 +1362,40 @@ button:active {
     display: inline-block;
 }
 
+.script-note {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: #aaa;
+}
+
+.script-ops {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 12px;
+}
+
+.script-op-chip {
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border: 1px solid var(--glass-stroke-soft);
+    border-radius: 2px;
+    color: #777;
+}
+
+.script-op-chip.current {
+    color: #fff;
+    border-color: #fff;
+}
+
+.script-op-chip.done {
+    color: #bbb;
+    opacity: 0.7;
+}
+
 .data-sources li {
     margin-bottom: 0.5rem;
     padding-left: 0;
@@ -1508,6 +1641,41 @@ button:active {
         width: 100%;
         margin: 0;
     }
+
+    .nav-dropdown {
+        width: 100%;
+    }
+
+    .nav-dropdown:hover .nav-dropdown-panel {
+        display: none;
+    }
+
+    .nav-dropdown.open .nav-dropdown-panel,
+    .nav-menu.active .nav-dropdown-panel {
+        display: flex;
+        flex-direction: column;
+        position: static;
+        min-width: 0;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+        backdrop-filter: none;
+    }
+
+    .nav-dropdown-toggle {
+        width: 100%;
+        text-align: left;
+        font-size: 1rem;
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--glass-stroke-soft);
+        display: none;
+    }
+
+    .nav-dropdown-panel .nav-link {
+        font-size: 1rem;
+        padding: 15px 20px;
+    }
     
     .nav-link {
         font-size: 1rem;
@@ -1696,6 +1864,48 @@ button:active {
     color: #cccccc;
     font-size: 0.8rem;
     font-weight: 500;
+}
+
+.modal-body textarea {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #111;
+    border-radius: 3px;
+    color: #ffffff;
+    caret-color: #ffffff;
+    font-size: 13px;
+    font-family: monospace;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 88px;
+}
+
+.modal-body textarea:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.28);
+    background: #161616;
+}
+
+.seed-modal-note {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    line-height: 1.45;
+    margin: 0 0 14px;
+}
+
+.seed-modal-error {
+    color: #f87171;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+#crypto-k-label,
+#crypto-q-label {
+    word-break: break-all;
+    font-family: ui-monospace, monospace;
+    font-size: 0.78em;
 }
 
 .modal-body input[type="text"],
@@ -2134,6 +2344,12 @@ button:active {
     
     .controls-main {
         height: 28px;
+        flex-wrap: wrap;
+        height: auto;
+    }
+
+    .controls-cluster-gap {
+        margin-left: 12px;
     }
     
     .controls-main button {

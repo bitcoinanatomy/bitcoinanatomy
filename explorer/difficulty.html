@@ -13,7 +13,7 @@
         <!-- Navigation -->
         <nav class="navbar">
             <div class="nav-brand">
-                <a href="index.html">Anatomy of Bitcoin Explorer</a>
+                <a href="index.html">Anatomy of Bitcoin</a>
             </div>
             <div class="hamburger">
                 <span></span>
@@ -21,14 +21,21 @@
                 <span></span>
             </div>
             <ul class="nav-menu">
-                <li><a href="network.html" class="nav-link">Network</a></li>
-                <li><a href="node.html" class="nav-link">Node</a></li>
-                <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
-                <li><a href="difficulty.html" class="nav-link active">Difficulty</a></li>
-                <li><a href="block.html" class="nav-link">Block</a></li>
-                <li><a href="transaction.html" class="nav-link">Transaction</a></li>
-                <li><a href="address.html" class="nav-link">Address</a></li>
-                <li><a href="mempool.html" class="nav-link">Mempool</a></li>
+                <li class="nav-dropdown">
+                    <button type="button" class="nav-link nav-dropdown-toggle" aria-expanded="false">Explore</button>
+                    <ul class="nav-dropdown-panel">
+                        <li><a href="network.html" class="nav-link">Network</a></li>
+                        <li><a href="node.html" class="nav-link">Node</a></li>
+                        <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
+                        <li><a href="difficulty.html" class="nav-link active">Difficulty</a></li>
+                        <li><a href="block.html" class="nav-link">Block</a></li>
+                        <li><a href="transaction.html" class="nav-link">Transaction</a></li>
+                        <li><a href="address.html" class="nav-link">Address</a></li>
+                        <li><a href="mempool.html" class="nav-link">Mempool</a></li>
+                        <li><a href="crypto.html" class="nav-link">Curve</a></li>
+                        <li><a href="script.html" class="nav-link">Script</a></li>
+                    </ul>
+                </li>
             </ul>
         </nav>
 
@@ -119,30 +126,15 @@
     </script>
     <script src="js/controls-camera.js"></script>
     <script>ControlsCamera(document.getElementById('controls-camera-root'), { viewGroup: true });</script>
+    <script src="js/audio/ExplorerAudio.js"></script>
     <script src="js/vr/VRButton.js"></script>
     <script src="js/vr/SpatialPanel.js"></script>
     <script src="js/vr/VRNavMenu.js"></script>
     <script src="js/vr/VRManager.js"></script>
+    <script src="js/nav.js"></script>
     <script src="js/vr/ExplorerRouter.js"></script>
     <script src="js/difficulty.js"></script>
     <script>
-        // Hamburger menu functionality
-        const hamburger = document.querySelector('.hamburger');
-        const navMenu = document.querySelector('.nav-menu');
-        
-        hamburger.addEventListener('click', () => {
-            hamburger.classList.toggle('active');
-            navMenu.classList.toggle('active');
-        });
-        
-        // Close menu when clicking on a link
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', () => {
-                hamburger.classList.remove('active');
-                navMenu.classList.remove('active');
-            });
-        });
-
         // Mobile panel management
         document.addEventListener('DOMContentLoaded', () => {
             const isMobile = window.innerWidth <= 768;
