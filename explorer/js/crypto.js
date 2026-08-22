@@ -48,7 +48,12 @@ class BitcoinCryptoExplorer {
         this.familyPDir = 1;
         this._familyPDragging = false;
         this._familyOpRoot = null;
+        this._fieldOpRoot = null;
         this._familyPAnimAcc = 0;
+        this.fieldPIndex = 0;
+        this.fieldPPlaying = false;
+        this._fieldPBoundFor = null;
+        this._fieldPAnimAcc = 0;
         this.hudOp = '—';
         this.useColor = false;
         this.showGrid = true;
@@ -57,6 +62,7 @@ class BitcoinCryptoExplorer {
         this._realKey = null;
 
         this._fieldCache = null;
+        this._opPtsCache = null;
         this._domainState = null;
         this._pointMeshes = [];
         this._zoomDots = [];
@@ -141,6 +147,7 @@ class BitcoinCryptoExplorer {
         this._zoomDots = [];
         this._lastDotZoom = -1;
         this._familyOpRoot = null;
+        this._fieldOpRoot = null;
         this._scalarHopGroup = null;
         this._pointMeshes.forEach((m) => {
             if (m.parent) m.parent.remove(m);
@@ -279,6 +286,7 @@ class BitcoinCryptoExplorer {
         if (this.drawCap >= max) return;
         this.drawCap = Math.min(max, this.drawCap * 2);
         this._fieldCache = null;
+        this._opPtsCache = null;
         if (this.view === 'family') this.setView('domain');
         else this.rebuildView();
     }
@@ -367,7 +375,7 @@ class BitcoinCryptoExplorer {
         const pRow = document.getElementById('crypto-p-row');
         const drawnRow = document.getElementById('crypto-drawn-row');
         if (sliceRow) sliceRow.hidden = view !== 'family';
-        if (pRow) pRow.hidden = view !== 'family';
+        if (pRow) pRow.hidden = view !== 'family' && !this._domainPSliderVisible();
         if (drawnRow) drawnRow.hidden = view === 'family';
         this._syncSliceSlider();
         this._syncPSlider();
@@ -426,6 +434,12 @@ class BitcoinCryptoExplorer {
         const setFromSlider = () => {
             const t = parseInt(slider.value, 10);
             if (!Number.isFinite(t)) return;
+            if (this.view === 'domain') {
+                this.fieldPIndex = t;
+                this._syncPSlider();
+                this._redrawFieldGroupOp();
+                return;
+            }
             this.familyPX = this._familyPXFromSlider(t);
             this._syncPSlider();
             if (this.view === 'family') this._redrawFamilyOp();
@@ -433,6 +447,7 @@ class BitcoinCryptoExplorer {
         slider.addEventListener('pointerdown', () => {
             this._familyPDragging = true;
             this.familyPPlaying = false;
+            this.fieldPPlaying = false;
             this._syncPSlider();
         }, { signal: this._ac.signal });
         slider.addEventListener('pointerup', () => {
@@ -444,28 +459,159 @@ class BitcoinCryptoExplorer {
         slider.addEventListener('input', setFromSlider, { signal: this._ac.signal });
         slider.addEventListener('change', setFromSlider, { signal: this._ac.signal });
         slider.addEventListener('dblclick', () => {
-            this.familyPPlaying = true;
+            if (this.view === 'domain') this.fieldPPlaying = true;
+            else this.familyPPlaying = true;
             this._syncPSlider();
         }, { signal: this._ac.signal });
         const rangeEl = document.getElementById('crypto-p-range');
         if (rangeEl) {
             rangeEl.style.cursor = 'pointer';
             rangeEl.addEventListener('click', () => {
-                this.familyPPlaying = !this.familyPPlaying;
+                if (this.view === 'domain') this.fieldPPlaying = !this.fieldPPlaying;
+                else this.familyPPlaying = !this.familyPPlaying;
                 this._syncPSlider();
             }, { signal: this._ac.signal });
         }
+    }
+
+    _domainPSliderVisible() {
+        return this.view === 'domain' && !!this.groupOp && this._fieldOpP() != null;
+    }
+
+    _fmtFieldCoord(n) {
+        if (n == null) return '—';
+        if (typeof n === 'bigint') {
+            const h = n.toString(16);
+            return h.length <= 8 ? '0x' + h : '0x' + h.slice(0, 4) + '…' + h.slice(-4);
+        }
+        if (typeof n === 'number' && n > 999) {
+            const h = n.toString(16);
+            return h.length <= 8 ? '0x' + h : '0x' + h.slice(0, 4) + '…' + h.slice(-4);
+        }
+        return String(n);
+    }
+
+    _fmtFieldCoordFull(n) {
+        if (n == null) return '—';
+        if (typeof n === 'bigint') return '0x' + n.toString(16);
+        if (typeof n === 'number' && n > 999) return '0x' + n.toString(16);
+        return String(n);
+    }
+
+    _fieldCoordIsWide(n) {
+        if (n == null) return false;
+        if (typeof n === 'bigint') return n.toString(16).length > 8;
+        if (typeof n === 'number') return n > 999 && n.toString(16).length > 8;
+        return false;
+    }
+
+    _fmtFieldPointLabel(P) {
+        if (!P) return { text: '—', title: '' };
+        const p = this._fieldOpP();
+        if (p != null && (this._fieldCoordIsWide(P.x) || this._fieldCoordIsWide(P.y))) {
+            const u = ECC.toUnit(P.x, p);
+            const v = ECC.toUnit(P.y, p);
+            return {
+                text: '(' + u.toFixed(2) + ', ' + v.toFixed(2) + ')',
+                title: 'x = ' + this._fmtFieldCoordFull(P.x) + '\ny = ' + this._fmtFieldCoordFull(P.y)
+            };
+        }
+        return {
+            text: '(' + this._fmtFieldCoord(P.x) + ', ' + this._fmtFieldCoord(P.y) + ')',
+            title: ''
+        };
+    }
+
+    _fieldOpPoints() {
+        const p = this._fieldOpP();
+        if (p == null) return [];
+        const key = String(p);
+        if (this._opPtsCache && this._opPtsCache.key === key) return this._opPtsCache.pts;
+        const lim = ECC.ENUM_MAX_P || 70000;
+        let raw;
+        if (typeof p === 'number' && p <= lim) {
+            raw = (p === 17 && ECC.F17 && ECC.F17.points) ? ECC.F17.points.slice() : ECC.toyCurvePoints(p);
+            if (raw.length > 160) {
+                const cap = 128;
+                const step = raw.length / cap;
+                const slim = [];
+                for (let i = 0; i < cap; i++) slim.push(raw[Math.floor(i * step)]);
+                raw = slim;
+            }
+        } else {
+            raw = ECC.sampleCurvePoints(p, 96);
+        }
+        if (typeof p === 'number') raw.sort((a, b) => a.x - b.x || a.y - b.y);
+        this._opPtsCache = { key: key, pts: raw };
+        return raw;
+    }
+
+    _ensureFieldPIndex(pts) {
+        const p = this._fieldOpP();
+        if (this._fieldPBoundFor === p && this.fieldPIndex >= 0 && this.fieldPIndex < pts.length) return;
+        this._fieldPBoundFor = p;
+        let i = 0;
+        if (p === 17) {
+            for (let k = 0; k < pts.length; k++) {
+                if (pts[k].x === 2) { i = k; break; }
+            }
+        }
+        this.fieldPIndex = i;
+    }
+
+    _fieldP() {
+        const pts = this._fieldOpPoints();
+        if (!pts.length) return null;
+        this._ensureFieldPIndex(pts);
+        if (this.fieldPIndex < 0 || this.fieldPIndex >= pts.length) this.fieldPIndex = 0;
+        return pts[this.fieldPIndex];
+    }
+
+    _fieldQ(P) {
+        const pts = this._fieldOpPoints();
+        if (!pts.length || !P) return null;
+        const n = pts.length;
+        const start = (this.fieldPIndex + Math.max(2, Math.floor(n / 3))) % n;
+        for (let i = 0; i < n; i++) {
+            const Q = pts[(start + i) % n];
+            if (Q.x !== P.x) return Q;
+        }
+        return pts[(this.fieldPIndex + 1) % n] || pts[0];
     }
 
     _syncPSlider() {
         const slider = document.getElementById('crypto-p-slider');
         const valueEl = document.getElementById('crypto-p-value');
         const rangeEl = document.getElementById('crypto-p-range');
+        if (this.view === 'domain') {
+            const pts = this._fieldOpPoints();
+            this._ensureFieldPIndex(pts);
+            const P = pts[this.fieldPIndex];
+            if (valueEl) {
+                const lab = this._fmtFieldPointLabel(P);
+                valueEl.textContent = lab.text;
+                if (lab.title) valueEl.setAttribute('title', lab.title);
+                else valueEl.removeAttribute('title');
+            }
+            if (rangeEl) rangeEl.textContent = this.fieldPPlaying && !this._familyPDragging ? 'hold' : 'walk';
+            if (!slider) return;
+            const max = Math.max(0, pts.length - 1);
+            slider.min = '0';
+            slider.max = String(max);
+            slider.value = String(this.fieldPIndex);
+            slider.style.setProperty('--slider-pct', max === 0 ? '100%' : ((this.fieldPIndex / max) * 100) + '%');
+            return;
+        }
+        if (slider) {
+            slider.min = '0';
+            slider.max = '1000';
+        }
         const y = (window.ECC && ECC.yUpperReal) ? ECC.yUpperReal(this.familyPX) : null;
         if (valueEl) {
             valueEl.textContent = y == null
                 ? '(' + this._fmtPCoord(this.familyPX) + ')'
                 : '(' + this._fmtPCoord(this.familyPX) + ', ' + this._fmtPCoord(y) + ')';
+            valueEl.removeAttribute('title');
         }
         if (rangeEl) rangeEl.textContent = this.familyPPlaying && !this._familyPDragging ? 'hold' : 'walk';
         if (!slider) return;
@@ -653,6 +799,7 @@ class BitcoinCryptoExplorer {
             this._pinGroupToy();
         } else if (view !== 'domain') {
             this._unpinGroupToy();
+            this.fieldPPlaying = false;
         }
         this._pushViewUrl();
         this.rebuildView();
@@ -698,7 +845,7 @@ class BitcoinCryptoExplorer {
         if (!st || !st.geom) return;
         this._updateSurfacePositions(st.geom, st.nu, st.nv, this.morphT);
         if (st.fillGeom) this._updateSurfacePositions(st.fillGeom, st.fillNu, st.fillNv, this.morphT);
-        if (st.gridExtraMat) st.gridExtraMat.opacity = 0.28 * this._torusSubdiv;
+        this._syncGridOpacity();
     }
 
     _ensureTorusSubdiv() {
@@ -715,6 +862,7 @@ class BitcoinCryptoExplorer {
         if (next === this.primeIndex && !wasToy) return;
         this.primeIndex = next;
         this._fieldCache = null;
+        this._opPtsCache = null;
         if (this.view === 'family') this.setView('domain');
         else {
             this.rebuildView();
@@ -756,18 +904,7 @@ class BitcoinCryptoExplorer {
     }
 
     setGroupOp(op) {
-        if (this.view === 'domain' && this.groupOp === op && !this._groupToy && !this._canLabelGroupOp()) {
-            this._pinGroupToy();
-            this.rebuildView();
-            if (this.vrManager && this.vrManager.navMenu && this.vrManager.navMenu._refreshAllToggles) {
-                this.vrManager.navMenu._refreshAllToggles();
-            }
-            return;
-        }
-        const next = this.groupOp === op ? null : op;
-        if (!next) this._unpinGroupToy();
-        else if (this.view === 'domain' && !this._canLabelGroupOp()) this._pinGroupToy();
-        this.groupOp = next;
+        this.groupOp = this.groupOp === op ? null : op;
         this.rebuildView();
         if (this.vrManager && this.vrManager.navMenu && this.vrManager.navMenu._refreshAllToggles) {
             this.vrManager.navMenu._refreshAllToggles();
@@ -1053,6 +1190,22 @@ class BitcoinCryptoExplorer {
         else if (this.view === 'domain') this.buildDomain();
         else this.buildScalar();
         this.updatePanel();
+    }
+
+    _gridCoarseOpacity() {
+        const t = Math.min(1, Math.max(0, this.morphT));
+        return 0.45 * (1 - 0.5 * t);
+    }
+
+    _gridExtraOpacity() {
+        return 0.14 * this._torusSubdiv;
+    }
+
+    _syncGridOpacity() {
+        const st = this._domainState;
+        if (!st) return;
+        if (st.gridCoarseMat) st.gridCoarseMat.opacity = this._gridCoarseOpacity();
+        if (st.gridExtraMat) st.gridExtraMat.opacity = this._gridExtraOpacity();
     }
 
     _matLine(color, opacity, opts) {
@@ -1407,16 +1560,17 @@ class BitcoinCryptoExplorer {
         geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
         geom.setIndex(idx);
         let mesh = null;
+        let gridCoarseMat = null;
         let gridExtraMat = null;
         if (this.showGrid) {
-            const coarseMat = this._matLine(this._tone('grid'), 0.45);
+            gridCoarseMat = this._matLine(this._tone('grid'), this._gridCoarseOpacity());
             if (extraIdx.length) {
                 geom.addGroup(0, coarseIdx.length, 0);
                 geom.addGroup(coarseIdx.length, extraIdx.length, 1);
-                gridExtraMat = this._matLine(this._tone('grid'), 0.28 * this._torusSubdiv);
-                mesh = new THREE.LineSegments(geom, [coarseMat, gridExtraMat]);
+                gridExtraMat = this._matLine(this._tone('grid'), this._gridExtraOpacity());
+                mesh = new THREE.LineSegments(geom, [gridCoarseMat, gridExtraMat]);
             } else {
-                mesh = new THREE.LineSegments(geom, coarseMat);
+                mesh = new THREE.LineSegments(geom, gridCoarseMat);
             }
             group.add(mesh);
         }
@@ -1440,7 +1594,7 @@ class BitcoinCryptoExplorer {
             group.add(new THREE.Line(geoMid, this._matLine(this._tone('mid'), 0.9)));
         }
 
-        return { geom: geom, nu: nu, nv: nv, mesh: mesh, geoA: geoA, geoB: geoB, geoMid: geoMid, gridExtraMat: gridExtraMat };
+        return { geom: geom, nu: nu, nv: nv, mesh: mesh, geoA: geoA, geoB: geoB, geoMid: geoMid, gridCoarseMat: gridCoarseMat, gridExtraMat: gridExtraMat };
     }
 
     _makeDomainFillGeom(nu, nv, t) {
@@ -1648,33 +1802,38 @@ class BitcoinCryptoExplorer {
             fillGeom: fill && fill.geom,
             fillNu: fill && fill.nu,
             fillNv: fill && fill.nv,
+            gridCoarseMat: surf.gridCoarseMat,
             gridExtraMat: surf.gridExtraMat
         };
+        this._fieldOpRoot = new THREE.Group();
+        this.content.add(this._fieldOpRoot);
         this._drawFieldGroupOp();
     }
 
     _fieldOpP() {
         if (this._groupToy || this.view === 'scalar') return 17;
         const field = this._ensureField();
-        if (field && field.exact && field.p) return field.p;
-        return 17;
+        if (field && field.p != null) return field.p;
+        const entry = ECC.PRIME_LADDER[this.primeIndex];
+        return ECC.entryPrime ? ECC.entryPrime(entry) : (entry && entry.p);
     }
 
     _addLabeledPoint(pt, color, label, extra) {
         if (!pt || pt.inf) return null;
         const p = this._fieldOpP();
-        const pos = ECC.sampleDomain(pt.x / p, pt.y / p, this.morphT);
+        const pos = ECC.sampleDomain(ECC.toUnit(pt.x, p), ECC.toUnit(pt.y, p), this.morphT);
         const mesh = new THREE.Mesh(
             new THREE.SphereGeometry(0.04, 14, 12),
             new THREE.MeshBasicMaterial({ color: color })
         );
         mesh.position.set(pos.x, pos.y, pos.z);
         mesh.userData = Object.assign({ isCurvePoint: true, label: label, x: pt.x, y: pt.y }, extra || {});
-        this.content.add(mesh);
+        const parent = this._fieldOpRoot || this.content;
+        parent.add(mesh);
         this._trackZoomDot(mesh);
         const sprite = this._makeLabelSprite(label, color);
         sprite.position.set(pos.x, pos.y + 0.16, pos.z);
-        this.content.add(sprite);
+        parent.add(sprite);
         return mesh;
     }
 
@@ -1699,27 +1858,36 @@ class BitcoinCryptoExplorer {
     _addWrappedChord(P, Q, color, dest) {
         if (!P || !Q || P.inf || Q.inf) return;
         const fieldP = this._fieldOpP();
-        const dx = Q.x - P.x;
-        const dy = Q.y - P.y;
-        if (dx === 0 && dy === 0) return;
-        const span = Math.hypot(dx, dy) || 1;
-        const extend = Math.max(1.6, (5 * fieldP / span - 1) / 2);
-        const x0 = P.x - dx * extend;
-        const y0 = P.y - dy * extend;
-        const x1 = Q.x + dx * extend;
-        const y1 = Q.y + dy * extend;
-        const steps = Math.max(160, Math.min(512, Math.ceil((1 + 2 * extend) * span * 10)));
+        const u0 = ECC.toUnit(P.x, fieldP);
+        const v0 = ECC.toUnit(P.y, fieldP);
+        const u1 = ECC.toUnit(Q.x, fieldP);
+        const v1 = ECC.toUnit(Q.y, fieldP);
+        const du = u1 - u0;
+        const dv = v1 - v0;
+        if (du === 0 && dv === 0) return;
+        const span = Math.hypot(du, dv) || 1e-9;
+        const target = 3.6;
+        const axis = Math.abs(du) + Math.abs(dv) || span;
+        let extend = Math.max(0.2, (target / span - 1) / 2);
+        const maxExtend = Math.max(0.2, (5.5 / axis - 1) / 2);
+        if (extend > maxExtend) extend = maxExtend;
+        const s0u = u0 - du * extend;
+        const s0v = v0 - dv * extend;
+        const s1u = u1 + du * extend;
+        const s1v = v1 + dv * extend;
+        const steps = Math.max(160, Math.min(720, Math.ceil((1 + 2 * extend) * span * 80)));
         const col = new THREE.Color(color);
-        const parent = (dest && dest.isObject3D) ? dest : this.content;
-        const fade = 0.08;
+        const parent = (dest && dest.isObject3D) ? dest : (this._fieldOpRoot || this.content);
+        const fade = 0.045;
         const alongAt = (t) => {
             const edge = Math.min(t, 1 - t);
             return edge >= fade ? 1 : Math.pow(edge / fade, 1.7);
         };
+        const frac = (t) => t - Math.floor(t);
         let buf = [];
         let ts = [];
-        let prevX = null;
-        let prevY = null;
+        let prevU = null;
+        let prevV = null;
         const flush = () => {
             const n = buf.length;
             if (n < 2) {
@@ -1742,17 +1910,15 @@ class BitcoinCryptoExplorer {
         };
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
-            const x = x0 + (x1 - x0) * t;
-            const y = y0 + (y1 - y0) * t;
-            const xm = ECC.mod(x, fieldP);
-            const ym = ECC.mod(y, fieldP);
-            if (prevX != null && (Math.abs(xm - prevX) > fieldP * 0.45 || Math.abs(ym - prevY) > fieldP * 0.45)) {
+            const u = frac(s0u + (s1u - s0u) * t);
+            const v = frac(s0v + (s1v - s0v) * t);
+            if (prevU != null && (Math.abs(u - prevU) > 0.45 || Math.abs(v - prevV) > 0.45)) {
                 flush();
             }
-            buf.push(this._v3(ECC.sampleDomain(xm / fieldP, ym / fieldP, this.morphT)));
+            buf.push(this._v3(ECC.sampleDomain(u, v, this.morphT)));
             ts.push(t);
-            prevX = xm;
-            prevY = ym;
+            prevU = u;
+            prevV = v;
         }
         flush();
     }
@@ -1762,11 +1928,46 @@ class BitcoinCryptoExplorer {
         const p = this._fieldOpP();
         const nP = ECC.negPt(P, p);
         this._addWrappedChord(P, nP, this._tone('chord'));
-        const top = ECC.sampleDomain(P.x / p, 0.98, this.morphT);
+        const top = ECC.sampleDomain(ECC.toUnit(P.x, p), 0.98, this.morphT);
         const spr = this._makeLabelSprite('𝒪', 0xffffff);
         spr.position.set(top.x, top.y + 0.2, top.z);
-        this.content.add(spr);
+        (this._fieldOpRoot || this.content).add(spr);
         this.hudOp = 'P ⊕ (−P) = 𝒪';
+    }
+
+    _clearFieldOp() {
+        if (!this._fieldOpRoot) return;
+        const gone = new Set();
+        this._fieldOpRoot.traverse((child) => gone.add(child));
+        this._zoomDots = this._zoomDots.filter((m) => !gone.has(m));
+        this._fieldOpRoot.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
+                else {
+                    if (child.material.map) child.material.map.dispose();
+                    child.material.dispose();
+                }
+            }
+        });
+        if (this._fieldOpRoot.parent) this._fieldOpRoot.parent.remove(this._fieldOpRoot);
+        this._fieldOpRoot = null;
+    }
+
+    _redrawFieldGroupOp(opts) {
+        opts = opts || {};
+        this._clearFieldOp();
+        if (!this.content) return;
+        this._fieldOpRoot = new THREE.Group();
+        this.content.add(this._fieldOpRoot);
+        this._drawFieldGroupOp();
+        if (opts.quiet) {
+            this._syncPSlider();
+            const opEl = document.getElementById('crypto-op-label');
+            if (opEl) opEl.textContent = this.hudOp;
+        } else {
+            this.updatePanel();
+        }
     }
 
     _drawFieldGroupOp() {
@@ -1774,19 +1975,18 @@ class BitcoinCryptoExplorer {
             this.hudOp = '—';
             return;
         }
-        if (this.view === 'domain' && !this._groupToy && !this._canLabelGroupOp()) {
-            this.hudOp = 'Tap + to pin 𝔽₁₇, or Field− until labels fit';
+        const p = this._fieldOpP();
+        const P = this._fieldP();
+        const Q = this._fieldQ(P);
+        if (!P) {
+            this.hudOp = '—';
             return;
         }
-        const p = this._fieldOpP();
-        const demo = ECC.demoAddPair(p);
-        const P = demo.P;
-        const Q = demo.Q;
         let R, Rp, nQ;
 
         if (this.groupOp === 'add') {
-            R = demo.R;
-            Rp = demo.Rp;
+            R = Q ? ECC.addFp(P, Q, p) : ECC.INF;
+            Rp = R.inf ? ECC.INF : { x: R.x, y: ECC.mod(-R.y, p) };
             this._addWrappedChord(P, Q, this._tone('chord'), Rp.inf ? [] : [Rp]);
             if (!R.inf && !Rp.inf) this._addWrappedChord(Rp, R, this._tone('reflect'));
             this._addLabeledPoint(P, this._tone('white'), 'P');
@@ -1797,7 +1997,8 @@ class BitcoinCryptoExplorer {
         } else if (this.groupOp === 'double') {
             R = ECC.sumDoubleFp(P, p);
             Rp = R.inf ? ECC.INF : { x: R.x, y: ECC.mod(-R.y, p) };
-            const Q2 = { x: ECC.mod(P.x + 1, p), y: P.y };
+            const one = typeof P.x === 'bigint' ? 1n : 1;
+            const Q2 = { x: ECC.mod(P.x + one, p), y: P.y };
             this._addWrappedChord(P, R.inf ? Q2 : Rp, this._tone('tangent'), R.inf ? [] : [Rp]);
             if (!R.inf && !Rp.inf) this._addWrappedChord(Rp, R, this._tone('reflect'));
             this._addLabeledPoint(P, this._tone('white'), 'P');
@@ -1873,6 +2074,7 @@ class BitcoinCryptoExplorer {
             geom: surf.geom, nu: surf.nu, nv: surf.nv,
             instances: inst, points: field.points,
             geoA: surf.geoA, geoB: surf.geoB, geoMid: surf.geoMid,
+            gridCoarseMat: surf.gridCoarseMat,
             gridExtraMat: surf.gridExtraMat
         };
 
@@ -2090,6 +2292,7 @@ class BitcoinCryptoExplorer {
             this._setLinePoints(st.geoB, edgeB);
             this._setLinePoints(st.geoMid, mid);
         }
+        this._syncGridOpacity();
     }
 
     animate() {
@@ -2139,6 +2342,17 @@ class BitcoinCryptoExplorer {
                     this.morphElapsed = 0;
                     this.updatePanel();
                     this._syncVrMenu();
+                }
+            }
+        }
+        if (this.view === 'domain' && this.fieldPPlaying && !this._familyPDragging && this.groupOp && !this.morphing) {
+            this._fieldPAnimAcc = (this._fieldPAnimAcc || 0) + dt;
+            if (this._fieldPAnimAcc >= 0.42) {
+                this._fieldPAnimAcc = 0;
+                const pts = this._fieldOpPoints();
+                if (pts.length) {
+                    this.fieldPIndex = (this.fieldPIndex + 1) % pts.length;
+                    this._redrawFieldGroupOp({ quiet: true });
                 }
             }
         }

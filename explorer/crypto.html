@@ -75,7 +75,7 @@
                             <input type="range" id="crypto-slice-slider" class="panel-range"
                                    min="1" max="89" value="45" aria-label="Number of family curves">
                         </div>
-                        <div class="panel-slider" id="crypto-p-row" hidden data-tip="Move point P along secp256k1 (z = 0). The chord, tangent, and sum update as you drag. Starts on hold. Click hold/walk to auto-walk the curve.">
+                        <div class="panel-slider" id="crypto-p-row" hidden data-tip="Move point P. Family walks secp256k1 over ℝ. Domain walks affine points on this 𝔽_p. Large fields show the unit-square position (hover for full x, y). Click walk to cycle.">
                             <div class="panel-slider-label">
                                 P <span id="crypto-p-value">(2.00, 3.00)</span>
                                 <span class="panel-slider-sep">·</span>
@@ -95,7 +95,7 @@
                     <button id="ar-button" data-tip="Mixed reality: the same model on your table. Scale is tighter so the torus fits in passthrough space.">MR</button>
                     <span class="controls-cluster" id="crypto-cluster-views">
                     <button id="view-family" data-tip="Weierstrass family y² = x³ + (7+z). Each curve is one member; z = 0 (highlighted) is secp256k1, the chart Bitcoin actually uses.">Family</button>
-                    <button id="view-domain" data-tip="Finite-field square for 𝔽_p. Glue opposite edges and the square becomes a torus — that identification is what “mod p” means geometrically. + / 2P / −P / P−Q draw the group law; on a large field they pin 𝔽₁₇ so labels stay readable.">Domain</button>
+                    <button id="view-domain" data-tip="Finite-field square for 𝔽_p. Glue opposite edges and the square becomes a torus — that identification is what “mod p” means geometrically. + / 2P / −P / P−Q draw the group law on this field; drag P to move the chord.">Domain</button>
                     <button id="view-scalar" data-tip="How Q = kG works: add G, repeatedly. The torus is 𝔽₁₇, so a real 256-bit k is shown as r ≡ k (mod n₁₇). The 33-byte Q lives only in the panel.">Scalar</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-glue">
@@ -103,11 +103,11 @@
                     <button id="dim-next" data-tip="Glue the next pair of opposite edges. Cartesian → cylinder → torus. Watch a straight chord become a wrapping geodesic.">Glue+</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-field">
-                    <button id="prime-prev" data-tip="Halve the bit length of 𝔽_p (256 → 128 → … → 2). Drawn scatter thins until every point is visible. A labeled group-law overlay needs a small exact field, or tap + to pin 𝔽₁₇.">Field−</button>
+                    <button id="prime-prev" data-tip="Halve the bit length of 𝔽_p (256 → 128 → … → 2). Drawn scatter thins until every point is visible. Group-law lines stay on the current field.">Field−</button>
                     <button id="prime-next" data-tip="Click: double the bit length (2, 4, 8, …, 256). Exact fields show every affine point; 32–128-bit rungs densify a schematic sample (128-bit uses the old 256-bit dot count). At 256-bit the domain is a solid white surface. Double-click: more scatter on schematic rungs (up to 768k). Entropy and search time follow the field.">Field+</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-ops">
-                    <button id="op-add" data-tip="Addition P ⊕ Q: chord through P and Q meets the curve at R′; reflect R′ across y = p/2 to land on R. On Domain, a field too big for labels pins 𝔽₁₇. On the torus that chord wraps.">+</button>
+                    <button id="op-add" data-tip="Addition P ⊕ Q: chord through P and Q meets the curve at R′; reflect R′ across y = p/2 to land on R. On the torus that chord wraps. Drag P to try other points on this field.">+</button>
                     <button id="op-double" data-tip="Doubling 2P = P ⊕ P: same construction with the tangent at P instead of a chord through two distinct points.">2P</button>
                     <button id="op-inverse" data-tip="Inverse: −P is P reflected across the midline. P and −P lie on a vertical line whose “third intersection” is the point at infinity 𝒪.">−P</button>
                     <button id="op-sub" data-tip="Subtraction is addition of the inverse: P − Q = P ⊕ (−Q). −Q is Q flipped across the midline, then add as usual.">P−Q</button>

@@ -19,10 +19,10 @@
         { bits: 4, p: 13, label: '𝔽₁₃', schematic: false },
         { bits: 8, p: 251, label: '𝔽₂₅₁', schematic: false },
         { bits: 16, p: 65521, label: '𝔽₆₅₅₂₁', schematic: false },
-        { bits: 32, p: null, label: '𝔽₂³²', schematic: true },
-        { bits: 64, p: null, label: '𝔽₂⁶⁴', schematic: true },
-        { bits: 128, p: null, label: '𝔽₂¹²⁸', schematic: true },
-        { bits: 256, p: null, label: 'secp256k1', schematic: true }
+        { bits: 32, p: 2147483647, label: '𝔽₂³²', schematic: true },
+        { bits: 64, p: null, pStr: '2305843009213693951', label: '𝔽₂⁶⁴', schematic: true },
+        { bits: 128, p: null, pStr: '170141183460469231731687303715884105727', label: '𝔽₂¹²⁸', schematic: true },
+        { bits: 256, p: null, pStr: '0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f', label: 'secp256k1', schematic: true }
     ];
 
     /* 1:1 atom-count matches for 2^n — no ×10^k multipliers. */
@@ -53,6 +53,9 @@
     var VIEWS = ['family', 'domain', 'scalar'];
 
     function mod(n, p) {
+        if (typeof p === 'bigint' || typeof n === 'bigint' || (typeof p === 'number' && p > 100000)) {
+            return shrinkCoord(modBig(n, toPrime(p)), typeof p === 'bigint' ? p : p);
+        }
         var r = n % p;
         if (r < 0) r += p;
         return r;
@@ -140,6 +143,7 @@
     }
 
     function sumDoubleFp(P, p) {
+        if (useBigP(p)) return sumDoubleFpBig(P, toPrime(p));
         if (P.inf) return INF;
         if (P.y === 0) return INF;
         var inv = modInv(mod(2 * P.y, p), p);
@@ -164,7 +168,137 @@
     }
 
     function addFp(P, Q, p) {
+        if (useBigP(p)) return addFpBig(P, Q, toPrime(p));
         return sumDistinctFp(P, Q, p);
+    }
+
+    function useBigP(p) {
+        return typeof p === 'bigint' || (typeof p === 'number' && p > 100000);
+    }
+
+    function toPrime(p) {
+        if (typeof p === 'bigint') return p;
+        if (typeof p === 'string') return BigInt(p);
+        return BigInt(p);
+    }
+
+    function entryPrime(entry) {
+        if (!entry) return null;
+        if (entry.pStr) return BigInt(entry.pStr);
+        if (entry.p) return entry.p;
+        return null;
+    }
+
+    function modBig(n, p) {
+        p = toPrime(p);
+        var r = BigInt(n) % p;
+        if (r < 0n) r += p;
+        return r;
+    }
+
+    function shrinkCoord(n, p) {
+        if (typeof p === 'bigint') return n;
+        return Number(n);
+    }
+
+    function modPowBig(base, exp, p) {
+        var result = 1n;
+        var b = modBig(base, p);
+        var e = BigInt(exp);
+        while (e > 0n) {
+            if (e & 1n) result = (result * b) % p;
+            b = (b * b) % p;
+            e >>= 1n;
+        }
+        return result;
+    }
+
+    function egcdBig(a, b) {
+        var x = 0n, y = 1n, u = 1n, v = 0n;
+        while (a !== 0n) {
+            var q = b / a, r = b % a;
+            var m = x - u * q, n = y - v * q;
+            b = a; a = r; x = u; y = v; u = m; v = n;
+        }
+        return { g: b, x: x };
+    }
+
+    function modInvBig(a, p) {
+        var r = egcdBig(modBig(a, p), p);
+        if (r.g !== 1n && r.g !== -1n) return null;
+        return modBig(r.x, p);
+    }
+
+    function modSqrt3mod4(a, p) {
+        a = modBig(a, p);
+        if (a === 0n) return 0n;
+        var y = modPowBig(a, (p + 1n) / 4n, p);
+        if ((y * y) % p !== a) return null;
+        return y;
+    }
+
+    function addFpBig(P, Q, p) {
+        if (!P || P.inf) return Q;
+        if (!Q || Q.inf) return INF;
+        var px = modBig(P.x, p), py = modBig(P.y, p);
+        var qx = modBig(Q.x, p), qy = modBig(Q.y, p);
+        var lam, inv, x, y;
+        if (px === qx && py === qy) {
+            if (py === 0n) return INF;
+            inv = modInvBig(2n * py, p);
+            if (inv == null) return INF;
+            lam = modBig((3n * px * px + BigInt(A)) * inv, p);
+        } else if (px === qx) {
+            return INF;
+        } else {
+            inv = modInvBig(qx - px, p);
+            if (inv == null) return INF;
+            lam = modBig((qy - py) * inv, p);
+        }
+        x = modBig(lam * lam - px - qx, p);
+        y = modBig(lam * (px - x) - py, p);
+        return { x: shrinkCoord(x, p), y: shrinkCoord(y, p) };
+    }
+
+    function sumDoubleFpBig(P, p) {
+        return addFpBig(P, P, p);
+    }
+
+    function toUnit(n, p) {
+        if (n == null || p == null) return 0;
+        if (!useBigP(p)) {
+            var r = mod(n, p);
+            return r / p;
+        }
+        p = toPrime(p);
+        var m = modBig(n, p);
+        if (p <= 9007199254740991n) return Number(m) / Number(p);
+        return Number(m * 10000000n / p) / 10000000;
+    }
+
+    function sampleCurvePoints(p, count) {
+        count = Math.max(4, Math.min(160, count || 96));
+        var orig = p;
+        p = toPrime(p);
+        if (p % 4n !== 3n) return [];
+        var pts = [];
+        var stride = p / BigInt(count * 6);
+        if (stride < 1n) stride = 1n;
+        var x = 1n;
+        var guard = 0;
+        while (pts.length < count && x < p && guard < count * 24) {
+            guard++;
+            var rhs = modBig(x * x * x + BigInt(B), p);
+            var y = modSqrt3mod4(rhs, p);
+            if (y != null) {
+                pts.push({ x: shrinkCoord(x, orig), y: shrinkCoord(y, orig) });
+                if (y !== 0n && pts.length < count) {
+                    pts.push({ x: shrinkCoord(x, orig), y: shrinkCoord(modBig(-y, orig), orig) });
+                }
+            }
+            x += stride;
+        }
+        return pts;
     }
 
     function lineSlopeFp(P, Q, p) {
@@ -358,7 +492,7 @@
                     total: null,
                     exact: false,
                     solid: true,
-                    p: entry && entry.p,
+                    p: entryPrime(entry),
                     bits: bits
                 };
             }
@@ -368,7 +502,7 @@
                 count: scatter.length,
                 total: null,
                 exact: false,
-                p: entry && entry.p,
+                p: entryPrime(entry),
                 bits: bits
             };
         }
@@ -566,6 +700,10 @@
         addFp: addFp,
         sumDoubleFp: sumDoubleFp,
         negPt: negPt,
+        toUnit: toUnit,
+        entryPrime: entryPrime,
+        sampleCurvePoints: sampleCurvePoints,
+        ENUM_MAX_P: ENUM_MAX_P,
         eqPt: eqPt,
         sampleDomain: sampleDomain,
         dimIndexToT: dimIndexToT,
