@@ -2,12 +2,13 @@
 class BitcoinTransactionExplorer {
     // Tube palette (RRGGBBAA canvas gradients). Current tx stays brighter than traced history.
     static TUBE_TONES = {
-        CURRENT_INPUT: ['#55555555', '#eeeeeedd'],
-        CURRENT_OUTPUT: ['#ffffffee', '#88888855'],
-        CURRENT_FLAT: '#eeeeeedd',
-        HISTORY_FLAT: '#55555599',
-        PARENT_INPUT: ['#0a0a0a00', '#44444488'],
-        PARENT_OUTPUT: ['#55555588', '#55555500']
+        // Untraced current-tx fade (visible, but still a real gradient). Flattened only after a trace loads.
+        CURRENT_INPUT: ['#22222200', '#eeeeeedd'],
+        CURRENT_OUTPUT: ['#ffffffee', '#ffffff00'],
+        CURRENT_FLAT: '#ffffffff',
+        HISTORY_FLAT: '#3a3a3a66',
+        PARENT_INPUT: ['#11111100', '#33333355'],
+        PARENT_OUTPUT: ['#3a3a3a55', '#3a3a3a00']
     };
 
     constructor(opts) {
@@ -930,6 +931,19 @@ class BitcoinTransactionExplorer {
         return texture;
     }
 
+    // FrontSide only: DoubleSide transparent tubes show an inner wall (nested shell / grain).
+    _makeTubeMaterial(map) {
+        return new THREE.MeshLambertMaterial({
+            color: 0xffffff,
+            map: map,
+            opacity: 1.0,
+            transparent: true,
+            side: THREE.FrontSide,
+            depthWrite: false,
+            depthTest: true
+        });
+    }
+
     updateCameraPosition() {
         const x = this.controls.distance * Math.sin(this.controls.phi) * Math.cos(this.controls.theta);
         const y = this.controls.distance * Math.cos(this.controls.phi);
@@ -1440,34 +1454,16 @@ class BitcoinTransactionExplorer {
             
             let material;
             if (inputIsCoinbase) {
-                // Coinbase tube: gradient from grey to white along the length
-                material = new THREE.MeshLambertMaterial({ 
-                    color: 0xffffff,
-                    map: this.coinbaseTubeGradientTexture,
-                    opacity: 1.0,
-                transparent: true,
-                side: THREE.DoubleSide,
-                depthWrite: false,
-                depthTest: true
-            });
+                material = this._makeTubeMaterial(this.coinbaseTubeGradientTexture);
             } else {
-                // Regular input tube: gradient from dark to light
-                material = new THREE.MeshLambertMaterial({ 
-                    color: 0xffffff,
-                    map: this.createHorizontalGradientTexture(
-                        BitcoinTransactionExplorer.TUBE_TONES.CURRENT_INPUT[0],
-                        BitcoinTransactionExplorer.TUBE_TONES.CURRENT_INPUT[1]
-                    ),
-                    opacity: 1.0,
-                    transparent: true,
-                    side: THREE.DoubleSide,
-                    depthWrite: false,
-                    depthTest: true
-                });
+                const tones = BitcoinTransactionExplorer.TUBE_TONES;
+                material = this._makeTubeMaterial(
+                    this.createHorizontalGradientTexture(tones.CURRENT_INPUT[0], tones.CURRENT_INPUT[1])
+                );
             }
             
             const tube = new THREE.Mesh(tubeGeometry, material);
-            tube.renderOrder = 0;
+            tube.renderOrder = 2;
             tube.userData = { 
                 type: 'input', 
                 index: index, 
@@ -1515,22 +1511,13 @@ class BitcoinTransactionExplorer {
             // Create tube geometry from the combined path
             const tubeGeometry = new THREE.TubeGeometry(curvePath, 128, tubeRadius, 16, false);
             
-            // Output tube: gradient from white to transparent along the length
-            const material = new THREE.MeshLambertMaterial({ 
-                color: 0xffffff,
-                map: this.createHorizontalGradientTexture(
-                    BitcoinTransactionExplorer.TUBE_TONES.CURRENT_OUTPUT[0],
-                    BitcoinTransactionExplorer.TUBE_TONES.CURRENT_OUTPUT[1]
-                ),
-                opacity: 1.0,
-                transparent: true,
-                side: THREE.DoubleSide,
-                depthWrite: false,
-                depthTest: true
-            });
+            const tones = BitcoinTransactionExplorer.TUBE_TONES;
+            const material = this._makeTubeMaterial(
+                this.createHorizontalGradientTexture(tones.CURRENT_OUTPUT[0], tones.CURRENT_OUTPUT[1])
+            );
             
             const tube = new THREE.Mesh(tubeGeometry, material);
-            tube.renderOrder = 0;
+            tube.renderOrder = 2;
             tube.userData = { 
                 type: 'output', 
                 index: index, 
@@ -1604,15 +1591,9 @@ class BitcoinTransactionExplorer {
     // Build a tube mesh, tag it, add it flat to the scene, and track it for cleanup.
     _addParentTube(curvePath, radius, gradStart, gradEnd, userData, meshList) {
         const geometry = new THREE.TubeGeometry(curvePath, 64, Math.max(radius, 0.02), 12, false);
-        const material = new THREE.MeshLambertMaterial({
-            color: 0xffffff,
-            map: this.createHorizontalGradientTexture(gradStart, gradEnd),
-            opacity: 1.0,
-            transparent: true,
-            side: THREE.DoubleSide,
-            depthWrite: false,
-            depthTest: true
-        });
+        const material = this._makeTubeMaterial(
+            this.createHorizontalGradientTexture(gradStart, gradEnd)
+        );
         const mesh = new THREE.Mesh(geometry, material);
         mesh.renderOrder = 0;
         mesh.userData = userData;
@@ -1888,9 +1869,10 @@ class BitcoinTransactionExplorer {
             if (!inputIndices.has(child.userData.index)) return;
             if (child.material && child.material.map && child.userData._origMap === undefined) {
                 child.userData._origMap = child.material.map;
-                // Uniform (no-fade) bright current-tx tone.
+                child.userData._origTint = child.material.color.getHex();
                 const flat = BitcoinTransactionExplorer.TUBE_TONES.CURRENT_FLAT;
                 child.material.map = this.createHorizontalGradientTexture(flat, flat);
+                child.material.color.setHex(0xffffff);
                 child.material.needsUpdate = true;
             }
         });
@@ -1902,11 +1884,15 @@ class BitcoinTransactionExplorer {
             if (child.userData.type !== 'input') return;
             if (child.userData._origMap === undefined) return;
             if (child.material) {
-                if (child.material.map) child.material.map.dispose(); // dispose the flat map
+                if (child.material.map) child.material.map.dispose();
                 child.material.map = child.userData._origMap;
+                if (typeof child.userData._origTint === 'number') {
+                    child.material.color.setHex(child.userData._origTint);
+                }
                 child.material.needsUpdate = true;
             }
             delete child.userData._origMap;
+            delete child.userData._origTint;
         });
     }
 
@@ -1918,8 +1904,10 @@ class BitcoinTransactionExplorer {
             if (!outputIndices.has(child.userData.index)) return;
             if (child.material && child.material.map && child.userData._origMap === undefined) {
                 child.userData._origMap = child.material.map;
+                child.userData._origTint = child.material.color.getHex();
                 const flat = BitcoinTransactionExplorer.TUBE_TONES.CURRENT_FLAT;
                 child.material.map = this.createHorizontalGradientTexture(flat, flat);
+                child.material.color.setHex(0xffffff);
                 child.material.needsUpdate = true;
             }
         });
@@ -1932,9 +1920,13 @@ class BitcoinTransactionExplorer {
             if (child.material) {
                 if (child.material.map) child.material.map.dispose();
                 child.material.map = child.userData._origMap;
+                if (typeof child.userData._origTint === 'number') {
+                    child.material.color.setHex(child.userData._origTint);
+                }
                 child.material.needsUpdate = true;
             }
             delete child.userData._origMap;
+            delete child.userData._origTint;
         });
     }
 
