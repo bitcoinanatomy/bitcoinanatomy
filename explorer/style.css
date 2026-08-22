@@ -230,13 +230,15 @@ body:not(.homepage) {
 }
 
 .nav-dropdown-panel {
-    display: none;
+    display: block;
     position: absolute;
     right: 0;
-    top: calc(100% + 4px);
+    /* Overlap the trigger so there is no hover dead zone */
+    top: calc(100% - 6px);
     min-width: 200px;
     margin: 0;
-    padding: 6px 0;
+    /* Extra top padding is a hover bridge; visual inset stays below the trigger */
+    padding: 12px 0 6px;
     list-style: none;
     background: rgba(0, 0, 0, 0.92);
     backdrop-filter: blur(12px);
@@ -244,11 +246,19 @@ body:not(.homepage) {
     border-radius: 4px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     z-index: 40001;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    /* Delay hide so a diagonal move to the submenu still counts */
+    transition: opacity 0.12s ease, visibility 0s linear 0.28s;
 }
 
 .nav-dropdown.open .nav-dropdown-panel,
 .nav-dropdown:hover .nav-dropdown-panel {
-    display: block;
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transition-delay: 0s;
 }
 
 .nav-dropdown-panel .nav-link {
@@ -1648,6 +1658,9 @@ button:active {
 
     .nav-dropdown:hover .nav-dropdown-panel {
         display: none;
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
     }
 
     .nav-dropdown.open .nav-dropdown-panel,
@@ -1661,6 +1674,10 @@ button:active {
         box-shadow: none;
         padding: 0;
         backdrop-filter: none;
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        transition: none;
     }
 
     .nav-dropdown-toggle {

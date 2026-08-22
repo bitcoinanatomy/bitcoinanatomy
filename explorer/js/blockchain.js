@@ -1452,41 +1452,11 @@ class BitcoinBlockchainExplorer {
             const progress = numDiscs <= 1 ? 1 : i / (numDiscs - 1);
             const color = new THREE.Color().lerpColors(startColor, endColor, progress);
             
-            // Create cylinder disc with random radius
-            let randomRadius = 1.5 + Math.random() * 0.3; // Random between 1.5 and 1.8
-            
-            if (i === 0) {
-                randomRadius = randomRadius * 1.60; 
-            }
-            
-            // Special exception for epoch 33 - reduce radius by 33%
-            if (i === 33) {
-                randomRadius = randomRadius * 0.57; // Reduce by 33%
-            }
+            const discRadius = (typeof DifficultySpiral !== 'undefined' && DifficultySpiral.discRadiusForEpoch)
+                ? DifficultySpiral.discRadiusForEpoch(i)
+                : 1.65;
 
-            if (i === 32) {
-                randomRadius = randomRadius * 0.77;
-            }
-
-
-            if (i === 8) {
-                randomRadius = randomRadius * 1.22;
-            }
-            if (i === 9) {
-                randomRadius = randomRadius * 1.23;
-            }
-            if (i === 10) {
-                randomRadius = randomRadius * 1.62;
-            }
-            if (i === 11) {
-                randomRadius = randomRadius * 1.22;
-            }
-            if (i === 12) {
-                randomRadius = randomRadius * 1.27;
-            }
-
-
-            const geometry = new THREE.CylinderGeometry(randomRadius, randomRadius, discThickness, 32);
+            const geometry = new THREE.CylinderGeometry(discRadius, discRadius, discThickness, 32);
             const material = new THREE.MeshStandardMaterial({
                 color: color,
                 roughness: 1.0,
