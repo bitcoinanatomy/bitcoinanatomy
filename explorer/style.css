@@ -1151,6 +1151,30 @@ button:active {
     display: none !important;
 }
 
+#load-epochs-wrap {
+    z-index: 3;
+}
+
+#load-epochs-wrap .trace-menu {
+    bottom: 100%;
+    padding-bottom: 10px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+#load-epochs-wrap .trace-menu button {
+    min-width: 128px;
+    height: 28px;
+}
+
+#load-epochs-wrap:not(.is-loading):hover .trace-menu,
+#load-epochs-wrap:not(.is-loading):hover .trace-menu[hidden],
+#load-epochs-wrap:not(.is-loading):focus-within .trace-menu,
+#load-epochs-wrap:not(.is-loading):focus-within .trace-menu[hidden] {
+    display: flex !important;
+}
+
 .controls-main button:disabled {
     opacity: 0.4;
     pointer-events: none;

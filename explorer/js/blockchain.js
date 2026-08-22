@@ -18,6 +18,7 @@ class BitcoinBlockchainExplorer {
         // Get adjustment index from URL parameter for highlighting
         const urlParams = new URLSearchParams(window.location.search);
         this.highlightAdjustment = urlParams.get('adjustment') ? parseInt(urlParams.get('adjustment')) : null;
+        this._debug = urlParams.has('debug') && urlParams.get('debug') !== '0';
         this.vrManager = null;
 
         this.epochJsonCache = new Map();
@@ -45,6 +46,11 @@ class BitcoinBlockchainExplorer {
         const day = date.getDate();
         const year = date.getFullYear();
         return `${month} ${day}, ${year}`;
+    }
+
+    _log() {
+        if (!this._debug) return;
+        console.log.apply(console, arguments);
     }
 
     init() {
@@ -371,10 +377,10 @@ class BitcoinBlockchainExplorer {
                     
                     // Check if it's the mempool disc
                     if (intersectedObject.userData.isMempool) {
-                        console.log(`Double-clicked on mempool disc, redirecting to mempool page...`);
+                        this._log(`Double-clicked on mempool disc, redirecting to mempool page...`);
                         explorerNavigate('mempool.html');
                     } else {
-                        console.log(`Double-clicked on disc ${index}, redirecting to difficulty page...`);
+                        this._log(`Double-clicked on disc ${index}, redirecting to difficulty page...`);
                         
                         // Redirect to difficulty page with the disc index as URL parameter
                         explorerNavigate(`difficulty.html?adjustment=${index}`);
@@ -422,7 +428,7 @@ class BitcoinBlockchainExplorer {
             this.controls.target.set(discPos.x, discPos.y, discPos.z);
             this.controls.update();
             
-            console.log(`Highlighted disc for adjustment ${adjustmentIndex}`);
+            this._log(`Highlighted disc for adjustment ${adjustmentIndex}`);
         } else {
             console.warn(`Disc for adjustment ${adjustmentIndex} not found`);
         }
@@ -648,7 +654,7 @@ class BitcoinBlockchainExplorer {
                 layout.positions[i * 3 + 2]
             );
             dummy.rotation.set(0, layout.rotationsY[i], 0);
-            dummy.scale.set(1, 0.28, 1);
+            dummy.scale.set(1, 1, 1);
             dummy.updateMatrix();
             mesh.setMatrixAt(i, dummy.matrix);
             color.setRGB(layout.colors[i * 3], layout.colors[i * 3 + 1], layout.colors[i * 3 + 2]);
@@ -786,7 +792,7 @@ class BitcoinBlockchainExplorer {
             totalTime: Math.round(layout.totalTime)
         };
         const row = this._epochSizeLog[epoch];
-        console.log(
+        this._log(
             '[epoch-size] epoch=' + row.epoch +
             ' blocks=' + row.blocks +
             ' maxRadius=' + row.maxRadius +
@@ -796,20 +802,21 @@ class BitcoinBlockchainExplorer {
     }
 
     _dumpEpochSizeLog() {
+        if (!this._debug) return;
         const rows = (this._epochSizeLog || []).filter(Boolean);
         const radii = rows.map((r) => r.maxRadius);
         const times = rows.map((r) => r.totalTime);
-        console.log('[epoch-size] count=' + rows.length);
-        console.log('[epoch-size] JSON', JSON.stringify(rows));
-        console.log('[epoch-size] EPOCH_MAX_RADIUS =', JSON.stringify(radii));
-        console.log('[epoch-size] EPOCH_TOTAL_TIME =', JSON.stringify(times));
+        this._log('[epoch-size] count=' + rows.length);
+        this._log('[epoch-size] JSON', JSON.stringify(rows));
+        this._log('[epoch-size] EPOCH_MAX_RADIUS =', JSON.stringify(radii));
+        this._log('[epoch-size] EPOCH_TOTAL_TIME =', JSON.stringify(times));
     }
 
     async _runEpochLoadAll(startEpoch) {
         const token = this._epochLoadAllToken;
         const minIndex = startEpoch == null ? 0 : startEpoch;
         const discs = this._epochLoadDiscs().filter((d) => d.userData.index >= minIndex);
-        console.log('[epoch-size] load-all start from epoch ' + minIndex + ', ' + discs.length + ' discs');
+        this._log('[epoch-size] load-all start from epoch ' + minIndex + ', ' + discs.length + ' discs');
         for (let i = 0; i < discs.length; i++) {
             if (this._disposed || token !== this._epochLoadAllToken) return;
             while (this.epochLoadAllPaused && token === this._epochLoadAllToken && !this._disposed) {
@@ -1348,7 +1355,7 @@ class BitcoinBlockchainExplorer {
             }
         });
         
-        console.log('Created UTXO spheres');
+        this._log('Created UTXO spheres');
     }
     
     removeUTXOs() {
@@ -1361,7 +1368,7 @@ class BitcoinBlockchainExplorer {
             return true; // Keep non-sphere blocks
         });
         
-        console.log('Removed UTXO spheres');
+        this._log('Removed UTXO spheres');
     }
     
     updateVisualization() {
@@ -1386,7 +1393,7 @@ class BitcoinBlockchainExplorer {
             this.highlightDiscByAdjustment(this.highlightAdjustment);
         }
         
-        console.log(`Updated visualization with ${this.difficultyAdjustments} discs (each representing 2016 blocks)`);
+        this._log(`Updated visualization with ${this.difficultyAdjustments} discs (each representing 2016 blocks)`);
     }
     
     createScene() {
@@ -1439,7 +1446,7 @@ class BitcoinBlockchainExplorer {
             { index: 175, size: 2.4 + Math.random() * 2.8 },
         ];
         
-        console.log('Creating blockchain visualization with', numDiscs, 'discs');
+        this._log('Creating blockchain visualization with', numDiscs, 'discs');
         
         // Generate disc positions along the helix
         for (let i = 0; i < numDiscs; i++) {
@@ -1533,7 +1540,7 @@ class BitcoinBlockchainExplorer {
         // Store sphere data for later creation
         this.sphereData = specialSpheres;
         
-        console.log('Created', this.blocks.length, 'total objects');
+        this._log('Created', this.blocks.length, 'total objects');
     }
 
     async fetchData() {
@@ -1567,8 +1574,8 @@ class BitcoinBlockchainExplorer {
                 console.warn('Could not fetch tip block hash:', e);
             }
             
-            console.log('Current height:', height);
-            console.log('Difficulty adjustments:', numDiscs);
+            this._log('Current height:', height);
+            this._log('Difficulty adjustments:', numDiscs);
             
             this.updateLoadingProgress('Creating visualization...', 90);
             this.updateUI({ height: height, numDiscs: numDiscs, hash: tipHash });
@@ -1779,8 +1786,8 @@ class BitcoinBlockchainExplorer {
         
         // Log the calculated values
         if (data.height && data.numDiscs) {
-            console.log(`Current height: ${data.height.toLocaleString()}`);
-            console.log(`Difficulty adjustments: ${data.numDiscs.toLocaleString()}`);
+            this._log(`Current height: ${data.height.toLocaleString()}`);
+            this._log(`Difficulty adjustments: ${data.numDiscs.toLocaleString()}`);
         }
     }
 
@@ -2092,7 +2099,7 @@ class BitcoinBlockchainExplorer {
             }
         }
         
-        console.log(`Showing ${discsToShow} of ${totalDiscs} difficulty adjustment discs (${percentage}%), mempool: ${percentage === 100}`);
+        this._log(`Showing ${discsToShow} of ${totalDiscs} difficulty adjustment discs (${percentage}%), mempool: ${percentage === 100}`);
     }
 }
 
@@ -2111,7 +2118,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('scene').innerHTML = '<div style="color: white; padding: 20px;">Error: Three.js failed to load. Please refresh the page.</div>';
         return;
     }
-    
-    console.log('Three.js loaded successfully:', THREE.REVISION);
+
     window.__explorer = new BitcoinBlockchainExplorer();
 }); 
