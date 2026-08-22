@@ -23,6 +23,8 @@ sounds/sfx/      one-shots
 | `transaction` | transaction.html | Seamless liquid data-flow ambient loop, soft whooshing particles, script assembly, quiet digital stream, analog warmth, no drums, no vocals, mid-quiet |
 | `address` | address.html | Seamless identity constellation ambient loop, sparse high bells very distant, key-and-lock metallic air, personal vault atmosphere, dark but intimate, no melody hook, no vocals |
 | `mempool` | mempool.html | Seamless waiting-room pressure ambient loop, bubbling unconfirmed traffic, crowded digital murmur, tense but looping, no drops, no vocals, slightly busier than the other beds |
+| `curve` | crypto.html (Curve) | Seamless mathematical elliptic-curve ambient loop, sparse sine partials, slow geometric overtones, infinite field of points, clean and still, no drums, no melody, no vocals |
+| `script` | script.html | Seamless stack-machine ambient loop, quiet mechanical opcodes, paper-and-ink ledger clicks far in the distance, instruction tape atmosphere, dry and precise, no drums, no vocals |
 
 Export each as `scapes/<stem>.ogg` and `scapes/<stem>.mp3`.
 

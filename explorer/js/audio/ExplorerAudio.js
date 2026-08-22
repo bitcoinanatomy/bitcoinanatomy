@@ -20,7 +20,9 @@
         'block.html': 'block',
         'transaction.html': 'transaction',
         'address.html': 'address',
-        'mempool.html': 'mempool'
+        'mempool.html': 'mempool',
+        'crypto.html': 'curve',
+        'script.html': 'script'
     };
 
     var SFX_IDS = {
