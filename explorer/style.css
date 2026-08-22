@@ -160,6 +160,30 @@ body:not(.homepage) {
 #container .navbar {
     position: absolute;
     z-index: 33000;
+    width: auto;
+    right: auto;
+    background: transparent;
+    backdrop-filter: none;
+    border: none;
+    box-shadow: none;
+    justify-content: flex-start;
+    gap: 4px;
+    pointer-events: none;
+}
+
+#container .navbar::after {
+    content: none;
+}
+
+#container .nav-brand,
+#container .hamburger,
+#container .nav-menu {
+    pointer-events: auto;
+}
+
+#container .nav-dropdown-panel {
+    left: 0;
+    right: auto;
 }
 
 .nav-brand {
@@ -314,10 +338,10 @@ body:not(.homepage) {
    ================================ */
 #ui {
     position: absolute;
-    top: 60px;
+    top: 0;
     left: 0;
     width: 100%;
-    height: calc(100% - 60px);
+    height: 100%;
     pointer-events: none;
     z-index: 1500;
 }
@@ -425,7 +449,7 @@ body:not(.homepage) {
     align-items: flex-start;
     gap: 4px;
     pointer-events: auto;
-    padding: 20px 20px;
+    padding: 64px 20px 20px;
 }
 
 .header h1 {
@@ -468,23 +492,22 @@ body:not(.homepage) {
 /* Snapshot navigation buttons */
 .snapshot-navigation {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
     margin-top: 8px;
     width: max-content;
-    min-width: 168px;
 }
 
 .snapshot-nav-row {
     display: flex;
     gap: 8px;
-    align-items: stretch;
-    width: 100%;
+    align-items: center;
 }
 
 .snapshot-nav-btn {
-    flex: 1 1 0;
+    flex: 0 0 auto;
     height: 28px;
     padding: 0 10px;
     box-sizing: border-box;
@@ -515,7 +538,8 @@ body:not(.homepage) {
 /* Archive picker (custom dropdown under Prev/Next) */
 .archive-picker {
     position: relative;
-    width: 100%;
+    width: auto;
+    min-width: 148px;
 }
 
 .archive-picker-trigger {
@@ -720,21 +744,28 @@ body:not(.homepage) {
    ================================ */
 .sidebar {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 12px;
+    right: 12px;
     width: 300px;
     pointer-events: auto;
 }
 
 .panel {
+    --glass-fill: rgba(7, 7, 7, 0.9);
     backdrop-filter: none;
-    background: rgba(0, 0, 0, 0.88);
-    background-color: rgba(0, 0, 0, 0.88);
-    background-image: none;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: none;
-    border-radius: 3px;
-    padding: 10px;
+    background-color: rgba(7, 7, 7, 0.9);
+    border: 1px solid transparent;
+    background-image:
+        linear-gradient(var(--glass-fill), var(--glass-fill)),
+        var(--glass-border-gradient);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    box-shadow:
+        var(--glass-highlight),
+        0 16px 36px rgba(0, 0, 0, 0.5),
+        0 1px 0 rgba(255, 255, 255, 0.035);
+    border-radius: 8px;
+    padding: 12px 12px 10px;
     margin-bottom: 20px;
     z-index: 2000;
     position: relative;
@@ -744,16 +775,19 @@ body:not(.homepage) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 2px;
+    padding: 0 8px 4px;
 }
 
 .panel-header h3 {
-    font-size: .8rem;
-    font-weight: 200;
+    font-size: .72rem;
+    font-weight: 500;
     margin: 0;
-    color: #797979;
+    color: rgba(255, 255, 255, 0.42);
     text-transform: uppercase;
-    letter-spacing: 0.05rem;
+    letter-spacing: 0.12rem;
+    text-align: left;
+    flex: 1;
 }
 
 .panel-toggle {
@@ -798,38 +832,75 @@ body:not(.homepage) {
     opacity: 0;
 }
 
-.panel div {
-    margin-bottom: 0px;
-    font-size: 0.8rem;
-    color: #cccccc;
-    line-height: 1.8em;
+.panel-content > div[hidden] {
+    display: none !important;
+}
+
+.panel-kv,
+.panel-content > div:not(.panel-slider):not(.implementation-item):not(.script-note):not(.script-ops):not(.panel-block) {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0;
+    padding: 7px 8px;
+    font-size: 0.66rem;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.38);
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+    border-radius: 5px;
+}
+
+.panel-kv + .panel-kv,
+.panel-content > div:not(.panel-slider):not(.implementation-item):not(.script-note):not(.script-ops):not(.panel-block) + div:not(.panel-slider):not(.implementation-item):not(.script-note):not(.script-ops):not(.panel-block) {
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.045);
+}
+
+.panel-content > div[data-tip]:not(.panel-slider):hover {
+    background: rgba(255, 255, 255, 0.035);
 }
 
 .panel-content.minimized div {
     margin-bottom: 0px;
 }
 
-.panel span {
-    color: #ffffff;
+.panel-kv > span,
+.panel-content > div:not(.panel-slider):not(.implementation-item):not(.script-note):not(.script-ops):not(.panel-block) > span {
+    color: #f3f3f3;
     font-weight: 500;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    text-align: right;
+    flex: 1 1 auto;
+    min-width: 0;
+    word-break: break-word;
+    font-variant-numeric: tabular-nums;
 }
 
 .panel-content .panel-row-muted {
-    color: #555555;
-    font-size: 0.7rem;
-    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.22);
+    font-size: 0.62rem;
 }
 
 .panel-content .panel-row-muted span {
-    color: #666666;
+    color: rgba(255, 255, 255, 0.32);
     font-weight: 400;
+}
+
+.panel-block {
+    margin-top: 8px;
+    padding: 10px 8px 4px;
+    border-radius: 6px;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.045);
 }
 
 /* Panel range slider (disc / block visibility) */
 .panel-slider {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 6px;
+    padding: 10px 8px 6px;
+    border-radius: 6px;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.045);
 }
 
 .panel-slider-label {
@@ -1520,6 +1591,11 @@ button:active {
     position: relative;
     overflow: hidden;
     z-index: 1;
+    font-size: 0.8rem;
+    color: #cccccc;
+    line-height: 1.8em;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .implementation-item:hover {
@@ -1551,11 +1627,18 @@ button:active {
 .implementation-item span {
     position: relative;
     z-index: 2;
+    color: #ffffff;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    text-align: left;
+    flex: none;
+    word-break: normal;
 }
 
-.implementation-name {
-    font-weight: bold;
-    color: #4CAF50;
+.implementation-item .implementation-name {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.45);
 }
 
 .implementation-sub-item {
@@ -1647,7 +1730,8 @@ button:active {
     }
     
     #container .navbar {
-        position: relative;
+        position: absolute;
+        width: auto;
     }
     
     .hamburger {
@@ -2485,7 +2569,7 @@ button:active {
     
     /* Mobile header adjustments */
     .header {
-        padding: 15px 20px;
+        padding: 56px 20px 15px;
     }
     
     .header h1 {
@@ -2533,7 +2617,7 @@ button:active {
     }
     
     .header {
-        padding: 10px 20px;
+        padding: 52px 20px 10px;
     }
     
     .header h1 {
