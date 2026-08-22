@@ -1,5 +1,15 @@
 // Bitcoin Explorer - Transaction Page
 class BitcoinTransactionExplorer {
+    // Tube palette (RRGGBBAA canvas gradients). Current tx stays brighter than traced history.
+    static TUBE_TONES = {
+        CURRENT_INPUT: ['#55555555', '#eeeeeedd'],
+        CURRENT_OUTPUT: ['#ffffffee', '#88888855'],
+        CURRENT_FLAT: '#eeeeeedd',
+        HISTORY_FLAT: '#55555599',
+        PARENT_INPUT: ['#0a0a0a00', '#44444488'],
+        PARENT_OUTPUT: ['#55555588', '#55555500']
+    };
+
     constructor(opts) {
         opts = opts || {};
         this._shell = opts.shell || null;
@@ -1444,7 +1454,10 @@ class BitcoinTransactionExplorer {
                 // Regular input tube: gradient from dark to light
                 material = new THREE.MeshLambertMaterial({ 
                     color: 0xffffff,
-                    map: this.createHorizontalGradientTexture('#22222200', '#aaaaaacc'),
+                    map: this.createHorizontalGradientTexture(
+                        BitcoinTransactionExplorer.TUBE_TONES.CURRENT_INPUT[0],
+                        BitcoinTransactionExplorer.TUBE_TONES.CURRENT_INPUT[1]
+                    ),
                     opacity: 1.0,
                     transparent: true,
                     side: THREE.DoubleSide,
@@ -1505,7 +1518,10 @@ class BitcoinTransactionExplorer {
             // Output tube: gradient from white to transparent along the length
             const material = new THREE.MeshLambertMaterial({ 
                 color: 0xffffff,
-                map: this.createHorizontalGradientTexture('#ffffffcc', '#ffffff00'),
+                map: this.createHorizontalGradientTexture(
+                    BitcoinTransactionExplorer.TUBE_TONES.CURRENT_OUTPUT[0],
+                    BitcoinTransactionExplorer.TUBE_TONES.CURRENT_OUTPUT[1]
+                ),
                 opacity: 1.0,
                 transparent: true,
                 side: THREE.DoubleSide,
@@ -1727,9 +1743,10 @@ class BitcoinTransactionExplorer {
         const group = opts.group || 'parent';
         const STUB = 20;
         // Older (parent) tubes are greyer/dimmer than the current tx so generations read as depth.
-        const PARENT_INPUT_GRAD = ['#0a0a0a00', '#6a6a6a99'];
-        const PARENT_OUTPUT_GRAD = ['#8a8a8a99', '#8a8a8a00'];
-        const FLAT_TONE = '#aaaaaacc'; // uninterrupted funding path (matches flattened input)
+        const tones = BitcoinTransactionExplorer.TUBE_TONES;
+        const PARENT_INPUT_GRAD = tones.PARENT_INPUT;
+        const PARENT_OUTPUT_GRAD = tones.PARENT_OUTPUT;
+        const FLAT_TONE = tones.HISTORY_FLAT; // uninterrupted funding path (dimmer than current)
 
         const vins = tx.vin || [];
         const vouts = tx.vout || [];
@@ -1861,8 +1878,8 @@ class BitcoinTransactionExplorer {
         return { inputAnchors, outputAnchors };
     }
 
-    // Replace the fading gradient on the given current-tx input tubes with a flat tone,
-    // so a traced input reads as a solid continuation from its parent (not a fade-to-nothing).
+    // Replace the fading gradient on the given current-tx input tubes with a bright solid,
+    // so a traced input reads as a continuous foreground path (brighter than history tubes).
     // Stashes the original texture on userData so clearParentTransactions can restore it.
     _flattenTracedInputs(inputIndices) {
         if (!inputIndices || inputIndices.size === 0) return;
@@ -1871,8 +1888,9 @@ class BitcoinTransactionExplorer {
             if (!inputIndices.has(child.userData.index)) return;
             if (child.material && child.material.map && child.userData._origMap === undefined) {
                 child.userData._origMap = child.material.map;
-                // Uniform (no-fade) version of the input tone.
-                child.material.map = this.createHorizontalGradientTexture('#aaaaaacc', '#aaaaaacc');
+                // Uniform (no-fade) bright current-tx tone.
+                const flat = BitcoinTransactionExplorer.TUBE_TONES.CURRENT_FLAT;
+                child.material.map = this.createHorizontalGradientTexture(flat, flat);
                 child.material.needsUpdate = true;
             }
         });
@@ -1900,7 +1918,8 @@ class BitcoinTransactionExplorer {
             if (!outputIndices.has(child.userData.index)) return;
             if (child.material && child.material.map && child.userData._origMap === undefined) {
                 child.userData._origMap = child.material.map;
-                child.material.map = this.createHorizontalGradientTexture('#aaaaaacc', '#aaaaaacc');
+                const flat = BitcoinTransactionExplorer.TUBE_TONES.CURRENT_FLAT;
+                child.material.map = this.createHorizontalGradientTexture(flat, flat);
                 child.material.needsUpdate = true;
             }
         });

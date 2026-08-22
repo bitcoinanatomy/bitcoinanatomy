@@ -145,6 +145,7 @@ class BitcoinAddressExplorer {
         this._disposed = true;
         this._ac.abort();
         this.isRotating = false;
+        this.hideLoadingModal();
         if (this._hoverTooltipEl && this._hoverTooltipEl.parentNode) {
             this._hoverTooltipEl.parentNode.removeChild(this._hoverTooltipEl);
             this._hoverTooltipEl = null;
@@ -731,7 +732,10 @@ class BitcoinAddressExplorer {
     }
 
     async fetchData() {
-        this.showLoadingModal('Loading address data...');
+        const quietLoad = !!window.__softNav;
+        if (!quietLoad) {
+            this.showLoadingModal('Loading address data...');
+        }
         
         try {
             if (!this.address) {
@@ -823,15 +827,17 @@ class BitcoinAddressExplorer {
             console.log('Chain stats funded:', this.addressData.chain_stats ? this.addressData.chain_stats.funded_txo_sum : 0);
             console.log('Chain stats spent:', this.addressData.chain_stats ? this.addressData.chain_stats.spent_txo_sum : 0);
             
-            this.updateLoadingProgress('Creating visualization...', 90);
+            if (!quietLoad) this.updateLoadingProgress('Creating visualization...', 90);
             
             this.updateUI(this.addressData);
             this.createAddressVisualization();
             
-            this.updateLoadingProgress('Complete!', 100);
-            setTimeout(() => {
-                this.hideLoadingModal();
-            }, 500);
+            if (!quietLoad) {
+                this.updateLoadingProgress('Complete!', 100);
+                setTimeout(() => {
+                    this.hideLoadingModal();
+                }, 500);
+            }
             
         } catch (error) {
             this.hideLoadingModal();
@@ -1400,7 +1406,7 @@ class BitcoinAddressExplorer {
                 return;
             }
 
-            // Redirect to the same page with new address parameter
+            closeModal();
             const currentUrl = new URL(window.location);
             currentUrl.searchParams.set('address', newAddress);
             explorerNavigate(currentUrl.toString());
