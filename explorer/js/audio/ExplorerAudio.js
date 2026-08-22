@@ -57,7 +57,7 @@
     function pickExt() {
         if (ext) return ext;
         var a = document.createElement('audio');
-        if (a.canPlayType('audio/ogg; codecs="vorbis"')) ext = 'ogg';
+        if (a.canPlayType('audio/ogg; codecs="opus"') || a.canPlayType('audio/ogg; codecs="vorbis"')) ext = 'ogg';
         else ext = 'mp3';
         return ext;
     }
