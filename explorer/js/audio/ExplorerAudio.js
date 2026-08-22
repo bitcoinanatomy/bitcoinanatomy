@@ -8,7 +8,7 @@
 
     var STORAGE_MUTE = 'explorerAudioMuted';
     var CROSSFADE_S = 0.8;
-    var SCAPE_GAIN = 0.28;
+    var SCAPE_GAIN = 0.14;
     var SFX_GAIN = 0.45;
     var DUCK_GAIN = 0.12;
 
@@ -21,15 +21,19 @@
         'transaction.html': 'transaction',
         'address.html': 'address',
         'mempool.html': 'mempool',
-        'crypto.html': 'curve',
-        'script.html': 'script'
+        'crypto.html': 'block',
+        'script.html': 'node'
     };
 
     var SFX_IDS = {
         'ui-hover': 'ui-hover',
         'ui-select': 'ui-select',
         'ui-menu': 'ui-menu',
-        'page-whoosh': 'page-whoosh'
+        'page-whoosh': 'ui-menu'
+    };
+
+    var SFX_CUE = {
+        'ui-hover': { offset: 0.07, duration: 0.11, gain: 0.22 }
     };
 
     var ext = null;
@@ -49,6 +53,10 @@
     var bufferCache = {};
     var loadPromises = {};
     var lastHoverAt = 0;
+    var HOVER_COOLDOWN_MS = 160;
+    var HOVER_SETTLE_MS = 35;
+    var chromeHoverTimer = null;
+    var chromeHoverBtn = null;
 
     try {
         muted = localStorage.getItem(STORAGE_MUTE) === '1';
@@ -208,7 +216,7 @@
             }
             if (key && currentScapeKey !== key) applyScape(key);
             ['ui-hover', 'ui-select', 'ui-menu', 'page-whoosh'].forEach(function (id) {
-                loadBuffer(urlFor('sfx', id));
+                loadBuffer(urlFor('sfx', SFX_IDS[id] || id));
             });
         },
 
@@ -263,20 +271,27 @@
             if (!name) return;
             if (id === 'ui-hover') {
                 var t = performance.now();
-                if (t - lastHoverAt < 80) return;
+                if (t - lastHoverAt < HOVER_COOLDOWN_MS) return;
                 lastHoverAt = t;
             }
             ensureContext();
             resume();
             loadBuffer(urlFor('sfx', name)).then(function (buf) {
                 if (!buf || muted) return;
+                var cue = SFX_CUE[id] || {};
                 var src = ctx.createBufferSource();
                 src.buffer = buf;
                 var g = ctx.createGain();
-                g.gain.value = 1;
+                g.gain.value = cue.gain != null ? cue.gain : 1;
                 src.connect(g);
                 g.connect(sfxBus);
-                try { src.start(); } catch (e) { /* ignore */ }
+                var offset = cue.offset || 0;
+                var dur = cue.duration;
+                try {
+                    if (dur) src.start(0, offset, dur);
+                    else if (offset) src.start(0, offset);
+                    else src.start();
+                } catch (e) { /* ignore */ }
                 src.onended = function () {
                     try { src.disconnect(); g.disconnect(); } catch (e2) { /* ignore */ }
                 };
@@ -315,8 +330,56 @@
         }
     };
 
+    function chromeControl(el) {
+        if (!el || !el.closest) return null;
+        var hit = el.closest('button, [role="button"], nav.navbar a.nav-link, .nav-dropdown-toggle');
+        if (!hit || hit.disabled) return null;
+        if (!hit.closest('.controls-main, .controls-camera, .navigation-controls, nav.navbar')) {
+            return null;
+        }
+        return hit;
+    }
+
+    function installChromeSfx() {
+        if (document.documentElement.dataset.explorerChromeSfx) return;
+        document.documentElement.dataset.explorerChromeSfx = '1';
+        document.addEventListener('click', function (e) {
+            if (!e.isTrusted) return;
+            var btn = chromeControl(e.target);
+            if (!btn) return;
+            ExplorerAudio.unlock();
+            if (btn.id === 'toggle-audio') return;
+            if (btn.matches && btn.matches('nav.navbar a.nav-link')) return;
+            ExplorerAudio.play('ui-select');
+        }, true);
+        document.addEventListener('pointerover', function (e) {
+            var btn = chromeControl(e.target);
+            if (!btn) return;
+            if (e.relatedTarget && btn.contains(e.relatedTarget)) return;
+            if (btn === chromeHoverBtn) return;
+            chromeHoverBtn = btn;
+            if (chromeHoverTimer) clearTimeout(chromeHoverTimer);
+            chromeHoverTimer = setTimeout(function () {
+                chromeHoverTimer = null;
+                if (chromeHoverBtn !== btn) return;
+                ExplorerAudio.play('ui-hover');
+            }, HOVER_SETTLE_MS);
+        }, true);
+        document.addEventListener('pointerout', function (e) {
+            var btn = chromeControl(e.target);
+            if (!btn) return;
+            if (e.relatedTarget && btn.contains(e.relatedTarget)) return;
+            if (chromeHoverBtn === btn) chromeHoverBtn = null;
+            if (chromeHoverTimer) {
+                clearTimeout(chromeHoverTimer);
+                chromeHoverTimer = null;
+            }
+        }, true);
+    }
+
     if (typeof window !== 'undefined') {
         window.ExplorerAudio = ExplorerAudio;
+        installChromeSfx();
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function () {
                 ExplorerAudio.bindDesktopToggle();
