@@ -1,4 +1,9 @@
-// Bitcoin Explorer — secp256k1 curve lesson (family / domain / group / scalar)
+// Bitcoin Explorer — secp256k1 curve lesson (family / domain / scalar)
+const CRYPTO_DEMO_MNEMONIC = 'crush miracle lawsuit inspire bomb into assist album surface will fuel control';
+const CRYPTO_DEMO_PATH = "m/84'/0'/0'/0/0";
+const SECP256K1_N = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141');
+const BIP32_HARDENED = 0x80000000;
+
 class BitcoinCryptoExplorer {
     constructor(opts) {
         opts = opts || {};
@@ -23,8 +28,16 @@ class BitcoinCryptoExplorer {
         this.morphing = false;
         this.morphElapsed = 0;
         this.morphDuration = 0.6;
+        this._torusSubdiv = 0;
+        this._torusSubdiving = false;
+        this._subdivElapsed = 0;
+        this._subdivDuration = 1.4;
+        this._subdivFrom = 0;
+        this._subdivTo = 1;
+        this._pendingUnglue = null;
         this.primeIndex = 0;
         this.groupOp = 'add';
+        this._groupToy = false;
         this.scalarK = 1;
         this.scalarPlaying = false;
         this.scalarTimer = 0;
@@ -51,7 +64,13 @@ class BitcoinCryptoExplorer {
 
         const params = new URLSearchParams(window.location.search);
         const v = (params.get('view') || '').toLowerCase();
-        if (window.ECC && ECC.VIEWS.indexOf(v) >= 0) this.view = v;
+        if (v === 'group') {
+            this.view = 'domain';
+            this.groupOp = 'add';
+            this._groupToy = true;
+        } else if (window.ECC && ECC.VIEWS.indexOf(v) >= 0) {
+            this.view = v;
+        }
 
         this.init();
     }
@@ -70,6 +89,7 @@ class BitcoinCryptoExplorer {
         this.setupPanelToggle();
         this.setupExplainers();
         this.rebuildView();
+        if (this.view === 'scalar') this._ensureDemoKey();
         this.renderer.setAnimationLoop(() => this.animate());
     }
 
@@ -86,16 +106,15 @@ class BitcoinCryptoExplorer {
     }
 
     getVRPageHud() {
-        const dim = ECC.DIM_NAMES[this.dimIndex] || '';
         const prime = ECC.PRIME_LADDER[this.primeIndex];
         return {
             title: 'Curve',
             identity: this.view.charAt(0).toUpperCase() + this.view.slice(1),
             stats: [
-                'Domain: ' + dim,
+                'Domain: ' + this._domainLabel(),
                 'Field: ' + (prime ? prime.label : ''),
                 this._curveTotalLabel(),
-                this.view === 'family' || this.view === 'domain' || this.view === 'group' ? 'Op: ' + this.hudOp : (this.view === 'scalar' ? 'k = ' + this.scalarK : 'y² = x³ + 7')
+                this.view === 'family' || this.view === 'domain' ? 'Op: ' + this.hudOp : (this.view === 'scalar' ? this.hudOp : 'y² = x³ + 7')
             ]
         };
     }
@@ -122,6 +141,7 @@ class BitcoinCryptoExplorer {
         this._zoomDots = [];
         this._lastDotZoom = -1;
         this._familyOpRoot = null;
+        this._scalarHopGroup = null;
         this._pointMeshes.forEach((m) => {
             if (m.parent) m.parent.remove(m);
             if (m.geometry) m.geometry.dispose();
@@ -266,7 +286,6 @@ class BitcoinCryptoExplorer {
     setupControls() {
         this._bind('view-family', () => this.setView('family'));
         this._bind('view-domain', () => this.setView('domain'));
-        this._bind('view-group', () => this.setView('group'));
         this._bind('view-scalar', () => this.setView('scalar'));
         this._bind('dim-prev', () => this.stepDim(-1));
         this._bind('dim-next', () => this.stepDim(1));
@@ -318,11 +337,11 @@ class BitcoinCryptoExplorer {
 
     _syncToolbar() {
         const view = this.view;
-        const views = ['family', 'domain', 'group', 'scalar'];
+        const views = ['family', 'domain', 'scalar'];
         views.forEach((v) => this._setPressed('view-' + v, view === v));
 
         const showGlueField = view === 'domain';
-        const showOps = view === 'family' || view === 'domain' || view === 'group';
+        const showOps = view === 'family' || view === 'domain';
         const showPlay = view === 'scalar';
         this._setClusterHidden('crypto-cluster-glue', !showGlueField);
         this._setClusterHidden('crypto-cluster-field', !showGlueField);
@@ -448,7 +467,7 @@ class BitcoinCryptoExplorer {
                 ? '(' + this._fmtPCoord(this.familyPX) + ')'
                 : '(' + this._fmtPCoord(this.familyPX) + ', ' + this._fmtPCoord(y) + ')';
         }
-        if (rangeEl) rangeEl.textContent = this.familyPPlaying && !this._familyPDragging ? 'walk' : 'hold';
+        if (rangeEl) rangeEl.textContent = this.familyPPlaying && !this._familyPDragging ? 'hold' : 'walk';
         if (!slider) return;
         const t = this._familySliderFromPX(this.familyPX);
         slider.value = String(t);
@@ -625,18 +644,34 @@ class BitcoinCryptoExplorer {
     }
 
     setView(view) {
+        const pinGroup = view === 'group';
+        if (pinGroup) view = 'domain';
         if (ECC.VIEWS.indexOf(view) < 0) return;
         this.view = view;
-        if (view === 'group' || view === 'scalar') {
-            this.primeIndex = 0;
+        if (pinGroup) {
+            this.groupOp = this.groupOp || 'add';
+            this._pinGroupToy();
+        } else if (view !== 'domain') {
+            this._unpinGroupToy();
         }
         this._pushViewUrl();
         this.rebuildView();
         this._syncVrMenu();
+        if (view === 'scalar' && !this._realKey) this._ensureDemoKey();
     }
 
     stepDim(dir) {
         const next = Math.max(0, Math.min(ECC.DIM_STEPS - 1, this.dimIndex + dir));
+        if (dir > 0 && this._pendingUnglue != null) {
+            this._pendingUnglue = null;
+            this._startTorusSubdiv(1);
+            return;
+        }
+        if (dir < 0 && this.morphT >= 0.999 && !this.morphing && this._torusSubdiv > 0.02) {
+            this._pendingUnglue = next;
+            this._startTorusSubdiv(0);
+            return;
+        }
         if (next === this.dimIndex) return;
         this.morphFrom = this.morphT;
         this.morphTo = ECC.dimIndexToT(next);
@@ -650,10 +685,34 @@ class BitcoinCryptoExplorer {
         }
     }
 
+    _startTorusSubdiv(to) {
+        this._subdivFrom = this._torusSubdiv;
+        this._subdivTo = to;
+        this._torusSubdiving = true;
+        this._subdivElapsed = 0;
+        this._applyTorusSubdiv();
+    }
+
+    _applyTorusSubdiv() {
+        const st = this._domainState;
+        if (!st || !st.geom) return;
+        this._updateSurfacePositions(st.geom, st.nu, st.nv, this.morphT);
+        if (st.fillGeom) this._updateSurfacePositions(st.fillGeom, st.fillNu, st.fillNv, this.morphT);
+        if (st.gridExtraMat) st.gridExtraMat.opacity = 0.28 * this._torusSubdiv;
+    }
+
+    _ensureTorusSubdiv() {
+        if (this.morphT >= 0.999 && !this._torusSubdiving && this._pendingUnglue == null) {
+            this._torusSubdiv = 1;
+        }
+    }
+
     stepPrime(dir) {
-        if (this.view === 'group' || this.view === 'scalar') return;
+        if (this.view === 'scalar') return;
+        const wasToy = this._groupToy;
+        if (wasToy) this._unpinGroupToy();
         const next = Math.max(0, Math.min(ECC.PRIME_LADDER.length - 1, this.primeIndex + dir));
-        if (next === this.primeIndex) return;
+        if (next === this.primeIndex && !wasToy) return;
         this.primeIndex = next;
         this._fieldCache = null;
         if (this.view === 'family') this.setView('domain');
@@ -663,8 +722,52 @@ class BitcoinCryptoExplorer {
         }
     }
 
+    _canLabelGroupOp() {
+        const field = this._ensureField();
+        return !!(field && field.exact && field.p && field.p <= 17);
+    }
+
+    _pinGroupToy() {
+        this._groupToy = true;
+    }
+
+    _unpinGroupToy() {
+        this._groupToy = false;
+    }
+
+    _ensureToyField() {
+        if (this._toyCache) return this._toyCache;
+        const raw = ECC.F17.points;
+        const pts = raw.map((q) => ({ x: q.x, y: q.y, u: q.x / 17, v: q.y / 17 }));
+        this._toyCache = {
+            points: pts,
+            count: pts.length,
+            total: raw.length,
+            exact: true,
+            p: 17,
+            bits: 5,
+            toy: true
+        };
+        return this._toyCache;
+    }
+
+    _domainDrawField() {
+        return this._groupToy ? this._ensureToyField() : this._ensureField();
+    }
+
     setGroupOp(op) {
-        this.groupOp = this.groupOp === op ? null : op;
+        if (this.view === 'domain' && this.groupOp === op && !this._groupToy && !this._canLabelGroupOp()) {
+            this._pinGroupToy();
+            this.rebuildView();
+            if (this.vrManager && this.vrManager.navMenu && this.vrManager.navMenu._refreshAllToggles) {
+                this.vrManager.navMenu._refreshAllToggles();
+            }
+            return;
+        }
+        const next = this.groupOp === op ? null : op;
+        if (!next) this._unpinGroupToy();
+        else if (this.view === 'domain' && !this._canLabelGroupOp()) this._pinGroupToy();
+        this.groupOp = next;
         this.rebuildView();
         if (this.vrManager && this.vrManager.navMenu && this.vrManager.navMenu._refreshAllToggles) {
             this.vrManager.navMenu._refreshAllToggles();
@@ -673,7 +776,12 @@ class BitcoinCryptoExplorer {
 
     toggleScalarPlay() {
         if (this.view !== 'scalar') this.setView('scalar');
-        this.scalarPlaying = !this.scalarPlaying;
+        const starting = !this.scalarPlaying;
+        if (starting && this._realKey && this.scalarK === this._realKey.toyR) {
+            this.scalarK = 1;
+            this._updateScalarHighlight();
+        }
+        this.scalarPlaying = starting;
         this._syncToolbar();
         if (this.vrManager && this.vrManager.navMenu && this.vrManager.navMenu._refreshAllToggles) {
             this.vrManager.navMenu._refreshAllToggles();
@@ -715,20 +823,131 @@ class BitcoinCryptoExplorer {
         return new Uint8Array(sig);
     }
 
+    _concatBytes() {
+        let n = 0;
+        let i;
+        for (i = 0; i < arguments.length; i++) n += arguments[i].length;
+        const out = new Uint8Array(n);
+        let o = 0;
+        for (i = 0; i < arguments.length; i++) {
+            out.set(arguments[i], o);
+            o += arguments[i].length;
+        }
+        return out;
+    }
+
+    _ser32(n) {
+        const b = new Uint8Array(4);
+        new DataView(b.buffer).setUint32(0, n >>> 0);
+        return b;
+    }
+
+    _bigintTo32(n) {
+        let hex = n.toString(16);
+        if (hex.length > 64) throw new Error('Integer does not fit in 32 bytes.');
+        return this._hexToBytes(hex.padStart(64, '0'));
+    }
+
+    _parseBip32Path(path) {
+        const raw = String(path || '').trim();
+        if (!raw || raw === 'm') return [];
+        const body = raw.replace(/^m\/?/i, '');
+        if (!body) return [];
+        return body.split('/').map((part) => {
+            const hard = /['hH]$/.test(part);
+            const num = parseInt(hard ? part.slice(0, -1) : part, 10);
+            if (!Number.isFinite(num) || num < 0) throw new Error('Bad BIP32 path: ' + path);
+            return hard ? (num + BIP32_HARDENED) >>> 0 : num >>> 0;
+        });
+    }
+
+    _mnemonicPhrase(text) {
+        const words = String(text || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+        const n = words.length;
+        if (n === 12 || n === 15 || n === 18 || n === 21 || n === 24) return words.join(' ');
+        return null;
+    }
+
+    async _mnemonicToSeed(mnemonic, passphrase) {
+        const enc = new TextEncoder();
+        const pw = enc.encode(mnemonic.normalize('NFKD'));
+        const salt = enc.encode(('mnemonic' + (passphrase || '')).normalize('NFKD'));
+        const key = await crypto.subtle.importKey('raw', pw, 'PBKDF2', false, ['deriveBits']);
+        const bits = await crypto.subtle.deriveBits({
+            name: 'PBKDF2',
+            hash: 'SHA-512',
+            salt: salt,
+            iterations: 2048
+        }, key, 512);
+        return new Uint8Array(bits);
+    }
+
+    async _bip32Master(seed) {
+        const I = await this._hmacSha512(new TextEncoder().encode('Bitcoin seed'), seed);
+        return { key: I.slice(0, 32), chain: I.slice(32) };
+    }
+
+    async _ckdPriv(parent, index) {
+        const secp = window.nobleSecp;
+        const hardened = index >= BIP32_HARDENED;
+        const data = hardened
+            ? this._concatBytes(new Uint8Array([0]), parent.key, this._ser32(index))
+            : this._concatBytes(secp.getPublicKey(parent.key, true), this._ser32(index));
+        const I = await this._hmacSha512(parent.chain, data);
+        const il = I.slice(0, 32);
+        const ir = I.slice(32);
+        const ilN = BigInt('0x' + this._bytesToHex(il));
+        if (ilN >= SECP256K1_N || ilN === 0n) throw new Error('BIP32 child IL is not a valid key.');
+        const ki = (ilN + BigInt('0x' + this._bytesToHex(parent.key))) % SECP256K1_N;
+        if (ki === 0n) throw new Error('BIP32 child key is zero.');
+        return { key: this._bigintTo32(ki), chain: ir };
+    }
+
+    async _derivePath(master, path) {
+        const idx = this._parseBip32Path(path);
+        let node = master;
+        for (let i = 0; i < idx.length; i++) node = await this._ckdPriv(node, idx[i]);
+        return node;
+    }
+
     async _seedToPriv(text) {
         const t = (text || '').trim();
-        if (!t) throw new Error('Paste a key, seed, or phrase.');
+        if (!t) throw new Error('Paste seed words, a key, or a hex seed.');
+        const mnemonic = this._mnemonicPhrase(t);
+        if (mnemonic) {
+            const seed = await this._mnemonicToSeed(mnemonic, '');
+            const master = await this._bip32Master(seed);
+            const child = await this._derivePath(master, CRYPTO_DEMO_PATH);
+            return {
+                priv: child.key,
+                source: 'BIP39 index 0',
+                mnemonic: mnemonic,
+                path: CRYPTO_DEMO_PATH
+            };
+        }
         const compact = t.replace(/\s+/g, '');
         if (/^(0x)?[0-9a-f]{64}$/i.test(compact)) {
             return { priv: this._hexToBytes(compact.replace(/^0x/i, '')), source: 'hex k' };
         }
         if (/^(0x)?[0-9a-f]{128}$/i.test(compact)) {
             const seed = this._hexToBytes(compact.replace(/^0x/i, ''));
-            const I = await this._hmacSha512(new TextEncoder().encode('Bitcoin seed'), seed);
-            return { priv: I.slice(0, 32), source: 'BIP32 master' };
+            const master = await this._bip32Master(seed);
+            return { priv: master.key, source: 'BIP32 master', path: 'm' };
         }
         const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
         return { priv: new Uint8Array(digest), source: 'SHA-256(text)' };
+    }
+
+    async _ensureDemoKey() {
+        if (this._realKey || this._demoKeyLoading) return;
+        this._demoKeyLoading = true;
+        try {
+            await this.loadSeed(CRYPTO_DEMO_MNEMONIC, { silent: true });
+        } catch (e) {
+            console.warn('[Curve] demo seed failed', e);
+        } finally {
+            this._demoKeyLoading = false;
+        }
     }
 
     openSeedModal() {
@@ -740,7 +959,11 @@ class BitcoinCryptoExplorer {
         modal.hidden = false;
         modal.style.display = 'block';
         if (err) { err.hidden = true; err.textContent = ''; }
-        if (input) input.focus();
+        if (input) {
+            input.value = (this._realKey && this._realKey.mnemonic) || CRYPTO_DEMO_MNEMONIC;
+            input.focus();
+            input.select();
+        }
     }
 
     closeSeedModal() {
@@ -764,7 +987,7 @@ class BitcoinCryptoExplorer {
         modal.addEventListener('click', (e) => { if (e.target === modal) hide(); }, { signal });
         if (example) {
             example.addEventListener('click', () => {
-                if (input) input.value = '0000000000000000000000000000000000000000000000000000000000000001';
+                if (input) input.value = CRYPTO_DEMO_MNEMONIC;
             }, { signal });
         }
         if (form) {
@@ -780,7 +1003,8 @@ class BitcoinCryptoExplorer {
         }
     }
 
-    async loadSeed(text) {
+    async loadSeed(text, opts) {
+        opts = opts || {};
         const secp = window.nobleSecp;
         if (!secp || typeof secp.getPublicKey !== 'function') {
             throw new Error('secp256k1 library not loaded yet.');
@@ -800,13 +1024,17 @@ class BitcoinCryptoExplorer {
         this._realKey = {
             kHex: kHex,
             pubHex: this._bytesToHex(pub),
-            source: parsed.source
+            source: parsed.source,
+            mnemonic: parsed.mnemonic || null,
+            path: parsed.path || null,
+            toyR: r === 0 ? order : r
         };
         this.scalarPlaying = false;
-        this.scalarK = r === 0 ? order : r;
-        this.closeSeedModal();
-        if (this.view !== 'scalar') this.setView('scalar');
-        else this.rebuildView();
+        this.scalarK = this._realKey.toyR;
+        if (!opts.silent) this.closeSeedModal();
+        if (this.view === 'scalar') this.rebuildView();
+        else if (!opts.silent) this.setView('scalar');
+        else this.updatePanel();
     }
 
     _pushViewUrl() {
@@ -823,7 +1051,6 @@ class BitcoinCryptoExplorer {
         this.scene.add(this.content);
         if (this.view === 'family') this.buildFamily();
         else if (this.view === 'domain') this.buildDomain();
-        else if (this.view === 'group') this.buildGroup();
         else this.buildScalar();
         this.updatePanel();
     }
@@ -1107,67 +1334,127 @@ class BitcoinCryptoExplorer {
         return this._fieldCache;
     }
 
-    _buildDomainSurface(group, t) {
+    _priorFieldScatter() {
+        if (this.primeIndex <= 0) return [];
+        const prev = ECC.PRIME_LADDER[this.primeIndex - 1];
+        const packed = ECC.fieldPointsForPrime(prev, this.drawCap);
+        return packed.points || [];
+    }
+
+    _domainGridRes() {
+        if (this.morphT >= 0.999 || this._torusSubdiving) return { nu: 80, nv: 40 };
+        return { nu: 40, nv: 20 };
+    }
+
+    _domainPoint(u, v, t) {
+        const p1 = ECC.sampleDomain(u, v, t);
+        const s = this._torusSubdiv;
+        if (t < 0.999 || s >= 0.999) return p1;
         const nu = 40, nv = 20;
+        const fu = u * nu, fv = v * nv;
+        const i0 = Math.floor(fu), j0 = Math.floor(fv);
+        const i1 = Math.min(nu, i0 + 1), j1 = Math.min(nv, j0 + 1);
+        const su = fu - i0, sv = fv - j0;
+        const a = ECC.sampleDomain(i0 / nu, j0 / nv, t);
+        const b = ECC.sampleDomain(i1 / nu, j0 / nv, t);
+        const c = ECC.sampleDomain(i0 / nu, j1 / nv, t);
+        const d = ECC.sampleDomain(i1 / nu, j1 / nv, t);
+        const k = s * s * (3 - 2 * s);
+        const p0x = a.x + (b.x - a.x) * su + (c.x - a.x) * sv + (a.x - b.x - c.x + d.x) * su * sv;
+        const p0y = a.y + (b.y - a.y) * su + (c.y - a.y) * sv + (a.y - b.y - c.y + d.y) * su * sv;
+        const p0z = a.z + (b.z - a.z) * su + (c.z - a.z) * sv + (a.z - b.z - c.z + d.z) * su * sv;
+        return {
+            x: p0x + (p1.x - p0x) * k,
+            y: p0y + (p1.y - p0y) * k,
+            z: p0z + (p1.z - p0z) * k
+        };
+    }
+
+    _buildDomainSurface(group, t) {
+        const res = this._domainGridRes();
+        const nu = res.nu, nv = res.nv;
         const verts = [];
-        const idx = [];
-        let i, j, u, v, p, a, b, c, d;
+        let i, j, u, v, p, a, b, c;
         for (j = 0; j <= nv; j++) {
             for (i = 0; i <= nu; i++) {
                 u = i / nu;
                 v = j / nv;
-                p = ECC.sampleDomain(u, v, t);
+                p = this._domainPoint(u, v, t);
                 verts.push(p.x, p.y, p.z);
             }
         }
-        for (j = 0; j < nv; j++) {
+        const coarseIdx = [];
+        const extraIdx = [];
+        const split = nu > 40;
+        for (j = 0; j <= nv; j++) {
             for (i = 0; i < nu; i++) {
                 a = j * (nu + 1) + i;
                 b = a + 1;
-                c = a + (nu + 1);
-                d = c + 1;
-                idx.push(a, b, b, d, d, c, c, a);
+                if (split && (j % 2 === 1)) extraIdx.push(a, b);
+                else coarseIdx.push(a, b);
             }
         }
+        for (j = 0; j < nv; j++) {
+            for (i = 0; i <= nu; i++) {
+                a = j * (nu + 1) + i;
+                c = a + (nu + 1);
+                if (split && (i % 2 === 1)) extraIdx.push(a, c);
+                else coarseIdx.push(a, c);
+            }
+        }
+        const idx = coarseIdx.concat(extraIdx);
         const geom = new THREE.BufferGeometry();
         geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
         geom.setIndex(idx);
         let mesh = null;
+        let gridExtraMat = null;
         if (this.showGrid) {
-            mesh = new THREE.LineSegments(geom, this._matLine(this._tone('grid'), 0.45));
+            const coarseMat = this._matLine(this._tone('grid'), 0.45);
+            if (extraIdx.length) {
+                geom.addGroup(0, coarseIdx.length, 0);
+                geom.addGroup(coarseIdx.length, extraIdx.length, 1);
+                gridExtraMat = this._matLine(this._tone('grid'), 0.28 * this._torusSubdiv);
+                mesh = new THREE.LineSegments(geom, [coarseMat, gridExtraMat]);
+            } else {
+                mesh = new THREE.LineSegments(geom, coarseMat);
+            }
             group.add(mesh);
         }
 
-        const edgeA = [];
-        const edgeB = [];
-        for (i = 0; i <= 64; i++) {
-            const ua = i / 64;
-            edgeA.push(this._v3(ECC.sampleDomain(ua, 0, t)));
-            edgeB.push(this._v3(ECC.sampleDomain(0, ua, t)));
+        let geoA = null, geoB = null, geoMid = null;
+        if (this.showGrid) {
+            const edgeA = [];
+            const edgeB = [];
+            const mid = [];
+            for (i = 0; i <= 64; i++) {
+                const ua = i / 64;
+                edgeA.push(this._v3(ECC.sampleDomain(ua, 0, t)));
+                edgeB.push(this._v3(ECC.sampleDomain(0, ua, t)));
+                mid.push(this._v3(ECC.sampleDomain(ua, 0.5, t)));
+            }
+            geoA = new THREE.BufferGeometry().setFromPoints(edgeA);
+            geoB = new THREE.BufferGeometry().setFromPoints(edgeB);
+            geoMid = new THREE.BufferGeometry().setFromPoints(mid);
+            group.add(new THREE.Line(geoA, this._matLine(this._tone('edgeA'), 0.95)));
+            group.add(new THREE.Line(geoB, this._matLine(this._tone('edgeB'), 0.95)));
+            group.add(new THREE.Line(geoMid, this._matLine(this._tone('mid'), 0.9)));
         }
-        const geoA = new THREE.BufferGeometry().setFromPoints(edgeA);
-        const geoB = new THREE.BufferGeometry().setFromPoints(edgeB);
-        group.add(new THREE.Line(geoA, this._matLine(this._tone('edgeA'), 0.95)));
-        group.add(new THREE.Line(geoB, this._matLine(this._tone('edgeB'), 0.95)));
 
-        const mid = [];
-        for (i = 0; i <= 64; i++) mid.push(this._v3(ECC.sampleDomain(i / 64, 0.5, t)));
-        const geoMid = new THREE.BufferGeometry().setFromPoints(mid);
-        group.add(new THREE.Line(geoMid, this._matLine(this._tone('mid'), 0.9)));
-
-        return { geom: geom, nu: nu, nv: nv, mesh: mesh, geoA: geoA, geoB: geoB, geoMid: geoMid };
+        return { geom: geom, nu: nu, nv: nv, mesh: mesh, geoA: geoA, geoB: geoB, geoMid: geoMid, gridExtraMat: gridExtraMat };
     }
 
     _makeDomainFillGeom(nu, nv, t) {
         const verts = [];
+        const uvs = [];
         const idx = [];
         let i, j, u, v, p, a, b, c, d;
         for (j = 0; j <= nv; j++) {
             for (i = 0; i <= nu; i++) {
                 u = i / nu;
                 v = j / nv;
-                p = ECC.sampleDomain(u, v, t);
+                p = this._domainPoint(u, v, t);
                 verts.push(p.x, p.y, p.z);
+                uvs.push(u, v);
             }
         }
         for (j = 0; j < nv; j++) {
@@ -1181,22 +1468,80 @@ class BitcoinCryptoExplorer {
         }
         const geom = new THREE.BufferGeometry();
         geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+        geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
         geom.setIndex(idx);
         geom.computeVertexNormals();
         return geom;
     }
 
-    _addDomainFill(group, t) {
-        const nu = 96, nv = 48;
-        const geom = this._makeDomainFillGeom(nu, nv, t);
-        const mat = new THREE.MeshBasicMaterial({
-            color: this._tone('pt'),
+    _domainFillMaterial() {
+        const rim = this.useColor ? new THREE.Color(0xeaf8ff) : new THREE.Color(0xffffff);
+        const core = this.useColor ? new THREE.Color(0xb7d0de) : new THREE.Color(0xd8d8dc);
+        return new THREE.ShaderMaterial({
             side: THREE.DoubleSide,
-            polygonOffset: true,
-            polygonOffsetFactor: 1,
-            polygonOffsetUnits: 1
+            transparent: true,
+            depthWrite: false,
+            uniforms: {
+                uRim: { value: rim },
+                uCore: { value: core }
+            },
+            vertexShader: [
+                'varying vec3 vWorldPos;',
+                'varying vec3 vWorldN;',
+                'void main() {',
+                '  vec4 wp = modelMatrix * vec4(position, 1.0);',
+                '  vWorldPos = wp.xyz;',
+                '  vWorldN = normalize(mat3(modelMatrix) * normal);',
+                '  gl_Position = projectionMatrix * viewMatrix * wp;',
+                '}'
+            ].join('\n'),
+            fragmentShader: [
+                'uniform vec3 uRim;',
+                'uniform vec3 uCore;',
+                'varying vec3 vWorldPos;',
+                'varying vec3 vWorldN;',
+                'float hash(vec2 p) {',
+                '  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);',
+                '}',
+                'float noise(vec2 p) {',
+                '  vec2 i = floor(p);',
+                '  vec2 f = fract(p);',
+                '  f = f * f * (3.0 - 2.0 * f);',
+                '  float a = hash(i);',
+                '  float b = hash(i + vec2(1.0, 0.0));',
+                '  float c = hash(i + vec2(0.0, 1.0));',
+                '  float d = hash(i + vec2(1.0, 1.0));',
+                '  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);',
+                '}',
+                'float fbm(vec2 p) {',
+                '  return 0.50 * noise(p) + 0.25 * noise(p * 2.13 + 1.7) + 0.125 * noise(p * 4.27 - 3.1);',
+                '}',
+                'void main() {',
+                '  vec3 N = normalize(vWorldN);',
+                '  if (!gl_FrontFacing) N = -N;',
+                '  vec3 V = normalize(cameraPosition - vWorldPos);',
+                '  float ndv = abs(dot(N, V));',
+                '  float fres = pow(1.0 - ndv, 1.6);',
+                '  vec3 w = abs(N);',
+                '  w /= (w.x + w.y + w.z);',
+                '  float sc = 14.0;',
+                '  float grain = fbm(vWorldPos.yz * sc) * w.x + fbm(vWorldPos.zx * sc) * w.y + fbm(vWorldPos.xy * sc) * w.z;',
+                '  float speck = hash(floor(vWorldPos.yz * 90.0)) * w.x + hash(floor(vWorldPos.zx * 90.0)) * w.y + hash(floor(vWorldPos.xy * 90.0)) * w.z;',
+                '  vec3 col = mix(uCore, uRim, clamp(fres * 0.7 + 0.38, 0.0, 1.0));',
+                '  col += (grain - 0.45) * 0.14;',
+                '  col += (speck - 0.5) * 0.04;',
+                '  float alpha = 0.78 + 0.18 * fres;',
+                '  gl_FragColor = vec4(clamp(col, 0.0, 1.0), alpha);',
+                '}'
+            ].join('\n')
         });
-        const mesh = new THREE.Mesh(geom, mat);
+    }
+
+    _addDomainFill(group, t) {
+        const nu = 128, nv = 64;
+        const geom = this._makeDomainFillGeom(nu, nv, t);
+        const mesh = new THREE.Mesh(geom, this._domainFillMaterial());
+        mesh.renderOrder = -1;
         group.add(mesh);
         return { geom: geom, mesh: mesh, nu: nu, nv: nv };
     }
@@ -1212,11 +1557,12 @@ class BitcoinCryptoExplorer {
             for (i = 0; i <= nu; i++) {
                 u = i / nu;
                 v = j / nv;
-                p = ECC.sampleDomain(u, v, t);
+                p = this._domainPoint(u, v, t);
                 pos.setXYZ(n++, p.x, p.y, p.z);
             }
         }
         pos.needsUpdate = true;
+        if (geom.attributes.normal) geom.computeVertexNormals();
         geom.computeBoundingSphere();
     }
 
@@ -1275,15 +1621,19 @@ class BitcoinCryptoExplorer {
     }
 
     buildDomain() {
+        this._ensureTorusSubdiv();
         const t = this.morphT;
-        const field = this._ensureField();
+        const field = this._domainDrawField();
         const surf = this._buildDomainSurface(this.content, t);
         let inst = null;
-        if (!field.solid && field.points.length) {
-            const r = field.exact ? (field.p <= 17 ? 0.028 : field.p <= 251 ? 0.014 : 0.007) : 0.0055;
-            inst = this._makeInstances(field.points.length, r);
+        const dots = field.solid ? this._priorFieldScatter() : field.points;
+        if (dots && dots.length) {
+            const r = field.solid
+                ? 0.0055
+                : (field.exact ? (field.p <= 17 ? 0.028 : field.p <= 251 ? 0.014 : 0.007) : 0.0055);
+            inst = this._makeInstances(dots.length, r);
             this.content.add(inst);
-            this._placeInstances(inst, field.points, t, -1);
+            this._placeInstances(inst, dots, t, -1);
         }
         const fill = field.solid ? this._addDomainFill(this.content, t) : null;
         this._domainState = {
@@ -1291,44 +1641,20 @@ class BitcoinCryptoExplorer {
             nu: surf.nu,
             nv: surf.nv,
             instances: inst,
-            points: field.points,
+            points: dots,
             geoA: surf.geoA,
             geoB: surf.geoB,
             geoMid: surf.geoMid,
             fillGeom: fill && fill.geom,
             fillNu: fill && fill.nu,
-            fillNv: fill && fill.nv
+            fillNv: fill && fill.nv,
+            gridExtraMat: surf.gridExtraMat
         };
-        if (this.dimIndex === 0 && field.exact && field.p === 17) {
-            this._addRealCurveOverlay(0.15);
-        }
         this._drawFieldGroupOp();
     }
 
-    _addRealCurveOverlay(opacity) {
-        const sampled = ECC.sampleRealCurve(-2.2, 4.5, 160);
-        const map = (pt) => {
-            const u = (pt.x + 2.2) / 6.6;
-            const v = (pt.y + 5) / 10;
-            return this._v3(ECC.sampleDomain(Math.max(0, Math.min(1, u)), Math.max(0, Math.min(1, v)), this.morphT));
-        };
-        const up = sampled.upper.map(map);
-        const lo = sampled.lower.map(map);
-        if (up.length > 1) {
-            this.content.add(new THREE.Line(
-                new THREE.BufferGeometry().setFromPoints(up),
-                this._matLine(0xffffff, opacity)
-            ));
-        }
-        if (lo.length > 1) {
-            this.content.add(new THREE.Line(
-                new THREE.BufferGeometry().setFromPoints(lo),
-                this._matLine(0xffffff, opacity)
-            ));
-        }
-    }
-
     _fieldOpP() {
+        if (this._groupToy || this.view === 'scalar') return 17;
         const field = this._ensureField();
         if (field && field.exact && field.p) return field.p;
         return 17;
@@ -1370,7 +1696,7 @@ class BitcoinCryptoExplorer {
         return spr;
     }
 
-    _addWrappedChord(P, Q, color) {
+    _addWrappedChord(P, Q, color, dest) {
         if (!P || !Q || P.inf || Q.inf) return;
         const fieldP = this._fieldOpP();
         const dx = Q.x - P.x;
@@ -1384,28 +1710,35 @@ class BitcoinCryptoExplorer {
         const y1 = Q.y + dy * extend;
         const steps = Math.max(160, Math.min(512, Math.ceil((1 + 2 * extend) * span * 10)));
         const col = new THREE.Color(color);
+        const parent = (dest && dest.isObject3D) ? dest : this.content;
+        const fade = 0.08;
+        const alongAt = (t) => {
+            const edge = Math.min(t, 1 - t);
+            return edge >= fade ? 1 : Math.pow(edge / fade, 1.7);
+        };
         let buf = [];
+        let ts = [];
         let prevX = null;
         let prevY = null;
         const flush = () => {
             const n = buf.length;
             if (n < 2) {
                 buf = [];
+                ts = [];
                 return;
             }
             const colors = new Float32Array(n * 3);
             for (let k = 0; k < n; k++) {
-                const t = n <= 1 ? 0.5 : k / (n - 1);
-                const edge = Math.min(t, 1 - t) * 2;
-                const along = Math.pow(Math.min(1, edge / 0.32), 1.7);
+                const along = alongAt(ts[k]);
                 colors[k * 3] = col.r * along;
                 colors[k * 3 + 1] = col.g * along;
                 colors[k * 3 + 2] = col.b * along;
             }
             const g = new THREE.BufferGeometry().setFromPoints(buf);
             g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-            this.content.add(new THREE.Line(g, this._matLine(0xffffff, 1, { vertexColors: true })));
+            parent.add(new THREE.Line(g, this._matLine(0xffffff, 1, { vertexColors: true })));
             buf = [];
+            ts = [];
         };
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
@@ -1417,6 +1750,7 @@ class BitcoinCryptoExplorer {
                 flush();
             }
             buf.push(this._v3(ECC.sampleDomain(xm / fieldP, ym / fieldP, this.morphT)));
+            ts.push(t);
             prevX = xm;
             prevY = ym;
         }
@@ -1435,30 +1769,16 @@ class BitcoinCryptoExplorer {
         this.hudOp = 'P ⊕ (−P) = 𝒪';
     }
 
-    buildGroup() {
-        this.primeIndex = 0;
-        this._fieldCache = null;
-        const field = this._ensureField();
-        const surf = this._buildDomainSurface(this.content, this.morphT);
-        const inst = this._makeInstances(field.points.length, 0.02);
-        this.content.add(inst);
-        this._placeInstances(inst, field.points, this.morphT, -1);
-        this._domainState = {
-            geom: surf.geom, nu: surf.nu, nv: surf.nv,
-            instances: inst, points: field.points,
-            geoA: surf.geoA, geoB: surf.geoB, geoMid: surf.geoMid
-        };
-
-        this._drawFieldGroupOp();
-    }
-
     _drawFieldGroupOp() {
         if (!this.groupOp) {
             this.hudOp = '—';
             return;
         }
-        const field = this._ensureField();
-        const p = (field && field.exact && field.p) ? field.p : 17;
+        if (this.view === 'domain' && !this._groupToy && !this._canLabelGroupOp()) {
+            this.hudOp = 'Tap + to pin 𝔽₁₇, or Field− until labels fit';
+            return;
+        }
+        const p = this._fieldOpP();
         const demo = ECC.demoAddPair(p);
         const P = demo.P;
         const Q = demo.Q;
@@ -1502,73 +1822,81 @@ class BitcoinCryptoExplorer {
         }
     }
 
+    _clearScalarHopGroup() {
+        const g = this._scalarHopGroup;
+        if (!g) return;
+        while (g.children.length) {
+            const c = g.children[0];
+            g.remove(c);
+            this._zoomDots = this._zoomDots.filter((x) => x !== c);
+            if (c.geometry) c.geometry.dispose();
+            if (c.material) {
+                if (c.material.map) c.material.map.dispose();
+                c.material.dispose();
+            }
+        }
+    }
+
+    _addScalarHopMarkers(hops) {
+        let i, h, p, m;
+        for (i = 0; i < hops.length; i++) {
+            h = hops[i];
+            if (!h || h.inf) continue;
+            p = ECC.sampleDomain(h.x / 17, h.y / 17, this.morphT);
+            m = new THREE.Mesh(
+                new THREE.SphereGeometry(0.032, 10, 8),
+                new THREE.MeshBasicMaterial({
+                    color: this._tone('hop'),
+                    transparent: true,
+                    opacity: 0.7
+                })
+            );
+            m.position.set(p.x, p.y, p.z);
+            this.content.add(m);
+            this._trackZoomDot(m);
+        }
+        if (ECC.F17.G && !ECC.F17.G.inf) {
+            this._addLabeledPoint(ECC.F17.G, this._tone('white'), 'G');
+        }
+    }
+
     buildScalar() {
-        this.primeIndex = 0;
-        this.dimIndex = 4;
+        this.dimIndex = ECC.DIM_STEPS - 1;
         this.morphT = 1;
-        this._fieldCache = null;
-        const field = this._ensureField();
+        this._ensureTorusSubdiv();
+        const field = this._ensureToyField();
         const surf = this._buildDomainSurface(this.content, 1);
-        const inst = this._makeInstances(field.points.length, 0.02);
+        const inst = this._makeInstances(field.points.length, 0.016);
         this.content.add(inst);
         this._placeInstances(inst, field.points, 1, -1);
         this._domainState = {
             geom: surf.geom, nu: surf.nu, nv: surf.nv,
             instances: inst, points: field.points,
-            geoA: surf.geoA, geoB: surf.geoB, geoMid: surf.geoMid
+            geoA: surf.geoA, geoB: surf.geoB, geoMid: surf.geoMid,
+            gridExtraMat: surf.gridExtraMat
         };
 
         const G = ECC.F17.G;
         const order = ECC.F17.order;
         const hops = ECC.multiplesOf(G, 17, order);
         this._scalarHops = hops;
-        hops.forEach((h) => {
-            if (h.inf) return;
-            const p = ECC.sampleDomain(h.x / 17, h.y / 17, 1);
-            const m = new THREE.Mesh(
-                new THREE.SphereGeometry(0.024, 10, 8),
-                new THREE.MeshBasicMaterial({ color: this._tone('hop') })
-            );
-            m.position.set(p.x, p.y, p.z);
-            this.content.add(m);
-            this._trackZoomDot(m);
-        });
+        this._scalarTrail = [];
+        this._addScalarHopMarkers(hops);
+        this._scalarHopGroup = new THREE.Group();
+        this.content.add(this._scalarHopGroup);
         this._scalarHighlight = new THREE.Mesh(
-            new THREE.SphereGeometry(0.05, 14, 12),
+            new THREE.SphereGeometry(0.055, 14, 12),
             new THREE.MeshBasicMaterial({ color: this._tone('hopActive') })
         );
         this._trackZoomDot(this._scalarHighlight);
         this.content.add(this._scalarHighlight);
         this._scalarLabel = this._makeLabelSprite('G', this._tone('hopActive'));
         this.content.add(this._scalarLabel);
+        if (this._realKey && this._realKey.toyR) this.scalarK = this._realKey.toyR;
         this._updateScalarHighlight();
-        this.hudOp = 'kG on 𝔽₁₇  (order ' + order + ')';
     }
 
-    _updateScalarHighlight() {
-        if (!this._scalarHops || !this._scalarHighlight) return;
-        const hops = this._scalarHops;
-        if (this.scalarK > hops.length) this.scalarK = 1;
-        const h = hops[this.scalarK - 1];
-        if (!h || h.inf) {
-            this._scalarHighlight.visible = false;
-            this._scalarLabel.position.set(0, 2.2, 0);
-            const canvas = this._scalarLabel.material.map.image;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#fff';
-            ctx.font = '28px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('𝒪', 64, 32);
-            this._scalarLabel.material.map.needsUpdate = true;
-            this.hudOp = this.scalarK + 'G = 𝒪';
-            return;
-        }
-        this._scalarHighlight.visible = true;
-        const p = ECC.sampleDomain(h.x / 17, h.y / 17, this.morphT);
-        this._scalarHighlight.position.set(p.x, p.y, p.z);
-        this._scalarLabel.position.set(p.x, p.y + 0.18, p.z);
+    _setScalarLabel(text) {
         const canvas = this._scalarLabel.material.map.image;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1576,9 +1904,79 @@ class BitcoinCryptoExplorer {
         ctx.font = '26px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(this.scalarK === 1 ? 'G' : (this.scalarK + 'G'), 64, 32);
+        ctx.fillText(text, 64, 32);
         this._scalarLabel.material.map.needsUpdate = true;
-        this.hudOp = this.scalarK + 'G';
+    }
+
+    _updateScalarHighlight() {
+        if (!this._scalarHops || !this._scalarHighlight) return;
+        const hops = this._scalarHops;
+        if (this.scalarK > hops.length) this.scalarK = 1;
+        const h = hops[this.scalarK - 1];
+        const prev = this.scalarK > 1 ? hops[this.scalarK - 2] : null;
+        this._clearScalarHopGroup();
+        const key = this._realKey;
+        const dest = key && key.toyR === this.scalarK;
+        if (prev && h && !prev.inf && !h.inf) {
+            this._addWrappedChord(prev, h, this._tone('chord'), this._scalarHopGroup);
+        }
+        if (!h || h.inf) {
+            this._scalarHighlight.visible = false;
+            this._scalarLabel.position.set(0, 2.2, 0);
+            this._setScalarLabel('𝒪');
+            this.hudOp = this.scalarK + 'G = 𝒪';
+            return;
+        }
+        this._scalarHighlight.visible = true;
+        const p = ECC.sampleDomain(h.x / 17, h.y / 17, this.morphT);
+        this._scalarHighlight.position.set(p.x, p.y, p.z);
+        this._scalarLabel.position.set(p.x, p.y + 0.2, p.z);
+        const tag = this.scalarK === 1 ? 'G' : (this.scalarK + 'G');
+        this._setScalarLabel(dest ? ('r=' + this.scalarK) : tag);
+        if (key) {
+            this.hudOp = dest
+                ? ('k ≡ ' + this.scalarK + ' (mod n₁₇)')
+                : (tag + '  →  r = ' + key.toyR);
+        } else {
+            this.hudOp = tag + '  (add G)';
+        }
+    }
+
+    _releaseScalarMesh(m) {
+        if (!m) return;
+        this._zoomDots = this._zoomDots.filter((x) => x !== m);
+        if (m.parent) m.parent.remove(m);
+        if (m.geometry) m.geometry.dispose();
+        if (m.material) m.material.dispose();
+    }
+
+    _pushScalarTrail(k) {
+        const hops = this._scalarHops;
+        if (!hops || !this.content) return;
+        const h = hops[k - 1];
+        if (!h || h.inf) return;
+        const p = ECC.sampleDomain(h.x / 17, h.y / 17, this.morphT);
+        const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.028, 10, 8),
+            new THREE.MeshBasicMaterial({
+                color: this._tone('hop'),
+                transparent: true,
+                opacity: 0.85
+            })
+        );
+        m.position.set(p.x, p.y, p.z);
+        this.content.add(m);
+        this._trackZoomDot(m);
+        if (!this._scalarTrail) this._scalarTrail = [];
+        this._scalarTrail.push(m);
+        const max = 6;
+        while (this._scalarTrail.length > max) this._releaseScalarMesh(this._scalarTrail.shift());
+        const n = this._scalarTrail.length;
+        for (let i = 0; i < n; i++) {
+            const u = (i + 1) / n;
+            this._scalarTrail[i].material.opacity = 0.18 + 0.55 * u;
+            this._scalarTrail[i].scale.setScalar(0.65 + 0.35 * u);
+        }
     }
 
     _pointCountLabel() {
@@ -1586,18 +1984,31 @@ class BitcoinCryptoExplorer {
             const r = this._familyZRange();
             return r.n + (r.n === 1 ? ' curve ' : ' curves ') + this._formatZRange(r);
         }
-        const field = this._ensureField();
-        if (field.solid) return 'full surface';
-        return field.count + (field.exact ? '' : ' schematic');
+        if (this.view === 'scalar') {
+            const toy = this._ensureToyField();
+            return toy.count + ' hops on 𝔽₁₇';
+        }
+        const field = this.view === 'domain' ? this._domainDrawField() : this._ensureField();
+        if (field.solid) {
+            const n = (this._domainState && this._domainState.points && this._domainState.points.length) || 0;
+            return n ? 'full surface · ' + n + ' prior sample' : 'full surface';
+        }
+        return field.count + (field.exact ? '' : ' schematic') + (field.toy ? ' · 𝔽₁₇' : '');
+    }
+
+    _domainLabel() {
+        if (this.view === 'family') return 'Cartesian';
+        return ECC.DIM_NAMES[this.dimIndex] || '';
     }
 
     _curveTotalLabel() {
         if (this.view === 'family') return 'ℝ curves, not 𝔽_p';
-        const field = this._ensureField();
+        if (this.view === 'scalar' && this._realKey) return '~' + ECC.formatPow2(256);
+        const field = this.view === 'domain' ? this._domainDrawField() : this._ensureField();
         const bits = field.bits || (ECC.PRIME_LADDER[this.primeIndex] && ECC.PRIME_LADDER[this.primeIndex].bits);
         if (field.exact && field.total != null) {
             const extra = field.total > field.count ? ' (capped draw)' : '';
-            return field.total + extra;
+            return field.total + extra + (field.toy ? ' on 𝔽₁₇' : '');
         }
         return '~' + ECC.formatPow2(bits);
     }
@@ -1607,12 +2018,16 @@ class BitcoinCryptoExplorer {
             const el = document.getElementById(id);
             if (el) el.textContent = v;
         };
-        const names = { family: 'Family', domain: 'Domain', group: 'Group', scalar: 'Scalar' };
-        const entry = ECC.PRIME_LADDER[this.primeIndex];
+        const names = { family: 'Family', domain: 'Domain', scalar: 'Scalar' };
+        const entry = (this.view === 'scalar' && this._realKey)
+            ? ECC.PRIME_LADDER[ECC.PRIME_LADDER.length - 1]
+            : ECC.PRIME_LADDER[this.primeIndex];
         const scale = ECC.fieldScale(entry);
         set('crypto-view-label', names[this.view] || this.view);
-        set('crypto-dim-label', ECC.DIM_NAMES[this.dimIndex]);
-        set('crypto-prime-label', (entry.bits ? entry.bits + '-bit ' : '') + entry.label);
+        set('crypto-dim-label', this._domainLabel());
+        set('crypto-prime-label', this.view === 'scalar'
+            ? (this._realKey ? '256-bit secp256k1' : '𝔽₁₇ (kG toy)')
+            : (this._groupToy ? '𝔽₁₇ (labels)' : (entry.bits ? entry.bits + '-bit ' : '') + entry.label));
         set('crypto-point-count', this._pointCountLabel());
         set('crypto-curve-total', this._curveTotalLabel());
         set('crypto-entropy', scale.entropy);
@@ -1620,19 +2035,26 @@ class BitcoinCryptoExplorer {
         set('crypto-atoms', scale.atoms);
         set('crypto-op-label', this.hudOp);
         const key = this._realKey;
+        const seedRow = document.getElementById('crypto-seed-row');
+        const pathRow = document.getElementById('crypto-path-row');
         const kRow = document.getElementById('crypto-k-row');
         const qRow = document.getElementById('crypto-q-row');
-        if (kRow) kRow.hidden = !key;
-        if (qRow) qRow.hidden = !key;
+        const showKey = this.view === 'scalar' && key;
+        if (seedRow) seedRow.hidden = !(showKey && key.mnemonic);
+        if (pathRow) pathRow.hidden = !(showKey && key.path);
+        if (kRow) kRow.hidden = !showKey;
+        if (qRow) qRow.hidden = !showKey;
         if (key) {
+            if (key.mnemonic) set('crypto-seed-label', key.mnemonic);
+            if (key.path) set('crypto-path-label', key.path + '  (index 0)');
             set('crypto-k-label', this._shortHex(key.kHex, 8, 8) + '  (' + key.source + ')');
-            set('crypto-q-label', this._shortHex(key.pubHex, 8, 8));
+            set('crypto-q-label', this._shortHex(key.pubHex, 8, 8) + '  (Q = kG)');
             const kEl = document.getElementById('crypto-k-label');
             const qEl = document.getElementById('crypto-q-label');
             if (kEl) kEl.setAttribute('title', key.kHex);
             if (qEl) qEl.setAttribute('title', key.pubHex);
         }
-        set('crypto-subtitle', 'y² = x³ + 7  ·  ' + names[this.view]);
+        set('crypto-subtitle', this.view === 'scalar' ? 'kG  ·  toy r ≡ k (mod n₁₇)' : 'y² = x³ + 7');
         const play = document.getElementById('scalar-play');
         if (play) play.textContent = this.scalarPlaying ? 'Pause kG' : 'Play kG';
         this._syncToolbar();
@@ -1687,8 +2109,37 @@ class BitcoinCryptoExplorer {
             if (u >= 1) {
                 this.morphing = false;
                 this.morphT = this.morphTo;
-                if (this.view === 'group' || this.view === 'domain') this.rebuildView();
+                if (this.morphTo >= 1 && this.morphFrom < 1) {
+                    this._torusSubdiv = 0;
+                    this._subdivFrom = 0;
+                    this._subdivTo = 1;
+                    this._torusSubdiving = true;
+                    this._subdivElapsed = 0;
+                }
+                if (this.view === 'domain') this.rebuildView();
                 else this.updatePanel();
+            }
+        }
+        if (this._torusSubdiving && !this.morphing) {
+            this._subdivElapsed += dt;
+            const su = Math.min(1, this._subdivElapsed / this._subdivDuration);
+            const s = su * su * (3 - 2 * su);
+            this._torusSubdiv = this._subdivFrom + (this._subdivTo - this._subdivFrom) * s;
+            this._applyTorusSubdiv();
+            if (su >= 1) {
+                this._torusSubdiving = false;
+                this._torusSubdiv = this._subdivTo;
+                if (this._pendingUnglue != null) {
+                    const next = this._pendingUnglue;
+                    this._pendingUnglue = null;
+                    this.morphFrom = this.morphT;
+                    this.morphTo = ECC.dimIndexToT(next);
+                    this.dimIndex = next;
+                    this.morphing = true;
+                    this.morphElapsed = 0;
+                    this.updatePanel();
+                    this._syncVrMenu();
+                }
             }
         }
         if (this.view === 'family' && this.familyPPlaying && !this._familyPDragging && this.groupOp) {
@@ -1709,10 +2160,12 @@ class BitcoinCryptoExplorer {
         }
         if (this.view === 'scalar' && this.scalarPlaying && this._scalarHops) {
             this.scalarTimer += dt;
-            if (this.scalarTimer > 0.55) {
+            if (this.scalarTimer > 0.48) {
                 this.scalarTimer = 0;
+                this._pushScalarTrail(this.scalarK);
                 this.scalarK += 1;
                 if (this.scalarK > this._scalarHops.length) this.scalarK = 1;
+                if (this._realKey && this.scalarK === this._realKey.toyR) this.scalarPlaying = false;
                 this._updateScalarHighlight();
                 this.updatePanel();
             }

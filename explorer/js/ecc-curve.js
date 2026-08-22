@@ -43,16 +43,14 @@
         return String(n).replace(/-/g, '⁻').replace(/\d/g, function (d) { return SUP[+d]; });
     }
 
-    var DIM_STEPS = 5;
+    var DIM_STEPS = 3;
     var DIM_NAMES = [
         'Cartesian',
-        'Rolling',
         'Cylinder',
-        'Bent tube',
         'Torus'
     ];
 
-    var VIEWS = ['family', 'domain', 'group', 'scalar'];
+    var VIEWS = ['family', 'domain', 'scalar'];
 
     function mod(n, p) {
         var r = n % p;
@@ -241,40 +239,39 @@
         return { x: (u - 0.5) * 2 * half, y: (v - 0.5) * 2 * half, z: 0 };
     }
 
-    function poseRolling(u, v) {
-        var R = 1.15, H = 2.5;
-        var th0 = Math.PI * 0.35;
-        var span = Math.PI * 1.30;
-        var theta = th0 + u * span;
-        var h = -H / 2 + v * H;
-        return { x: R * Math.cos(theta), y: h, z: R * Math.sin(theta) };
-    }
-
     function poseCylinder(u, v) {
         var R = 1.15, H = 2.5;
-        var theta = u * 2 * Math.PI;
+        var phi = u * 2 * Math.PI;
         var h = -H / 2 + v * H;
-        return { x: R * Math.cos(theta), y: h, z: R * Math.sin(theta) };
+        return { x: R * Math.cos(phi), y: h, z: R * Math.sin(phi) };
     }
 
-    function poseBent(u, v) {
-        var bendR = 1.45, tubeR = 0.55;
-        var theta = Math.PI + u * Math.PI;
-        var phi = v * 2 * Math.PI;
-        var ccx = bendR * Math.cos(theta);
-        var ccy = bendR * Math.sin(theta);
-        var nx0 = Math.cos(theta), ny0 = Math.sin(theta);
+    /* Bend the cylinder axis (v) into a circle so the rims meet. u stays the tube angle. */
+    function poseCylinderToTorus(u, v, s) {
+        s = s < 0 ? 0 : s > 1 ? 1 : s;
+        var rCyl = 1.15, H = 2.5, Rtor = 1.55, rTor = 0.58;
+        var r = rCyl + (rTor - rCyl) * s;
+        var phi = u * 2 * Math.PI;
+        var cPhi = Math.cos(phi), sPhi = Math.sin(phi);
+        if (s < 1e-5) {
+            return { x: r * cPhi, y: -H / 2 + v * H, z: r * sPhi };
+        }
+        var alpha = s * 2 * Math.PI;
+        var L = H + (2 * Math.PI * Rtor - H) * s;
+        var R = L / alpha;
+        var psi = (v - 0.5) * alpha;
+        var cPsi = Math.cos(psi), sPsi = Math.sin(psi);
         return {
-            x: ccx + tubeR * Math.cos(phi) * nx0,
-            y: ccy + tubeR * Math.cos(phi) * ny0,
-            z: tubeR * Math.sin(phi)
+            x: -R * (1 - cPsi) + r * cPhi * cPsi + R * s * s,
+            y: R * sPsi + r * cPhi * sPsi,
+            z: r * sPhi
         };
     }
 
     function poseTorus(u, v) {
         var R = 1.55, r = 0.58;
-        var theta = u * 2 * Math.PI;
-        var phi = v * 2 * Math.PI;
+        var theta = (v - 0.5) * 2 * Math.PI;
+        var phi = u * 2 * Math.PI;
         return {
             x: (R + r * Math.cos(phi)) * Math.cos(theta),
             y: (R + r * Math.cos(phi)) * Math.sin(theta),
@@ -282,18 +279,14 @@
         };
     }
 
-    var POSES = [poseSquare, poseRolling, poseCylinder, poseBent, poseTorus];
-
     function sampleDomain(u, v, t) {
+        if (t <= 0) return poseSquare(u, v);
+        if (t >= 1) return poseTorus(u, v);
         var scaled = t * (DIM_STEPS - 1);
         var i0 = Math.floor(scaled);
-        if (i0 < 0) i0 = 0;
-        if (i0 > DIM_STEPS - 2) i0 = DIM_STEPS - 2;
         var f = scaled - i0;
-        if (t >= 1) {
-            return poseTorus(u, v);
-        }
-        return lerp3(POSES[i0](u, v), POSES[i0 + 1](u, v), f);
+        if (i0 <= 0) return lerp3(poseSquare(u, v), poseCylinder(u, v), f);
+        return poseCylinderToTorus(u, v, f);
     }
 
     function dimIndexToT(i) {

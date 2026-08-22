@@ -173,7 +173,7 @@ body:not(.homepage) {
     transition: opacity 0.2s;
     font-family: "BureauGrotesque", sans-serif;
     text-transform: uppercase;
-    letter-spacing: -0.05rem;
+    letter-spacing: 0.03rem;
     font-weight: 500;
     z-index: 40000;
     position: relative;
@@ -420,8 +420,10 @@ body:not(.homepage) {
 
 /* Headers */
 .header {
-    align-items: center;
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
     pointer-events: auto;
     padding: 20px 20px;
 }
@@ -1943,10 +1945,16 @@ button:active {
 }
 
 #crypto-k-label,
-#crypto-q-label {
+#crypto-q-label,
+#crypto-path-label {
     word-break: break-all;
     font-family: ui-monospace, monospace;
     font-size: 0.78em;
+}
+
+#crypto-seed-label {
+    word-break: break-word;
+    font-size: 0.82em;
 }
 
 .modal-body input[type="text"],

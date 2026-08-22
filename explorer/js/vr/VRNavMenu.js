@@ -379,12 +379,6 @@
                         onSelect: click('view-domain')
                     },
                     {
-                        label: 'GRP',
-                        kind: 'toggle',
-                        getState: function () { return view() === 'group'; },
-                        onSelect: click('view-group')
-                    },
-                    {
                         label: 'SCL',
                         kind: 'toggle',
                         getState: function () { return view() === 'scalar'; },
@@ -421,28 +415,28 @@
                     {
                         label: '+',
                         kind: 'toggle',
-                        when: function () { return view() === 'family' || view() === 'domain' || view() === 'group'; },
+                        when: function () { return view() === 'family' || view() === 'domain'; },
                         getState: function () { return op() === 'add'; },
                         onSelect: click('op-add')
                     },
                     {
                         label: '2P',
                         kind: 'toggle',
-                        when: function () { return view() === 'family' || view() === 'domain' || view() === 'group'; },
+                        when: function () { return view() === 'family' || view() === 'domain'; },
                         getState: function () { return op() === 'double'; },
                         onSelect: click('op-double')
                     },
                     {
                         label: '−P',
                         kind: 'toggle',
-                        when: function () { return view() === 'family' || view() === 'domain' || view() === 'group'; },
+                        when: function () { return view() === 'family' || view() === 'domain'; },
                         getState: function () { return op() === 'inverse'; },
                         onSelect: click('op-inverse')
                     },
                     {
                         label: 'P−Q',
                         kind: 'toggle',
-                        when: function () { return view() === 'family' || view() === 'domain' || view() === 'group'; },
+                        when: function () { return view() === 'family' || view() === 'domain'; },
                         getState: function () { return op() === 'sub'; },
                         onSelect: click('op-sub')
                     },
