@@ -265,6 +265,7 @@ class BitcoinNetworkExplorer {
         this._ac.abort();
         this.isRotating = false;
         this.montageActive = false;
+        if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.setDuck(false);
         if (this.rateLimitArchiveTimeout) {
             clearTimeout(this.rateLimitArchiveTimeout);
             this.rateLimitArchiveTimeout = null;
@@ -696,6 +697,9 @@ class BitcoinNetworkExplorer {
                 this.montageMusicEnabled = !this.montageMusicEnabled;
                 musicBtn.title = this.montageMusicEnabled ? 'Music on' : 'Music off';
                 musicBtn.setAttribute('aria-label', musicBtn.title);
+                if (typeof window.ExplorerAudio !== 'undefined' && this.montageActive) {
+                    ExplorerAudio.setDuck(this.montageMusicEnabled);
+                }
                 const icon = document.getElementById('toggle-montage-music-icon');
                 if (icon) {
                     icon.innerHTML = this.montageMusicEnabled
@@ -4230,6 +4234,7 @@ this.updateCameraCoordsDisplay();
             this.montageActive = false;
             this.updateMontageButton(false);
             this.syncUrlParams();
+            if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.setDuck(false);
             return;
         }
         if (this.is2DMode) {
@@ -4253,6 +4258,7 @@ this.updateCameraCoordsDisplay();
         this.controls.update();
         this.updateMontageButton(true);
         if (typeof Tone !== 'undefined' && this.montageMusicEnabled) {
+            if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.setDuck(true);
             Tone.start().then(() => {
                 this.montageMusicInit();
                 this.montageMusicPhrase(MONTAGE_SHOTS[0]);

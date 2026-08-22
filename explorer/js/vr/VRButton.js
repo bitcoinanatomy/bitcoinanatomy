@@ -240,12 +240,14 @@
             }
 
             function startVR() {
+                if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.unlock();
                 navigator.xr.requestSession('immersive-vr', vrInit)
                     .then(onSessionStarted)
                     .catch(function (e) { console.warn('[VRButton] VR session failed:', e); });
             }
 
             function startAR() {
+                if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.unlock();
                 navigator.xr.requestSession('immersive-ar', arInit)
                     .then(onSessionStarted)
                     .catch(function (e) { console.warn('[VRButton] AR session failed:', e); });
@@ -399,6 +401,7 @@
                 var s = session();
                 if (s) { s.end(); return; }
                 if (!VRButton.vrSupported) return;
+                if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.unlock();
                 navigator.xr.requestSession('immersive-vr', vrInit)
                     .then(function (sess) {
                         sess.addEventListener('end', syncLabels);
@@ -413,6 +416,7 @@
                     var s = session();
                     if (s) { s.end(); return; }
                     if (!VRButton.arSupported) return;
+                    if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.unlock();
                     navigator.xr.requestSession('immersive-ar', arInit)
                         .then(function (sess) {
                             sess.addEventListener('end', syncLabels);

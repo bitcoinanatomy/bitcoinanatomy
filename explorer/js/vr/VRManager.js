@@ -39,6 +39,7 @@
         'mempool.html':     0.05,
         'node.html':        0.05,
         'address.html':     0.1,
+        'crypto.html':      0.08,
     };
 
     // Tighter scales for AR (table-top)
@@ -51,6 +52,7 @@
         'mempool.html':     0.02,
         'node.html':        0.02,
         'address.html':     0.04,
+        'crypto.html':      0.03,
     };
 
     var SCALE_MIN        = 1e-5;
@@ -361,6 +363,7 @@
 
     // ── Right trigger — hold = pan/tilt; both = pinch; tap = select / nav ─────
     VRManager.prototype._onRightSelectStart = function () {
+        if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.unlock();
         this._trigger0 = true;
         this._triggerTravel0 = 0;
         this.controller0.getWorldPosition(this._prevPos0);
@@ -380,6 +383,7 @@
 
     // ── Left trigger — hold = pan/tilt; both = pinch; tap = select ────────────
     VRManager.prototype._onLeftSelectStart = function () {
+        if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.unlock();
         this._trigger1 = true;
         this._triggerTravel1 = 0;
         this.controller1.getWorldPosition(this._prevPos1);
@@ -422,6 +426,9 @@
             return true;
         }
         if (this.navMenu.group.visible) {
+            if (typeof window.ExplorerAudio !== 'undefined' && this.navMenu.highlighted) {
+                ExplorerAudio.play('ui-select');
+            }
             this.navMenu.selectHighlighted();
             this._haptic(hand || 'right', 50, 0.4);
             return true;
@@ -534,7 +541,8 @@
 
         switch (page) {
             case 'blockchain.html':
-                // Epoch / genesis / mempool discs only — not UTXO spheres
+                // Epoch / genesis / mempool discs only — not UTXO spheres or epoch overlays
+                if (ud.epochOverlay) return false;
                 return !ud.special && (ud.t != null || ud.isMempool === true);
 
             case 'block.html':
@@ -602,8 +610,15 @@
         if (this._hoveredObj && this._hoveredBaseScale) {
             this._hoveredObj.scale.copy(this._hoveredBaseScale);
         }
+        var hadHover = !!this._hoveredObj;
         this._hoveredObj = null;
         this._hoveredBaseScale = null;
+        if (hadHover) {
+            var exEnd = this.explorer;
+            if (exEnd && typeof exEnd.onVRHoverEnd === 'function') {
+                try { exEnd.onVRHoverEnd(); } catch (e) { /* ignore page errors */ }
+            }
+        }
     };
 
     VRManager.prototype._setHover = function (obj) {
@@ -613,6 +628,10 @@
         this._hoveredObj = obj;
         this._hoveredBaseScale = obj.scale.clone();
         obj.scale.multiplyScalar(HOVER_SCALE);
+        var ex = this.explorer;
+        if (ex && typeof ex.onVRHover === 'function') {
+            try { ex.onVRHover(obj); } catch (e) { /* ignore page errors */ }
+        }
     };
 
     VRManager.prototype._updatePointers = function () {
@@ -1522,6 +1541,10 @@
         var self     = this;
         var explorer = this.explorer;
         var renderer = explorer.renderer;
+        if (typeof window.ExplorerAudio !== 'undefined') {
+            ExplorerAudio.unlock();
+            ExplorerAudio.resume();
+        }
 
         // Detect AR vs VR
         var session    = renderer.xr.getSession();
@@ -2355,8 +2378,8 @@
         var W = canvas.width;
         var PAD = opts.pad != null ? opts.pad : 18;
         var align = opts.align || 'left';
-        var fontSize = opts.fontSize || 20;
-        var lineH = opts.lineH || 34;
+        var fontSize = opts.fontSize || 22;
+        var lineH = opts.lineH || 36;
         var startY = opts.startY != null ? opts.startY : PAD;
         var maxLines = opts.maxLines != null ? opts.maxLines : 6;
         var maxChars = opts.maxChars || 42;
@@ -2412,7 +2435,7 @@
             ctx.fillRect(PAD, PAD + 56, W - PAD * 2, 1);
 
             ctx.fillStyle = 'rgba(255,255,255,0.82)';
-            ctx.font      = '400 18px "Inter", sans-serif';
+            ctx.font      = '400 22px "Inter", sans-serif';
             if (identity.length > 40) identity = identity.slice(0, 38) + '…';
             ctx.fillText(identity || 'Anatomy of Bitcoin', PAD, PAD + 66);
 
@@ -2422,13 +2445,13 @@
             ctx.textAlign = 'right';
             if (stats.length === 0) {
                 ctx.fillStyle = 'rgba(255,255,255,0.55)';
-                ctx.font = '400 17px "Inter", sans-serif';
+                ctx.font = '400 20px "Inter", sans-serif';
                 ctx.fillText('Loading…', W - PAD, PAD + 20);
             } else if (stats.length === 1) {
                 var primary = stats[0];
                 var col = primary.indexOf(':');
                 if (col > -1) {
-                    ctx.font = '400 17px "Inter", sans-serif';
+                    ctx.font = '400 20px "Inter", sans-serif';
                     ctx.fillStyle = 'rgba(255,255,255,0.62)';
                     ctx.fillText(primary.slice(0, col + 1), W - PAD, PAD);
                     ctx.font = '400 40px "BureauGrotesque", sans-serif';
@@ -2441,7 +2464,7 @@
                 }
             } else {
                 this._drawStatRows(ctx, canvas, stats, {
-                    align: 'right', fontSize: 18, lineH: 28, startY: PAD - 2, maxLines: 5, maxChars: 36
+                    align: 'right', fontSize: 22, lineH: 32, startY: PAD - 2, maxLines: 5, maxChars: 36
                 });
             }
 
@@ -2451,21 +2474,21 @@
                 // Pack first chunk of selected-object fields (rest → BR)
                 leftRows = model.selection.slice(0, 6);
                 ctx.fillStyle = 'rgba(255,255,255,0.62)';
-                ctx.font = '400 15px "Inter", sans-serif';
+                ctx.font = '400 18px "Inter", sans-serif';
                 ctx.textAlign = 'left';
                 var kind = model.selectionKind ? String(model.selectionKind).toUpperCase() : 'SELECTED';
                 ctx.fillText(kind, PAD, PAD - 4);
                 this._drawStatRows(ctx, canvas, leftRows, {
-                    align: 'left', fontSize: 19, lineH: 30, startY: PAD + 22, maxLines: 6, maxChars: 40
+                    align: 'left', fontSize: 22, lineH: 34, startY: PAD + 24, maxLines: 6, maxChars: 40
                 });
             } else {
                 leftRows = model.idleLines || [];
                 ctx.fillStyle = 'rgba(255,255,255,0.62)';
-                ctx.font = '400 15px "Inter", sans-serif';
+                ctx.font = '400 18px "Inter", sans-serif';
                 ctx.textAlign = 'left';
                 ctx.fillText('PAGE DATA', PAD, PAD - 4);
                 this._drawStatRows(ctx, canvas, leftRows, {
-                    align: 'left', fontSize: 19, lineH: 30, startY: PAD + 22, maxLines: 6, maxChars: 40
+                    align: 'left', fontSize: 22, lineH: 34, startY: PAD + 24, maxLines: 6, maxChars: 40
                 });
             }
 
@@ -2475,15 +2498,15 @@
                 var rightRows = model.selection.slice(6);
                 ctx.textAlign = 'right';
                 ctx.fillStyle = 'rgba(255,255,255,0.62)';
-                ctx.font = '400 15px "Inter", sans-serif';
+                ctx.font = '400 18px "Inter", sans-serif';
                 ctx.fillText('DETAILS', W - PAD, PAD - 4);
                 if (rightRows.length === 0) {
                     ctx.fillStyle = 'rgba(255,255,255,0.50)';
-                    ctx.font = '400 17px "Inter", sans-serif';
+                    ctx.font = '400 20px "Inter", sans-serif';
                     ctx.fillText('All fields on left', W - PAD, PAD + 28);
                 } else {
                     this._drawStatRows(ctx, canvas, rightRows, {
-                        align: 'right', fontSize: 18, lineH: 28, startY: PAD + 22, maxLines: 7, maxChars: 38
+                        align: 'right', fontSize: 22, lineH: 32, startY: PAD + 24, maxLines: 7, maxChars: 38
                     });
                 }
             } else {
@@ -2494,12 +2517,12 @@
                 var now = new Date();
                 var ts = now.toUTCString().replace(/:\d\d GMT$/, ' UTC');
 
-                ctx.font = '400 18px "Inter", sans-serif';
+                ctx.font = '400 22px "Inter", sans-serif';
                 ctx.fillStyle = 'rgba(255,255,255,0.62)';
                 ctx.fillText(src.length > 42 ? src.slice(0, 40) + '…' : src, W - PAD, PAD);
-                ctx.font = '400 16px "Inter", sans-serif';
+                ctx.font = '400 20px "Inter", sans-serif';
                 ctx.fillStyle = 'rgba(255,255,255,0.48)';
-                ctx.fillText(ts, W - PAD, PAD + 28);
+                ctx.fillText(ts, W - PAD, PAD + 32);
             }
         }
     };
@@ -2771,6 +2794,15 @@
     // -------------------------------------------------------------------------
 
     VRManager.prototype.update = function () {
+        if (this.explorer.renderer.xr.isPresenting) {
+            var xrCam = this.explorer.renderer.xr.getCamera();
+            if (typeof window.ExplorerAudio !== 'undefined' && xrCam) {
+                ExplorerAudio.attachListener(xrCam);
+            }
+        } else if (this.explorer.camera && typeof window.ExplorerAudio !== 'undefined') {
+            ExplorerAudio.attachListener(this.explorer.camera);
+        }
+
         if (!this.explorer.renderer.xr.isPresenting) return;
 
         if (this._needsInitialPlacement) {
@@ -2800,8 +2832,15 @@
             }
             if (this.navMenu.highlighted && this.navMenu.highlighted !== prevHighlight) {
                 this._haptic('right', 20, 0.2);
+                if (typeof window.ExplorerAudio !== 'undefined') {
+                    ExplorerAudio.play('ui-hover');
+                    if (this.navMenu.highlighted.userData.pageFile) {
+                        ExplorerAudio.prefetch(this.navMenu.highlighted.userData.pageFile);
+                    }
+                }
             } else if (this.navMenu._chipHovered && !prevChip) {
                 this._haptic('right', 20, 0.2);
+                if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.play('ui-hover');
             }
         }
 

@@ -20,6 +20,8 @@
         { name: 'TRANSACTION', file: 'transaction.html', img: 'imgs/transaction.png' },
         { name: 'ADDRESS',     file: 'address.html',     img: 'imgs/address.png'     },
         { name: 'MEMPOOL',     file: 'mempool.html',     img: 'imgs/mempool.png'     },
+        { name: 'CURVE',       file: 'crypto.html',       img: 'imgs/crypto.png'      },
+        { name: 'SCRIPT',      file: 'script.html',       img: 'imgs/script.png'      },
     ];
 
     // Grid layout
@@ -178,6 +180,46 @@
                     kind: 'toggle',
                     getState: function () { return explorerProp(vrManager, 'showLabels'); },
                     onSelect: click('toggle-labels')
+                },
+                {
+                    label: 'LOAD ALL',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    getLabel: function () {
+                        var ex = vrManager && vrManager.explorer;
+                        if (!ex) return 'PAUSE';
+                        if (ex.epochLoadAllRunning) return 'PAUSE';
+                        if (ex.epochLoadAllPaused) return 'RESUME';
+                        return 'GENESIS';
+                    },
+                    onSelect: function (mesh) {
+                        var ex = vrManager && vrManager.explorer;
+                        if (ex && (ex.epochLoadAllRunning || ex.epochLoadAllPaused)) {
+                            clickDomButton('load-all-epochs');
+                        } else {
+                            clickDomButton('load-epochs-genesis');
+                        }
+                        if (mesh && vrManager && vrManager.navMenu) {
+                            setTimeout(function () { vrManager.navMenu._refreshToggle(mesh); }, 0);
+                        }
+                    }
+                },
+                {
+                    label: 'FROM HOVER',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    getLabel: function () {
+                        var ex = vrManager && vrManager.explorer;
+                        if (!ex || ex.lastTooltipEpochIndex == null) return 'FROM HOVER';
+                        return 'EPOCH ' + ex.lastTooltipEpochIndex;
+                    },
+                    onSelect: click('load-epochs-tooltip')
+                },
+                {
+                    label: 'RESET',
+                    kind: 'action',
+                    getState: function () { return false; },
+                    onSelect: click('reset-epochs')
                 }
             ],
             'block.html': [
@@ -295,6 +337,128 @@
                     onSelect: click('load-more-transactions')
                 }
             ],
+            'crypto.html': (function () {
+                var view = function () {
+                    var ex = vrManager && vrManager.explorer;
+                    return ex && ex.view ? ex.view : 'family';
+                };
+                var ex = function () { return vrManager && vrManager.explorer; };
+                var op = function () {
+                    var e = ex();
+                    return e ? e.groupOp : 'add';
+                };
+                var all = [
+                    {
+                        label: 'COLOR',
+                        kind: 'toggle',
+                        getState: function () { return explorerProp(vrManager, 'useColor'); },
+                        onSelect: click('toggle-color')
+                    },
+                    {
+                        label: 'GRID',
+                        kind: 'toggle',
+                        getState: function () { return explorerProp(vrManager, 'showGrid'); },
+                        onSelect: click('toggle-grid')
+                    },
+                    {
+                        label: 'FAM',
+                        kind: 'toggle',
+                        getState: function () { return view() === 'family'; },
+                        onSelect: click('view-family')
+                    },
+                    {
+                        label: 'DOM',
+                        kind: 'toggle',
+                        getState: function () { return view() === 'domain'; },
+                        onSelect: click('view-domain')
+                    },
+                    {
+                        label: 'GRP',
+                        kind: 'toggle',
+                        getState: function () { return view() === 'group'; },
+                        onSelect: click('view-group')
+                    },
+                    {
+                        label: 'SCL',
+                        kind: 'toggle',
+                        getState: function () { return view() === 'scalar'; },
+                        onSelect: click('view-scalar')
+                    },
+                    {
+                        label: 'GLUE−',
+                        kind: 'action',
+                        when: function () { return view() === 'domain'; },
+                        getState: function () { return false; },
+                        onSelect: click('dim-prev')
+                    },
+                    {
+                        label: 'GLUE+',
+                        kind: 'action',
+                        when: function () { return view() === 'domain'; },
+                        getState: function () { return false; },
+                        onSelect: click('dim-next')
+                    },
+                    {
+                        label: 'FIELD−',
+                        kind: 'action',
+                        when: function () { return view() === 'domain'; },
+                        getState: function () { return false; },
+                        onSelect: click('prime-prev')
+                    },
+                    {
+                        label: 'FIELD+',
+                        kind: 'action',
+                        when: function () { return view() === 'domain'; },
+                        getState: function () { return false; },
+                        onSelect: click('prime-next')
+                    },
+                    {
+                        label: '+',
+                        kind: 'toggle',
+                        when: function () { return view() === 'family' || view() === 'domain' || view() === 'group'; },
+                        getState: function () { return op() === 'add'; },
+                        onSelect: click('op-add')
+                    },
+                    {
+                        label: '2P',
+                        kind: 'toggle',
+                        when: function () { return view() === 'family' || view() === 'domain' || view() === 'group'; },
+                        getState: function () { return op() === 'double'; },
+                        onSelect: click('op-double')
+                    },
+                    {
+                        label: '−P',
+                        kind: 'toggle',
+                        when: function () { return view() === 'family' || view() === 'domain' || view() === 'group'; },
+                        getState: function () { return op() === 'inverse'; },
+                        onSelect: click('op-inverse')
+                    },
+                    {
+                        label: 'P−Q',
+                        kind: 'toggle',
+                        when: function () { return view() === 'family' || view() === 'domain' || view() === 'group'; },
+                        getState: function () { return op() === 'sub'; },
+                        onSelect: click('op-sub')
+                    },
+                    {
+                        label: 'PLAY KG',
+                        kind: 'toggle',
+                        when: function () { return view() === 'scalar'; },
+                        getState: function () { return explorerProp(vrManager, 'scalarPlaying'); },
+                        onSelect: click('scalar-play')
+                    },
+                    {
+                        label: 'LOAD SEED',
+                        kind: 'action',
+                        when: function () { return view() === 'scalar'; },
+                        getState: function () { return false; },
+                        onSelect: click('scalar-load-seed')
+                    }
+                ];
+                return all.filter(function (def) {
+                    return !def.when || def.when();
+                });
+            })(),
             'difficulty.html': [
                 {
                     label: 'BLOCKS',
@@ -517,6 +681,19 @@
                     var ex = self.vrManager && self.vrManager.explorer;
                     if (!ex || typeof ex.isRotating === 'undefined') return;
                     ex.isRotating = !ex.isRotating;
+                    self._refreshToggle(mesh);
+                },
+            },
+            {
+                label:    'SOUND',
+                kind:     'toggle',
+                getState: function () {
+                    return typeof window.ExplorerAudio !== 'undefined' && !ExplorerAudio.isMuted();
+                },
+                onSelect: function (mesh) {
+                    if (typeof window.ExplorerAudio === 'undefined') return;
+                    ExplorerAudio.unlock();
+                    ExplorerAudio.toggleMuted();
                     self._refreshToggle(mesh);
                 },
             },
@@ -782,6 +959,7 @@
     };
 
     VRNavMenu.prototype.toggle = function () {
+        if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.play('ui-menu');
         if (this.group.visible) { this.hide(); } else { this.show(); }
     };
 

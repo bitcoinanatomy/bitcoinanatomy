@@ -2112,6 +2112,7 @@ class BitcoinDifficultyExplorer {
     
     // Audio methods
     initAudio() {
+        if (typeof window.ExplorerAudio !== 'undefined') ExplorerAudio.unlock();
         if (!this.audioContext) {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
