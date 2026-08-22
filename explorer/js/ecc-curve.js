@@ -505,17 +505,29 @@
         return { x: x, y: y, lam: lam };
     }
 
-    function demoRealOps() {
-        var px = 2;
-        var qx = 3;
+    function demoRealOps(px, qx) {
+        var xNode = Math.cbrt(-B);
+        px = px == null ? 2 : px;
+        qx = qx == null ? 3 : qx;
+        if (!(px > xNode)) px = xNode + 0.08;
+        if (Math.abs(px - qx) < 0.12) qx = px + (px < 5 ? 1.35 : -1.35);
+        if (!(qx > xNode)) qx = xNode + 0.45;
         var py = yUpperReal(px);
         var qy = yUpperReal(qx);
+        if (py == null) {
+            px = 2;
+            py = yUpperReal(px);
+        }
+        if (qy == null) {
+            qx = 3;
+            qy = yUpperReal(qx);
+        }
         var P = { x: px, y: py };
         var Q = { x: qx, y: qy };
         var R = sumDistinctReal(P.x, P.y, Q.x, Q.y);
         var Rp = { x: R.x, y: -R.y };
-        var R2 = sumDoubleReal(P.x, P.y);
-        var R2p = { x: R2.x, y: -R2.y };
+        var R2 = (Math.abs(P.y) < 1e-8) ? null : sumDoubleReal(P.x, P.y);
+        var R2p = R2 ? { x: R2.x, y: -R2.y } : null;
         var nQ = { x: Q.x, y: -Q.y };
         var S = sumDistinctReal(P.x, P.y, nQ.x, nQ.y);
         var Sp = { x: S.x, y: -S.y };

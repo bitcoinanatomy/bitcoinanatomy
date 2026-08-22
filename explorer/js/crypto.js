@@ -30,6 +30,12 @@ class BitcoinCryptoExplorer {
         this.scalarTimer = 0;
         this.selectedSliceZ = 0;
         this.familySliceCount = 45;
+        this.familyPX = 2;
+        this.familyPPlaying = false;
+        this.familyPDir = 1;
+        this._familyPDragging = false;
+        this._familyOpRoot = null;
+        this._familyPAnimAcc = 0;
         this.hudOp = '—';
         this.useColor = false;
         this.showGrid = true;
@@ -115,6 +121,7 @@ class BitcoinCryptoExplorer {
         this._domainState = null;
         this._zoomDots = [];
         this._lastDotZoom = -1;
+        this._familyOpRoot = null;
         this._pointMeshes.forEach((m) => {
             if (m.parent) m.parent.remove(m);
             if (m.geometry) m.geometry.dispose();
@@ -290,6 +297,7 @@ class BitcoinCryptoExplorer {
         this._bind('zoom-out', () => this.zoomOut());
         this._setupSeedModal();
         this._setupSliceSlider();
+        this._setupPSlider();
         this._syncToolbar();
     }
 
@@ -337,10 +345,13 @@ class BitcoinCryptoExplorer {
         this._syncColorButton();
         this._setPressed('toggle-grid', !!this.showGrid);
         const sliceRow = document.getElementById('crypto-slice-row');
+        const pRow = document.getElementById('crypto-p-row');
         const drawnRow = document.getElementById('crypto-drawn-row');
         if (sliceRow) sliceRow.hidden = view !== 'family';
+        if (pRow) pRow.hidden = view !== 'family';
         if (drawnRow) drawnRow.hidden = view === 'family';
         this._syncSliceSlider();
+        this._syncPSlider();
     }
 
     _setupSliceSlider() {
@@ -363,6 +374,85 @@ class BitcoinCryptoExplorer {
             timer = setTimeout(apply, 40);
         }, { signal: this._ac.signal });
         slider.addEventListener('change', apply, { signal: this._ac.signal });
+    }
+
+    _familyPRange() {
+        const xNode = Math.cbrt(-7);
+        return { lo: xNode + 0.14, hi: 8 };
+    }
+
+    _familyPXFromSlider(t) {
+        const r = this._familyPRange();
+        const u = Math.max(0, Math.min(1, t / 1000));
+        return r.lo + u * (r.hi - r.lo);
+    }
+
+    _familySliderFromPX(x) {
+        const r = this._familyPRange();
+        const span = r.hi - r.lo;
+        const u = span <= 0 ? 0 : (x - r.lo) / span;
+        return Math.round(Math.max(0, Math.min(1, u)) * 1000);
+    }
+
+    _fmtPCoord(n) {
+        if (!Number.isFinite(n)) return '—';
+        const s = n.toFixed(2);
+        return n < 0 ? '−' + s.slice(1) : s;
+    }
+
+    _setupPSlider() {
+        const slider = document.getElementById('crypto-p-slider');
+        if (!slider) return;
+        this._syncPSlider();
+        const setFromSlider = () => {
+            const t = parseInt(slider.value, 10);
+            if (!Number.isFinite(t)) return;
+            this.familyPX = this._familyPXFromSlider(t);
+            this._syncPSlider();
+            if (this.view === 'family') this._redrawFamilyOp();
+        };
+        slider.addEventListener('pointerdown', () => {
+            this._familyPDragging = true;
+            this.familyPPlaying = false;
+            this._syncPSlider();
+        }, { signal: this._ac.signal });
+        slider.addEventListener('pointerup', () => {
+            this._familyPDragging = false;
+        }, { signal: this._ac.signal });
+        slider.addEventListener('pointercancel', () => {
+            this._familyPDragging = false;
+        }, { signal: this._ac.signal });
+        slider.addEventListener('input', setFromSlider, { signal: this._ac.signal });
+        slider.addEventListener('change', setFromSlider, { signal: this._ac.signal });
+        slider.addEventListener('dblclick', () => {
+            this.familyPPlaying = true;
+            this._syncPSlider();
+        }, { signal: this._ac.signal });
+        const rangeEl = document.getElementById('crypto-p-range');
+        if (rangeEl) {
+            rangeEl.style.cursor = 'pointer';
+            rangeEl.addEventListener('click', () => {
+                this.familyPPlaying = !this.familyPPlaying;
+                this._syncPSlider();
+            }, { signal: this._ac.signal });
+        }
+    }
+
+    _syncPSlider() {
+        const slider = document.getElementById('crypto-p-slider');
+        const valueEl = document.getElementById('crypto-p-value');
+        const rangeEl = document.getElementById('crypto-p-range');
+        const y = (window.ECC && ECC.yUpperReal) ? ECC.yUpperReal(this.familyPX) : null;
+        if (valueEl) {
+            valueEl.textContent = y == null
+                ? '(' + this._fmtPCoord(this.familyPX) + ')'
+                : '(' + this._fmtPCoord(this.familyPX) + ', ' + this._fmtPCoord(y) + ')';
+        }
+        if (rangeEl) rangeEl.textContent = this.familyPPlaying && !this._familyPDragging ? 'walk' : 'hold';
+        if (!slider) return;
+        const t = this._familySliderFromPX(this.familyPX);
+        slider.value = String(t);
+        slider.style.setProperty('--slider-pct', (t / 10) + '%');
     }
 
     _syncSliceSlider() {
@@ -824,7 +914,43 @@ class BitcoinCryptoExplorer {
             mk(lower);
         }
         this._addFamilyGrid();
+        this._redrawFamilyOp();
+    }
+
+    _clearFamilyOp() {
+        if (!this._familyOpRoot) return;
+        const gone = new Set();
+        this._familyOpRoot.traverse((child) => gone.add(child));
+        this._zoomDots = this._zoomDots.filter((m) => !gone.has(m));
+        this._familyOpRoot.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
+                else child.material.dispose();
+            }
+        });
+        if (this._familyOpRoot.parent) this._familyOpRoot.parent.remove(this._familyOpRoot);
+        this._familyOpRoot = null;
+    }
+
+    _redrawFamilyOp(opts) {
+        opts = opts || {};
+        this._clearFamilyOp();
+        if (!this.content) return;
+        this._familyOpRoot = new THREE.Group();
+        this.content.add(this._familyOpRoot);
         this._drawFamilyGroupOp();
+        if (opts.quiet) {
+            this._syncPSlider();
+            const opEl = document.getElementById('crypto-op-label');
+            if (opEl) opEl.textContent = this.hudOp;
+        } else {
+            this.updatePanel();
+        }
+    }
+
+    _opAdd(obj) {
+        (this._familyOpRoot || this.content).add(obj);
     }
 
     _addFamilyGrid() {
@@ -886,7 +1012,7 @@ class BitcoinCryptoExplorer {
         }
         const g = new THREE.BufferGeometry().setFromPoints(pts);
         g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        this.content.add(new THREE.Line(g, this._matLine(color, 1, { vertexColors: true })));
+        this._opAdd(new THREE.Line(g, this._matLine(color, 1, { vertexColors: true })));
     }
 
     _addFamilyPoint(pt, color, label) {
@@ -897,11 +1023,11 @@ class BitcoinCryptoExplorer {
         );
         mesh.position.copy(w);
         mesh.userData = { isCurvePoint: true, label: label, x: pt.x, y: pt.y };
-        this.content.add(mesh);
+        this._opAdd(mesh);
         this._trackZoomDot(mesh);
         const sprite = this._makeLabelSprite(label, color);
         sprite.position.set(w.x, w.y + 0.22, w.z);
-        this.content.add(sprite);
+        this._opAdd(sprite);
     }
 
     _extendThrough(P, Q, len) {
@@ -920,7 +1046,7 @@ class BitcoinCryptoExplorer {
             this.hudOp = '—';
             return;
         }
-        const ops = ECC.demoRealOps();
+        const ops = ECC.demoRealOps(this.familyPX);
         const P = ops.P, Q = ops.Q;
         const op = this.groupOp;
 
@@ -935,15 +1061,20 @@ class BitcoinCryptoExplorer {
             this._addFamilyPoint(ops.R, this._tone('ptR'), 'R');
             this.hudOp = 'R = P ⊕ Q on secp256k1 (z = 0)';
         } else if (op === 'double') {
-            const t = { x: P.x + 1, y: P.y + ops.R2.lam };
-            const chord = this._extendThrough(P, t, 140);
-            this._addFamilyLine(chord.a, chord.b, this._tone('tangent'));
-            const refl = this._extendThrough(ops.R2p, ops.R2, 120);
-            this._addFamilyLine(refl.a, refl.b, this._tone('reflect'));
-            this._addFamilyPoint(P, this._tone('white'), 'P');
-            this._addFamilyPoint(ops.R2p, this._tone('ptRp'), "R′");
-            this._addFamilyPoint(ops.R2, this._tone('ptR'), '2P');
-            this.hudOp = '2P = P ⊕ P on secp256k1 (z = 0)';
+            if (!ops.R2) {
+                this._addFamilyPoint(P, this._tone('white'), 'P');
+                this.hudOp = '2P = 𝒪 (tangent vertical)';
+            } else {
+                const t = { x: P.x + 1, y: P.y + ops.R2.lam };
+                const chord = this._extendThrough(P, t, 140);
+                this._addFamilyLine(chord.a, chord.b, this._tone('tangent'));
+                const refl = this._extendThrough(ops.R2p, ops.R2, 120);
+                this._addFamilyLine(refl.a, refl.b, this._tone('reflect'));
+                this._addFamilyPoint(P, this._tone('white'), 'P');
+                this._addFamilyPoint(ops.R2p, this._tone('ptRp'), "R′");
+                this._addFamilyPoint(ops.R2, this._tone('ptR'), '2P');
+                this.hudOp = '2P = P ⊕ P on secp256k1 (z = 0)';
+            }
         } else if (op === 'inverse') {
             this._addFamilyLine({ x: P.x, y: 160 }, { x: P.x, y: -160 }, this._tone('chord'));
             this._addFamilyPoint(P, this._tone('white'), 'P');
@@ -951,7 +1082,7 @@ class BitcoinCryptoExplorer {
             const inf = this._familyWorld(P.x, 160);
             const spr = this._makeLabelSprite('𝒪', 0xffffff);
             spr.position.set(inf.x, inf.y + 0.2, inf.z);
-            this.content.add(spr);
+            this._opAdd(spr);
             this.hudOp = 'P ⊕ (−P) = 𝒪 on secp256k1 (z = 0)';
         } else {
             const chord = this._extendThrough(P, ops.nQ, 140);
@@ -1558,6 +1689,22 @@ class BitcoinCryptoExplorer {
                 this.morphT = this.morphTo;
                 if (this.view === 'group' || this.view === 'domain') this.rebuildView();
                 else this.updatePanel();
+            }
+        }
+        if (this.view === 'family' && this.familyPPlaying && !this._familyPDragging && this.groupOp) {
+            const r = this._familyPRange();
+            this.familyPX += this.familyPDir * dt * 0.9;
+            if (this.familyPX >= r.hi) {
+                this.familyPX = r.hi;
+                this.familyPDir = -1;
+            } else if (this.familyPX <= r.lo) {
+                this.familyPX = r.lo;
+                this.familyPDir = 1;
+            }
+            this._familyPAnimAcc = (this._familyPAnimAcc || 0) + dt;
+            if (this._familyPAnimAcc >= 1 / 30) {
+                this._familyPAnimAcc = 0;
+                this._redrawFamilyOp({ quiet: true });
             }
         }
         if (this.view === 'scalar' && this.scalarPlaying && this._scalarHops) {

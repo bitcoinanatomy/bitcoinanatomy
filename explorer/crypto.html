@@ -73,6 +73,15 @@
                             <input type="range" id="crypto-slice-slider" class="panel-range"
                                    min="1" max="89" value="45" aria-label="Number of family curves">
                         </div>
+                        <div class="panel-slider" id="crypto-p-row" hidden data-tip="Move point P along secp256k1 (z = 0). The chord, tangent, and sum update as you drag. Starts on hold. Click hold/walk to auto-walk the curve.">
+                            <div class="panel-slider-label">
+                                P <span id="crypto-p-value">(2.00, 3.00)</span>
+                                <span class="panel-slider-sep">·</span>
+                                <span id="crypto-p-range">hold</span>
+                            </div>
+                            <input type="range" id="crypto-p-slider" class="panel-range"
+                                   min="0" max="1000" value="250" aria-label="Point P along the curve">
+                        </div>
                     </div>
                 </div>
             </div>
