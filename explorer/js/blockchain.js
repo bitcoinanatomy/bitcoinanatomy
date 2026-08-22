@@ -20,6 +20,21 @@ class BitcoinBlockchainExplorer {
         this.highlightAdjustment = urlParams.get('adjustment') ? parseInt(urlParams.get('adjustment')) : null;
         this.vrManager = null;
 
+        this.epochJsonCache = new Map();
+        this.epochSpiralCache = new Map();
+        this._epochOverlayDwellMs = 250;
+        this._epochOverlayDwellTimer = null;
+        this._epochOverlayPendingIndex = null;
+        this._epochOverlayFetchAbort = null;
+        this._epochBoxGeometry = null;
+        this._epochDummy = new THREE.Object3D();
+        this._epochHoldAll = false;
+        this.epochLoadAllRunning = false;
+        this.epochLoadAllPaused = false;
+        this._epochLoadAllToken = 0;
+        this.lastTooltipEpochIndex = null;
+        this._epochSizeLog = [];
+
         this.init();
     }
 
@@ -95,6 +110,18 @@ class BitcoinBlockchainExplorer {
         this._disposed = true;
         this._ac.abort();
         this.isRotating = false;
+        this._cancelEpochOverlayDwell();
+        this._stopEpochLoadAll();
+        if (this._epochOverlayFetchAbort) {
+            this._epochOverlayFetchAbort.abort();
+            this._epochOverlayFetchAbort = null;
+        }
+        this._unloadAllEpochSpirals();
+        this.epochJsonCache.clear();
+        if (this._epochBoxGeometry) {
+            this._epochBoxGeometry.dispose();
+            this._epochBoxGeometry = null;
+        }
         if (this._hoverTooltipEl && this._hoverTooltipEl.parentNode) {
             this._hoverTooltipEl.parentNode.removeChild(this._hoverTooltipEl);
             this._hoverTooltipEl = null;
@@ -197,13 +224,13 @@ class BitcoinBlockchainExplorer {
             if (this.isPerspective) {
                 // Perspective camera zoom
                 controls.distance += e.deltaY * 0.1; // Inverted: was -=, now +=
-                controls.distance = Math.max(10, Math.min(100, controls.distance));
+                controls.distance = Math.max(0.35, Math.min(100, controls.distance));
                 controls.update();
             } else {
                 // Orthographic camera zoom
                 const zoomSpeed = 0.1;
                 this.orthographicZoom -= e.deltaY * zoomSpeed; // Inverted: was +=, now -=
-                this.orthographicZoom = Math.max(5, Math.min(50, this.orthographicZoom));
+                this.orthographicZoom = Math.max(0.4, Math.min(50, this.orthographicZoom));
                 
                 const aspect = window.innerWidth / window.innerHeight;
                 this.camera.left = -this.orthographicZoom * aspect / 2;
@@ -265,9 +292,14 @@ class BitcoinBlockchainExplorer {
                     if (hoveredDisc !== intersectedObject) {
                         hoveredDisc = intersectedObject;
                         this.highlightDisc(hoveredDisc);
+                        this._scheduleEpochOverlay(hoveredDisc);
                     }
 
                     const index = intersectedObject.userData.index;
+                    if (!intersectedObject.userData.isMempool && index != null) {
+                        this.lastTooltipEpochIndex = index;
+                        this._syncLoadEpochMenuButtons();
+                    }
                     
                     // Check if it's the mempool disc
                     if (intersectedObject.userData.isMempool) {
@@ -276,7 +308,8 @@ class BitcoinBlockchainExplorer {
                         // Calculate block range for this difficulty adjustment period
                         const startBlock = index * 2016;
                         const endBlock = startBlock + 2015;
-                        tooltip.innerHTML = `Epoch ${index}<br>Blocks ${startBlock.toLocaleString()} - ${endBlock.toLocaleString()}<br>Double-click to view details`;
+                        const loaded = this.epochSpiralCache.has(index);
+                        tooltip.innerHTML = `Epoch ${index}<br>Blocks ${startBlock.toLocaleString()} - ${endBlock.toLocaleString()}<br>2016 blocks (retarget)${loaded ? '' : ' · loading…'}<br>Double-click to view details`;
                     }
                     
                     tooltip.style.display = 'block';
@@ -285,6 +318,7 @@ class BitcoinBlockchainExplorer {
                 } else {
                     // Reset hover state when not hovering over discs
                     if (hoveredDisc) {
+                        this._cancelEpochOverlayDwell();
                         this.resetDiscAppearance(hoveredDisc);
                         hoveredDisc = null;
                         this.resetAllDiscsOpacity();
@@ -294,6 +328,7 @@ class BitcoinBlockchainExplorer {
             } else {
                 // Reset hover state when not hovering over any object
                 if (hoveredDisc) {
+                    this._cancelEpochOverlayDwell();
                     this.resetDiscAppearance(hoveredDisc);
                     hoveredDisc = null;
                     this.resetAllDiscsOpacity();
@@ -305,6 +340,7 @@ class BitcoinBlockchainExplorer {
         this.renderer.domElement.addEventListener('mouseleave', () => {
             // Reset hover state when mouse leaves the canvas
             if (hoveredDisc) {
+                this._cancelEpochOverlayDwell();
                 this.resetDiscAppearance(hoveredDisc);
                 hoveredDisc = null;
                 this.resetAllDiscsOpacity();
@@ -354,8 +390,9 @@ class BitcoinBlockchainExplorer {
             disc.userData.originalColor = disc.material.color.clone();
         }
         
-        // Change disc color to white
-        disc.material.color.setHex(0xffffff);
+        if (!disc.userData.epochOverlayActive) {
+            disc.material.color.setHex(0xffffff);
+        }
         
         // Add subtle scale up effect (10% increase)
         disc.scale.set(1.1, 1.1, 1.1);
@@ -399,16 +436,398 @@ class BitcoinBlockchainExplorer {
         
         // Reset scale to normal
         disc.scale.set(1, 1, 1);
+
+        if (disc.userData.epochOverlayActive) {
+            this._dimDiscForOverlay(disc);
+        }
     }
 
     resetAllDiscsOpacity() {
-        // Reset opacity of all discs back to 1.0
         this.blocks.forEach(block => {
             if (!block.userData.special && !block.userData.isMempool) {
-                block.material.opacity = 1.0;
-                block.material.transparent = false;
+                if (block.userData.epochOverlayActive) {
+                    this._dimDiscForOverlay(block);
+                } else {
+                    block.material.opacity = 1.0;
+                    block.material.transparent = false;
+                }
             }
         });
+    }
+
+    onVRHover(obj) {
+        if (!obj || obj.userData.special || obj.userData.isMempool || obj.userData.epochOverlay) return;
+        if (obj.userData.index == null || obj.userData.t == null) return;
+        this.lastTooltipEpochIndex = obj.userData.index;
+        this._syncLoadEpochMenuButtons();
+        this._scheduleEpochOverlay(obj);
+    }
+
+    onVRHoverEnd() {
+        this._cancelEpochOverlayDwell();
+    }
+
+    _epochGpuCap() {
+        if (this._epochHoldAll) return Infinity;
+        const xr = this.renderer && this.renderer.xr;
+        return (xr && xr.isPresenting) ? 1 : 2;
+    }
+
+    _cancelEpochOverlayDwell() {
+        if (this._epochOverlayDwellTimer != null) {
+            clearTimeout(this._epochOverlayDwellTimer);
+            this._epochOverlayDwellTimer = null;
+        }
+        this._epochOverlayPendingIndex = null;
+    }
+
+    _scheduleEpochOverlay(disc) {
+        if (!disc || disc.userData.isMempool || disc.userData.special) {
+            this._cancelEpochOverlayDwell();
+            return;
+        }
+        const index = disc.userData.index;
+        if (index == null) return;
+
+        if (this.epochSpiralCache.has(index)) {
+            this._touchEpochSpiral(index);
+            return;
+        }
+
+        if (this._epochOverlayPendingIndex === index) return;
+        this._cancelEpochOverlayDwell();
+        this._epochOverlayPendingIndex = index;
+        this._epochOverlayDwellTimer = setTimeout(() => {
+            this._epochOverlayDwellTimer = null;
+            this._epochOverlayPendingIndex = null;
+            this.requestEpochOverlay(disc);
+        }, this._epochOverlayDwellMs);
+    }
+
+    _touchEpochSpiral(epoch) {
+        const entry = this.epochSpiralCache.get(epoch);
+        if (!entry) return;
+        entry.lastUsed = performance.now();
+        this.epochSpiralCache.delete(epoch);
+        this.epochSpiralCache.set(epoch, entry);
+        this._evictEpochSpirals();
+    }
+
+    _dimDiscForOverlay(disc) {
+        if (!disc || !disc.material) return;
+        disc.material.transparent = true;
+        disc.material.opacity = 0.12;
+        disc.material.depthWrite = false;
+        disc.material.side = THREE.DoubleSide;
+        disc.material.needsUpdate = true;
+    }
+
+    _restoreDiscAfterOverlay(disc) {
+        if (!disc || !disc.material) return;
+        disc.userData.epochOverlayActive = false;
+        disc.material.opacity = 1.0;
+        disc.material.transparent = false;
+        disc.material.depthWrite = true;
+        disc.material.side = THREE.FrontSide;
+        disc.material.needsUpdate = true;
+    }
+
+    _unloadSpiral(epoch) {
+        const entry = this.epochSpiralCache.get(epoch);
+        if (!entry) return;
+        this.epochSpiralCache.delete(epoch);
+        if (entry.group && entry.group.parent) entry.group.parent.remove(entry.group);
+        if (entry.mesh) {
+            if (entry.mesh.geometry && entry.mesh.geometry !== this._epochBoxGeometry) {
+                entry.mesh.geometry.dispose();
+            }
+            if (entry.mesh.material) entry.mesh.material.dispose();
+        }
+        if (entry.disc) this._restoreDiscAfterOverlay(entry.disc);
+    }
+
+    _unloadAllEpochSpirals() {
+        Array.from(this.epochSpiralCache.keys()).forEach((epoch) => this._unloadSpiral(epoch));
+    }
+
+    _evictEpochSpirals() {
+        const cap = this._epochGpuCap();
+        while (this.epochSpiralCache.size > cap) {
+            const oldest = this.epochSpiralCache.keys().next().value;
+            this._unloadSpiral(oldest);
+        }
+        while (this.epochJsonCache.size > 8) {
+            const oldestJson = this.epochJsonCache.keys().next().value;
+            this.epochJsonCache.delete(oldestJson);
+        }
+    }
+
+    async requestEpochOverlay(disc) {
+        if (this._disposed || !disc || disc.userData.isMempool || disc.userData.special) return;
+        const epoch = disc.userData.index;
+        if (epoch == null || typeof DifficultySpiral === 'undefined') return;
+
+        if (this.epochSpiralCache.has(epoch)) {
+            this._touchEpochSpiral(epoch);
+            return;
+        }
+
+        try {
+            const blocks = await this._fetchEpochBlocks(epoch);
+            if (this._disposed || !blocks) return;
+            if (!disc.parent) return;
+            this._attachEpochSpiral(disc, epoch, blocks);
+        } catch (err) {
+            if (err && err.name === 'AbortError') return;
+            console.warn('Epoch overlay load failed', epoch, err);
+        }
+    }
+
+    async _fetchEpochBlocks(epoch) {
+        if (this.epochJsonCache.has(epoch)) {
+            const cached = this.epochJsonCache.get(epoch);
+            this.epochJsonCache.delete(epoch);
+            this.epochJsonCache.set(epoch, cached);
+            return cached;
+        }
+
+        if (this._epochOverlayFetchAbort) this._epochOverlayFetchAbort.abort();
+        const ac = new AbortController();
+        this._epochOverlayFetchAbort = ac;
+        const pageSignal = this._ac.signal;
+        const onPageAbort = () => ac.abort();
+        pageSignal.addEventListener('abort', onPageAbort);
+
+        try {
+            const response = await fetch(DifficultySpiral.epochUrl(epoch), { signal: ac.signal });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const data = await response.json();
+            const blocks = data && data[0];
+            if (!blocks || !blocks.length) throw new Error('Empty epoch data');
+            this.epochJsonCache.set(epoch, blocks);
+            this._evictEpochSpirals();
+            return blocks;
+        } finally {
+            pageSignal.removeEventListener('abort', onPageAbort);
+            if (this._epochOverlayFetchAbort === ac) this._epochOverlayFetchAbort = null;
+        }
+    }
+
+    _attachEpochSpiral(disc, epoch, blocks) {
+        if (this.epochSpiralCache.has(epoch)) {
+            this._touchEpochSpiral(epoch);
+            return;
+        }
+
+        const layout = DifficultySpiral.layoutBlocks(blocks);
+        if (!layout.count) return;
+        this._recordEpochSize(epoch, layout);
+
+        if (!this._epochBoxGeometry) {
+            this._epochBoxGeometry = new THREE.BoxGeometry(layout.blockSize, layout.blockSize, layout.blockSize);
+        }
+
+        const material = new THREE.MeshBasicMaterial({
+            transparent: true,
+            opacity: 0.95,
+            depthTest: true,
+            depthWrite: true,
+            side: THREE.DoubleSide
+        });
+        const mesh = new THREE.InstancedMesh(this._epochBoxGeometry, material, layout.count);
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.userData.epochOverlay = true;
+        mesh.raycast = function () {};
+
+        const dummy = this._epochDummy;
+        const color = new THREE.Color();
+        for (let i = 0; i < layout.count; i++) {
+            dummy.position.set(
+                layout.positions[i * 3],
+                layout.positions[i * 3 + 1],
+                layout.positions[i * 3 + 2]
+            );
+            dummy.rotation.set(0, layout.rotationsY[i], 0);
+            dummy.scale.set(1, 0.28, 1);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i, dummy.matrix);
+            color.setRGB(layout.colors[i * 3], layout.colors[i * 3 + 1], layout.colors[i * 3 + 2]);
+            mesh.setColorAt(i, color);
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+
+        const group = new THREE.Group();
+        group.userData.epochOverlay = true;
+        const discRadius = (disc.geometry && disc.geometry.parameters && disc.geometry.parameters.radiusTop) || 1.6;
+        const fit = (discRadius * 0.92) / Math.max(layout.maxRadius, 0.01);
+        group.scale.setScalar(fit);
+        group.position.set(0, 0, 0);
+        group.add(mesh);
+        mesh.renderOrder = 2;
+        disc.renderOrder = 1;
+        disc.add(group);
+
+        disc.userData.epochOverlayActive = true;
+        if (disc.userData.originalColor) {
+            disc.material.color.copy(disc.userData.originalColor);
+        }
+        this._dimDiscForOverlay(disc);
+
+        this.epochSpiralCache.set(epoch, {
+            group: group,
+            mesh: mesh,
+            disc: disc,
+            lastUsed: performance.now()
+        });
+        this._evictEpochSpirals();
+    }
+
+    _epochLoadDiscs() {
+        return this.blocks.filter((b) =>
+            b && !b.userData.special && !b.userData.isMempool && b.userData.index != null
+        ).sort((a, b) => a.userData.index - b.userData.index);
+    }
+
+    _stopEpochLoadAll() {
+        this._epochLoadAllToken++;
+        this.epochLoadAllRunning = false;
+        this.epochLoadAllPaused = false;
+        this._updateEpochLoadButtons();
+    }
+
+    _updateEpochLoadButtons() {
+        const loadBtn = document.getElementById('load-all-epochs');
+        const resetBtn = document.getElementById('reset-epochs');
+        const wrap = document.getElementById('load-epochs-wrap');
+        if (loadBtn) {
+            if (this.epochLoadAllRunning) loadBtn.textContent = 'Pause';
+            else if (this.epochLoadAllPaused) loadBtn.textContent = 'Resume';
+            else loadBtn.textContent = 'Load all';
+        }
+        if (this.epochLoadAllRunning || this.epochLoadAllPaused) {
+            this._setLoadEpochsMenuOpen(false);
+        }
+        if (wrap) wrap.classList.toggle('is-loading', !!(this.epochLoadAllRunning || this.epochLoadAllPaused));
+        if (resetBtn) {
+            resetBtn.disabled = this.epochSpiralCache.size === 0 && !this.epochLoadAllRunning && !this.epochLoadAllPaused;
+        }
+        this._syncLoadEpochMenuButtons();
+        if (this.vrManager && this.vrManager.navMenu && typeof this.vrManager.navMenu._refreshAllToggles === 'function') {
+            this.vrManager.navMenu._refreshAllToggles();
+        }
+    }
+
+    _setLoadEpochsMenuOpen(open) {
+        const menu = document.getElementById('load-epochs-menu');
+        const toggle = document.getElementById('load-all-epochs');
+        if (!menu || !toggle) return;
+        if (this.epochLoadAllRunning || this.epochLoadAllPaused) open = false;
+        menu.classList.toggle('is-open', open);
+        menu.hidden = !open;
+        toggle.classList.toggle('active', open);
+    }
+
+    _syncLoadEpochMenuButtons() {
+        const fromTip = document.getElementById('load-epochs-tooltip');
+        if (!fromTip) return;
+        const idx = this.lastTooltipEpochIndex;
+        fromTip.disabled = idx == null;
+        fromTip.textContent = idx == null ? 'From tooltip' : ('From epoch ' + idx);
+    }
+
+    toggleEpochLoadAll() {
+        if (this.epochLoadAllRunning) {
+            this.epochLoadAllRunning = false;
+            this.epochLoadAllPaused = true;
+            this._updateEpochLoadButtons();
+            return;
+        }
+        if (this.epochLoadAllPaused) {
+            this.epochLoadAllPaused = false;
+            this.epochLoadAllRunning = true;
+            this._updateEpochLoadButtons();
+            return;
+        }
+        const menu = document.getElementById('load-epochs-menu');
+        const open = !(menu && menu.classList.contains('is-open'));
+        this._setLoadEpochsMenuOpen(open);
+    }
+
+    startEpochLoadAll(fromIndex) {
+        if (this.epochLoadAllRunning || this.epochLoadAllPaused) return;
+        const start = Math.max(0, parseInt(fromIndex, 10) || 0);
+        this._epochHoldAll = true;
+        this.epochLoadAllPaused = false;
+        this.epochLoadAllRunning = true;
+        this._setLoadEpochsMenuOpen(false);
+        this._updateEpochLoadButtons();
+        this._runEpochLoadAll(start);
+    }
+
+    resetEpochOverlays() {
+        this._stopEpochLoadAll();
+        if (this._epochOverlayFetchAbort) {
+            this._epochOverlayFetchAbort.abort();
+            this._epochOverlayFetchAbort = null;
+        }
+        this._unloadAllEpochSpirals();
+        this._epochHoldAll = false;
+        this._updateEpochLoadButtons();
+    }
+
+    _recordEpochSize(epoch, layout) {
+        if (!this._epochSizeLog) this._epochSizeLog = [];
+        this._epochSizeLog[epoch] = {
+            epoch: epoch,
+            blocks: layout.count,
+            maxRadius: Number(layout.maxRadius.toFixed(4)),
+            arcLength: Number(layout.arcLength.toFixed(4)),
+            totalTime: Math.round(layout.totalTime)
+        };
+        const row = this._epochSizeLog[epoch];
+        console.log(
+            '[epoch-size] epoch=' + row.epoch +
+            ' blocks=' + row.blocks +
+            ' maxRadius=' + row.maxRadius +
+            ' arcLength=' + row.arcLength +
+            ' totalTime=' + row.totalTime + 's'
+        );
+    }
+
+    _dumpEpochSizeLog() {
+        const rows = (this._epochSizeLog || []).filter(Boolean);
+        const radii = rows.map((r) => r.maxRadius);
+        const times = rows.map((r) => r.totalTime);
+        console.log('[epoch-size] count=' + rows.length);
+        console.log('[epoch-size] JSON', JSON.stringify(rows));
+        console.log('[epoch-size] EPOCH_MAX_RADIUS =', JSON.stringify(radii));
+        console.log('[epoch-size] EPOCH_TOTAL_TIME =', JSON.stringify(times));
+    }
+
+    async _runEpochLoadAll(startEpoch) {
+        const token = this._epochLoadAllToken;
+        const minIndex = startEpoch == null ? 0 : startEpoch;
+        const discs = this._epochLoadDiscs().filter((d) => d.userData.index >= minIndex);
+        console.log('[epoch-size] load-all start from epoch ' + minIndex + ', ' + discs.length + ' discs');
+        for (let i = 0; i < discs.length; i++) {
+            if (this._disposed || token !== this._epochLoadAllToken) return;
+            while (this.epochLoadAllPaused && token === this._epochLoadAllToken && !this._disposed) {
+                await new Promise((r) => setTimeout(r, 80));
+            }
+            if (this._disposed || token !== this._epochLoadAllToken) return;
+            if (!this.epochLoadAllRunning) return;
+            const disc = discs[i];
+            if (!disc || this.epochSpiralCache.has(disc.userData.index)) continue;
+            await this.requestEpochOverlay(disc);
+            this._updateEpochLoadButtons();
+        }
+        if (token === this._epochLoadAllToken) {
+            this.epochLoadAllRunning = false;
+            this.epochLoadAllPaused = false;
+            this._updateEpochLoadButtons();
+            this._dumpEpochSizeLog();
+        }
     }
 
     resetCamera() {
@@ -514,10 +933,10 @@ class BitcoinBlockchainExplorer {
                 
                 if (this.isPerspective) {
                     this.controls.distance *= zoomFactor;
-                    this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+                    this.controls.distance = Math.max(0.35, Math.min(100, this.controls.distance));
                 } else {
                     this.orthographicZoom *= zoomFactor;
-                    this.orthographicZoom = Math.max(5, Math.min(50, this.orthographicZoom));
+                    this.orthographicZoom = Math.max(0.4, Math.min(50, this.orthographicZoom));
                     
                     const aspect = window.innerWidth / window.innerHeight;
                     this.camera.left = -this.orthographicZoom * aspect / 2;
@@ -616,6 +1035,43 @@ class BitcoinBlockchainExplorer {
         document.getElementById('toggle-labels').addEventListener('click', () => {
             this.toggleLabels();
         });
+
+        const loadAllBtn = document.getElementById('load-all-epochs');
+        const loadMenu = document.getElementById('load-epochs-menu');
+        const loadWrap = document.getElementById('load-epochs-wrap');
+        if (loadAllBtn) {
+            loadAllBtn.addEventListener('click', () => this.toggleEpochLoadAll());
+        }
+        if (loadWrap && loadMenu) {
+            loadWrap.addEventListener('mouseenter', () => {
+                if (!this.epochLoadAllRunning && !this.epochLoadAllPaused) {
+                    this._setLoadEpochsMenuOpen(true);
+                }
+            });
+            loadWrap.addEventListener('mouseleave', () => {
+                this._setLoadEpochsMenuOpen(false);
+            });
+        }
+        const fromGenesisBtn = document.getElementById('load-epochs-genesis');
+        if (fromGenesisBtn) {
+            fromGenesisBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.startEpochLoadAll(0);
+            });
+        }
+        const fromTooltipBtn = document.getElementById('load-epochs-tooltip');
+        if (fromTooltipBtn) {
+            fromTooltipBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (this.lastTooltipEpochIndex == null) return;
+                this.startEpochLoadAll(this.lastTooltipEpochIndex);
+            });
+        }
+        const resetEpochsBtn = document.getElementById('reset-epochs');
+        if (resetEpochsBtn) {
+            resetEpochsBtn.addEventListener('click', () => this.resetEpochOverlays());
+        }
+        this._updateEpochLoadButtons();
         
         document.getElementById('rotate-left').addEventListener('click', () => {
             this.rotateLeft();
@@ -817,10 +1273,10 @@ class BitcoinBlockchainExplorer {
         // Zoom in
         if (this.isPerspective) {
             this.controls.distance -= 2;
-            this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+            this.controls.distance = Math.max(0.35, Math.min(100, this.controls.distance));
         } else {
             this.orthographicZoom -= 1;
-            this.orthographicZoom = Math.max(5, Math.min(50, this.orthographicZoom));
+            this.orthographicZoom = Math.max(0.4, Math.min(50, this.orthographicZoom));
             
             const aspect = window.innerWidth / window.innerHeight;
             this.camera.left = -this.orthographicZoom * aspect / 2;
@@ -839,10 +1295,10 @@ class BitcoinBlockchainExplorer {
         // Zoom out
         if (this.isPerspective) {
             this.controls.distance += 2;
-            this.controls.distance = Math.max(10, Math.min(100, this.controls.distance));
+            this.controls.distance = Math.max(0.35, Math.min(100, this.controls.distance));
         } else {
             this.orthographicZoom += 1;
-            this.orthographicZoom = Math.max(5, Math.min(50, this.orthographicZoom));
+            this.orthographicZoom = Math.max(0.4, Math.min(50, this.orthographicZoom));
             
             const aspect = window.innerWidth / window.innerHeight;
             this.camera.left = -this.orthographicZoom * aspect / 2;
@@ -910,6 +1366,8 @@ class BitcoinBlockchainExplorer {
     
     updateVisualization() {
         if (!this.difficultyAdjustments) return;
+
+        this._unloadAllEpochSpirals();
         
         // Clear existing helix discs (but keep UTXOs if they exist)
         this.blocks = this.blocks.filter(block => {
