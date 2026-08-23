@@ -374,10 +374,31 @@
     }
 
     function poseCylinder(u, v) {
-        var R = 1.15, H = 2.5;
-        var phi = u * 2 * Math.PI;
+        var rCyl = 1.15, H = 2.5;
+        var phi = (u - 0.5) * 2 * Math.PI;
         var h = -H / 2 + v * H;
-        return { x: R * Math.cos(phi), y: h, z: R * Math.sin(phi) };
+        return { x: rCyl * Math.sin(phi), y: h, z: -rCyl * Math.cos(phi) };
+    }
+
+    /* Roll the square (u) into a tube: isometric arc, edges lift, then the seam meets. */
+    function poseSquareToCylinder(u, v, s) {
+        s = s < 0 ? 0 : s > 1 ? 1 : s;
+        var half = 2.2, rCyl = 1.15, H = 2.5;
+        var W = 2 * half;
+        var y0 = (v - 0.5) * 2 * half;
+        var y1 = -H / 2 + v * H;
+        var y = y0 + (y1 - y0) * s;
+        if (s < 1e-5) return { x: (u - 0.5) * W, y: y0, z: 0 };
+        var alpha = s * 2 * Math.PI;
+        var L = W + (2 * Math.PI * rCyl - W) * s;
+        var R = L / alpha;
+        var phi = (u - 0.5) * alpha;
+        var cPhi = Math.cos(phi), sPhi = Math.sin(phi);
+        return {
+            x: R * sPhi,
+            y: y,
+            z: R * (1 - cPhi) - R * s * s
+        };
     }
 
     /* Bend the cylinder axis (v) into a circle so the rims meet. u stays the tube angle. */
@@ -385,10 +406,10 @@
         s = s < 0 ? 0 : s > 1 ? 1 : s;
         var rCyl = 1.15, H = 2.5, Rtor = 1.55, rTor = 0.58;
         var r = rCyl + (rTor - rCyl) * s;
-        var phi = u * 2 * Math.PI;
+        var phi = (u - 0.5) * 2 * Math.PI;
         var cPhi = Math.cos(phi), sPhi = Math.sin(phi);
         if (s < 1e-5) {
-            return { x: r * cPhi, y: -H / 2 + v * H, z: r * sPhi };
+            return { x: r * sPhi, y: -H / 2 + v * H, z: -r * cPhi };
         }
         var alpha = s * 2 * Math.PI;
         var L = H + (2 * Math.PI * Rtor - H) * s;
@@ -396,20 +417,20 @@
         var psi = (v - 0.5) * alpha;
         var cPsi = Math.cos(psi), sPsi = Math.sin(psi);
         return {
-            x: -R * (1 - cPsi) + r * cPhi * cPsi + R * s * s,
-            y: R * sPsi + r * cPhi * sPsi,
-            z: r * sPhi
+            x: -R * (1 - cPsi) + r * sPhi * cPsi + R * s * s,
+            y: R * sPsi + r * sPhi * sPsi,
+            z: -r * cPhi
         };
     }
 
     function poseTorus(u, v) {
         var R = 1.55, r = 0.58;
         var theta = (v - 0.5) * 2 * Math.PI;
-        var phi = u * 2 * Math.PI;
+        var phi = (u - 0.5) * 2 * Math.PI;
         return {
-            x: (R + r * Math.cos(phi)) * Math.cos(theta),
-            y: (R + r * Math.cos(phi)) * Math.sin(theta),
-            z: r * Math.sin(phi)
+            x: (R + r * Math.sin(phi)) * Math.cos(theta),
+            y: (R + r * Math.sin(phi)) * Math.sin(theta),
+            z: -r * Math.cos(phi)
         };
     }
 
@@ -419,7 +440,7 @@
         var scaled = t * (DIM_STEPS - 1);
         var i0 = Math.floor(scaled);
         var f = scaled - i0;
-        if (i0 <= 0) return lerp3(poseSquare(u, v), poseCylinder(u, v), f);
+        if (i0 <= 0) return poseSquareToCylinder(u, v, f);
         return poseCylinderToTorus(u, v, f);
     }
 
