@@ -65,6 +65,7 @@ class BitcoinCryptoExplorer {
         this._pointMeshes = [];
         this._zoomDots = [];
         this._lastDotZoom = -1;
+        this._nearCamKey = '';
 
         const params = new URLSearchParams(window.location.search);
         const v = (params.get('view') || '').toLowerCase();
@@ -145,9 +146,16 @@ class BitcoinCryptoExplorer {
             if (inst.geometry) inst.geometry.dispose();
             if (inst.material) inst.material.dispose();
         }
+        if (this._domainState && this._domainState.nearInst) {
+            const near = this._domainState.nearInst;
+            if (near.parent) near.parent.remove(near);
+            if (near.geometry) near.geometry.dispose();
+            if (near.material) near.material.dispose();
+        }
         this._domainState = null;
         this._zoomDots = [];
         this._lastDotZoom = -1;
+        this._nearCamKey = '';
         this._familyOpRoot = null;
         this._fieldOpRoot = null;
         this._scalarHopGroup = null;
@@ -1565,9 +1573,12 @@ class BitcoinCryptoExplorer {
                 '  float fres = pow(1.0 - ndv, 1.6);',
                 '  vec3 w = abs(N);',
                 '  w /= (w.x + w.y + w.z);',
-                '  float sc = 14.0;',
+                '  float dist = length(cameraPosition - vWorldPos);',
+                '  float near = clamp((2.9 - dist) * 0.55, 0.0, 1.0);',
+                '  float sc = 14.0 + near * 22.0;',
                 '  float grain = fbm(vWorldPos.yz * sc) * w.x + fbm(vWorldPos.zx * sc) * w.y + fbm(vWorldPos.xy * sc) * w.z;',
-                '  float speck = hash(floor(vWorldPos.yz * 90.0)) * w.x + hash(floor(vWorldPos.zx * 90.0)) * w.y + hash(floor(vWorldPos.xy * 90.0)) * w.z;',
+                '  float speckHz = 90.0 + near * 260.0;',
+                '  float speck = hash(floor(vWorldPos.yz * speckHz)) * w.x + hash(floor(vWorldPos.zx * speckHz)) * w.y + hash(floor(vWorldPos.xy * speckHz)) * w.z;',
                 '  vec3 col = mix(uCore, uRim, clamp(fres * 0.7 + 0.38, 0.0, 1.0));',
                 '  col += (grain - 0.45) * 0.14;',
                 '  col += (speck - 0.5) * 0.04;',
@@ -1620,6 +1631,7 @@ class BitcoinCryptoExplorer {
     }
 
     _applyDotZoom() {
+        this._updateNearCamPoints();
         const z = this._dotZoomScale();
         if (Math.abs(z - this._lastDotZoom) < 0.002) return;
         this._lastDotZoom = z;
@@ -1631,6 +1643,95 @@ class BitcoinCryptoExplorer {
         for (i = 0; i < this._zoomDots.length; i++) {
             if (this._zoomDots[i]) this._zoomDots[i].scale.setScalar(z);
         }
+    }
+
+    _maxFieldScatter() {
+        const last = (window.ECC && ECC.PRIME_LADDER) ? ECC.PRIME_LADDER.length - 1 : 7;
+        return this.primeIndex >= last || this.drawCap >= ((window.ECC && ECC.INSTANCE_CAP_MAX) || 768000);
+    }
+
+    _wrap01(x) {
+        return x - Math.floor(x);
+    }
+
+    _closestDomainUv(cam, t) {
+        let bestU = 0.5, bestV = 0.5, bestD2 = Infinity;
+        const nu = 36, nv = 20;
+        let i, j, u, v, p, dx, dy, dz, d2;
+        for (j = 0; j <= nv; j++) {
+            v = j / nv;
+            for (i = 0; i <= nu; i++) {
+                u = i / nu;
+                p = ECC.sampleDomain(u, v, t);
+                dx = p.x - cam.x;
+                dy = p.y - cam.y;
+                dz = p.z - cam.z;
+                d2 = dx * dx + dy * dy + dz * dz;
+                if (d2 < bestD2) {
+                    bestD2 = d2;
+                    bestU = u;
+                    bestV = v;
+                }
+            }
+        }
+        return { u: bestU, v: bestV, d2: bestD2 };
+    }
+
+    _updateNearCamPoints() {
+        const st = this._domainState;
+        if (!st || !st.nearInst || this.view !== 'domain' || this._kgOverlay || this.morphing) {
+            if (st && st.nearInst) st.nearInst.count = 0;
+            return;
+        }
+        if (!this._maxFieldScatter()) {
+            st.nearInst.count = 0;
+            this._nearCamKey = '';
+            return;
+        }
+        const dist = (this.controls && this.controls.distance) || 16;
+        const zoomed = dist < 4.15;
+        if (!zoomed) {
+            st.nearInst.count = 0;
+            this._nearCamKey = '';
+            return;
+        }
+        const cam = this.camera.position;
+        const tightness = Math.max(0, Math.min(1, (4.15 - dist) / 3.55));
+        const qu = Math.round(cam.x * 18) + ':' + Math.round(cam.y * 18) + ':' + Math.round(cam.z * 18) + ':' + Math.round(tightness * 24) + ':' + Math.round(this._dotZoomScale() * 40);
+        if (qu === this._nearCamKey) return;
+        this._nearCamKey = qu;
+
+        const t = this.morphT;
+        const hit = this._closestDomainUv(cam, t);
+        const nMax = st.nearCap || 160000;
+        const nWant = Math.min(nMax, Math.round(24000 + tightness * 136000));
+        const span = 0.26 - tightness * 0.16;
+        const keepR = Math.sqrt(hit.d2) + 0.55 + (1 - tightness) * 0.45;
+        const keepR2 = keepR * keepR;
+        const side = Math.ceil(Math.sqrt(nWant));
+        const dummy = new THREE.Object3D();
+        const z = this._dotZoomScale() * 0.92;
+        let i, j, u, v, p, dx, dy, dz, placed = 0;
+        const u0 = hit.u - span * 0.5;
+        const v0 = hit.v - span * 0.5;
+        for (j = 0; j < side && placed < nWant; j++) {
+            for (i = 0; i < side && placed < nWant; i++) {
+                u = this._wrap01(u0 + (i + 0.18 + ((i * 13 + j * 29) % 7) * 0.09) / side * span);
+                v = this._wrap01(v0 + (j + 0.27 + ((i * 17 + j * 11) % 7) * 0.09) / side * span);
+                p = ECC.sampleDomain(u, v, t);
+                dx = p.x - cam.x;
+                dy = p.y - cam.y;
+                dz = p.z - cam.z;
+                if (dx * dx + dy * dy + dz * dz > keepR2) continue;
+                dummy.position.set(p.x, p.y, p.z);
+                dummy.scale.setScalar(z);
+                dummy.updateMatrix();
+                st.nearInst.setMatrixAt(placed, dummy.matrix);
+                placed++;
+            }
+        }
+        st.nearInst.count = placed;
+        st.nearInst.instanceMatrix.needsUpdate = true;
     }
 
     _makeInstances(count, radius) {
@@ -1677,12 +1778,22 @@ class BitcoinCryptoExplorer {
             this._placeInstances(inst, dots, t, -1);
         }
         const fill = field.solid ? this._addDomainFill(this.content, t) : null;
+        let nearInst = null;
+        const nearCap = 160000;
+        if (this._maxFieldScatter() && (field.solid || (dots && dots.length))) {
+            nearInst = this._makeInstances(nearCap, 0.0048);
+            nearInst.count = 0;
+            this.content.add(nearInst);
+        }
+        this._nearCamKey = '';
         this._domainState = {
             geom: surf.geom,
             nu: surf.nu,
             nv: surf.nv,
             instances: inst,
             points: dots,
+            nearInst: nearInst,
+            nearCap: nearCap,
             geoA: surf.geoA,
             geoB: surf.geoB,
             geoMid: surf.geoMid,
@@ -1692,6 +1803,7 @@ class BitcoinCryptoExplorer {
             gridCoarseMat: surf.gridCoarseMat,
             gridExtraMat: surf.gridExtraMat
         };
+        this._updateNearCamPoints();
         this._fieldOpRoot = new THREE.Group();
         this.content.add(this._fieldOpRoot);
         this._drawFieldGroupOp();
