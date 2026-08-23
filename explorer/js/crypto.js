@@ -1,4 +1,4 @@
-// Bitcoin Explorer — secp256k1 curve lesson (family / domain / scalar)
+// Bitcoin Explorer — secp256k1 curve lesson (family / domain; kG overlay)
 const CRYPTO_DEMO_MNEMONIC = 'crush miracle lawsuit inspire bomb into assist album surface will fuel control';
 const CRYPTO_DEMO_PATH = "m/84'/0'/0'/0/0";
 const SECP256K1_N = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141');
@@ -17,6 +17,7 @@ class BitcoinCryptoExplorer {
         this.vrManager = null;
         this.isRotating = false;
         this.isPerspective = true;
+        this.orthographicZoom = 42;
         this.clock = new THREE.Clock();
         this.content = null;
 
@@ -41,8 +42,10 @@ class BitcoinCryptoExplorer {
         this.scalarK = 1;
         this.scalarPlaying = false;
         this.scalarTimer = 0;
+        this._kgOverlay = false;
         this.selectedSliceZ = 0;
         this.familySliceCount = 45;
+        this.lineLen = 50;
         this.familyPX = 2;
         this.familyPPlaying = false;
         this.familyPDir = 1;
@@ -54,6 +57,7 @@ class BitcoinCryptoExplorer {
         this.fieldPPlaying = false;
         this._fieldPBoundFor = null;
         this._fieldPAnimAcc = 0;
+        this._sliderSync = 0;
         this.hudOp = '—';
         this.useColor = false;
         this.showGrid = true;
@@ -73,6 +77,10 @@ class BitcoinCryptoExplorer {
         if (v === 'group') {
             this.view = 'domain';
             this.groupOp = 'add';
+            this._groupToy = true;
+        } else if (v === 'scalar') {
+            this.view = 'domain';
+            this._kgOverlay = true;
             this._groupToy = true;
         } else if (window.ECC && ECC.VIEWS.indexOf(v) >= 0) {
             this.view = v;
@@ -95,7 +103,7 @@ class BitcoinCryptoExplorer {
         this.setupPanelToggle();
         this.setupExplainers();
         this.rebuildView();
-        if (this.view === 'scalar') this._ensureDemoKey();
+        if (this._kgOverlay) this._ensureDemoKey();
         this.renderer.setAnimationLoop(() => this.animate());
     }
 
@@ -120,7 +128,7 @@ class BitcoinCryptoExplorer {
                 'Domain: ' + this._domainLabel(),
                 'Field: ' + (prime ? prime.label : ''),
                 this._curveTotalLabel(),
-                this.view === 'family' || this.view === 'domain' ? 'Op: ' + this.hudOp : (this.view === 'scalar' ? this.hudOp : 'y² = x³ + 7')
+                this.view === 'family' || this.view === 'domain' ? 'Op: ' + this.hudOp : 'y² = x³ + 7'
             ]
         };
     }
@@ -134,6 +142,7 @@ class BitcoinCryptoExplorer {
             this._explainerEl = null;
         }
         this._clearContent();
+        if (!this.isPerspective) this._setPerspectiveCamera(true);
     }
 
     _clearContent() {
@@ -253,10 +262,8 @@ class BitcoinCryptoExplorer {
         el.addEventListener('wheel', (e) => {
             if (this.renderer.xr && this.renderer.xr.isPresenting) return;
             e.preventDefault();
-            this.controls.distance *= (e.deltaY > 0 ? 1.08 : 0.92);
-            this.controls.distance = Math.max(0.6, Math.min(80, this.controls.distance));
-            this.controls.update();
-            this._applyDotZoom();
+            const f = e.deltaY > 0 ? 1.08 : 0.92;
+            this._zoomBy(f);
         }, { signal, passive: false });
     }
 
@@ -287,14 +294,26 @@ class BitcoinCryptoExplorer {
         this.drawCap = Math.min(max, this.drawCap * 2);
         this._fieldCache = null;
         this._opPtsCache = null;
-        if (this.view === 'family') this.setView('domain');
-        else this.rebuildView();
+        if (this.view === 'family') return;
+        this.rebuildView();
     }
 
     setupControls() {
         this._bind('view-family', () => this.setView('family'));
-        this._bind('view-domain', () => this.setView('domain'));
-        this._bind('view-scalar', () => this.setView('scalar'));
+        this._bind('view-domain', () => {
+            if (this.view === 'domain' && this._kgOverlay) {
+                this._kgOverlay = false;
+                this.scalarPlaying = false;
+                this._unpinGroupToy();
+                if (!this.groupOp) this.groupOp = 'add';
+                this.rebuildView();
+                this._syncToolbar();
+                this._syncVrMenu();
+                this._pushViewUrl();
+                return;
+            }
+            this.setView('domain');
+        });
         this._bind('dim-prev', () => this.stepDim(-1));
         this._bind('dim-next', () => this.stepDim(1));
         this._bind('prime-prev', () => this.stepPrime(-1));
@@ -311,6 +330,7 @@ class BitcoinCryptoExplorer {
             this.isRotating = !this.isRotating;
             if (typeof setRotationButtonState === 'function') setRotationButtonState(this.isRotating);
         });
+        this._bind('toggle-view', () => this.toggleCameraView());
         this._bind('reset-camera', () => this.resetCamera());
         this._bind('rotate-left', () => this.rotateLeft());
         this._bind('rotate-right', () => this.rotateRight());
@@ -325,6 +345,7 @@ class BitcoinCryptoExplorer {
         this._setupSeedModal();
         this._setupSliceSlider();
         this._setupPSlider();
+        this._setupLineSlider();
         this._syncToolbar();
     }
 
@@ -345,12 +366,12 @@ class BitcoinCryptoExplorer {
 
     _syncToolbar() {
         const view = this.view;
-        const views = ['family', 'domain', 'scalar'];
+        const views = ['family', 'domain'];
         views.forEach((v) => this._setPressed('view-' + v, view === v));
 
-        const showGlueField = view === 'domain';
-        const showOps = view === 'family' || view === 'domain';
-        const showPlay = view === 'scalar';
+        const showGlueField = view === 'domain' && !this._kgOverlay;
+        const showOps = view === 'family' || (view === 'domain' && !this._kgOverlay);
+        const showPlay = view === 'domain';
         this._setClusterHidden('crypto-cluster-glue', !showGlueField);
         this._setClusterHidden('crypto-cluster-field', !showGlueField);
         this._setClusterHidden('crypto-cluster-ops', !showOps);
@@ -373,12 +394,15 @@ class BitcoinCryptoExplorer {
         this._setPressed('toggle-grid', !!this.showGrid);
         const sliceRow = document.getElementById('crypto-slice-row');
         const pRow = document.getElementById('crypto-p-row');
+        const lineRow = document.getElementById('crypto-line-row');
         const drawnRow = document.getElementById('crypto-drawn-row');
         if (sliceRow) sliceRow.hidden = view !== 'family';
         if (pRow) pRow.hidden = view !== 'family' && !this._domainPSliderVisible();
+        if (lineRow) lineRow.hidden = !this._lineSliderVisible();
         if (drawnRow) drawnRow.hidden = view === 'family';
         this._syncSliceSlider();
         this._syncPSlider();
+        this._syncLineSlider();
     }
 
     _setupSliceSlider() {
@@ -387,6 +411,7 @@ class BitcoinCryptoExplorer {
         this._syncSliceSlider();
         let timer = null;
         const apply = () => {
+            if (this._sliderSync) return;
             const n = parseInt(slider.value, 10);
             if (!Number.isFinite(n)) return;
             this.familySliceCount = n;
@@ -394,6 +419,7 @@ class BitcoinCryptoExplorer {
             if (this.view === 'family' && n !== this._builtSliceCount) this.rebuildView();
         };
         slider.addEventListener('input', () => {
+            if (this._sliderSync) return;
             const n = parseInt(slider.value, 10);
             if (Number.isFinite(n)) this.familySliceCount = n;
             this._syncSliceSlider();
@@ -432,9 +458,10 @@ class BitcoinCryptoExplorer {
         if (!slider) return;
         this._syncPSlider();
         const setFromSlider = () => {
+            if (this._sliderSync) return;
             const t = parseInt(slider.value, 10);
             if (!Number.isFinite(t)) return;
-            if (this.view === 'domain') {
+            if (this.view === 'domain' && !this._kgOverlay) {
                 this.fieldPIndex = t;
                 this._syncPSlider();
                 this._redrawFieldGroupOp();
@@ -459,23 +486,69 @@ class BitcoinCryptoExplorer {
         slider.addEventListener('input', setFromSlider, { signal: this._ac.signal });
         slider.addEventListener('change', setFromSlider, { signal: this._ac.signal });
         slider.addEventListener('dblclick', () => {
-            if (this.view === 'domain') this.fieldPPlaying = true;
-            else this.familyPPlaying = true;
+            if (this.view === 'domain' && !this._kgOverlay) this.fieldPPlaying = true;
+            else if (this.view === 'family') this.familyPPlaying = true;
             this._syncPSlider();
         }, { signal: this._ac.signal });
         const rangeEl = document.getElementById('crypto-p-range');
         if (rangeEl) {
             rangeEl.style.cursor = 'pointer';
             rangeEl.addEventListener('click', () => {
-                if (this.view === 'domain') this.fieldPPlaying = !this.fieldPPlaying;
-                else this.familyPPlaying = !this.familyPPlaying;
+                if (this.view === 'domain' && !this._kgOverlay) this.fieldPPlaying = !this.fieldPPlaying;
+                else if (this.view === 'family') this.familyPPlaying = !this.familyPPlaying;
                 this._syncPSlider();
             }, { signal: this._ac.signal });
         }
     }
 
     _domainPSliderVisible() {
-        return this.view === 'domain' && !!this.groupOp && this._fieldOpP() != null;
+        return this.view === 'domain' && !this._kgOverlay && !!this.groupOp && this._fieldOpP() != null;
+    }
+
+    _lineSliderVisible() {
+        if (this._kgOverlay) return false;
+        if (!this.groupOp) return false;
+        return this.view === 'family' || this.view === 'domain';
+    }
+
+    _lineLenFactor() {
+        const t = Math.max(1, Math.min(1000, this.lineLen | 0));
+        return t / 50;
+    }
+
+    _setupLineSlider() {
+        const slider = document.getElementById('crypto-line-slider');
+        if (!slider) return;
+        this._syncLineSlider();
+        const apply = () => {
+            if (this._sliderSync) return;
+            const n = parseInt(slider.value, 10);
+            if (!Number.isFinite(n)) return;
+            this.lineLen = n;
+            this._syncLineSlider();
+            if (this.view === 'family') this._redrawFamilyOp({ quiet: true });
+            else if (this.view === 'domain' && !this._kgOverlay) this._redrawFieldGroupOp({ quiet: true });
+        };
+        slider.addEventListener('input', apply, { signal: this._ac.signal });
+        slider.addEventListener('change', apply, { signal: this._ac.signal });
+    }
+
+    _syncLineSlider() {
+        const slider = document.getElementById('crypto-line-slider');
+        const valueEl = document.getElementById('crypto-line-value');
+        const f = this._lineLenFactor();
+        if (valueEl) valueEl.textContent = f.toFixed(2) + '×';
+        if (!slider) return;
+        this._sliderSync++;
+        const min = parseFloat(slider.min);
+        const max = parseFloat(slider.max);
+        const minV = Number.isFinite(min) ? min : 1;
+        const maxV = Number.isFinite(max) ? max : 1000;
+        const n = Math.max(minV, Math.min(maxV, this.lineLen | 0));
+        const pct = maxV === minV ? 100 : ((n - minV) / (maxV - minV)) * 100;
+        slider.value = String(n);
+        slider.style.setProperty('--slider-pct', pct + '%');
+        requestAnimationFrame(() => { this._sliderSync = Math.max(0, this._sliderSync - 1); });
     }
 
     _fmtFieldCoord(n) {
@@ -583,7 +656,7 @@ class BitcoinCryptoExplorer {
         const slider = document.getElementById('crypto-p-slider');
         const valueEl = document.getElementById('crypto-p-value');
         const rangeEl = document.getElementById('crypto-p-range');
-        if (this.view === 'domain') {
+        if (this.view === 'domain' && !this._kgOverlay) {
             const pts = this._fieldOpPoints();
             this._ensureFieldPIndex(pts);
             const P = pts[this.fieldPIndex];
@@ -595,13 +668,16 @@ class BitcoinCryptoExplorer {
             }
             if (rangeEl) rangeEl.textContent = this.fieldPPlaying && !this._familyPDragging ? 'hold' : 'walk';
             if (!slider) return;
+            this._sliderSync++;
             const max = Math.max(0, pts.length - 1);
             slider.min = '0';
             slider.max = String(max);
             slider.value = String(this.fieldPIndex);
             slider.style.setProperty('--slider-pct', max === 0 ? '100%' : ((this.fieldPIndex / max) * 100) + '%');
+            requestAnimationFrame(() => { this._sliderSync = Math.max(0, this._sliderSync - 1); });
             return;
         }
+        this._sliderSync++;
         if (slider) {
             slider.min = '0';
             slider.max = '1000';
@@ -614,10 +690,14 @@ class BitcoinCryptoExplorer {
             valueEl.removeAttribute('title');
         }
         if (rangeEl) rangeEl.textContent = this.familyPPlaying && !this._familyPDragging ? 'hold' : 'walk';
-        if (!slider) return;
+        if (!slider) {
+            requestAnimationFrame(() => { this._sliderSync = Math.max(0, this._sliderSync - 1); });
+            return;
+        }
         const t = this._familySliderFromPX(this.familyPX);
         slider.value = String(t);
         slider.style.setProperty('--slider-pct', (t / 10) + '%');
+        requestAnimationFrame(() => { this._sliderSync = Math.max(0, this._sliderSync - 1); });
     }
 
     _syncSliceSlider() {
@@ -628,6 +708,7 @@ class BitcoinCryptoExplorer {
         if (valueEl) valueEl.textContent = String(r.n);
         if (rangeEl) rangeEl.textContent = this._formatZRange(r);
         if (!slider) return;
+        this._sliderSync++;
         const min = parseFloat(slider.min);
         const max = parseFloat(slider.max);
         const minV = Number.isFinite(min) ? min : 1;
@@ -635,6 +716,7 @@ class BitcoinCryptoExplorer {
         const pct = maxV === minV ? 100 : ((r.n - minV) / (maxV - minV)) * 100;
         slider.value = String(r.n);
         slider.style.setProperty('--slider-pct', pct + '%');
+        requestAnimationFrame(() => { this._sliderSync = Math.max(0, this._sliderSync - 1); });
     }
 
     _familyZRange() {
@@ -789,10 +871,64 @@ class BitcoinCryptoExplorer {
         }, { signal: this._ac.signal });
     }
 
+    _carryFamilyToField() {
+        const pts = this._fieldOpPoints();
+        if (!pts.length) return;
+        const p = this._fieldOpP();
+        const x = this.familyPX;
+        let want = null;
+        if (typeof p === 'number' && Number.isFinite(x)) want = ECC.mod(Math.round(x), p);
+        let best = 0;
+        let bestScore = Infinity;
+        for (let i = 0; i < pts.length; i++) {
+            const q = pts[i];
+            let dx;
+            if (want != null && typeof q.x === 'number') {
+                const d = Math.abs(q.x - want);
+                dx = Math.min(d, p - d);
+            } else {
+                const uWant = want != null && typeof p === 'number' ? want / p : 0.5;
+                dx = Math.abs(ECC.toUnit(q.x, p) - uWant);
+                dx = Math.min(dx, 1 - dx);
+            }
+            const upper = (typeof p === 'number' && typeof q.y === 'number')
+                ? q.y <= p / 2
+                : ECC.toUnit(q.y, p) <= 0.5;
+            const score = dx * 10 + (upper ? 0 : 1);
+            if (score < bestScore) {
+                bestScore = score;
+                best = i;
+            }
+        }
+        this.fieldPIndex = best;
+        this._fieldPBoundFor = p;
+    }
+
+    _carryFieldToFamily() {
+        const pts = this._fieldOpPoints();
+        if (!pts.length) return;
+        this._ensureFieldPIndex(pts);
+        const P = pts[this.fieldPIndex];
+        if (!P || P.inf) return;
+        const r = this._familyPRange();
+        let x;
+        if (typeof P.x === 'number' && Number.isFinite(P.x) && P.x <= r.hi + 4) x = P.x;
+        else x = r.lo + ECC.toUnit(P.x, this._fieldOpP()) * (r.hi - r.lo);
+        this.familyPX = Math.max(r.lo, Math.min(r.hi, x));
+    }
+
     setView(view) {
         const pinGroup = view === 'group';
+        if (view === 'scalar') {
+            view = 'domain';
+            this._kgOverlay = true;
+            this._pinGroupToy();
+        }
         if (pinGroup) view = 'domain';
         if (ECC.VIEWS.indexOf(view) < 0) return;
+        const prev = this.view;
+        if (prev === 'family' && view === 'domain') this._carryFamilyToField();
+        if (prev === 'domain' && view === 'family') this._carryFieldToFamily();
         this.view = view;
         if (pinGroup) {
             this.groupOp = this.groupOp || 'add';
@@ -800,14 +936,17 @@ class BitcoinCryptoExplorer {
         } else if (view !== 'domain') {
             this._unpinGroupToy();
             this.fieldPPlaying = false;
+            this._kgOverlay = false;
+            this.scalarPlaying = false;
         }
         this._pushViewUrl();
         this.rebuildView();
         this._syncVrMenu();
-        if (view === 'scalar' && !this._realKey) this._ensureDemoKey();
+        if (this._kgOverlay) this._ensureDemoKey();
     }
 
     stepDim(dir) {
+        if (this.view === 'family') return;
         const next = Math.max(0, Math.min(ECC.DIM_STEPS - 1, this.dimIndex + dir));
         if (dir > 0 && this._pendingUnglue != null) {
             this._pendingUnglue = null;
@@ -825,11 +964,8 @@ class BitcoinCryptoExplorer {
         this.dimIndex = next;
         this.morphing = true;
         this.morphElapsed = 0;
-        if (this.view === 'family') this.setView('domain');
-        else {
-            this.updatePanel();
-            this._syncVrMenu();
-        }
+        this.updatePanel();
+        this._syncVrMenu();
     }
 
     _startTorusSubdiv(to) {
@@ -855,7 +991,7 @@ class BitcoinCryptoExplorer {
     }
 
     stepPrime(dir) {
-        if (this.view === 'scalar') return;
+        if (this.view !== 'domain' || this._kgOverlay) return;
         const wasToy = this._groupToy;
         if (wasToy) this._unpinGroupToy();
         const next = Math.max(0, Math.min(ECC.PRIME_LADDER.length - 1, this.primeIndex + dir));
@@ -863,11 +999,8 @@ class BitcoinCryptoExplorer {
         this.primeIndex = next;
         this._fieldCache = null;
         this._opPtsCache = null;
-        if (this.view === 'family') this.setView('domain');
-        else {
-            this.rebuildView();
-            this._syncVrMenu();
-        }
+        this.rebuildView();
+        this._syncVrMenu();
     }
 
     _canLabelGroupOp() {
@@ -904,6 +1037,11 @@ class BitcoinCryptoExplorer {
     }
 
     setGroupOp(op) {
+        if (this._kgOverlay) {
+            this._kgOverlay = false;
+            this.scalarPlaying = false;
+            this._unpinGroupToy();
+        }
         this.groupOp = this.groupOp === op ? null : op;
         this.rebuildView();
         if (this.vrManager && this.vrManager.navMenu && this.vrManager.navMenu._refreshAllToggles) {
@@ -912,13 +1050,19 @@ class BitcoinCryptoExplorer {
     }
 
     toggleScalarPlay() {
-        if (this.view !== 'scalar') this.setView('scalar');
+        if (this.view !== 'domain') this.setView('domain');
+        const needBuild = !this._kgOverlay || !this._scalarHops;
+        this._kgOverlay = true;
+        this._pinGroupToy();
+        this.groupOp = null;
         const starting = !this.scalarPlaying;
         if (starting && this._realKey && this.scalarK === this._realKey.toyR) {
             this.scalarK = 1;
-            this._updateScalarHighlight();
         }
         this.scalarPlaying = starting;
+        if (needBuild) this.rebuildView();
+        else if (starting) this._updateScalarHighlight();
+        this._pushViewUrl();
         this._syncToolbar();
         if (this.vrManager && this.vrManager.navMenu && this.vrManager.navMenu._refreshAllToggles) {
             this.vrManager.navMenu._refreshAllToggles();
@@ -1088,7 +1232,11 @@ class BitcoinCryptoExplorer {
     }
 
     openSeedModal() {
-        if (this.view !== 'scalar') this.setView('scalar');
+        if (this.view !== 'domain') this.setView('domain');
+        this._kgOverlay = true;
+        this._pinGroupToy();
+        this.groupOp = null;
+        if (!this._scalarHops) this.rebuildView();
         const modal = document.getElementById('seed-modal');
         const input = document.getElementById('seed-input');
         const err = document.getElementById('seed-modal-error');
@@ -1168,14 +1316,16 @@ class BitcoinCryptoExplorer {
         };
         this.scalarPlaying = false;
         this.scalarK = this._realKey.toyR;
+        this._kgOverlay = true;
+        this._pinGroupToy();
         if (!opts.silent) this.closeSeedModal();
-        if (this.view === 'scalar') this.rebuildView();
-        else if (!opts.silent) this.setView('scalar');
-        else this.updatePanel();
+        if (this.view !== 'domain') this.setView('domain');
+        else this.rebuildView();
     }
 
     _pushViewUrl() {
-        const url = 'crypto.html?view=' + this.view;
+        const q = this._kgOverlay ? 'scalar' : this.view;
+        const url = 'curve.html?view=' + q;
         if (window.history && window.history.replaceState) {
             window.history.replaceState({}, '', url);
         }
@@ -1187,8 +1337,7 @@ class BitcoinCryptoExplorer {
         this.content = new THREE.Group();
         this.scene.add(this.content);
         if (this.view === 'family') this.buildFamily();
-        else if (this.view === 'domain') this.buildDomain();
-        else this.buildScalar();
+        else this.buildDomain();
         this.updatePanel();
     }
 
@@ -1430,10 +1579,15 @@ class BitcoinCryptoExplorer {
         const P = ops.P, Q = ops.Q;
         const op = this.groupOp;
 
+        const f = this._lineLenFactor();
+        const chordLen = 140 * f;
+        const reflLen = 120 * f;
+        const infY = 160 * Math.max(0.35, f);
+
         if (op === 'add') {
-            const chord = this._extendThrough(P, ops.Rp, 140);
+            const chord = this._extendThrough(P, ops.Rp, chordLen);
             this._addFamilyLine(chord.a, chord.b, this._tone('chord'));
-            const refl = this._extendThrough(ops.Rp, ops.R, 120);
+            const refl = this._extendThrough(ops.Rp, ops.R, reflLen);
             this._addFamilyLine(refl.a, refl.b, this._tone('reflect'));
             this._addFamilyPoint(P, this._tone('white'), 'P');
             this._addFamilyPoint(Q, this._tone('ptQ'), 'Q');
@@ -1446,9 +1600,9 @@ class BitcoinCryptoExplorer {
                 this.hudOp = '2P = 𝒪 (tangent vertical)';
             } else {
                 const t = { x: P.x + 1, y: P.y + ops.R2.lam };
-                const chord = this._extendThrough(P, t, 140);
+                const chord = this._extendThrough(P, t, chordLen);
                 this._addFamilyLine(chord.a, chord.b, this._tone('tangent'));
-                const refl = this._extendThrough(ops.R2p, ops.R2, 120);
+                const refl = this._extendThrough(ops.R2p, ops.R2, reflLen);
                 this._addFamilyLine(refl.a, refl.b, this._tone('reflect'));
                 this._addFamilyPoint(P, this._tone('white'), 'P');
                 this._addFamilyPoint(ops.R2p, this._tone('ptRp'), "R′");
@@ -1456,18 +1610,18 @@ class BitcoinCryptoExplorer {
                 this.hudOp = '2P = P ⊕ P on secp256k1 (z = 0)';
             }
         } else if (op === 'inverse') {
-            this._addFamilyLine({ x: P.x, y: 160 }, { x: P.x, y: -160 }, this._tone('chord'));
+            this._addFamilyLine({ x: P.x, y: infY }, { x: P.x, y: -infY }, this._tone('chord'));
             this._addFamilyPoint(P, this._tone('white'), 'P');
             this._addFamilyPoint(ops.nP, this._tone('ptQ'), '−P');
-            const inf = this._familyWorld(P.x, 160);
+            const inf = this._familyWorld(P.x, infY);
             const spr = this._makeLabelSprite('𝒪', 0xffffff);
             spr.position.set(inf.x, inf.y + 0.2, inf.z);
             this._opAdd(spr);
             this.hudOp = 'P ⊕ (−P) = 𝒪 on secp256k1 (z = 0)';
         } else {
-            const chord = this._extendThrough(P, ops.nQ, 140);
+            const chord = this._extendThrough(P, ops.nQ, chordLen);
             this._addFamilyLine(chord.a, chord.b, this._tone('chord'));
-            const refl = this._extendThrough(ops.Sp, ops.S, 120);
+            const refl = this._extendThrough(ops.Sp, ops.S, reflLen);
             this._addFamilyLine(refl.a, refl.b, this._tone('reflect'));
             this._addFamilyPoint(P, this._tone('white'), 'P');
             this._addFamilyPoint(Q, this._tone('muted'), 'Q');
@@ -1808,10 +1962,11 @@ class BitcoinCryptoExplorer {
         this._fieldOpRoot = new THREE.Group();
         this.content.add(this._fieldOpRoot);
         this._drawFieldGroupOp();
+        if (this._kgOverlay) this._buildKgOverlay();
     }
 
     _fieldOpP() {
-        if (this._groupToy || this.view === 'scalar') return 17;
+        if (this._groupToy || this._kgOverlay) return 17;
         const field = this._ensureField();
         if (field && field.p != null) return field.p;
         const entry = ECC.PRIME_LADDER[this.primeIndex];
@@ -1855,6 +2010,57 @@ class BitcoinCryptoExplorer {
         return spr;
     }
 
+    _foldChartUV(u, v, dirU, dirV, isEnd) {
+        const uInt = Math.abs(u - Math.round(u)) < 1e-8;
+        const vInt = Math.abs(v - Math.round(v)) < 1e-8;
+        let fu = u - Math.floor(u);
+        let fv = v - Math.floor(v);
+        if (fu < 0) fu += 1;
+        if (fv < 0) fv += 1;
+        if (fu >= 1) fu = 0;
+        if (fv >= 1) fv = 0;
+        if (uInt) fu = (isEnd ? dirU >= 0 : dirU < 0) ? 1 : 0;
+        if (vInt) fv = (isEnd ? dirV >= 0 : dirV < 0) ? 1 : 0;
+        return { u: fu, v: fv };
+    }
+
+    _chartCellSegments(u0, v0, u1, v1) {
+        const du = u1 - u0;
+        const dv = v1 - v0;
+        const dirU = du > 0 ? 1 : du < 0 ? -1 : 0;
+        const dirV = dv > 0 ? 1 : dv < 0 ? -1 : 0;
+        const eps = 1e-10;
+        const segs = [];
+        let t = 0;
+        let guard = 0;
+        while (t < 1 - eps && guard++ < 512) {
+            const u = u0 + t * du;
+            const v = v0 + t * dv;
+            let tNext = 1;
+            if (dirU) {
+                const nextInt = dirU > 0 ? Math.floor(u + eps) + 1 : Math.ceil(u - eps) - 1;
+                const tn = (nextInt - u0) / du;
+                if (tn > t + eps && tn < tNext) tNext = tn;
+            }
+            if (dirV) {
+                const nextInt = dirV > 0 ? Math.floor(v + eps) + 1 : Math.ceil(v - eps) - 1;
+                const tn = (nextInt - v0) / dv;
+                if (tn > t + eps && tn < tNext) tNext = tn;
+            }
+            if (tNext <= t + eps) tNext = Math.min(1, t + 0.02);
+            segs.push({
+                u0: u0 + t * du,
+                v0: v0 + t * dv,
+                u1: u0 + tNext * du,
+                v1: v0 + tNext * dv,
+                dirU: dirU,
+                dirV: dirV
+            });
+            t = tNext;
+        }
+        return segs;
+    }
+
     _addWrappedChord(P, Q, color, dest) {
         if (!P || !Q || P.inf || Q.inf) return;
         const fieldP = this._fieldOpP();
@@ -1866,61 +2072,34 @@ class BitcoinCryptoExplorer {
         const dv = v1 - v0;
         if (du === 0 && dv === 0) return;
         const span = Math.hypot(du, dv) || 1e-9;
-        const target = 3.6;
-        const axis = Math.abs(du) + Math.abs(dv) || span;
-        let extend = Math.max(0.2, (target / span - 1) / 2);
-        const maxExtend = Math.max(0.2, (5.5 / axis - 1) / 2);
-        if (extend > maxExtend) extend = maxExtend;
-        const s0u = u0 - du * extend;
-        const s0v = v0 - dv * extend;
-        const s1u = u1 + du * extend;
-        const s1v = v1 + dv * extend;
-        const steps = Math.max(160, Math.min(720, Math.ceil((1 + 2 * extend) * span * 80)));
+        const f = this._lineLenFactor();
+        const extra = Math.max(0, (Math.max(span, 3.6 * f) - span) / 2);
+        const ux = du / span, uy = dv / span;
+        const aU = u0 - ux * extra;
+        const aV = v0 - uy * extra;
+        const bU = u1 + ux * extra;
+        const bV = v1 + uy * extra;
         const col = new THREE.Color(color);
         const parent = (dest && dest.isObject3D) ? dest : (this._fieldOpRoot || this.content);
-        const fade = 0.045;
-        const alongAt = (t) => {
-            const edge = Math.min(t, 1 - t);
-            return edge >= fade ? 1 : Math.pow(edge / fade, 1.7);
-        };
-        const frac = (t) => t - Math.floor(t);
-        let buf = [];
-        let ts = [];
-        let prevU = null;
-        let prevV = null;
-        const flush = () => {
-            const n = buf.length;
-            if (n < 2) {
-                buf = [];
-                ts = [];
-                return;
+        const tMorph = this.morphT;
+        const segs = this._chartCellSegments(aU, aV, bU, bV);
+        for (let s = 0; s < segs.length; s++) {
+            const seg = segs[s];
+            const a = this._foldChartUV(seg.u0, seg.v0, seg.dirU, seg.dirV, false);
+            const b = this._foldChartUV(seg.u1, seg.v1, seg.dirU, seg.dirV, true);
+            const dist = Math.hypot(b.u - a.u, b.v - a.v);
+            const steps = Math.max(12, Math.min(96, Math.ceil(dist * 80)));
+            const pts = [];
+            for (let i = 0; i <= steps; i++) {
+                const k = i / steps;
+                const u = a.u + (b.u - a.u) * k;
+                const v = a.v + (b.v - a.v) * k;
+                pts.push(this._v3(ECC.sampleDomain(u, v, tMorph)));
             }
-            const colors = new Float32Array(n * 3);
-            for (let k = 0; k < n; k++) {
-                const along = alongAt(ts[k]);
-                colors[k * 3] = col.r * along;
-                colors[k * 3 + 1] = col.g * along;
-                colors[k * 3 + 2] = col.b * along;
-            }
-            const g = new THREE.BufferGeometry().setFromPoints(buf);
-            g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-            parent.add(new THREE.Line(g, this._matLine(0xffffff, 1, { vertexColors: true })));
-            buf = [];
-            ts = [];
-        };
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-            const u = frac(s0u + (s1u - s0u) * t);
-            const v = frac(s0v + (s1v - s0v) * t);
-            if (prevU != null && (Math.abs(u - prevU) > 0.45 || Math.abs(v - prevV) > 0.45)) {
-                flush();
-            }
-            buf.push(this._v3(ECC.sampleDomain(u, v, this.morphT)));
-            ts.push(t);
-            prevU = u;
-            prevV = v;
+            if (pts.length < 2) continue;
+            const g = new THREE.BufferGeometry().setFromPoints(pts);
+            parent.add(new THREE.Line(g, this._matLine(col, 1)));
         }
-        flush();
     }
 
     _addVerticalToInfinity(P) {
@@ -2098,6 +2277,27 @@ class BitcoinCryptoExplorer {
         this._updateScalarHighlight();
     }
 
+    _buildKgOverlay() {
+        const G = ECC.F17.G;
+        const order = ECC.F17.order;
+        const hops = ECC.multiplesOf(G, 17, order);
+        this._scalarHops = hops;
+        this._scalarTrail = [];
+        this._addScalarHopMarkers(hops);
+        this._scalarHopGroup = new THREE.Group();
+        this.content.add(this._scalarHopGroup);
+        this._scalarHighlight = new THREE.Mesh(
+            new THREE.SphereGeometry(0.055, 14, 12),
+            new THREE.MeshBasicMaterial({ color: this._tone('hopActive') })
+        );
+        this._trackZoomDot(this._scalarHighlight);
+        this.content.add(this._scalarHighlight);
+        this._scalarLabel = this._makeLabelSprite('G', this._tone('hopActive'));
+        this.content.add(this._scalarLabel);
+        if (this._realKey && this._realKey.toyR) this.scalarK = this._realKey.toyR;
+        this._updateScalarHighlight();
+    }
+
     _setScalarLabel(text) {
         const canvas = this._scalarLabel.material.map.image;
         const ctx = canvas.getContext('2d');
@@ -2186,7 +2386,7 @@ class BitcoinCryptoExplorer {
             const r = this._familyZRange();
             return r.n + (r.n === 1 ? ' curve ' : ' curves ') + this._formatZRange(r);
         }
-        if (this.view === 'scalar') {
+        if (this._kgOverlay) {
             const toy = this._ensureToyField();
             return toy.count + ' hops on 𝔽₁₇';
         }
@@ -2205,7 +2405,7 @@ class BitcoinCryptoExplorer {
 
     _curveTotalLabel() {
         if (this.view === 'family') return 'ℝ curves, not 𝔽_p';
-        if (this.view === 'scalar' && this._realKey) return '~' + ECC.formatPow2(256);
+        if (this._kgOverlay && this._realKey) return '~' + ECC.formatPow2(256);
         const field = this.view === 'domain' ? this._domainDrawField() : this._ensureField();
         const bits = field.bits || (ECC.PRIME_LADDER[this.primeIndex] && ECC.PRIME_LADDER[this.primeIndex].bits);
         if (field.exact && field.total != null) {
@@ -2220,15 +2420,15 @@ class BitcoinCryptoExplorer {
             const el = document.getElementById(id);
             if (el) el.textContent = v;
         };
-        const names = { family: 'Family', domain: 'Domain', scalar: 'Scalar' };
-        const entry = (this.view === 'scalar' && this._realKey)
+        const names = { family: 'Family', domain: this._kgOverlay ? 'Domain · kG' : 'Domain' };
+        const entry = (this._kgOverlay && this._realKey)
             ? ECC.PRIME_LADDER[ECC.PRIME_LADDER.length - 1]
             : ECC.PRIME_LADDER[this.primeIndex];
         const scale = ECC.fieldScale(entry);
         set('crypto-view-label', names[this.view] || this.view);
         set('crypto-dim-label', this._domainLabel());
-        set('crypto-prime-label', this.view === 'scalar'
-            ? (this._realKey ? '256-bit secp256k1' : '𝔽₁₇ (kG toy)')
+        set('crypto-prime-label', this._kgOverlay
+            ? (this._realKey ? '256-bit secp256k1  ·  hops on 𝔽₁₇' : '𝔽₁₇ (kG toy)')
             : (this._groupToy ? '𝔽₁₇ (labels)' : (entry.bits ? entry.bits + '-bit ' : '') + entry.label));
         set('crypto-point-count', this._pointCountLabel());
         set('crypto-curve-total', this._curveTotalLabel());
@@ -2241,7 +2441,7 @@ class BitcoinCryptoExplorer {
         const pathRow = document.getElementById('crypto-path-row');
         const kRow = document.getElementById('crypto-k-row');
         const qRow = document.getElementById('crypto-q-row');
-        const showKey = this.view === 'scalar' && key;
+        const showKey = this._kgOverlay && key;
         if (seedRow) seedRow.hidden = !(showKey && key.mnemonic);
         if (pathRow) pathRow.hidden = !(showKey && key.path);
         if (kRow) kRow.hidden = !showKey;
@@ -2256,7 +2456,11 @@ class BitcoinCryptoExplorer {
             if (kEl) kEl.setAttribute('title', key.kHex);
             if (qEl) qEl.setAttribute('title', key.pubHex);
         }
-        set('crypto-subtitle', this.view === 'scalar' ? 'kG  ·  toy r ≡ k (mod n₁₇)' : 'y² = x³ + 7');
+        set('crypto-subtitle', this.view === 'family'
+            ? 'y² = x³ + 7'
+            : (this._kgOverlay
+                ? 'kG  ·  toy r ≡ k (mod n₁₇)'
+                : 'z = 0 over ' + ((entry && entry.label) || '𝔽_p')));
         const play = document.getElementById('scalar-play');
         if (play) play.textContent = this.scalarPlaying ? 'Pause kG' : 'Play kG';
         this._syncToolbar();
@@ -2372,7 +2576,7 @@ class BitcoinCryptoExplorer {
                 this._redrawFamilyOp({ quiet: true });
             }
         }
-        if (this.view === 'scalar' && this.scalarPlaying && this._scalarHops) {
+        if (this._kgOverlay && this.scalarPlaying && this._scalarHops) {
             this.scalarTimer += dt;
             if (this.scalarTimer > 0.48) {
                 this.scalarTimer = 0;
@@ -2394,9 +2598,102 @@ class BitcoinCryptoExplorer {
 
     onWindowResize() {
         if (this.renderer && this.renderer.xr && this.renderer.xr.isPresenting) return;
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this._updateCameraProjection();
+    }
+
+    _updateCameraProjection() {
+        if (!this.camera) return;
+        const aspect = window.innerWidth / window.innerHeight;
+        if (this.isPerspective && this.camera.isPerspectiveCamera) {
+            this.camera.aspect = aspect;
+            this.camera.updateProjectionMatrix();
+            return;
+        }
+        if (!this.isPerspective && this.camera.isOrthographicCamera) {
+            const z = this.orthographicZoom;
+            this.camera.left = -z * aspect / 2;
+            this.camera.right = z * aspect / 2;
+            this.camera.top = z / 2;
+            this.camera.bottom = -z / 2;
+            this.camera.updateProjectionMatrix();
+        }
+    }
+
+    _adoptCamera(cam) {
+        this.camera = cam;
+        if (this._shell) this._shell.camera = cam;
+        if (this.vrManager) this.vrManager.camera = cam;
+    }
+
+    _setPerspectiveCamera(keepPose) {
+        const aspect = window.innerWidth / window.innerHeight;
+        const pos = keepPose && this.camera ? this.camera.position.clone() : null;
+        const cam = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
+        if (pos) cam.position.copy(pos);
+        this.isPerspective = true;
+        this._adoptCamera(cam);
+        if (this.controls) {
+            cam.lookAt(this.controls.target);
+            this.controls.update();
+        }
+        this._updateViewButton();
+    }
+
+    toggleCameraView() {
+        if (this.renderer && this.renderer.xr && this.renderer.xr.isPresenting) return;
+        const aspect = window.innerWidth / window.innerHeight;
+        const pos = this.camera.position.clone();
+        const target = this.controls ? this.controls.target.clone() : new THREE.Vector3();
+        if (this.isPerspective) {
+            this.orthographicZoom = Math.max(0.8, this.controls ? this.controls.distance * 0.95 : 12);
+            const z = this.orthographicZoom;
+            const cam = new THREE.OrthographicCamera(
+                -z * aspect / 2, z * aspect / 2, z / 2, -z / 2, 0.1, 1000
+            );
+            cam.position.copy(pos);
+            this.isPerspective = false;
+            this._adoptCamera(cam);
+        } else {
+            const cam = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
+            cam.position.copy(pos);
+            this.isPerspective = true;
+            this._adoptCamera(cam);
+        }
+        if (this.controls) {
+            this.controls.target.copy(target);
+            this.camera.lookAt(this.controls.target);
+            this.controls.update();
+        }
+        this._updateViewButton();
+        this._applyDotZoom();
+    }
+
+    _updateViewButton() {
+        const btn = document.getElementById('toggle-view');
+        if (!btn) return;
+        const icon = document.getElementById('toggle-view-icon');
+        if (this.isPerspective) {
+            if (icon) icon.src = 'imgs/icons/orthographic.svg';
+            btn.title = 'Switch to orthographic';
+            btn.setAttribute('aria-label', 'Orthographic view');
+        } else {
+            if (icon) icon.src = 'imgs/icons/perspective.svg';
+            btn.title = 'Switch to perspective';
+            btn.setAttribute('aria-label', 'Perspective view');
+        }
+    }
+
+    _zoomBy(f) {
+        this.controls.distance *= f;
+        this.controls.distance = Math.max(0.6, Math.min(80, this.controls.distance));
+        if (!this.isPerspective) {
+            this.orthographicZoom *= f;
+            this.orthographicZoom = Math.max(0.8, Math.min(80, this.orthographicZoom));
+            this._updateCameraProjection();
+        }
+        this.controls.update();
+        this._applyDotZoom();
     }
 
     resetCamera() {
@@ -2407,6 +2704,10 @@ class BitcoinCryptoExplorer {
         this.controls.phi = Math.PI / 2;
         this.controls.theta = Math.PI / 2;
         this.controls.distance = this.view === 'family' ? 42 : 8;
+        if (!this.isPerspective) {
+            this.orthographicZoom = this.controls.distance * 0.95;
+            this._updateCameraProjection();
+        }
         this.controls.update();
         this._applyDotZoom();
     }
@@ -2442,16 +2743,17 @@ class BitcoinCryptoExplorer {
         this.controls.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.controls.phi));
         this.controls.update();
     }
-    zoomIn() { this.controls.distance *= 0.85; this.controls.distance = Math.max(0.6, this.controls.distance); this.controls.update(); this._applyDotZoom(); }
-    zoomOut() { this.controls.distance *= 1.15; this.controls.distance = Math.min(80, this.controls.distance); this.controls.update(); this._applyDotZoom(); }
+    zoomIn() { this._zoomBy(0.85); }
+    zoomOut() { this._zoomBy(1.15); }
 }
 
 window.ExplorerPages = window.ExplorerPages || {};
-window.ExplorerPages['crypto.html'] = {
+window.ExplorerPages['curve.html'] = {
     panelTitle: 'Curve',
     panelDomId: 'crypto-info',
     create: function (opts) { return new BitcoinCryptoExplorer(opts); }
 };
+window.ExplorerPages['crypto.html'] = window.ExplorerPages['curve.html'];
 
 document.addEventListener('DOMContentLoaded', () => {
     if (window.__softNav) return;

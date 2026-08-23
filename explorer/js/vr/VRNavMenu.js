@@ -20,7 +20,7 @@
         { name: 'TRANSACTION', file: 'transaction.html', img: 'imgs/transaction.png' },
         { name: 'ADDRESS',     file: 'address.html',     img: 'imgs/address.png'     },
         { name: 'MEMPOOL',     file: 'mempool.html',     img: 'imgs/mempool.png'     },
-        { name: 'CURVE',       file: 'crypto.html',       img: 'imgs/crypto.png'      },
+        { name: 'CURVE',       file: 'curve.html',       img: 'imgs/crypto.png'      },
         { name: 'SCRIPT',      file: 'script.html',       img: 'imgs/script.png'      },
     ];
 
@@ -153,6 +153,7 @@
     /** Page-specific controls under the global HUD / Info / Rotation row. */
     function getPageActionDefs(vrManager) {
         var page = currentPageFile();
+        if (page === 'crypto.html') page = 'curve.html';
         var click = function (id) {
             return function (mesh) {
                 clickDomButton(id);
@@ -343,7 +344,7 @@
                     onSelect: click('load-more-transactions')
                 }
             ],
-            'crypto.html': (function () {
+            'curve.html': (function () {
                 var view = function () {
                     var ex = vrManager && vrManager.explorer;
                     return ex && ex.view ? ex.view : 'family';
@@ -352,6 +353,10 @@
                 var op = function () {
                     var e = ex();
                     return e ? e.groupOp : 'add';
+                };
+                var kg = function () {
+                    var e = ex();
+                    return !!(e && e._kgOverlay);
                 };
                 var all = [
                     {
@@ -379,78 +384,72 @@
                         onSelect: click('view-domain')
                     },
                     {
-                        label: 'SCL',
-                        kind: 'toggle',
-                        getState: function () { return view() === 'scalar'; },
-                        onSelect: click('view-scalar')
-                    },
-                    {
                         label: 'GLUE−',
                         kind: 'action',
-                        when: function () { return view() === 'domain'; },
+                        when: function () { return view() === 'domain' && !kg(); },
                         getState: function () { return false; },
                         onSelect: click('dim-prev')
                     },
                     {
                         label: 'GLUE+',
                         kind: 'action',
-                        when: function () { return view() === 'domain'; },
+                        when: function () { return view() === 'domain' && !kg(); },
                         getState: function () { return false; },
                         onSelect: click('dim-next')
                     },
                     {
                         label: 'FIELD−',
                         kind: 'action',
-                        when: function () { return view() === 'domain'; },
+                        when: function () { return view() === 'domain' && !kg(); },
                         getState: function () { return false; },
                         onSelect: click('prime-prev')
                     },
                     {
                         label: 'FIELD+',
                         kind: 'action',
-                        when: function () { return view() === 'domain'; },
+                        when: function () { return view() === 'domain' && !kg(); },
                         getState: function () { return false; },
                         onSelect: click('prime-next')
                     },
                     {
                         label: '+',
                         kind: 'toggle',
-                        when: function () { return view() === 'family' || view() === 'domain'; },
+                        when: function () { return view() === 'family' || (view() === 'domain' && !kg()); },
                         getState: function () { return op() === 'add'; },
                         onSelect: click('op-add')
                     },
                     {
                         label: '2P',
                         kind: 'toggle',
-                        when: function () { return view() === 'family' || view() === 'domain'; },
+                        when: function () { return view() === 'family' || (view() === 'domain' && !kg()); },
                         getState: function () { return op() === 'double'; },
                         onSelect: click('op-double')
                     },
                     {
                         label: '−P',
                         kind: 'toggle',
-                        when: function () { return view() === 'family' || view() === 'domain'; },
+                        when: function () { return view() === 'family' || (view() === 'domain' && !kg()); },
                         getState: function () { return op() === 'inverse'; },
                         onSelect: click('op-inverse')
                     },
                     {
                         label: 'P−Q',
                         kind: 'toggle',
-                        when: function () { return view() === 'family' || view() === 'domain'; },
+                        when: function () { return view() === 'family' || (view() === 'domain' && !kg()); },
                         getState: function () { return op() === 'sub'; },
                         onSelect: click('op-sub')
                     },
                     {
                         label: 'PLAY KG',
                         kind: 'toggle',
-                        when: function () { return view() === 'scalar'; },
+                        when: function () { return view() === 'domain'; },
                         getState: function () { return explorerProp(vrManager, 'scalarPlaying'); },
                         onSelect: click('scalar-play')
                     },
                     {
                         label: 'LOAD SEED',
                         kind: 'action',
-                        when: function () { return view() === 'scalar'; },
+                        when: function () { return view() === 'domain'; },
                         getState: function () { return false; },
                         onSelect: click('scalar-load-seed')
                     }

@@ -50,7 +50,7 @@
         'Torus'
     ];
 
-    var VIEWS = ['family', 'domain', 'scalar'];
+    var VIEWS = ['family', 'domain'];
 
     function mod(n, p) {
         if (typeof p === 'bigint' || typeof n === 'bigint' || (typeof p === 'number' && p > 100000)) {

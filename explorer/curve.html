@@ -31,7 +31,7 @@
                         <li><a href="transaction.html" class="nav-link">Transaction</a></li>
                         <li><a href="address.html" class="nav-link">Address</a></li>
                         <li><a href="mempool.html" class="nav-link">Mempool</a></li>
-                        <li><a href="crypto.html" class="nav-link active">Curve</a></li>
+                        <li><a href="curve.html" class="nav-link active">Curve</a></li>
                         <li><a href="script.html" class="nav-link">Script</a></li>
                     </ul>
                 </li>
@@ -53,8 +53,8 @@
                         <button id="toggle-panel" class="panel-toggle" title="Minimize" aria-label="Minimize panel"><img class="panel-toggle-icon" src="imgs/icons/chevron-up.svg" alt=""></button>
                     </div>
                     <div id="crypto-info" class="panel-content">
-                        <div data-tip="Which lesson layer is on screen: family of curves, glued domain, or scalar hops.">View: <span id="crypto-view-label">Family</span></div>
-                        <div data-tip="Family is the real affine plane. Domain / Scalar show the finite-field square after glue: Cartesian, cylinder, or torus.">Domain: <span id="crypto-dim-label">Cartesian</span></div>
+                        <div data-tip="Which lesson layer is on screen: family of real curves, or the z = 0 chart over 𝔽_p (glue / kG).">View: <span id="crypto-view-label">Family</span></div>
+                        <div data-tip="Family is the real affine plane. Domain is that same z = 0 Weierstrass chart over 𝔽_p, then glued: Cartesian, cylinder, or torus.">Domain: <span id="crypto-dim-label">Cartesian</span></div>
                         <div data-tip="Prime field 𝔽_p. Bitcoin’s secp256k1 prime is 256-bit. PRIME± doubles bit length: 2, 4, 8, …, 256. Drawn dots cap out; the field size does not.">Field: <span id="crypto-prime-label">𝔽₃</span></div>
                         <div data-tip="How many points the curve really has over this 𝔽_p (Hasse: about p). Goes all the way to ~2²⁵⁶ for secp256k1 — far beyond what we can plot.">On curve: <span id="crypto-curve-total">—</span></div>
                         <div data-tip="Size of the search space if a secret were a uniform n-bit string (same order as the field). A Bitcoin private key is 256-bit entropy.">Entropy: <span id="crypto-entropy">—</span></div>
@@ -84,6 +84,13 @@
                             <input type="range" id="crypto-p-slider" class="panel-range"
                                    min="0" max="1000" value="250" aria-label="Point P along the curve">
                         </div>
+                        <div class="panel-slider" id="crypto-line-row" hidden data-tip="How far the group-law chord or tangent is drawn past P and Q. Same control on Family (real plane) and Domain (wrapping geodesic).">
+                            <div class="panel-slider-label">
+                                Line <span id="crypto-line-value">1.00×</span>
+                            </div>
+                            <input type="range" id="crypto-line-slider" class="panel-range"
+                                   min="1" max="1000" value="50" aria-label="Group-law line length">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -91,12 +98,11 @@
             <div class="controls">
                 <div id="controls-camera-root" class="controls-camera"></div>
                 <div class="controls-main">
-                    <button id="vr-button" data-tip="Enter a headset session. The curve stays in front of you; wrist menu FAM / DOM / SCL, Glue, and Field change the lesson without leaving VR.">VR</button>
+                    <button id="vr-button" data-tip="Enter a headset session. The curve stays in front of you; wrist menu FAM / DOM, Glue, Field, and Play kG change the lesson without leaving VR.">VR</button>
                     <button id="ar-button" data-tip="Mixed reality: the same model on your table. Scale is tighter so the torus fits in passthrough space.">MR</button>
                     <span class="controls-cluster" id="crypto-cluster-views">
-                    <button id="view-family" data-tip="Weierstrass family y² = x³ + (7+z). Each curve is one member; z = 0 (highlighted) is secp256k1, the chart Bitcoin actually uses.">Family</button>
-                    <button id="view-domain" data-tip="Finite-field square for 𝔽_p. Glue opposite edges and the square becomes a torus — that identification is what “mod p” means geometrically. + / 2P / −P / P−Q draw the group law on this field; drag P to move the chord.">Domain</button>
-                    <button id="view-scalar" data-tip="How Q = kG works: add G, repeatedly. The torus is 𝔽₁₇, so a real 256-bit k is shown as r ≡ k (mod n₁₇). The 33-byte Q lives only in the panel.">Scalar</button>
+                    <button id="view-family" data-tip="Weierstrass family y² = x³ + (7+z). Each curve is one member; z = 0 (highlighted) is secp256k1, the chart Bitcoin actually uses. Domain is this slice over 𝔽_p.">Family</button>
+                    <button id="view-domain" data-tip="The z = 0 chart over 𝔽_p. Glue opposite edges and the square becomes a torus — that identification is what “mod p” means geometrically. Play kG walks multiples of G (seed search). Click Domain again to leave kG.">Domain</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-glue">
                     <button id="dim-prev" data-tip="Undo one glue step. Torus → cylinder (one pair of edges identified) → flat Cartesian square.">Glue−</button>
@@ -113,12 +119,12 @@
                     <button id="op-sub" data-tip="Subtraction is addition of the inverse: P − Q = P ⊕ (−Q). −Q is Q flipped across the midline, then add as usual.">P−Q</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-play">
-                    <button id="scalar-play" data-tip="Walk +G on the 𝔽₁₇ toy until r ≡ k (mod n₁₇). Same group law as Domain. That residue is not the Bitcoin public key — Q stays in the panel.">Play kG</button>
+                    <button id="scalar-play" data-tip="Walk +G on the 𝔽₁₇ toy until r ≡ k (mod n₁₇). This is how iterating seeds works: hop count, not sliding P. That residue is not the Bitcoin public key — Q stays in the panel.">Play kG</button>
                     <button id="scalar-load-seed" data-tip="Derive a real key from BIP39 words (index 0), hex k, or a 64-byte BIP32 seed. Computes Q = kG on secp256k1. The torus only marks r ≡ k (mod n₁₇).">Load seed</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap">
                     <button id="toggle-color" data-tip="Color uses cyan (edge a / latitude), red (edge b / longitude), and orange (negation midline). Grey is white and tones of grey only.">Color</button>
-                    <button id="toggle-grid" data-tip="Show or hide the chart grid: Cartesian paper behind the Weierstrass family, and the glued 𝔽_p square (flat through torus) on Domain and Scalar.">Grid</button>
+                    <button id="toggle-grid" data-tip="Show or hide the chart grid: Cartesian paper behind the Weierstrass family, and the glued 𝔽_p square (flat through torus) on Domain.">Grid</button>
                     </span>
                 </div>
             </div>

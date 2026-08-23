@@ -922,6 +922,17 @@ body:not(.homepage) {
     margin: 0 2px;
 }
 
+#crypto-p-row .panel-slider-label {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+#crypto-p-row .panel-slider-sep,
+#crypto-line-row .panel-slider-sep {
+    margin-left: auto;
+}
+
 .panel-range {
     -webkit-appearance: none;
     appearance: none;
