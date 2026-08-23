@@ -397,6 +397,24 @@ body > .navbar .nav-dropdown-panel {
     z-index: 1500;
 }
 
+/* Soft top fade so white nav + title stay readable over bright 3D meshes */
+#ui::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 220px;
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.55) 0%,
+        rgba(0, 0, 0, 0.28) 42%,
+        rgba(0, 0, 0, 0) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
 /* Hero Section */
 .hero-section {
     position: relative;
@@ -495,6 +513,8 @@ body > .navbar .nav-dropdown-panel {
 
 /* Headers */
 .header {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
