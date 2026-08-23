@@ -445,13 +445,6 @@
                         when: function () { return view() === 'domain'; },
                         getState: function () { return explorerProp(vrManager, 'scalarPlaying'); },
                         onSelect: click('scalar-play')
-                    },
-                    {
-                        label: 'LOAD SEED',
-                        kind: 'action',
-                        when: function () { return view() === 'domain'; },
-                        getState: function () { return false; },
-                        onSelect: click('scalar-load-seed')
                     }
                 ];
                 return all.filter(function (def) {

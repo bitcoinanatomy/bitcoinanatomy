@@ -1,9 +1,4 @@
 // Bitcoin Explorer — secp256k1 curve lesson (family / domain; kG overlay)
-const CRYPTO_DEMO_MNEMONIC = 'crush miracle lawsuit inspire bomb into assist album surface will fuel control';
-const CRYPTO_DEMO_PATH = "m/84'/0'/0'/0/0";
-const SECP256K1_N = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141');
-const BIP32_HARDENED = 0x80000000;
-
 class BitcoinCryptoExplorer {
     constructor(opts) {
         opts = opts || {};
@@ -63,7 +58,6 @@ class BitcoinCryptoExplorer {
         this.showGrid = true;
         this.drawCap = (window.ECC && ECC.INSTANCE_CAP) || 192000;
         this._primeNextTimer = null;
-        this._realKey = null;
 
         this._fieldCache = null;
         this._opPtsCache = null;
@@ -103,7 +97,6 @@ class BitcoinCryptoExplorer {
         this.setupPanelToggle();
         this.setupExplainers();
         this.rebuildView();
-        if (this._kgOverlay) this._ensureDemoKey();
         this.renderer.setAnimationLoop(() => this.animate());
     }
 
@@ -323,7 +316,6 @@ class BitcoinCryptoExplorer {
         this._bind('op-inverse', () => this.setGroupOp('inverse'));
         this._bind('op-sub', () => this.setGroupOp('sub'));
         this._bind('scalar-play', () => this.toggleScalarPlay());
-        this._bind('scalar-load-seed', () => this.openSeedModal());
         this._bind('toggle-color', () => this.toggleColor());
         this._bind('toggle-grid', () => this.toggleGrid());
         this._bind('toggle-rotation', () => {
@@ -342,7 +334,6 @@ class BitcoinCryptoExplorer {
         this._bind('pan-down', () => this.panBy(0, -1));
         this._bind('zoom-in', () => this.zoomIn());
         this._bind('zoom-out', () => this.zoomOut());
-        this._setupSeedModal();
         this._setupSliceSlider();
         this._setupPSlider();
         this._setupLineSlider();
@@ -942,7 +933,6 @@ class BitcoinCryptoExplorer {
         this._pushViewUrl();
         this.rebuildView();
         this._syncVrMenu();
-        if (this._kgOverlay) this._ensureDemoKey();
     }
 
     stepDim(dir) {
@@ -1056,9 +1046,6 @@ class BitcoinCryptoExplorer {
         this._pinGroupToy();
         this.groupOp = null;
         const starting = !this.scalarPlaying;
-        if (starting && this._realKey && this.scalarK === this._realKey.toyR) {
-            this.scalarK = 1;
-        }
         this.scalarPlaying = starting;
         if (needBuild) this.rebuildView();
         else if (starting) this._updateScalarHighlight();
@@ -1067,260 +1054,6 @@ class BitcoinCryptoExplorer {
         if (this.vrManager && this.vrManager.navMenu && this.vrManager.navMenu._refreshAllToggles) {
             this.vrManager.navMenu._refreshAllToggles();
         }
-    }
-
-    _hexToBytes(hex) {
-        const h = hex.replace(/^0x/i, '');
-        if (h.length % 2) return null;
-        const out = new Uint8Array(h.length / 2);
-        for (let i = 0; i < out.length; i++) {
-            const n = parseInt(h.slice(i * 2, i * 2 + 2), 16);
-            if (Number.isNaN(n)) return null;
-            out[i] = n;
-        }
-        return out;
-    }
-
-    _bytesToHex(bytes) {
-        let s = '';
-        for (let i = 0; i < bytes.length; i++) s += bytes[i].toString(16).padStart(2, '0');
-        return s;
-    }
-
-    _shortHex(hex, head, tail) {
-        if (!hex || hex.length <= head + tail) return hex;
-        return hex.slice(0, head) + '…' + hex.slice(-tail);
-    }
-
-    async _hmacSha512(keyBytes, msgBytes) {
-        const key = await crypto.subtle.importKey(
-            'raw',
-            keyBytes,
-            { name: 'HMAC', hash: 'SHA-512' },
-            false,
-            ['sign']
-        );
-        const sig = await crypto.subtle.sign('HMAC', key, msgBytes);
-        return new Uint8Array(sig);
-    }
-
-    _concatBytes() {
-        let n = 0;
-        let i;
-        for (i = 0; i < arguments.length; i++) n += arguments[i].length;
-        const out = new Uint8Array(n);
-        let o = 0;
-        for (i = 0; i < arguments.length; i++) {
-            out.set(arguments[i], o);
-            o += arguments[i].length;
-        }
-        return out;
-    }
-
-    _ser32(n) {
-        const b = new Uint8Array(4);
-        new DataView(b.buffer).setUint32(0, n >>> 0);
-        return b;
-    }
-
-    _bigintTo32(n) {
-        let hex = n.toString(16);
-        if (hex.length > 64) throw new Error('Integer does not fit in 32 bytes.');
-        return this._hexToBytes(hex.padStart(64, '0'));
-    }
-
-    _parseBip32Path(path) {
-        const raw = String(path || '').trim();
-        if (!raw || raw === 'm') return [];
-        const body = raw.replace(/^m\/?/i, '');
-        if (!body) return [];
-        return body.split('/').map((part) => {
-            const hard = /['hH]$/.test(part);
-            const num = parseInt(hard ? part.slice(0, -1) : part, 10);
-            if (!Number.isFinite(num) || num < 0) throw new Error('Bad BIP32 path: ' + path);
-            return hard ? (num + BIP32_HARDENED) >>> 0 : num >>> 0;
-        });
-    }
-
-    _mnemonicPhrase(text) {
-        const words = String(text || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
-        const n = words.length;
-        if (n === 12 || n === 15 || n === 18 || n === 21 || n === 24) return words.join(' ');
-        return null;
-    }
-
-    async _mnemonicToSeed(mnemonic, passphrase) {
-        const enc = new TextEncoder();
-        const pw = enc.encode(mnemonic.normalize('NFKD'));
-        const salt = enc.encode(('mnemonic' + (passphrase || '')).normalize('NFKD'));
-        const key = await crypto.subtle.importKey('raw', pw, 'PBKDF2', false, ['deriveBits']);
-        const bits = await crypto.subtle.deriveBits({
-            name: 'PBKDF2',
-            hash: 'SHA-512',
-            salt: salt,
-            iterations: 2048
-        }, key, 512);
-        return new Uint8Array(bits);
-    }
-
-    async _bip32Master(seed) {
-        const I = await this._hmacSha512(new TextEncoder().encode('Bitcoin seed'), seed);
-        return { key: I.slice(0, 32), chain: I.slice(32) };
-    }
-
-    async _ckdPriv(parent, index) {
-        const secp = window.nobleSecp;
-        const hardened = index >= BIP32_HARDENED;
-        const data = hardened
-            ? this._concatBytes(new Uint8Array([0]), parent.key, this._ser32(index))
-            : this._concatBytes(secp.getPublicKey(parent.key, true), this._ser32(index));
-        const I = await this._hmacSha512(parent.chain, data);
-        const il = I.slice(0, 32);
-        const ir = I.slice(32);
-        const ilN = BigInt('0x' + this._bytesToHex(il));
-        if (ilN >= SECP256K1_N || ilN === 0n) throw new Error('BIP32 child IL is not a valid key.');
-        const ki = (ilN + BigInt('0x' + this._bytesToHex(parent.key))) % SECP256K1_N;
-        if (ki === 0n) throw new Error('BIP32 child key is zero.');
-        return { key: this._bigintTo32(ki), chain: ir };
-    }
-
-    async _derivePath(master, path) {
-        const idx = this._parseBip32Path(path);
-        let node = master;
-        for (let i = 0; i < idx.length; i++) node = await this._ckdPriv(node, idx[i]);
-        return node;
-    }
-
-    async _seedToPriv(text) {
-        const t = (text || '').trim();
-        if (!t) throw new Error('Paste seed words, a key, or a hex seed.');
-        const mnemonic = this._mnemonicPhrase(t);
-        if (mnemonic) {
-            const seed = await this._mnemonicToSeed(mnemonic, '');
-            const master = await this._bip32Master(seed);
-            const child = await this._derivePath(master, CRYPTO_DEMO_PATH);
-            return {
-                priv: child.key,
-                source: 'BIP39 index 0',
-                mnemonic: mnemonic,
-                path: CRYPTO_DEMO_PATH
-            };
-        }
-        const compact = t.replace(/\s+/g, '');
-        if (/^(0x)?[0-9a-f]{64}$/i.test(compact)) {
-            return { priv: this._hexToBytes(compact.replace(/^0x/i, '')), source: 'hex k' };
-        }
-        if (/^(0x)?[0-9a-f]{128}$/i.test(compact)) {
-            const seed = this._hexToBytes(compact.replace(/^0x/i, ''));
-            const master = await this._bip32Master(seed);
-            return { priv: master.key, source: 'BIP32 master', path: 'm' };
-        }
-        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
-        return { priv: new Uint8Array(digest), source: 'SHA-256(text)' };
-    }
-
-    async _ensureDemoKey() {
-        if (this._realKey || this._demoKeyLoading) return;
-        this._demoKeyLoading = true;
-        try {
-            await this.loadSeed(CRYPTO_DEMO_MNEMONIC, { silent: true });
-        } catch (e) {
-            console.warn('[Curve] demo seed failed', e);
-        } finally {
-            this._demoKeyLoading = false;
-        }
-    }
-
-    openSeedModal() {
-        if (this.view !== 'domain') this.setView('domain');
-        this._kgOverlay = true;
-        this._pinGroupToy();
-        this.groupOp = null;
-        if (!this._scalarHops) this.rebuildView();
-        const modal = document.getElementById('seed-modal');
-        const input = document.getElementById('seed-input');
-        const err = document.getElementById('seed-modal-error');
-        if (!modal) return;
-        modal.hidden = false;
-        modal.style.display = 'block';
-        if (err) { err.hidden = true; err.textContent = ''; }
-        if (input) {
-            input.value = (this._realKey && this._realKey.mnemonic) || CRYPTO_DEMO_MNEMONIC;
-            input.focus();
-            input.select();
-        }
-    }
-
-    closeSeedModal() {
-        const modal = document.getElementById('seed-modal');
-        if (!modal) return;
-        modal.style.display = 'none';
-        modal.hidden = true;
-    }
-
-    _setupSeedModal() {
-        const modal = document.getElementById('seed-modal');
-        const form = document.getElementById('seed-form');
-        const input = document.getElementById('seed-input');
-        const err = document.getElementById('seed-modal-error');
-        const close = document.getElementById('seed-modal-close');
-        const example = document.getElementById('seed-modal-example');
-        if (!modal) return;
-        const signal = this._ac.signal;
-        const hide = () => this.closeSeedModal();
-        if (close) close.addEventListener('click', hide, { signal });
-        modal.addEventListener('click', (e) => { if (e.target === modal) hide(); }, { signal });
-        if (example) {
-            example.addEventListener('click', () => {
-                if (input) input.value = CRYPTO_DEMO_MNEMONIC;
-            }, { signal });
-        }
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.loadSeed(input ? input.value : '').catch((ex) => {
-                    if (err) {
-                        err.hidden = false;
-                        err.textContent = ex.message || String(ex);
-                    }
-                });
-            }, { signal });
-        }
-    }
-
-    async loadSeed(text, opts) {
-        opts = opts || {};
-        const secp = window.nobleSecp;
-        if (!secp || typeof secp.getPublicKey !== 'function') {
-            throw new Error('secp256k1 library not loaded yet.');
-        }
-        const parsed = await this._seedToPriv(text);
-        if (!parsed.priv || parsed.priv.length !== 32) throw new Error('Need a 32-byte key.');
-        let pub;
-        try {
-            pub = secp.getPublicKey(parsed.priv, true);
-        } catch (e) {
-            throw new Error('Not a valid secp256k1 private key (k must be in 1…n−1).');
-        }
-        const kHex = this._bytesToHex(parsed.priv);
-        const k = BigInt('0x' + kHex);
-        const order = ECC.F17 && ECC.F17.order ? ECC.F17.order : 18;
-        const r = Number(k % BigInt(order));
-        this._realKey = {
-            kHex: kHex,
-            pubHex: this._bytesToHex(pub),
-            source: parsed.source,
-            mnemonic: parsed.mnemonic || null,
-            path: parsed.path || null,
-            toyR: r === 0 ? order : r
-        };
-        this.scalarPlaying = false;
-        this.scalarK = this._realKey.toyR;
-        this._kgOverlay = true;
-        this._pinGroupToy();
-        if (!opts.silent) this.closeSeedModal();
-        if (this.view !== 'domain') this.setView('domain');
-        else this.rebuildView();
     }
 
     _pushViewUrl() {
@@ -2273,7 +2006,6 @@ class BitcoinCryptoExplorer {
         this.content.add(this._scalarHighlight);
         this._scalarLabel = this._makeLabelSprite('G', this._tone('hopActive'));
         this.content.add(this._scalarLabel);
-        if (this._realKey && this._realKey.toyR) this.scalarK = this._realKey.toyR;
         this._updateScalarHighlight();
     }
 
@@ -2294,7 +2026,6 @@ class BitcoinCryptoExplorer {
         this.content.add(this._scalarHighlight);
         this._scalarLabel = this._makeLabelSprite('G', this._tone('hopActive'));
         this.content.add(this._scalarLabel);
-        if (this._realKey && this._realKey.toyR) this.scalarK = this._realKey.toyR;
         this._updateScalarHighlight();
     }
 
@@ -2317,8 +2048,6 @@ class BitcoinCryptoExplorer {
         const h = hops[this.scalarK - 1];
         const prev = this.scalarK > 1 ? hops[this.scalarK - 2] : null;
         this._clearScalarHopGroup();
-        const key = this._realKey;
-        const dest = key && key.toyR === this.scalarK;
         if (prev && h && !prev.inf && !h.inf) {
             this._addWrappedChord(prev, h, this._tone('chord'), this._scalarHopGroup);
         }
@@ -2334,14 +2063,8 @@ class BitcoinCryptoExplorer {
         this._scalarHighlight.position.set(p.x, p.y, p.z);
         this._scalarLabel.position.set(p.x, p.y + 0.2, p.z);
         const tag = this.scalarK === 1 ? 'G' : (this.scalarK + 'G');
-        this._setScalarLabel(dest ? ('r=' + this.scalarK) : tag);
-        if (key) {
-            this.hudOp = dest
-                ? ('k ≡ ' + this.scalarK + ' (mod n₁₇)')
-                : (tag + '  →  r = ' + key.toyR);
-        } else {
-            this.hudOp = tag + '  (add G)';
-        }
+        this._setScalarLabel(tag);
+        this.hudOp = tag + '  (add G)';
     }
 
     _releaseScalarMesh(m) {
@@ -2405,7 +2128,6 @@ class BitcoinCryptoExplorer {
 
     _curveTotalLabel() {
         if (this.view === 'family') return 'ℝ curves, not 𝔽_p';
-        if (this._kgOverlay && this._realKey) return '~' + ECC.formatPow2(256);
         const field = this.view === 'domain' ? this._domainDrawField() : this._ensureField();
         const bits = field.bits || (ECC.PRIME_LADDER[this.primeIndex] && ECC.PRIME_LADDER[this.primeIndex].bits);
         if (field.exact && field.total != null) {
@@ -2421,14 +2143,12 @@ class BitcoinCryptoExplorer {
             if (el) el.textContent = v;
         };
         const names = { family: 'Family', domain: this._kgOverlay ? 'Domain · kG' : 'Domain' };
-        const entry = (this._kgOverlay && this._realKey)
-            ? ECC.PRIME_LADDER[ECC.PRIME_LADDER.length - 1]
-            : ECC.PRIME_LADDER[this.primeIndex];
+        const entry = ECC.PRIME_LADDER[this.primeIndex];
         const scale = ECC.fieldScale(entry);
         set('crypto-view-label', names[this.view] || this.view);
         set('crypto-dim-label', this._domainLabel());
         set('crypto-prime-label', this._kgOverlay
-            ? (this._realKey ? '256-bit secp256k1  ·  hops on 𝔽₁₇' : '𝔽₁₇ (kG toy)')
+            ? '𝔽₁₇ (kG toy)'
             : (this._groupToy ? '𝔽₁₇ (labels)' : (entry.bits ? entry.bits + '-bit ' : '') + entry.label));
         set('crypto-point-count', this._pointCountLabel());
         set('crypto-curve-total', this._curveTotalLabel());
@@ -2436,26 +2156,6 @@ class BitcoinCryptoExplorer {
         set('crypto-search', scale.search);
         set('crypto-atoms', scale.atoms);
         set('crypto-op-label', this.hudOp);
-        const key = this._realKey;
-        const seedRow = document.getElementById('crypto-seed-row');
-        const pathRow = document.getElementById('crypto-path-row');
-        const kRow = document.getElementById('crypto-k-row');
-        const qRow = document.getElementById('crypto-q-row');
-        const showKey = this._kgOverlay && key;
-        if (seedRow) seedRow.hidden = !(showKey && key.mnemonic);
-        if (pathRow) pathRow.hidden = !(showKey && key.path);
-        if (kRow) kRow.hidden = !showKey;
-        if (qRow) qRow.hidden = !showKey;
-        if (key) {
-            if (key.mnemonic) set('crypto-seed-label', key.mnemonic);
-            if (key.path) set('crypto-path-label', key.path + '  (index 0)');
-            set('crypto-k-label', this._shortHex(key.kHex, 8, 8) + '  (' + key.source + ')');
-            set('crypto-q-label', this._shortHex(key.pubHex, 8, 8) + '  (Q = kG)');
-            const kEl = document.getElementById('crypto-k-label');
-            const qEl = document.getElementById('crypto-q-label');
-            if (kEl) kEl.setAttribute('title', key.kHex);
-            if (qEl) qEl.setAttribute('title', key.pubHex);
-        }
         set('crypto-subtitle', this.view === 'family'
             ? 'y² = x³ + 7'
             : (this._kgOverlay
@@ -2583,7 +2283,6 @@ class BitcoinCryptoExplorer {
                 this._pushScalarTrail(this.scalarK);
                 this.scalarK += 1;
                 if (this.scalarK > this._scalarHops.length) this.scalarK = 1;
-                if (this._realKey && this.scalarK === this._realKey.toyR) this.scalarPlaying = false;
                 this._updateScalarHighlight();
                 this.updatePanel();
             }

@@ -61,10 +61,6 @@
                         <div data-tip="Average time to brute-force that space at 10¹² guesses per second (a very fast cluster). Real ECDLP is Pollard rho ~2^{n/2}, still hopeless at 256-bit.">Search: <span id="crypto-search">—</span></div>
                         <div data-tip="If each key were an atom: 2-bit ≈ a few atoms, 4 ≈ a molecule, 8 ≈ a peptide, 16 ≈ a protein, 32 ≈ a small bacterium, 64 ≈ a grain of sand, 128 ≈ a km³ of rock, 256 ≈ the observable universe. One-to-one, not a multiple.">Atoms: <span id="crypto-atoms">—</span></div>
                         <div data-tip="Current construction: family parameter z, addition formula, or kG hop.">Op: <span id="crypto-op-label">—</span></div>
-                        <div id="crypto-seed-row" hidden data-tip="BIP39 words stay in this tab. PBKDF2-HMAC-SHA512 (2048 rounds, salt “mnemonic”) turns them into a 512-bit seed.">Seed: <span id="crypto-seed-label">—</span></div>
-                        <div id="crypto-path-row" hidden data-tip="BIP32 path to the first native-segwit receive key: m/84'/0'/0'/0/0. Index 0 is the first address a wallet derives from this seed.">Path: <span id="crypto-path-label">—</span></div>
-                        <div id="crypto-k-row" hidden data-tip="256-bit private scalar k at that path. Words → seed → master (HMAC-SHA512 “Bitcoin seed”) → CKD to index 0. Never sent anywhere.">k: <span id="crypto-k-label">—</span></div>
-                        <div id="crypto-q-row" hidden data-tip="Compressed secp256k1 public key Q = kG, 33 bytes, from a real multiply. The torus hop is only r ≡ k (mod n₁₇) — not Q, not a prefix of Q.">Q: <span id="crypto-q-label">—</span></div>
                         <div class="panel-row-muted" id="crypto-drawn-row" data-tip="Spheres actually drawn. Tiny primes show every affine point. 32–128-bit fields are a denser schematic sample (not more real points). At 256-bit the domain is drawn as a solid white surface.">Drawn: <span id="crypto-point-count">—</span></div>
                         <div class="panel-slider" id="crypto-slice-row" hidden data-tip="How many Weierstrass curves y² = x³ + (7+z) to draw. Spacing along z stays 0.5; the interval grows or shrinks. z = 0 is secp256k1.">
                             <div class="panel-slider-label">
@@ -102,7 +98,7 @@
                     <button id="ar-button" data-tip="Mixed reality: the same model on your table. Scale is tighter so the torus fits in passthrough space.">MR</button>
                     <span class="controls-cluster" id="crypto-cluster-views">
                     <button id="view-family" data-tip="Weierstrass family y² = x³ + (7+z). Each curve is one member; z = 0 (highlighted) is secp256k1, the chart Bitcoin actually uses. Domain is this slice over 𝔽_p.">Family</button>
-                    <button id="view-domain" data-tip="The z = 0 chart over 𝔽_p. Glue opposite edges and the square becomes a torus — that identification is what “mod p” means geometrically. Play kG walks multiples of G (seed search). Click Domain again to leave kG.">Domain</button>
+                    <button id="view-domain" data-tip="The z = 0 chart over 𝔽_p. Glue opposite edges and the square becomes a torus — that identification is what “mod p” means geometrically. Play kG walks multiples of G. Click Domain again to leave kG.">Domain</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-glue">
                     <button id="dim-prev" data-tip="Undo one glue step. Torus → cylinder (one pair of edges identified) → flat Cartesian square.">Glue−</button>
@@ -119,8 +115,7 @@
                     <button id="op-sub" data-tip="Subtraction is addition of the inverse: P − Q = P ⊕ (−Q). −Q is Q flipped across the midline, then add as usual.">P−Q</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-play">
-                    <button id="scalar-play" data-tip="Walk +G on the 𝔽₁₇ toy until r ≡ k (mod n₁₇). This is how iterating seeds works: hop count, not sliding P. That residue is not the Bitcoin public key — Q stays in the panel.">Play kG</button>
-                    <button id="scalar-load-seed" data-tip="Derive a real key from BIP39 words (index 0), hex k, or a 64-byte BIP32 seed. Computes Q = kG on secp256k1. The torus only marks r ≡ k (mod n₁₇).">Load seed</button>
+                    <button id="scalar-play" data-tip="Walk +G on the 𝔽₁₇ toy. This is hop count, not sliding P.">Play kG</button>
                     </span>
                     <span class="controls-cluster controls-cluster-gap">
                     <button id="toggle-color" data-tip="Color uses cyan (edge a / latitude), red (edge b / longitude), and orange (negation midline). Grey is white and tones of grey only.">Color</button>
@@ -133,27 +128,6 @@
 
     <div class="disclaimer">
         Pedagogical model of y² = x³ + 7. Scatter is capped; field order steps to 256-bit secp256k1.
-    </div>
-
-    <div id="seed-modal" class="modal" hidden>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Load seed</h3>
-                <button type="button" class="modal-close" id="seed-modal-close" aria-label="Close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="seed-modal-note">12-word BIP39 phrase → seed → BIP32 path m/84'/0'/0'/0/0 (receive index 0) → k, then Q = kG. Or paste 64-hex k / 128-hex seed. Stays in this tab.</p>
-                <form id="seed-form">
-                    <label for="seed-input">Seed words or k</label>
-                    <textarea id="seed-input" rows="4" spellcheck="false" autocomplete="off" placeholder="twelve BIP39 words, or hex k"></textarea>
-                    <div class="input-group">
-                        <button type="submit" id="seed-modal-submit">Derive k &amp; Q</button>
-                        <button type="button" id="seed-modal-example">Demo words</button>
-                    </div>
-                    <div id="seed-modal-error" class="seed-modal-error" hidden></div>
-                </form>
-            </div>
-        </div>
     </div>
 
     <script type="importmap">
@@ -169,10 +143,6 @@
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
         window.THREE = THREE;
         window.XRControllerModelFactory = XRControllerModelFactory;
-    </script>
-    <script type="module">
-        import * as secp from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@2.3.0/+esm';
-        window.nobleSecp = secp;
     </script>
     <script src="js/controls-camera.js"></script>
     <script>ControlsCamera(document.getElementById('controls-camera-root'), { viewGroup: true });</script>
