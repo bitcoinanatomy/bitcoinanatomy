@@ -18,6 +18,7 @@
         'transaction.html': 'js/transaction.js',
         'address.html':     'js/address.js',
         'mempool.html':     'js/mempool.js',
+        'curve.html':       'js/crypto.js',
         'crypto.html':      'js/crypto.js',
         'script.html':      'js/script.js',
     };
@@ -32,7 +33,9 @@
     function pageFileFromUrl(url) {
         try {
             var u = new URL(url, window.location.href);
-            return (u.pathname.split('/').pop() || '') || null;
+            var file = (u.pathname.split('/').pop() || '') || null;
+            if (file === 'crypto.html') return 'curve.html';
+            return file;
         } catch (e) {
             return null;
         }
@@ -268,6 +271,10 @@
 
             try {
                 var abs = new URL(url, window.location.href);
+                if ((abs.pathname.split('/').pop() || '') === 'crypto.html') {
+                    abs.pathname = abs.pathname.replace(/crypto\.html$/, 'curve.html');
+                    url = abs.pathname + abs.search + abs.hash;
+                }
                 var targetPath = abs.pathname + abs.search + abs.hash;
 
                 // Fetch target HTML for #ui + title
@@ -285,7 +292,7 @@
                 if (file === 'blockchain.html') {
                     await loadScriptOnce('js/difficultySpiral.js');
                 }
-                if (file === 'crypto.html') {
+                if (file === 'curve.html' || file === 'crypto.html') {
                     await loadScriptOnce('js/ecc-curve.js');
                 }
                 await loadScriptOnce(PAGE_SCRIPTS[file]);

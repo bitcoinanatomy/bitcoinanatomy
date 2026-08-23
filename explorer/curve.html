@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Explorer - Curve</title>
+    <meta name="description" content="secp256k1 elliptic curve: family, torus, group law">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <div id="container">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="index.html">Anatomy of Bitcoin</a>
+            </div>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-dropdown">
+                    <button type="button" class="nav-link nav-dropdown-toggle" aria-expanded="false">Explore</button>
+                    <ul class="nav-dropdown-panel">
+                        <li><a href="network.html" class="nav-link">Network</a></li>
+                        <li><a href="node.html" class="nav-link">Node</a></li>
+                        <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
+                        <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
+                        <li><a href="block.html" class="nav-link">Block</a></li>
+                        <li><a href="transaction.html" class="nav-link">Transaction</a></li>
+                        <li><a href="address.html" class="nav-link">Address</a></li>
+                        <li><a href="mempool.html" class="nav-link">Mempool</a></li>
+                        <li><a href="crypto.html" class="nav-link active">Curve</a></li>
+                        <li><a href="script.html" class="nav-link">Script</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+
+        <div id="scene"></div>
+
+        <div id="ui">
+            <div class="header">
+                <h1>Curve</h1>
+                <div class="subtitle" id="crypto-subtitle">y² = x³ + 7</div>
+            </div>
+
+            <div class="sidebar">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>secp256k1</h3>
+                        <button id="toggle-panel" class="panel-toggle" title="Minimize" aria-label="Minimize panel"><img class="panel-toggle-icon" src="imgs/icons/chevron-up.svg" alt=""></button>
+                    </div>
+                    <div id="crypto-info" class="panel-content">
+                        <div data-tip="Which lesson layer is on screen: family of curves, glued domain, or scalar hops.">View: <span id="crypto-view-label">Family</span></div>
+                        <div data-tip="Family is the real affine plane. Domain / Scalar show the finite-field square after glue: Cartesian, cylinder, or torus.">Domain: <span id="crypto-dim-label">Cartesian</span></div>
+                        <div data-tip="Prime field 𝔽_p. Bitcoin’s secp256k1 prime is 256-bit. PRIME± doubles bit length: 2, 4, 8, …, 256. Drawn dots cap out; the field size does not.">Field: <span id="crypto-prime-label">𝔽₃</span></div>
+                        <div data-tip="How many points the curve really has over this 𝔽_p (Hasse: about p). Goes all the way to ~2²⁵⁶ for secp256k1 — far beyond what we can plot.">On curve: <span id="crypto-curve-total">—</span></div>
+                        <div data-tip="Size of the search space if a secret were a uniform n-bit string (same order as the field). A Bitcoin private key is 256-bit entropy.">Entropy: <span id="crypto-entropy">—</span></div>
+                        <div data-tip="Average time to brute-force that space at 10¹² guesses per second (a very fast cluster). Real ECDLP is Pollard rho ~2^{n/2}, still hopeless at 256-bit.">Search: <span id="crypto-search">—</span></div>
+                        <div data-tip="If each key were an atom: 2-bit ≈ a few atoms, 4 ≈ a molecule, 8 ≈ a peptide, 16 ≈ a protein, 32 ≈ a small bacterium, 64 ≈ a grain of sand, 128 ≈ a km³ of rock, 256 ≈ the observable universe. One-to-one, not a multiple.">Atoms: <span id="crypto-atoms">—</span></div>
+                        <div data-tip="Current construction: family parameter z, addition formula, or kG hop.">Op: <span id="crypto-op-label">—</span></div>
+                        <div id="crypto-seed-row" hidden data-tip="BIP39 words stay in this tab. PBKDF2-HMAC-SHA512 (2048 rounds, salt “mnemonic”) turns them into a 512-bit seed.">Seed: <span id="crypto-seed-label">—</span></div>
+                        <div id="crypto-path-row" hidden data-tip="BIP32 path to the first native-segwit receive key: m/84'/0'/0'/0/0. Index 0 is the first address a wallet derives from this seed.">Path: <span id="crypto-path-label">—</span></div>
+                        <div id="crypto-k-row" hidden data-tip="256-bit private scalar k at that path. Words → seed → master (HMAC-SHA512 “Bitcoin seed”) → CKD to index 0. Never sent anywhere.">k: <span id="crypto-k-label">—</span></div>
+                        <div id="crypto-q-row" hidden data-tip="Compressed secp256k1 public key Q = kG, 33 bytes, from a real multiply. The torus hop is only r ≡ k (mod n₁₇) — not Q, not a prefix of Q.">Q: <span id="crypto-q-label">—</span></div>
+                        <div class="panel-row-muted" id="crypto-drawn-row" data-tip="Spheres actually drawn. Tiny primes show every affine point. 32–128-bit fields are a denser schematic sample (not more real points). At 256-bit the domain is drawn as a solid white surface.">Drawn: <span id="crypto-point-count">—</span></div>
+                        <div class="panel-slider" id="crypto-slice-row" hidden data-tip="How many Weierstrass curves y² = x³ + (7+z) to draw. Spacing along z stays 0.5; the interval grows or shrinks. z = 0 is secp256k1.">
+                            <div class="panel-slider-label">
+                                Curves <span id="crypto-slice-value">45</span>
+                                <span class="panel-slider-sep">·</span>
+                                <span id="crypto-slice-range">z ∈ [−12, 10]</span>
+                            </div>
+                            <input type="range" id="crypto-slice-slider" class="panel-range"
+                                   min="1" max="89" value="45" aria-label="Number of family curves">
+                        </div>
+                        <div class="panel-slider" id="crypto-p-row" hidden data-tip="Move point P. Family walks secp256k1 over ℝ. Domain walks affine points on this 𝔽_p. Large fields show the unit-square position (hover for full x, y). Click walk to cycle.">
+                            <div class="panel-slider-label">
+                                P <span id="crypto-p-value">(2.00, 3.00)</span>
+                                <span class="panel-slider-sep">·</span>
+                                <span id="crypto-p-range">walk</span>
+                            </div>
+                            <input type="range" id="crypto-p-slider" class="panel-range"
+                                   min="0" max="1000" value="250" aria-label="Point P along the curve">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div id="controls-camera-root" class="controls-camera"></div>
+                <div class="controls-main">
+                    <button id="vr-button" data-tip="Enter a headset session. The curve stays in front of you; wrist menu FAM / DOM / SCL, Glue, and Field change the lesson without leaving VR.">VR</button>
+                    <button id="ar-button" data-tip="Mixed reality: the same model on your table. Scale is tighter so the torus fits in passthrough space.">MR</button>
+                    <span class="controls-cluster" id="crypto-cluster-views">
+                    <button id="view-family" data-tip="Weierstrass family y² = x³ + (7+z). Each curve is one member; z = 0 (highlighted) is secp256k1, the chart Bitcoin actually uses.">Family</button>
+                    <button id="view-domain" data-tip="Finite-field square for 𝔽_p. Glue opposite edges and the square becomes a torus — that identification is what “mod p” means geometrically. + / 2P / −P / P−Q draw the group law on this field; drag P to move the chord.">Domain</button>
+                    <button id="view-scalar" data-tip="How Q = kG works: add G, repeatedly. The torus is 𝔽₁₇, so a real 256-bit k is shown as r ≡ k (mod n₁₇). The 33-byte Q lives only in the panel.">Scalar</button>
+                    </span>
+                    <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-glue">
+                    <button id="dim-prev" data-tip="Undo one glue step. Torus → cylinder (one pair of edges identified) → flat Cartesian square.">Glue−</button>
+                    <button id="dim-next" data-tip="Glue the next pair of opposite edges. Cartesian → cylinder → torus. Watch a straight chord become a wrapping geodesic.">Glue+</button>
+                    </span>
+                    <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-field">
+                    <button id="prime-prev" data-tip="Halve the bit length of 𝔽_p (256 → 128 → … → 2). Drawn scatter thins until every point is visible. Group-law lines stay on the current field.">Field−</button>
+                    <button id="prime-next" data-tip="Click: double the bit length (2, 4, 8, …, 256). Exact fields show every affine point; 32–128-bit rungs densify a schematic sample (128-bit uses the old 256-bit dot count). At 256-bit the domain is a solid white surface. Double-click: more scatter on schematic rungs (up to 768k). Entropy and search time follow the field.">Field+</button>
+                    </span>
+                    <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-ops">
+                    <button id="op-add" data-tip="Addition P ⊕ Q: chord through P and Q meets the curve at R′; reflect R′ across y = p/2 to land on R. On the torus that chord wraps. Drag P to try other points on this field.">+</button>
+                    <button id="op-double" data-tip="Doubling 2P = P ⊕ P: same construction with the tangent at P instead of a chord through two distinct points.">2P</button>
+                    <button id="op-inverse" data-tip="Inverse: −P is P reflected across the midline. P and −P lie on a vertical line whose “third intersection” is the point at infinity 𝒪.">−P</button>
+                    <button id="op-sub" data-tip="Subtraction is addition of the inverse: P − Q = P ⊕ (−Q). −Q is Q flipped across the midline, then add as usual.">P−Q</button>
+                    </span>
+                    <span class="controls-cluster controls-cluster-gap" id="crypto-cluster-play">
+                    <button id="scalar-play" data-tip="Walk +G on the 𝔽₁₇ toy until r ≡ k (mod n₁₇). Same group law as Domain. That residue is not the Bitcoin public key — Q stays in the panel.">Play kG</button>
+                    <button id="scalar-load-seed" data-tip="Derive a real key from BIP39 words (index 0), hex k, or a 64-byte BIP32 seed. Computes Q = kG on secp256k1. The torus only marks r ≡ k (mod n₁₇).">Load seed</button>
+                    </span>
+                    <span class="controls-cluster controls-cluster-gap">
+                    <button id="toggle-color" data-tip="Color uses cyan (edge a / latitude), red (edge b / longitude), and orange (negation midline). Grey is white and tones of grey only.">Color</button>
+                    <button id="toggle-grid" data-tip="Show or hide the chart grid: Cartesian paper behind the Weierstrass family, and the glued 𝔽_p square (flat through torus) on Domain and Scalar.">Grid</button>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="disclaimer">
+        Pedagogical model of y² = x³ + 7. Scatter is capped; field order steps to 256-bit secp256k1.
+    </div>
+
+    <div id="seed-modal" class="modal" hidden>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Load seed</h3>
+                <button type="button" class="modal-close" id="seed-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="seed-modal-note">12-word BIP39 phrase → seed → BIP32 path m/84'/0'/0'/0/0 (receive index 0) → k, then Q = kG. Or paste 64-hex k / 128-hex seed. Stays in this tab.</p>
+                <form id="seed-form">
+                    <label for="seed-input">Seed words or k</label>
+                    <textarea id="seed-input" rows="4" spellcheck="false" autocomplete="off" placeholder="twelve BIP39 words, or hex k"></textarea>
+                    <div class="input-group">
+                        <button type="submit" id="seed-modal-submit">Derive k &amp; Q</button>
+                        <button type="button" id="seed-modal-example">Demo words</button>
+                    </div>
+                    <div id="seed-modal-error" class="seed-modal-error" hidden></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+        window.THREE = THREE;
+        window.XRControllerModelFactory = XRControllerModelFactory;
+    </script>
+    <script type="module">
+        import * as secp from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@2.3.0/+esm';
+        window.nobleSecp = secp;
+    </script>
+    <script src="js/controls-camera.js"></script>
+    <script>ControlsCamera(document.getElementById('controls-camera-root'), { viewGroup: true });</script>
+    <script src="js/audio/ExplorerAudio.js"></script>
+    <script src="js/vr/VRButton.js"></script>
+    <script src="js/vr/SpatialPanel.js"></script>
+    <script src="js/vr/VRNavMenu.js"></script>
+    <script src="js/vr/VRManager.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/vr/ExplorerRouter.js"></script>
+    <script src="js/ecc-curve.js"></script>
+    <script src="js/crypto.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const isMobile = window.innerWidth <= 768;
+            const panelContent = document.querySelector('.panel-content');
+            const toggleButton = document.querySelector('.panel-toggle');
+            if (isMobile && panelContent) {
+                panelContent.classList.add('minimized');
+                if (toggleButton) {
+                    const icon = toggleButton.querySelector('.panel-toggle-icon');
+                    if (icon) icon.src = 'imgs/icons/chevron-down.svg';
+                    toggleButton.title = 'Maximize';
+                    toggleButton.setAttribute('aria-label', 'Maximize panel');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

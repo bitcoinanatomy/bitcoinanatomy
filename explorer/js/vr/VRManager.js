@@ -39,7 +39,8 @@
         'mempool.html':     0.05,
         'node.html':        0.05,
         'address.html':     0.1,
-        'crypto.html':      0.08,
+        'curve.html':      0.08,
+        'crypto.html':     0.08,
     };
 
     // Tighter scales for AR (table-top)
@@ -53,6 +54,7 @@
         'node.html':        0.02,
         'address.html':     0.04,
         'crypto.html':      0.03,
+        'curve.html':       0.03,
     };
 
     var SCALE_MIN        = 1e-5;

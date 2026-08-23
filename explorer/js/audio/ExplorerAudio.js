@@ -21,6 +21,7 @@
         'transaction.html': 'transaction',
         'address.html': 'address',
         'mempool.html': 'mempool',
+        'curve.html': 'block',
         'crypto.html': 'block',
         'script.html': 'node'
     };

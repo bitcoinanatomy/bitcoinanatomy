@@ -5,6 +5,13 @@
       "destination": "https://btcnodes.io/api/:path*"
     }
   ],
+  "redirects": [
+    {
+      "source": "/crypto.html",
+      "destination": "/curve.html",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
