@@ -167,7 +167,7 @@ body:not(.homepage) {
     border: none;
     box-shadow: none;
     justify-content: flex-start;
-    gap: 4px;
+    gap: 12px;
     pointer-events: none;
 }
 
@@ -248,33 +248,78 @@ body:not(.homepage) {
 
 .nav-dropdown-toggle {
     appearance: none;
-    border: 0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     cursor: pointer;
     font-family: inherit;
+    color: #d2d2d2;
+    font-weight: 400;
+    letter-spacing: 0.1rem;
+    line-height: 1;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.045);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.nav-dropdown-toggle::after {
+    content: '';
+    width: 0;
+    height: 0;
+    border-left: 3.5px solid transparent;
+    border-right: 3.5px solid transparent;
+    border-top: 4px solid currentColor;
+    opacity: 0.65;
+    flex-shrink: 0;
+    transform: none;
+    transition: opacity 0.15s ease;
+}
+
+.nav-dropdown-toggle:hover,
+.nav-dropdown.open .nav-dropdown-toggle {
+    color: #f2f2f2;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.nav-dropdown.open .nav-dropdown-toggle::after,
+.nav-dropdown:hover .nav-dropdown-toggle::after {
+    border-top: 0;
+    border-bottom: 4px solid currentColor;
+    opacity: 0.9;
+    transform: none;
 }
 
 .nav-dropdown-panel {
     display: block;
     position: absolute;
-    right: 0;
-    /* Overlap the trigger so there is no hover dead zone */
-    top: calc(100% - 6px);
-    min-width: 200px;
+    left: 0;
+    right: auto;
+    top: calc(100% + 6px);
+    min-width: 100%;
+    width: max-content;
     margin: 0;
-    /* Extra top padding is a hover bridge; visual inset stays below the trigger */
-    padding: 12px 0 6px;
+    padding: 6px 0;
     list-style: none;
-    background: rgba(0, 0, 0, 0.92);
+    background: rgba(8, 8, 8, 0.94);
     backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-stroke-soft);
-    border-radius: 4px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 3px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
     z-index: 40001;
     visibility: hidden;
     opacity: 0;
     pointer-events: none;
-    /* Delay hide so a diagonal move to the submenu still counts */
     transition: opacity 0.12s ease, visibility 0s linear 0.28s;
+}
+
+.nav-dropdown-panel::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -8px;
+    height: 8px;
 }
 
 .nav-dropdown.open .nav-dropdown-panel,
@@ -289,7 +334,13 @@ body:not(.homepage) {
     display: block;
     width: 100%;
     border-radius: 0;
-    padding: 8px 16px;
+    padding: 7px 12px;
+    letter-spacing: 0.1rem;
+}
+
+body > .navbar .nav-dropdown-panel {
+    left: auto;
+    right: 0;
 }
 
 /* Hamburger Menu */
@@ -1790,6 +1841,7 @@ button:active {
         flex-direction: column;
         position: static;
         min-width: 0;
+        width: auto;
         background: transparent;
         border: 0;
         box-shadow: none;
@@ -1801,12 +1853,24 @@ button:active {
         transition: none;
     }
 
+    .nav-dropdown-panel::before {
+        display: none;
+    }
+
     .nav-dropdown-toggle {
         width: 100%;
         text-align: left;
         font-size: 1rem;
         padding: 15px 20px;
+        border: 0;
         border-bottom: 1px solid var(--glass-stroke-soft);
+        border-radius: 0;
+        background: transparent;
+        display: none;
+        letter-spacing: 0.08rem;
+    }
+
+    .nav-dropdown-toggle::after {
         display: none;
     }
 
@@ -2024,32 +2088,6 @@ button:active {
     outline: none;
     border-color: rgba(255, 255, 255, 0.28);
     background: #161616;
-}
-
-.seed-modal-note {
-    color: rgba(255, 255, 255, 0.55);
-    font-size: 12px;
-    line-height: 1.45;
-    margin: 0 0 14px;
-}
-
-.seed-modal-error {
-    color: #f87171;
-    font-size: 12px;
-    margin-top: 10px;
-}
-
-#crypto-k-label,
-#crypto-q-label,
-#crypto-path-label {
-    word-break: break-all;
-    font-family: ui-monospace, monospace;
-    font-size: 0.78em;
-}
-
-#crypto-seed-label {
-    word-break: break-word;
-    font-size: 0.82em;
 }
 
 .modal-body input[type="text"],
