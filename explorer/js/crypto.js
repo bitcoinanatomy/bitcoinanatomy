@@ -93,12 +93,14 @@ class BitcoinCryptoExplorer {
             this.vrManager.init();
         }
         this.setupOrbitControls();
+        if (this.camera && this.camera.isOrthographicCamera) this._setPerspectiveCamera(false);
         this.setupControls();
         if (typeof setRotationButtonState === 'function') setRotationButtonState(this.isRotating);
         this.setupPanelToggle();
         this.setupExplainers();
         this.rebuildView();
         this.resetCamera();
+        requestAnimationFrame(() => { if (!this._disposed) this.resetCamera(); });
         this.renderer.setAnimationLoop(() => this.animate());
     }
 
@@ -196,9 +198,7 @@ class BitcoinCryptoExplorer {
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.camera.updateProjectionMatrix();
             }
-            this.camera.up.set(0, 1, 0);
-            this.camera.position.set(0, 0, 42);
-            this.camera.lookAt(0, 0, 0);
+            this._neutralCameraPose();
             window.addEventListener('resize', () => this.onWindowResize(), { signal });
             return;
         }
@@ -206,9 +206,7 @@ class BitcoinCryptoExplorer {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);
         this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.up.set(0, 1, 0);
-        this.camera.position.set(0, 0, 42);
-        this.camera.lookAt(0, 0, 0);
+        this._neutralCameraPose();
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         container.appendChild(this.renderer.domElement);
@@ -228,7 +226,7 @@ class BitcoinCryptoExplorer {
     setupOrbitControls() {
         this.controls = {
             target: new THREE.Vector3(0, 0, 0),
-            distance: 42,
+            distance: this._frontalDistance(),
             phi: Math.PI / 2,
             theta: Math.PI / 2,
             isMouseDown: false,
@@ -2502,23 +2500,43 @@ class BitcoinCryptoExplorer {
 
     _zoomBy(f) {
         this.controls.distance *= f;
-        this.controls.distance = Math.max(0.6, Math.min(80, this.controls.distance));
+        this.controls.distance = Math.max(0.6, Math.min(160, this.controls.distance));
         if (!this.isPerspective) {
             this.orthographicZoom *= f;
-            this.orthographicZoom = Math.max(0.8, Math.min(80, this.orthographicZoom));
+            this.orthographicZoom = Math.max(0.8, Math.min(160, this.orthographicZoom));
             this._updateCameraProjection();
         }
         this.controls.update();
         this._applyDotZoom();
     }
 
+    _frontalDistance() {
+        return this.view === 'family' ? 78 : 9;
+    }
+
+    /** Drop leftover pose/parenting from other explorer pages. */
+    _neutralCameraPose(distance) {
+        const d = distance == null ? this._frontalDistance() : distance;
+        const cam = this.camera;
+        if (!cam) return;
+        if (cam.zoom != null) cam.zoom = 1;
+        cam.up.set(0, 1, 0);
+        cam.quaternion.identity();
+        cam.rotation.set(0, 0, 0);
+        cam.position.set(0, 0, d);
+        cam.lookAt(0, 0, 0);
+        cam.updateMatrixWorld(true);
+        if (cam.isPerspectiveCamera) cam.updateProjectionMatrix();
+    }
+
     /** Face the Weierstrass (x, y) chart: X right, Y up, camera on +Z — like a 2D plot. */
     _frontalChartPose() {
+        const d = this._frontalDistance();
         this.controls.target.set(0, 0, 0);
         this.controls.phi = Math.PI / 2;
         this.controls.theta = Math.PI / 2;
-        this.controls.distance = this.view === 'family' ? 42 : 8;
-        if (this.camera && this.camera.up) this.camera.up.set(0, 1, 0);
+        this.controls.distance = d;
+        this._neutralCameraPose(d);
     }
 
     resetCamera() {
