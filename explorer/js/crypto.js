@@ -98,6 +98,7 @@ class BitcoinCryptoExplorer {
         this.setupPanelToggle();
         this.setupExplainers();
         this.rebuildView();
+        this.resetCamera();
         this.renderer.setAnimationLoop(() => this.animate());
     }
 
@@ -195,7 +196,8 @@ class BitcoinCryptoExplorer {
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.camera.updateProjectionMatrix();
             }
-            this.camera.position.set(8, 6, 12);
+            this.camera.up.set(0, 1, 0);
+            this.camera.position.set(0, 0, 42);
             this.camera.lookAt(0, 0, 0);
             window.addEventListener('resize', () => this.onWindowResize(), { signal });
             return;
@@ -204,7 +206,8 @@ class BitcoinCryptoExplorer {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);
         this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(8, 6, 12);
+        this.camera.up.set(0, 1, 0);
+        this.camera.position.set(0, 0, 42);
         this.camera.lookAt(0, 0, 0);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -232,6 +235,7 @@ class BitcoinCryptoExplorer {
             lastMouseX: 0,
             lastMouseY: 0,
             update: () => {
+                this.camera.up.set(0, 1, 0);
                 this.camera.position.x = this.controls.target.x + this.controls.distance * Math.sin(this.controls.phi) * Math.cos(this.controls.theta);
                 this.camera.position.y = this.controls.target.y + this.controls.distance * Math.cos(this.controls.phi);
                 this.camera.position.z = this.controls.target.z + this.controls.distance * Math.sin(this.controls.phi) * Math.sin(this.controls.theta);
@@ -940,6 +944,7 @@ class BitcoinCryptoExplorer {
         }
         this._pushViewUrl();
         this.rebuildView();
+        this.resetCamera();
         this._syncVrMenu();
     }
 
@@ -2507,14 +2512,20 @@ class BitcoinCryptoExplorer {
         this._applyDotZoom();
     }
 
-    resetCamera() {
-        if (!this.controls) return;
-        this.isRotating = false;
-        if (typeof setRotationButtonState === 'function') setRotationButtonState(false);
+    /** Face the Weierstrass (x, y) chart: X right, Y up, camera on +Z — like a 2D plot. */
+    _frontalChartPose() {
         this.controls.target.set(0, 0, 0);
         this.controls.phi = Math.PI / 2;
         this.controls.theta = Math.PI / 2;
         this.controls.distance = this.view === 'family' ? 42 : 8;
+        if (this.camera && this.camera.up) this.camera.up.set(0, 1, 0);
+    }
+
+    resetCamera() {
+        if (!this.controls) return;
+        this.isRotating = false;
+        if (typeof setRotationButtonState === 'function') setRotationButtonState(false);
+        this._frontalChartPose();
         if (!this.isPerspective) {
             this.orthographicZoom = this.controls.distance * 0.95;
             this._updateCameraProjection();
