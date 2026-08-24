@@ -3,12 +3,10 @@
    ================================ */
    @font-face {
     font-family: "BureauGrotesque";
-    src: url("../assets/fonts/BureauGrotesque/BureauGrotesque.eot");
-    src: url("../assets/fonts/BureauGrotesque/BureauGrotesque.eot?#iefix") format("embedded-opentype"),
-    url("../assets/fonts/BureauGrotesque/BureauGrotesque.woff2") format("woff2"),
-    url("../assets/fonts/BureauGrotesque/BureauGrotesque.woff") format("woff"),
-    url("../assets/fonts/BureauGrotesque/BureauGrotesque.ttf") format("truetype"),
-    url("../assets/fonts/BureauGrotesque/BureauGrotesque.svg#BureauGrotesque") format("svg");
+    src: url("assets/fonts/BureauGrotesque/BureauGrotesque.eot");
+    src: url("assets/fonts/BureauGrotesque/BureauGrotesque.eot?#iefix") format("embedded-opentype"),
+    url("assets/fonts/BureauGrotesque/BureauGrotesque.woff2") format("woff2"),
+    url("assets/fonts/BureauGrotesque/BureauGrotesque.ttf") format("truetype");
 }
 
 /* ================================
@@ -142,7 +140,8 @@ body:not(.homepage) {
     height: 60px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 12px;
 }
 
 .navbar::after {
@@ -176,14 +175,8 @@ body:not(.homepage) {
 }
 
 #container .nav-brand,
-#container .hamburger,
 #container .nav-menu {
     pointer-events: auto;
-}
-
-#container .nav-dropdown-panel {
-    left: 0;
-    right: auto;
 }
 
 .nav-brand {
@@ -197,10 +190,15 @@ body:not(.homepage) {
     transition: opacity 0.2s;
     font-family: "BureauGrotesque", sans-serif;
     text-transform: uppercase;
-    letter-spacing: 0.03rem;
+    letter-spacing: -0.01rem;
     font-weight: 500;
     z-index: 40000;
     position: relative;
+    font-size: 1.7rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
 }
 
 .nav-brand a:hover {
@@ -255,24 +253,14 @@ body:not(.homepage) {
     font-weight: 400;
     letter-spacing: 0.1rem;
     line-height: 1;
-    padding: 8px 10px;
+    padding: 5px 10px;
+    height: 30px;
+    box-sizing: border-box;
     background: rgba(255, 255, 255, 0.045);
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-}
-
-.nav-dropdown-toggle::after {
-    content: '';
-    width: 0;
-    height: 0;
-    border-left: 3.5px solid transparent;
-    border-right: 3.5px solid transparent;
-    border-top: 4px solid currentColor;
-    opacity: 0.65;
-    flex-shrink: 0;
-    transform: none;
-    transition: opacity 0.15s ease;
+    position: relative;
+    z-index: 40000;
 }
 
 .nav-dropdown-toggle:hover,
@@ -282,51 +270,36 @@ body:not(.homepage) {
     border-color: rgba(255, 255, 255, 0.22);
 }
 
-.nav-dropdown.open .nav-dropdown-toggle::after,
-.nav-dropdown:hover .nav-dropdown-toggle::after {
-    border-top: 0;
-    border-bottom: 4px solid currentColor;
-    opacity: 0.9;
-    transform: none;
-}
-
 .nav-dropdown-panel {
-    display: block;
-    position: absolute;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
     left: 0;
-    right: auto;
-    top: calc(100% + 6px);
-    min-width: 100%;
-    width: max-content;
+    bottom: 0;
+    width: min(320px, 80vw);
     margin: 0;
-    padding: 6px 0;
+    padding: 64px 0 16px;
     list-style: none;
     background: rgba(8, 8, 8, 0.94);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 3px;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
-    z-index: 40001;
+    border: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    box-shadow: 8px 0 28px rgba(0, 0, 0, 0.45);
+    z-index: 32000;
     visibility: hidden;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.12s ease, visibility 0s linear 0.28s;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease, opacity 0.2s ease, visibility 0s linear 0.2s;
 }
 
-.nav-dropdown-panel::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: -8px;
-    height: 8px;
-}
-
-.nav-dropdown.open .nav-dropdown-panel,
-.nav-dropdown:hover .nav-dropdown-panel {
+.nav-dropdown.open .nav-dropdown-panel {
     visibility: visible;
     opacity: 1;
     pointer-events: auto;
+    transform: translateX(0);
     transition-delay: 0s;
 }
 
@@ -334,43 +307,13 @@ body:not(.homepage) {
     display: block;
     width: 100%;
     border-radius: 0;
-    padding: 7px 12px;
+    padding: 12px 20px;
     letter-spacing: 0.1rem;
+    border-bottom: 1px solid var(--glass-stroke-soft);
 }
 
 body > .navbar .nav-dropdown-panel {
-    left: auto;
-    right: 0;
-}
-
-/* Hamburger Menu */
-.hamburger {
-    display: none;
-    flex-direction: column;
-    cursor: pointer;
-    padding: 8px;
-    z-index: 1001;
-}
-
-.hamburger span {
-    width: 22px;
-    height: 2px;
-    background: white;
-    margin: 2px 0;
-    transition: 0.2s;
-    border-radius: 1px;
-}
-
-.hamburger.active span:nth-child(1) {
-    transform: rotate(-45deg) translate(-4px, 5px);
-}
-
-.hamburger.active span:nth-child(2) {
-    opacity: 0;
-}
-
-.hamburger.active span:nth-child(3) {
-    transform: rotate(45deg) translate(-4px, -5px);
+    z-index: 22000;
 }
 
 /* ================================
@@ -529,7 +472,11 @@ body > .navbar .nav-dropdown-panel {
     color: #ffffff;
     font-family: "BureauGrotesque", sans-serif;
     text-transform: uppercase;
-    letter-spacing: -0.05rem;
+    letter-spacing: -0.01rem;
+}
+
+#ui .header h1 {
+    font-size: 1.25rem;
 }
 
 .header .subtitle {
@@ -539,6 +486,11 @@ body > .navbar .nav-dropdown-panel {
     font-family: "Inter", sans-serif;
     margin-top: 4px;
     word-break: break-all;
+}
+
+#ui .header .subtitle {
+    font-size: 0.75rem;
+    margin-top: 2px;
 }
 
 .difficulty-epoch-link,
@@ -1806,92 +1758,48 @@ button:active {
    RESPONSIVE DESIGN
    ================================ */
 @media (max-width: 1024px) {
-    /* Navigation */
+    /* Navigation: logo + Explore stay together on the left */
     .navbar {
-        padding: 0 10px;
+        padding: 0 16px;
+        gap: 12px;
     }
     
     #container .navbar {
         position: absolute;
-        width: auto;
-    }
-    
-    .hamburger {
-        display: flex;
-    }
-    
-    .nav-menu {
-        position: fixed;
-        top: 0;
-        right: -100%;
         width: 100%;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.98);
-        flex-direction: column;
+        max-width: 100%;
         justify-content: flex-start;
-        align-items: flex-start;
-        padding-top: 60px;
-        transition: 0.15s;
-        z-index: 1000;
-    }
-    
-    .nav-menu.active {
-        right: 0;
-    }
-    
-    .nav-menu li {
-        width: 100%;
-        margin: 0;
+        align-items: center;
+        padding: 0 16px;
+        height: 56px;
     }
 
-    .nav-dropdown {
-        width: 100%;
-    }
-
-    .nav-dropdown:hover .nav-dropdown-panel {
-        display: none;
-        visibility: hidden;
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    .nav-dropdown.open .nav-dropdown-panel,
-    .nav-menu.active .nav-dropdown-panel {
-        display: flex;
-        flex-direction: column;
-        position: static;
+    #container .nav-brand {
+        flex: 0 1 auto;
         min-width: 0;
-        width: auto;
-        background: transparent;
-        border: 0;
-        box-shadow: none;
-        padding: 0;
-        backdrop-filter: none;
-        visibility: visible;
-        opacity: 1;
-        pointer-events: auto;
-        transition: none;
+        line-height: 1.1;
     }
 
-    .nav-dropdown-panel::before {
-        display: none;
+    #container .nav-brand a {
+        display: flex;
+        font-size: 1.4rem;
+        height: 28px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .nav-dropdown-toggle {
-        width: 100%;
-        text-align: left;
-        font-size: 1rem;
-        padding: 15px 20px;
-        border: 0;
-        border-bottom: 1px solid var(--glass-stroke-soft);
-        border-radius: 0;
-        background: transparent;
-        display: none;
-        letter-spacing: 0.08rem;
+        height: 28px;
+        padding: 4px 9px;
     }
 
-    .nav-dropdown-toggle::after {
-        display: none;
+    .nav-menu {
+        flex-shrink: 0;
+    }
+
+    .nav-dropdown-panel {
+        padding-top: 56px;
     }
 
     .nav-dropdown-panel .nav-link {
@@ -1899,26 +1807,24 @@ button:active {
         padding: 15px 20px;
     }
     
-    .nav-link {
-        font-size: 1rem;
-        padding: 15px 20px;
-        width: 100%;
-        display: block;
-        border-bottom: 1px solid var(--glass-stroke-soft);
-    }
-
-    .nav-link.active::after {
-        content: none;
-    }
-    
     /* Layout */
     .container {
         padding: 1rem;
         padding-top: 100px;
     }
+
+    /* Page title lines up with the logo; sits below the 56px navbar */
+    #ui .header {
+        padding: 64px 16px 12px;
+        gap: 2px;
+    }
     
     .header h1 {
-        font-size: 1.2rem;
+        font-size: 1.35rem;
+    }
+
+    #ui .header h1 {
+        font-size: 1.15rem;
     }
     
     .container .header h1 {
@@ -1928,36 +1834,131 @@ button:active {
     .sections {
         grid-template-columns: 1fr;
     }
-    
-    /* Sidebar */
-    .sidebar {
+
+    /* Stack chrome: title → scene → controls → panel. Panel stays on-screen. */
+    #ui {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(0, 1fr) auto minmax(0, max-content);
+        height: 100%;
+        max-height: 100%;
+        overflow: hidden;
+        align-items: stretch;
+    }
+
+    #ui .header {
+        grid-row: 1;
+        grid-column: 1;
+    }
+
+    #ui .controls {
+        grid-row: 3;
+        grid-column: 1;
+        position: relative;
+        margin-top: 0;
+        bottom: auto;
+        left: auto;
+        right: auto;
         width: 100%;
-        right: 0;
-        left: 0;
-        bottom: 0;
-        top: auto;
-        border-radius: 0;
+        justify-content: flex-start;
+        align-items: center;
+        padding: 8px 16px 10px;
+        flex-wrap: wrap;
+        gap: 8px;
+        z-index: 1600;
+        box-sizing: border-box;
     }
     
+    /* Sidebar / info panel — stay on screen; scroll inside .panel when rows overflow */
+    #ui .sidebar,
+    .sidebar {
+        grid-row: 4;
+        grid-column: 1;
+        position: relative;
+        width: 100%;
+        max-width: none;
+        right: auto;
+        left: auto;
+        bottom: auto;
+        top: auto;
+        height: auto;
+        max-height: min(72dvh, calc(100dvh - 160px));
+        min-height: 0;
+        overflow: hidden;
+        border-radius: 0;
+        z-index: 1600;
+        margin-top: 0;
+        display: flex;
+        flex-direction: column;
+        pointer-events: auto;
+    }
+    
+    #ui .panel,
     .panel {
         padding: 10px;
-        margin-bottom: 10px;
+        margin-bottom: 0;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1 1 auto;
+        max-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        pointer-events: auto;
+    }
+
+    #ui .panel-content:not(.minimized) {
+        max-height: none;
+        min-height: 0;
+        flex: 0 0 auto;
+        overflow: visible;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+
+    #ui .panel-range {
+        touch-action: auto;
     }
     
     /* Controls */
     .controls {
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
+        bottom: auto;
+        left: auto;
+        right: auto;
         flex-wrap: wrap;
         gap: 5px;
+        justify-content: flex-start;
+        align-items: center;
+    }
+
+    .controls-main {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 28px;
+        align-items: center;
+    }
+
+    .controls-camera {
+        width: auto;
+        justify-content: flex-start;
+        align-items: center;
+    }
+
+    .control-buttons {
+        justify-content: flex-start;
+        align-items: center;
     }
     
-    .controls button {
+    .controls-main button {
         font-size: 0.8rem;
-        padding: 8px 12px;
-        flex: 1;
-        min-width: 80px;
+        padding: 0 12px;
+        flex: 0 0 auto;
+        min-width: 0;
+        height: 28px;
     }
     
     .filter-controls {
@@ -2536,18 +2537,30 @@ button:active {
 
 /* Mobile controls improvements */
 @media (max-width: 768px) {
+    #container .nav-brand a {
+        font-size: 1.2rem;
+    }
+
+    #ui .header {
+        padding: 62px 16px 10px;
+    }
+
+    #ui .header h1 {
+        font-size: 1.1rem;
+    }
+
     .controls {
-        bottom: 80px;
-        left: 20px;
-        right: 20px;
         flex-wrap: wrap;
         gap: 8px;
+        justify-content: flex-start;
+        align-items: center;
     }
     
     .controls-main {
         height: 28px;
         flex-wrap: wrap;
         height: auto;
+        justify-content: flex-start;
     }
 
     .controls-cluster-gap {
@@ -2558,25 +2571,26 @@ button:active {
         height: 28px;
         padding: 0 12px;
         font-size: 0.8rem;
-        min-width: 70px;
-        flex: 1;
         min-width: 0;
+        flex: 0 0 auto;
     }
     
     .controls-camera {
-        width: 100%;
+        width: auto;
+        justify-content: flex-start;
+        align-items: center;
     }
     
     .navigation-controls {
         margin-left: 0;
-        margin-top: 10px;
-        width: 100%;
-        align-items: center;
+        margin-top: 0;
+        width: auto;
+        align-items: flex-start;
         gap: 8px;
     }
 
     .camera-nav-popup {
-        justify-content: center;
+        justify-content: flex-start;
         flex-wrap: wrap;
         gap: 8px;
     }
@@ -2618,31 +2632,15 @@ button:active {
         height: 22px;
     }
     
-    /* Mobile sidebar adjustments */
+    #ui .sidebar,
     .sidebar {
         width: 100%;
-        max-width: none;
-        right: 0;
-        left: 0;
-        bottom: 0;
-        top: auto;
-        height: auto;
-        max-height: 50vh;
     }
     
     .panel {
         margin: 0;
         border-radius: 0;
         border-top: 1px solid var(--glass-stroke-soft);
-    }
-    
-    /* Mobile header adjustments */
-    .header {
-        padding: 56px 20px 15px;
-    }
-    
-    .header h1 {
-        font-size: 1.5rem;
     }
     
     .subtitle {
@@ -2659,15 +2657,9 @@ button:active {
 
 /* Tablet optimizations */
 @media (min-width: 769px) and (max-width: 1024px) {
-    .controls {
-        bottom: 30px;
-        left: 30px;
-        right: 30px;
-    }
-    
-    .controls button {
-        padding: 10px 14px;
-        font-size: 13px;
+    .controls-main button {
+        padding: 0 12px;
+        font-size: 0.8rem;
     }
 }
 
@@ -2681,27 +2673,22 @@ button:active {
 
 /* Landscape mobile optimizations */
 @media (max-width: 768px) and (orientation: landscape) {
+    #ui .sidebar,
     .sidebar {
-        max-height: 40vh;
+        max-height: min(78dvh, calc(100dvh - 96px));
     }
     
-    .header {
-        padding: 52px 20px 10px;
+    #ui .header {
+        padding: 58px 16px 8px;
     }
     
-    .header h1 {
-        font-size: 1.3rem;
+    #ui .header h1 {
+        font-size: 1rem;
     }
     
-    .controls {
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
-    }
-    
-    .controls button {
-        padding: 8px 12px;
-        font-size: 12px;
+    .controls-main button {
+        padding: 0 10px;
+        font-size: 0.75rem;
     }
 }
 

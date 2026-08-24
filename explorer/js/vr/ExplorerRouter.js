@@ -136,6 +136,19 @@
         else document.body.appendChild(imported);
     }
 
+    /** Overlays live outside #ui (modals, raw data, treemap, node table). */
+    var PAGE_OVERLAY_SELECTOR = [
+        '.modal',
+        '.raw-data-modal',
+        '.treemap-container',
+        '.node-table-pane',
+        '.loading-modal',
+    ].join(', ');
+
+    function isChromeOverlay(el) {
+        return !!(el && !el.closest('#container'));
+    }
+
     function hidePageOverlays() {
         document.querySelectorAll('.modal, .raw-data-modal').forEach(function (el) {
             el.style.display = 'none';
@@ -143,8 +156,29 @@
         document.querySelectorAll('.treemap-container').forEach(function (el) {
             el.style.display = 'none';
         });
-        document.querySelectorAll('.loading-modal').forEach(function (el) {
+        document.querySelectorAll('.loading-modal, .api-popup').forEach(function (el) {
             el.remove();
+        });
+    }
+
+    /** Soft-nav only swaps #ui; bring page-specific body overlays along. */
+    function syncPageOverlays(doc) {
+        document.querySelectorAll(PAGE_OVERLAY_SELECTOR).forEach(function (el) {
+            if (isChromeOverlay(el)) el.remove();
+        });
+
+        var insertAfter = document.querySelector('.disclaimer') ||
+            document.getElementById('container');
+        doc.querySelectorAll(PAGE_OVERLAY_SELECTOR).forEach(function (el) {
+            if (!isChromeOverlay(el)) return;
+            var imported = document.importNode(el, true);
+            if (insertAfter) {
+                insertAfter.insertAdjacentElement('afterend', imported);
+                insertAfter = imported;
+            } else {
+                document.body.appendChild(imported);
+                insertAfter = imported;
+            }
         });
     }
 
@@ -156,23 +190,10 @@
         if (shell && shell.renderer && typeof VRButton !== 'undefined' && VRButton.reattach) {
             VRButton.reattach(shell.renderer);
         }
-        // Hamburger. The .navbar persists across soft-nav (only #ui is swapped),
-        // so the page's inline listener stays bound. Clone the node to strip any
-        // existing listeners (inline + prior rebinds) and bind exactly once —
-        // otherwise stacked listeners toggle .active twice and the menu "dies".
+        // The .navbar persists across soft-nav (only #ui is swapped). Rebind
+        // Explore so listeners are not stacked, then close the drawer.
         if (typeof window.bindExplorerNav === 'function') {
             window.bindExplorerNav();
-        } else {
-            var hamburger = document.querySelector('.hamburger');
-            var navMenu = document.querySelector('.nav-menu');
-            if (hamburger && navMenu && hamburger.parentNode) {
-                var fresh = hamburger.cloneNode(true);
-                hamburger.parentNode.replaceChild(fresh, hamburger);
-                fresh.addEventListener('click', function () {
-                    fresh.classList.toggle('active');
-                    navMenu.classList.toggle('active');
-                });
-            }
         }
         if (typeof window.closeExplorerNav === 'function') window.closeExplorerNav();
         if (typeof window.ExplorerAudio !== 'undefined' && ExplorerAudio.bindDesktopToggle) {
@@ -192,13 +213,7 @@
             var file = pageFileFromUrl(href);
             if (!isExplorerFile(file)) return;
             e.preventDefault();
-            var hm = document.querySelector('.hamburger');
-            var nm = document.querySelector('.nav-menu');
             if (typeof window.closeExplorerNav === 'function') window.closeExplorerNav();
-            else {
-                if (hm) hm.classList.remove('active');
-                if (nm) nm.classList.remove('active');
-            }
             ExplorerRouter.navigate(href);
             if (typeof window.ExplorerAudio !== 'undefined') {
                 ExplorerAudio.unlock();
@@ -333,6 +348,7 @@
                 if (doc.title) document.title = doc.title;
                 updateNavbarActive(file);
                 updateDisclaimer(doc);
+                syncPageOverlays(doc);
 
                 if (!opts.fromPopstate) {
                     if (opts.replace) history.replaceState({ softNav: true }, '', targetPath);

@@ -1,34 +1,29 @@
 (function () {
     'use strict';
 
+    function syncNavDuck(open) {
+        if (typeof window.ExplorerAudio === 'undefined') return;
+        if (open) {
+            ExplorerAudio.setDuck(true);
+            return;
+        }
+        var ex = window.__explorer;
+        if (ex && ex.montageActive && ex.montageMusicEnabled) return;
+        ExplorerAudio.setDuck(false);
+    }
+
     function closeDropdown() {
+        var closing = false;
         document.querySelectorAll('.nav-dropdown.open').forEach(function (el) {
+            closing = true;
             el.classList.remove('open');
             var btn = el.querySelector('.nav-dropdown-toggle');
             if (btn) btn.setAttribute('aria-expanded', 'false');
         });
-    }
-
-    function closeMobile() {
-        var hm = document.querySelector('.hamburger');
-        var nm = document.querySelector('.nav-menu');
-        if (hm) hm.classList.remove('active');
-        if (nm) nm.classList.remove('active');
-        closeDropdown();
+        if (closing) syncNavDuck(false);
     }
 
     function bindExplorerNav() {
-        var hamburger = document.querySelector('.hamburger');
-        var navMenu = document.querySelector('.nav-menu');
-        if (hamburger && navMenu && hamburger.parentNode) {
-            var fresh = hamburger.cloneNode(true);
-            hamburger.parentNode.replaceChild(fresh, hamburger);
-            fresh.addEventListener('click', function () {
-                fresh.classList.toggle('active');
-                navMenu.classList.toggle('active');
-            });
-        }
-
         document.querySelectorAll('.nav-dropdown-toggle').forEach(function (btn) {
             var next = btn.cloneNode(true);
             btn.parentNode.replaceChild(next, btn);
@@ -41,6 +36,11 @@
                 if (open) {
                     li.classList.add('open');
                     next.setAttribute('aria-expanded', 'true');
+                    syncNavDuck(true);
+                    if (typeof window.ExplorerAudio !== 'undefined') {
+                        ExplorerAudio.unlock();
+                        ExplorerAudio.play('ui-menu');
+                    }
                 }
             });
         });
@@ -51,17 +51,17 @@
                 if (!e.target.closest || !e.target.closest('.nav-dropdown')) closeDropdown();
             });
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') closeMobile();
+                if (e.key === 'Escape') closeDropdown();
             });
         }
 
         document.querySelectorAll('.nav-dropdown-panel a.nav-link').forEach(function (a) {
-            a.addEventListener('click', function () { closeMobile(); });
+            a.addEventListener('click', function () { closeDropdown(); });
         });
     }
 
     window.bindExplorerNav = bindExplorerNav;
-    window.closeExplorerNav = closeMobile;
+    window.closeExplorerNav = closeDropdown;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', bindExplorerNav);
