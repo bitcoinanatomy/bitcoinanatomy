@@ -41,6 +41,7 @@ function truncHex(h) {
 const SCRIPT_TYPES = {
     p2pk: {
         name: 'P2PK',
+        subtitle: 'Pay to public key',
         note: 'Placeholder kA = …0001. Locking script holds compressed 1·G. Unlocking script is a DER signature over SHA256("anatomy-of-bitcoin-script-demo"). CHECKSIG is pedagogical.',
         tokens: [
             { phase: 'unlock', kind: 'push', role: 'SIG', hex: DEMO.sigA },
@@ -50,6 +51,7 @@ const SCRIPT_TYPES = {
     },
     p2pkh: {
         name: 'P2PKH',
+        subtitle: 'Pay to public key hash',
         note: 'kA = …0001. HASH160(compressed 1·G) = 751e76e8…1433bd6. DUP, HASH160, EQUALVERIFY, CHECKSIG.',
         tokens: [
             { phase: 'unlock', kind: 'push', role: 'SIG', hex: DEMO.sigA },
@@ -63,6 +65,7 @@ const SCRIPT_TYPES = {
     },
     p2ms: {
         name: 'P2MS',
+        subtitle: '2-of-3 multisig',
         note: '2-of-3 with kA,kB,kC = 1,2,3. Dummy OP_0 accounts for the CHECKMULTISIG extra pop. Signatures A and C follow pubkey order.',
         tokens: [
             { phase: 'unlock', kind: 'op', name: 'OP_0' },
@@ -78,6 +81,7 @@ const SCRIPT_TYPES = {
     },
     p2sh: {
         name: 'P2SH',
+        subtitle: 'Pay to script hash',
         note: 'Redeem script is P2PKH for kA. Script hash HASH160(76a914…88ac). After EQUALVERIFY the inner P2PKH runs.',
         tokens: [
             { phase: 'unlock', kind: 'push', role: 'SIG', hex: DEMO.sigA },
@@ -95,6 +99,7 @@ const SCRIPT_TYPES = {
     },
     p2wpkh: {
         name: 'P2WPKH',
+        subtitle: 'SegWit v0 pay to public key hash',
         note: 'SegWit v0: SIG and PUBKEY in the witness. ScriptPubKey is OP_0 + HASH160(1·G). Implied script is P2PKH.',
         tokens: [
             { phase: 'witness', kind: 'push', role: 'SIG', hex: DEMO.sigA },
@@ -108,6 +113,7 @@ const SCRIPT_TYPES = {
     },
     p2wsh: {
         name: 'P2WSH',
+        subtitle: 'SegWit v0 pay to script hash',
         note: 'Witness: dummy, SIG A, SIG C, 2-of-3 script. SHA256(script) = 12c2ffbc…af20c572. Inner CHECKMULTISIG after the hash check.',
         tokens: [
             { phase: 'witness', kind: 'op', name: 'OP_0' },
@@ -129,6 +135,7 @@ const SCRIPT_TYPES = {
     },
     p2tr: {
         name: 'P2TR',
+        subtitle: 'Taproot key-path spend',
         note: 'Key-path: BIP-340 Schnorr (key 1, empty-message test vector) and x-only 1·G as Q (untweaked demo). CHECKSIG is pedagogical.',
         tokens: [
             { phase: 'witness', kind: 'push', role: 'SCHNORR', hex: DEMO.schnorr },
@@ -138,6 +145,7 @@ const SCRIPT_TYPES = {
     },
     opreturn: {
         name: 'OP_RETURN',
+        subtitle: 'Unspendable data output',
         note: 'OP_RETURN fails immediately. Data is ASCII “anatomy-of-bitcoin-script-demo” (never executed).',
         tokens: [
             { phase: 'lock', kind: 'op', name: 'OP_RETURN' },
@@ -343,14 +351,14 @@ class BitcoinScriptExplorer {
     }
 
     setupControls() {
-        this._bind('type-p2pk', () => this.setType('p2pk'));
-        this._bind('type-p2pkh', () => this.setType('p2pkh'));
-        this._bind('type-p2ms', () => this.setType('p2ms'));
-        this._bind('type-p2sh', () => this.setType('p2sh'));
-        this._bind('type-p2wpkh', () => this.setType('p2wpkh'));
-        this._bind('type-p2wsh', () => this.setType('p2wsh'));
-        this._bind('type-p2tr', () => this.setType('p2tr'));
-        this._bind('type-opreturn', () => this.setType('opreturn'));
+        this._bind('type-p2pk', () => this.selectType('p2pk'));
+        this._bind('type-p2pkh', () => this.selectType('p2pkh'));
+        this._bind('type-p2ms', () => this.selectType('p2ms'));
+        this._bind('type-p2sh', () => this.selectType('p2sh'));
+        this._bind('type-p2wpkh', () => this.selectType('p2wpkh'));
+        this._bind('type-p2wsh', () => this.selectType('p2wsh'));
+        this._bind('type-p2tr', () => this.selectType('p2tr'));
+        this._bind('type-opreturn', () => this.selectType('opreturn'));
         this._bind('script-reset', () => this.reset());
         this._bind('script-step', () => this.step());
         this._bind('script-play', () => this.togglePlay());
@@ -760,6 +768,14 @@ class BitcoinScriptExplorer {
         this.updatePanel();
     }
 
+    selectType(id) {
+        if (id === this.typeId) {
+            this.step();
+            return;
+        }
+        this.setType(id);
+    }
+
     setType(id) {
         if (!SCRIPT_TYPES[id]) return;
         this.typeId = id;
@@ -1007,7 +1023,7 @@ class BitcoinScriptExplorer {
             if (el) el.textContent = v;
         };
         set('script-type-label', t.name);
-        set('script-subtitle', t.name + '  ·  kA=…0001');
+        set('script-subtitle', t.subtitle || t.name);
         set('script-phase-label', this.done ? 'done' : (cur ? cur.phase : '—'));
         set('script-op-label', this.lastOp);
         set('script-stack-label', this.stack.length
