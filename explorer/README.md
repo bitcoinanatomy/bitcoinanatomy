@@ -67,6 +67,8 @@ A 3D interactive Bitcoin protocol explorer built with vanilla HTML, CSS, and Jav
 
 ## Getting Started
 
+From this folder, run `python3 serve.py` then open http://127.0.0.1:8000/ (this serves only `explorer/` and proxies btcnodes.io).
+
 1. Open `index.html` in a modern web browser
 2. Navigate between pages using the top navigation
 3. Interact with 3D scenes using mouse controls:
