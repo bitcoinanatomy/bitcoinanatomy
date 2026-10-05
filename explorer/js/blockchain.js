@@ -608,7 +608,11 @@ class BitcoinBlockchainExplorer {
         pageSignal.addEventListener('abort', onPageAbort);
 
         try {
-            const response = await fetch(DifficultySpiral.epochUrl(epoch), { signal: ac.signal });
+            let response = await fetch(DifficultySpiral.epochUrl(epoch), { signal: ac.signal });
+            if (!response.ok) {
+                // fallback to pvxg.net
+                response = await fetch(DifficultySpiral.epochUrlFallback(epoch), { signal: ac.signal });
+            }
             if (!response.ok) throw new Error('HTTP ' + response.status);
             const data = await response.json();
             const blocks = data && data[0];

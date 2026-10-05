@@ -1109,7 +1109,7 @@ class BitcoinNetworkExplorer {
     }
     
     async loadLocalArchive() {
-        const ARCHIVE_PATH = 'js/bitnodes-snapshot-1772712282.json';
+        const ARCHIVE_PATH = 'js/pvxg-nodes-snapshot-1791229381.json';
         this.showLoadingModal('Loading archive snapshot...');
         try {
             this.updateLoadingProgress('Loading archive snapshot...', 10);
@@ -1832,7 +1832,32 @@ class BitcoinNetworkExplorer {
     async fetchData() {
         this.showLoadingModal('Loading network data...');
         
-        // Check cache first
+        // ── Primary: load from local pvxg node snapshot (no API dependency) ──
+        try {
+            this.updateLoadingProgress('Loading local node data...', 20);
+            const localResp = await fetch('js/pvxg-nodes-snapshot-1791229381.json');
+            if (localResp.ok) {
+                const localData = await localResp.json();
+                if (localData && localData.nodes && Object.keys(localData.nodes).length > 1000) {
+                    console.log('✅ Loaded local pvxg node snapshot:', Object.keys(localData.nodes).length, 'nodes');
+                    this.nodeData = localData;
+                    this.latestSnapshot = { timestamp: localData.timestamp, total_nodes: Object.keys(localData.nodes).length };
+                    this.snapshotsData = null;
+                    this.updateDataSourceDisclaimer(false);
+                    this.updateLoadingProgress('Creating visualization...', 80);
+                    this.createNetworkVisualization();
+                    this.updateSnapshotNavButtons();
+                    this.syncUrlParams();
+                    this.hideLoadingModal();
+                    this.fetchSnapshotsList(); // still try API for snapshot nav, non-blocking
+                    return;
+                }
+            }
+        } catch (localErr) {
+            console.warn('⚠️ Local snapshot unavailable, falling back to API:', localErr.message);
+        }
+
+        // ── Fallback: check localStorage cache ──────────────────────────────
         const cachedData = this.getCachedData();
         if (cachedData) {
             this.updateLoadingProgress('Loading from cache...', 50);

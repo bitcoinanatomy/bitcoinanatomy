@@ -33,6 +33,12 @@
     function epochUrl(adjustmentIndex) {
         var firstBlock = adjustmentIndex * BLOCKS_PER_EPOCH;
         var fileName = 'rcp_bitcoin_block_data_' + String(firstBlock).padStart(7, '0') + '.json';
+        return 'data/difficulty_epochs/' + fileName;
+    }
+
+    function epochUrlFallback(adjustmentIndex) {
+        var firstBlock = adjustmentIndex * BLOCKS_PER_EPOCH;
+        var fileName = 'rcp_bitcoin_block_data_' + String(firstBlock).padStart(7, '0') + '.json';
         return 'https://pvxg.net/bitcoin_data/difficulty_epochs/' + fileName;
     }
 
@@ -109,6 +115,7 @@
         BLOCK_SIZE: BLOCK_SIZE,
         EPOCH_MAX_RADIUS: EPOCH_MAX_RADIUS,
         epochUrl: epochUrl,
+        epochUrlFallback: epochUrlFallback,
         layoutBlocks: layoutBlocks,
         discRadiusForEpoch: discRadiusForEpoch
     };

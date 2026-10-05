@@ -1113,7 +1113,11 @@ class BitcoinDifficultyExplorer {
             console.log('=== END HEIGHT FETCH DEBUG ===');
             
             const fileName = `rcp_bitcoin_block_data_${firstBlock.toString().padStart(7, '0')}.json`;
-            const response = await fetch(`https://pvxg.net/bitcoin_data/difficulty_epochs/${fileName}`);
+            let response = await fetch(`data/difficulty_epochs/${fileName}`);
+            if (!response.ok) {
+                // fallback to pvxg.net
+                response = await fetch(`https://pvxg.net/bitcoin_data/difficulty_epochs/${fileName}`);
+            }
             
             if (response.status === 429) {
                 this.hideLoadingModal();
