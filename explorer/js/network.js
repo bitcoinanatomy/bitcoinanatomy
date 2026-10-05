@@ -156,6 +156,9 @@ class BitcoinNetworkExplorer {
         
         console.log('  4.6️⃣ Setting up archive dropdown...');
         this.setupArchiveDropdown();
+
+        console.log('  4.7️⃣ Setting up source selector...');
+        this.setupSourceSelector();
         
         console.log('  5️⃣ Creating scene...');
         this.createScene();
@@ -1833,6 +1836,7 @@ class BitcoinNetworkExplorer {
         this.showLoadingModal('Loading network data...');
         
         // ── Primary: load from local pvxg node snapshot (no API dependency) ──
+        if (!this._forceSkipLocal) {
         try {
             this.updateLoadingProgress('Loading local node data...', 20);
             const localResp = await fetch('js/pvxg-nodes-snapshot-1791229381.json');
@@ -1844,6 +1848,7 @@ class BitcoinNetworkExplorer {
                     this.latestSnapshot = { timestamp: localData.timestamp, total_nodes: Object.keys(localData.nodes).length };
                     this.snapshotsData = null;
                     this.updateDataSourceDisclaimer(false);
+                    this.updateNodeSourceLabel('local');
                     this.updateLoadingProgress('Creating visualization...', 80);
                     this.createNetworkVisualization();
                     this.updateSnapshotNavButtons();
@@ -1856,6 +1861,7 @@ class BitcoinNetworkExplorer {
         } catch (localErr) {
             console.warn('⚠️ Local snapshot unavailable, falling back to API:', localErr.message);
         }
+        } // end !_forceSkipLocal
 
         // ── Fallback: check localStorage cache ──────────────────────────────
         const cachedData = this.getCachedData();
@@ -3426,6 +3432,64 @@ this.updateCameraCoordsDisplay();
         if (!trigger || !menu) return;
         menu.hidden = true;
         trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    // ── Source selector (bottom-right disclaimer) ──────────────────────────
+    setupSourceSelector() {
+        this._nodeSource = 'local'; // default: local pvxg snapshot
+        const btn = document.getElementById('node-source-btn');
+        const menu = document.getElementById('node-source-menu');
+        const label = document.getElementById('node-source-label');
+        if (!btn || !menu) return;
+
+        const sources = {
+            local: 'Local snapshot',
+            live:  'Live · BTC Nodes',
+        };
+
+        const open  = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+        const close = () => { menu.hidden = true;  btn.setAttribute('aria-expanded', 'false'); };
+
+        btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? open() : close(); });
+        document.addEventListener('click', (e) => { if (!btn.closest('#node-source-picker').contains(e.target)) close(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+        menu.querySelectorAll('.source-selector-option').forEach((opt) => {
+            opt.addEventListener('click', async () => {
+                const src = opt.dataset.source;
+                if (src === this._nodeSource) { close(); return; }
+                this._nodeSource = src;
+                label.textContent = sources[src];
+                menu.querySelectorAll('.source-selector-option').forEach(o => o.classList.toggle('active', o.dataset.source === src));
+                close();
+                // Re-fetch data using the selected source
+                if (src === 'local') {
+                    this.clearCache();
+                    await this.fetchData();
+                } else {
+                    // Force skip local snapshot → go straight to live API
+                    this.clearCache();
+                    this._forceSkipLocal = true;
+                    await this.fetchData();
+                    this._forceSkipLocal = false;
+                }
+            });
+        });
+
+        // Reflect active source in label on init (local is default)
+        label.textContent = sources[this._nodeSource];
+    }
+
+    updateNodeSourceLabel(src) {
+        const label = document.getElementById('node-source-label');
+        const menu  = document.getElementById('node-source-menu');
+        if (!label || !menu) return;
+        const names = { local: 'Local snapshot', live: 'Live · BTC Nodes' };
+        if (names[src]) {
+            label.textContent = names[src];
+            this._nodeSource = src;
+            menu.querySelectorAll('.source-selector-option').forEach(o => o.classList.toggle('active', o.dataset.source === src));
+        }
     }
     
     async loadArchiveSnapshot(timestamp) {
