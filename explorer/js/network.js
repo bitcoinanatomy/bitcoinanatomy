@@ -1835,10 +1835,62 @@ class BitcoinNetworkExplorer {
     async fetchData() {
         this.showLoadingModal('Loading network data...');
         
-        // ── Primary: load from local pvxg node snapshot (no API dependency) ──
+        // ── Primary: load from live crawler via /api/addrman ─────────────────
         if (!this._forceSkipLocal) {
         try {
-            this.updateLoadingProgress('Loading local node data...', 20);
+            this.updateLoadingProgress('Loading crawler node data...', 20);
+            const crawlerResp = await fetch('/api/addrman');
+            if (crawlerResp.ok) {
+                const raw = await crawlerResp.json();
+                // addrman_merged format: { nodes: [{addr, port, userAgent, lat, lng, country, city, org, services, ...}] }
+                const nodeList = Array.isArray(raw.nodes) ? raw.nodes : (Array.isArray(raw) ? raw : null);
+                if (nodeList && nodeList.length > 1000) {
+                    console.log('✅ Loaded crawler data:', nodeList.length, 'nodes');
+                    // Convert to snapshot format: { timestamp, nodes: { "ip:port": [...13 fields] } }
+                    const nodes = {};
+                    const now = Math.floor(Date.now() / 1000);
+                    for (const n of nodeList) {
+                        const addr = n.addr || n.address || '';
+                        const port = n.port || 8333;
+                        const isIpv6 = addr.includes(':') && !addr.includes('.onion');
+                        const key = isIpv6 ? `[${addr}]:${port}` : `${addr}:${port}`;
+                        nodes[key] = [
+                            n.version   ?? 70015,
+                            n.userAgent ?? n.user_agent ?? '/Satoshi:0.0.0/',
+                            n.connectedSince ?? n.connected_since ?? 0,
+                            n.services  ?? 0,
+                            n.height    ?? 0,
+                            n.hostname  ?? null,
+                            n.city      ?? null,
+                            n.country   ?? null,
+                            n.lat       ?? n.latitude  ?? 0.0,
+                            n.lng       ?? n.longitude ?? n.lon ?? 0.0,
+                            n.timezone  ?? null,
+                            n.asn       ?? null,
+                            n.org       ?? n.organization ?? null,
+                        ];
+                    }
+                    this.nodeData = { timestamp: now, total_nodes: nodeList.length, nodes };
+                    this.latestSnapshot = { timestamp: now, total_nodes: nodeList.length };
+                    this.snapshotsData = null;
+                    this.updateDataSourceDisclaimer(false);
+                    this.updateNodeSourceLabel('local');
+                    this.updateLoadingProgress('Creating visualization...', 80);
+                    this.createNetworkVisualization();
+                    this.updateSnapshotNavButtons();
+                    this.syncUrlParams();
+                    this.hideLoadingModal();
+                    this.fetchSnapshotsList();
+                    return;
+                }
+            }
+        } catch (crawlerErr) {
+            console.warn('⚠️ Crawler API unavailable, trying local snapshot:', crawlerErr.message);
+        }
+
+        // ── Fallback: local pvxg snapshot ────────────────────────────────────
+        try {
+            this.updateLoadingProgress('Loading local node snapshot...', 30);
             const localResp = await fetch('js/pvxg-nodes-snapshot-1791229381.json');
             if (localResp.ok) {
                 const localData = await localResp.json();
@@ -1854,7 +1906,7 @@ class BitcoinNetworkExplorer {
                     this.updateSnapshotNavButtons();
                     this.syncUrlParams();
                     this.hideLoadingModal();
-                    this.fetchSnapshotsList(); // still try API for snapshot nav, non-blocking
+                    this.fetchSnapshotsList();
                     return;
                 }
             }
@@ -3444,7 +3496,7 @@ this.updateCameraCoordsDisplay();
         if (!btn || !menu) return;
 
         const sources = {
-            local:   'Local snapshot',
+            local:   'Crawler data',
             live:    'Live · BTC Nodes',
             archive: 'Historical Archive',
         };
@@ -3494,7 +3546,7 @@ this.updateCameraCoordsDisplay();
         const label = document.getElementById('node-source-label');
         const menu  = document.getElementById('node-source-menu');
         if (!label || !menu) return;
-        const names = { local: 'Local snapshot', live: 'Live · BTC Nodes', archive: 'Historical Archive' };
+        const names = { local: 'Crawler data', live: 'Live · BTC Nodes', archive: 'Historical Archive' };
         if (names[src]) {
             label.textContent = names[src];
             this._nodeSource = src;
