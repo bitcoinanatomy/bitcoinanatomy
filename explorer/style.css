@@ -1853,6 +1853,14 @@ button:active {
     content: '✓ ';
 }
 
+.source-selector-option[data-source="archive"] {
+    color: #6a9fcf;
+}
+
+.source-selector-option[data-source="archive"]:hover {
+    color: #90c0ef;
+}
+
 .source-selector-separator {
     height: 1px;
     background: #333;

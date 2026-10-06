@@ -1974,6 +1974,7 @@ class BitcoinNetworkExplorer {
                 this.nodeData = nodeData;
                 this.subtitlePrefix = '';
                 this.updateDataSourceDisclaimer(false);
+                this.updateNodeSourceLabel('live');
 
                 this.updateLoadingProgress('Creating visualization...', 80);
                 const loadedCount = Object.keys(this.nodeData.nodes).length;
@@ -3443,8 +3444,9 @@ this.updateCameraCoordsDisplay();
         if (!btn || !menu) return;
 
         const sources = {
-            local: 'Local snapshot',
-            live:  'Live · BTC Nodes',
+            local:   'Local snapshot',
+            live:    'Live · BTC Nodes',
+            archive: 'Historical Archive',
         };
 
         const open  = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
@@ -3458,6 +3460,14 @@ this.updateCameraCoordsDisplay();
             opt.addEventListener('click', async () => {
                 const src = opt.dataset.source;
                 if (src === this._nodeSource) { close(); return; }
+
+                if (src === 'archive') {
+                    // Don't change the active source — just open the archive picker
+                    close();
+                    this.openArchivePicker();
+                    return;
+                }
+
                 this._nodeSource = src;
                 label.textContent = sources[src];
                 menu.querySelectorAll('.source-selector-option').forEach(o => o.classList.toggle('active', o.dataset.source === src));
@@ -3484,11 +3494,14 @@ this.updateCameraCoordsDisplay();
         const label = document.getElementById('node-source-label');
         const menu  = document.getElementById('node-source-menu');
         if (!label || !menu) return;
-        const names = { local: 'Local snapshot', live: 'Live · BTC Nodes' };
+        const names = { local: 'Local snapshot', live: 'Live · BTC Nodes', archive: 'Historical Archive' };
         if (names[src]) {
             label.textContent = names[src];
             this._nodeSource = src;
-            menu.querySelectorAll('.source-selector-option').forEach(o => o.classList.toggle('active', o.dataset.source === src));
+            // archive is a launcher — never mark it as the active data source
+            menu.querySelectorAll('.source-selector-option').forEach(o => {
+                o.classList.toggle('active', o.dataset.source === src && src !== 'archive');
+            });
         }
     }
     
