@@ -184,14 +184,28 @@
             <span class="source-selector-label">Node data:</span>
             <span class="source-selector-picker" id="node-source-picker">
                 <button type="button" id="node-source-btn" class="source-selector-btn" aria-haspopup="listbox" aria-expanded="false">
-                    <span id="node-source-label">Crawler data</span>
+                    <span id="node-source-label">Crawler archive</span>
                 </button>
                 <div class="source-selector-menu" id="node-source-menu" role="listbox" hidden>
-                    <button class="source-selector-option active" data-source="local" role="option">Crawler data (live)</button>
+                    <button class="source-selector-option active" data-source="crawler-archive" role="option">
+                        <span class="src-name">Crawler archive</span>
+                        <span class="src-desc">Your node's addrman — IPs seen via P2P gossip</span>
+                    </button>
                     <div class="source-selector-separator"></div>
-                    <button class="source-selector-option" data-source="live" role="option">Live · BTC Nodes API</button>
+                    <button class="source-selector-option" data-source="btcnodes-live" role="option">
+                        <span class="src-name">BTC Nodes · live</span>
+                        <span class="src-desc">Live btcnodes.io API via local proxy</span>
+                    </button>
                     <div class="source-selector-separator"></div>
-                    <button class="source-selector-option" data-source="archive" role="option">Historical Archive ↗</button>
+                    <button class="source-selector-option" data-source="btcnodes-archive" role="option">
+                        <span class="src-name">BTC Nodes · archive</span>
+                        <span class="src-desc">pvxg.net local snapshot (static JSON)</span>
+                    </button>
+                    <div class="source-selector-separator"></div>
+                    <button class="source-selector-option" data-source="bitnodes-archive" role="option">
+                        <span class="src-name">Bitnodes · archive</span>
+                        <span class="src-desc">bitnodes.io geo cache — 25k geolocated IPs</span>
+                    </button>
                 </div>
             </span>
         </span>
