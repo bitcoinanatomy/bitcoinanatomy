@@ -752,7 +752,7 @@ class BitcoinDifficultyExplorer {
         directionalLight.castShadow = true;
         this.scene.add(directionalLight);
         
-        if (this.selectedAdjustment !== null) {
+        if (this.selectedAdjustment !== null && this.blockData) {
             this.createBlockSpiral();
         }
     }
