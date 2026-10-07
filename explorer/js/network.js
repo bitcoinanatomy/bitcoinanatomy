@@ -1120,6 +1120,7 @@ class BitcoinNetworkExplorer {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
 
+            if (!data.total_nodes && data.nodes) data.total_nodes = Object.keys(data.nodes).length;
             this.nodeData = data;
             this.subtitlePrefix = 'Archive: ';
             this.latestSnapshot = { timestamp: data.timestamp, total_nodes: data.total_nodes };
@@ -1838,9 +1839,11 @@ class BitcoinNetworkExplorer {
         const src = this._nodeSource || 'crawler-archive';
 
         // ── Helper: convert flat node list → snapshot format ─────────────────
-        const nodeListToSnapshot = (nodeList) => {
+        const nodeListToSnapshot = (nodeList, generatedAt) => {
             const nodes = {};
-            const now = Math.floor(Date.now() / 1000);
+            const now = (typeof generatedAt === 'number' && generatedAt > 1e9)
+                ? Math.floor(generatedAt > 1e12 ? generatedAt / 1000 : generatedAt)
+                : Math.floor(Date.now() / 1000);
             for (const n of nodeList) {
                 const addr = n.addr || n.address || '';
                 const port = n.port || 8333;
@@ -1867,6 +1870,7 @@ class BitcoinNetworkExplorer {
 
         // ── Helper: finalize and render ───────────────────────────────────────
         const render = (snapshot, srcLabel) => {
+            this.subtitlePrefix = '';
             this.nodeData = snapshot;
             this.latestSnapshot = { timestamp: snapshot.timestamp, total_nodes: snapshot.total_nodes };
             this.snapshotsData = null;
@@ -1886,13 +1890,14 @@ class BitcoinNetworkExplorer {
         if (src === 'crawler-archive') {
             try {
                 this.updateLoadingProgress('Loading crawler node data...', 20);
-                const resp = await fetch('/api/addrman');
+                let resp = await fetch('data/btc_nodes.json');
+                if (!resp.ok) resp = await fetch('/api/addrman');
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const raw = await resp.json();
                 const nodeList = Array.isArray(raw.nodes) ? raw.nodes : (Array.isArray(raw) ? raw : null);
                 if (!nodeList || nodeList.length < 100) throw new Error('Empty crawler response');
                 console.log('✅ [crawler-archive] Loaded', nodeList.length, 'nodes');
-                render(nodeListToSnapshot(nodeList), 'crawler-archive');
+                render(nodeListToSnapshot(nodeList, raw.generated_at), 'crawler-archive');
                 return;
             } catch (err) {
                 console.error('[crawler-archive] Failed:', err.message);
@@ -1972,19 +1977,21 @@ class BitcoinNetworkExplorer {
                 const localResp = await fetch('js/pvxg-nodes-snapshot-1791229381.json');
                 if (!localResp.ok) throw new Error(`HTTP ${localResp.status}`);
                 const localData = await localResp.json();
-                if (!localData || !localData.nodes || Object.keys(localData.nodes).length < 100) throw new Error('Archive snapshot empty or too small');
-                console.log('✅ [btcnodes-archive] Loaded', Object.keys(localData.nodes).length, 'nodes');
+                const nodeCount = localData && localData.nodes ? Object.keys(localData.nodes).length : 0;
+                if (nodeCount < 100) throw new Error('Archive snapshot empty or too small');
+                if (!localData.total_nodes) localData.total_nodes = nodeCount;
+                console.log('✅ [btcnodes-archive] Loaded', nodeCount, 'nodes from', localData.timestamp);
+                this.subtitlePrefix = 'Archive: ';
                 this.nodeData = localData;
-                this.latestSnapshot = { timestamp: localData.timestamp, total_nodes: Object.keys(localData.nodes).length };
+                this.latestSnapshot = { timestamp: localData.timestamp, total_nodes: nodeCount };
                 this.snapshotsData = null;
-                this.updateDataSourceDisclaimer(false);
+                this.updateDataSourceDisclaimer(true);
                 this.updateNodeSourceLabel('btcnodes-archive');
                 this.updateLoadingProgress('Creating visualization...', 80);
                 this.createNetworkVisualization();
                 this.updateSnapshotNavButtons();
                 this.syncUrlParams();
                 this.hideLoadingModal();
-                this.fetchSnapshotsList();
                 return;
             } catch (err) {
                 console.error('[btcnodes-archive] Failed:', err.message);
@@ -2006,7 +2013,7 @@ class BitcoinNetworkExplorer {
                 const nodeList = Array.isArray(raw.nodes) ? raw.nodes : (Array.isArray(raw) ? raw : null);
                 if (!nodeList || nodeList.length < 100) throw new Error('Empty bitnodes archive response');
                 console.log('✅ [bitnodes-archive] Loaded', nodeList.length, 'nodes');
-                render(nodeListToSnapshot(nodeList), 'bitnodes-archive');
+                render(nodeListToSnapshot(nodeList, raw.generated_at), 'bitnodes-archive');
                 return;
             } catch (err) {
                 console.error('[bitnodes-archive] Failed:', err.message);
@@ -3444,18 +3451,18 @@ this.updateCameraCoordsDisplay();
 
     // ── Source selector (bottom-right disclaimer) ──────────────────────────
     setupSourceSelector() {
-        this._nodeSource = 'crawler-archive'; // default
-        const btn = document.getElementById('node-source-btn');
-        const menu = document.getElementById('node-source-menu');
-        const label = document.getElementById('node-source-label');
-        if (!btn || !menu) return;
-
         const sources = {
             'crawler-archive':  'Crawler archive',
             'btcnodes-live':    'BTC Nodes · live',
             'btcnodes-archive': 'BTC Nodes · archive',
             'bitnodes-archive': 'Bitnodes · archive',
         };
+        const fromUrl = new URLSearchParams(location.search).get('source');
+        this._nodeSource = sources[fromUrl] ? fromUrl : 'crawler-archive';
+        const btn = document.getElementById('node-source-btn');
+        const menu = document.getElementById('node-source-menu');
+        const label = document.getElementById('node-source-label');
+        if (!btn || !menu) return;
 
         const open  = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
         const close = () => { menu.hidden = true;  btn.setAttribute('aria-expanded', 'false'); };
@@ -3472,12 +3479,16 @@ this.updateCameraCoordsDisplay();
                 label.textContent = sources[src] || src;
                 menu.querySelectorAll('.source-selector-option').forEach(o => o.classList.toggle('active', o.dataset.source === src));
                 close();
+                this.syncUrlParams();
                 this.clearCache();
                 await this.fetchData();
             });
         });
 
         label.textContent = sources[this._nodeSource];
+        menu.querySelectorAll('.source-selector-option').forEach(o => {
+            o.classList.toggle('active', o.dataset.source === this._nodeSource);
+        });
     }
 
     updateNodeSourceLabel(src) {
@@ -4038,6 +4049,7 @@ this.updateCameraCoordsDisplay();
         if (this.tableOpen)       p.set('table',       '1');
         if (!this.isRotating)     p.set('rotate',      '0');
         if (this.tableFilter !== 'all') p.set('filter', this.tableFilter);
+        if (this._nodeSource && this._nodeSource !== 'crawler-archive') p.set('source', this._nodeSource);
         if (document.body.classList.contains('ui-hidden')) p.set('ui', 'hidden');
         if (this.montageActive) p.set('montage', '1');
         const current = new URLSearchParams(location.search);
