@@ -131,8 +131,7 @@ body:not(.homepage) {
     top: 0;
     left: 0;
     right: 0;
-    background: rgb(0 0 0 / 8%);
-    backdrop-filter: blur(10px);
+    background: transparent;
     border-bottom: 1px solid var(--glass-stroke-soft);
     box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.03);
     z-index: 23000;
@@ -142,6 +141,18 @@ body:not(.homepage) {
     align-items: center;
     justify-content: flex-start;
     gap: 12px;
+}
+
+/* Blur lives on a pseudo-element. backdrop-filter on .navbar itself
+   makes it the containing block for the fixed Explore drawer. */
+body > .navbar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 8%);
+    backdrop-filter: blur(10px);
+    z-index: 0;
+    pointer-events: none;
 }
 
 .navbar::after {
@@ -180,6 +191,8 @@ body:not(.homepage) {
 }
 
 .nav-brand {
+    position: relative;
+    z-index: 2;
     font-size: 1.5rem;
     color: #ffffff;
 }
@@ -206,6 +219,8 @@ body:not(.homepage) {
 }
 
 .nav-menu {
+    position: relative;
+    z-index: 1;
     display: flex;
     list-style: none;
     gap: 4px;
