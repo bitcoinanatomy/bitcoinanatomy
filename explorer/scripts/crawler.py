@@ -391,18 +391,47 @@ def write_status(status_path, state, started_at, timeout, workers, found, visite
         json.dump(doc, f, separators=(',', ':'))
     os.replace(tmp, status_path)
 
+_geo_cache = {'mtime': -1, 'map': {}}
+
+def load_ip_geo():
+    """IP → lat/lng written by geolocate_recent.py. Reloaded when the file changes."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'cache', 'ip_geo.json')
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return {}
+    if mtime != _geo_cache['mtime']:
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            _geo_cache['map'] = data.get('ips') if isinstance(data, dict) and 'ips' in data else data
+            _geo_cache['mtime'] = mtime
+        except (OSError, json.JSONDecodeError):
+            _geo_cache['map'] = {}
+    return _geo_cache['map']
+
 def write_cache(out_path, found, user_agents):
     """Atomically write the archive the dashboard serves at /api/addrman."""
+    geo = load_ip_geo()
     nodes = []
     for key, a in found.items():
-        nodes.append({
+        node = {
             'addr':      a['addr'],
             'port':      a['port'],
             'services':  a.get('services', 0),
             'userAgent': user_agents.get(key, ''),
             'timestamp': a.get('timestamp', 0),
             'network': network_of(a.get('addr', ''), a.get('network', '')),
-        })
+        }
+        hit = geo.get(a['addr']) if geo else None
+        if hit and hit.get('lat') is not None and hit.get('lng') is not None:
+            node['lat'] = hit['lat']
+            node['lng'] = hit['lng']
+            if hit.get('city'):
+                node['city'] = hit['city']
+            if hit.get('country'):
+                node['country'] = hit['country']
+        nodes.append(node)
     out = {
         'generated_at': int(time.time()),
         'count':        len(nodes),
