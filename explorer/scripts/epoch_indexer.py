@@ -83,6 +83,19 @@ def rpc_batch(rpc_url, auth_header, calls):
 
 # ── Epoch generation via RPC ──────────────────────────────────────────────────
 
+_status_path = None
+_status = {}
+
+def write_status(**fields):
+    _status.update(fields)
+    if not _status_path:
+        return
+    os.makedirs(os.path.dirname(_status_path), exist_ok=True)
+    tmp = _status_path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(_status, f)
+    os.replace(tmp, _status_path)
+
 def generate_epoch_rpc(epoch, tip, rpc_url, auth_header, out_dir):
     epoch_start = epoch * BLOCKS_PER_EPOCH
     epoch_end   = min(epoch_start + BLOCKS_PER_EPOCH - 1, tip)
@@ -104,6 +117,7 @@ def generate_epoch_rpc(epoch, tip, rpc_url, auth_header, out_dir):
                                  [('getblock', [bh, 1]) for bh in hashes[i:i+BATCH_SIZE]])
         sys.stdout.write(f'\r  Blocks: {min(i+BATCH_SIZE, count)}/{count}   ')
         sys.stdout.flush()
+        write_status(blocks=min(i + BATCH_SIZE, count), expected=count)
 
     blocks = []
     for i, blk in enumerate(block_data):
@@ -181,6 +195,7 @@ def generate_epoch_api(epoch, tip, out_dir):
             height = h + 1
         sys.stdout.write(f'\r  {height - epoch_start}/{count} blocks...')
         sys.stdout.flush()
+        write_status(blocks=min(height - epoch_start, count), expected=count)
         time.sleep(0.15)
 
     all_blocks = existing + new_blocks
@@ -218,6 +233,21 @@ def parse_epochs(spec, current_epoch):
         return list(range(int(a), int(b) + 1))
     return [int(spec)]
 
+def _tip(args):
+    if args.rpc_url and not args.api:
+        auth_header = 'Basic ' + base64.b64encode(
+            f'{args.rpc_user}:{args.rpc_password}'.encode()).decode()
+        payload = json.dumps({'jsonrpc':'1.0','id':'tip','method':'getblockcount','params':[]}).encode()
+        req = urllib.request.Request(args.rpc_url, data=payload,
+              headers={'Content-Type':'text/plain','Authorization':auth_header})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            tip = json.loads(r.read())['result']
+        return tip, True, auth_header
+    tip = int(urllib.request.urlopen(f'{MEMPOOL_API}/blocks/tip/height', timeout=10).read())
+    if args.rpc_url:
+        print('Note: --rpc-url ignored because --api flag is set')
+    return tip, False, None
+
 def main():
     parser = argparse.ArgumentParser(description='Bitcoin Epoch Indexer')
     parser.add_argument('--epochs',       default='current',
@@ -230,44 +260,57 @@ def main():
                         help='Use mempool.space API instead of RPC (slower, no node needed)')
     parser.add_argument('--out-dir',      default=None,
                         help=f'Output directory (default: {DEFAULT_OUT_DIR})')
+    parser.add_argument('--status-file',  default=None,
+                        help='JSON file updated while indexing (for the monitor page)')
     args = parser.parse_args()
 
     out_dir = args.out_dir or os.environ.get('EPOCH_OUT_DIR', DEFAULT_OUT_DIR)
 
+    global _status_path
+    _status_path = args.status_file
+    write_status(state='running', epochs=args.epochs, mode='rpc' if (args.rpc_url and not args.api) else 'api',
+                 outDir=os.path.abspath(out_dir), pid=os.getpid(), error=None)
+
     # Determine tip
-    if args.rpc_url and not args.api:
-        auth_header = 'Basic ' + base64.b64encode(
-            f'{args.rpc_user}:{args.rpc_password}'.encode()).decode()
-        payload = json.dumps({'jsonrpc':'1.0','id':'tip','method':'getblockcount','params':[]}).encode()
-        req = urllib.request.Request(args.rpc_url, data=payload,
-              headers={'Content-Type':'text/plain','Authorization':auth_header})
-        with urllib.request.urlopen(req, timeout=15) as r:
-            tip = json.loads(r.read())['result']
-        use_rpc = True
-    else:
-        tip = int(urllib.request.urlopen(f'{MEMPOOL_API}/blocks/tip/height', timeout=10).read())
-        use_rpc = False
-        if args.rpc_url:
-            print('Note: --rpc-url ignored because --api flag is set')
+    try:
+        tip, use_rpc, auth_header = _tip(args)
+    except Exception as err:
+        write_status(state='error', error=str(err))
+        raise
 
     current_epoch = tip // BLOCKS_PER_EPOCH
     epochs = parse_epochs(args.epochs, current_epoch)
+    write_status(state='running', tip=tip, currentEpoch=current_epoch,
+                 epochs=args.epochs, epochsTotal=len(epochs), epochIndex=0,
+                 blocks=0, expected=0, mode='rpc' if use_rpc else 'api',
+                 outDir=os.path.abspath(out_dir), pid=os.getpid(), error=None)
     print(f'Node tip: {tip}  |  Current epoch: {current_epoch}')
     print(f'Mode: {"RPC (" + args.rpc_url + ")" if use_rpc else "mempool.space API"}')
     print(f'Epochs to generate: {epochs[0]}–{epochs[-1]}  ({len(epochs)} total)')
     print(f'Output dir: {out_dir}\n')
 
-    for epoch in epochs:
-        epoch_start = epoch * BLOCKS_PER_EPOCH
-        if epoch_start > tip:
-            print(f'Epoch {epoch}: skipping (beyond tip {tip})')
-            continue
-        print(f'Epoch {epoch} (blocks {epoch_start}–{min(epoch_start+BLOCKS_PER_EPOCH-1, tip)}):')
-        if use_rpc:
-            generate_epoch_rpc(epoch, tip, args.rpc_url, auth_header, out_dir)
-        else:
-            generate_epoch_api(epoch, tip, out_dir)
+    try:
+        for epoch in epochs:
+            epoch_start = epoch * BLOCKS_PER_EPOCH
+            if epoch_start > tip:
+                print(f'Epoch {epoch}: skipping (beyond tip {tip})')
+                continue
+            print(f'Epoch {epoch} (blocks {epoch_start}–{min(epoch_start+BLOCKS_PER_EPOCH-1, tip)}):')
+            write_status(epoch=epoch, epochIndex=epochs.index(epoch) + 1,
+                         epochStart=epoch_start, blocks=0,
+                         expected=min(epoch_start + BLOCKS_PER_EPOCH - 1, tip) - epoch_start + 1)
+            if use_rpc:
+                generate_epoch_rpc(epoch, tip, args.rpc_url, auth_header, out_dir)
+            else:
+                generate_epoch_api(epoch, tip, out_dir)
+    except KeyboardInterrupt:
+        write_status(state='stopped')
+        raise
+    except Exception as err:
+        write_status(state='error', error=str(err))
+        raise
 
+    write_status(state='done')
     print('\nDone.')
 
 if __name__ == '__main__':

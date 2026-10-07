@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Explorer - Crawler</title>
+    <meta name="description" content="Start, stop, and watch the clearnet Bitcoin crawler">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        #ui.crawler-ui {
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+        }
+        .crawler-wrap {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            margin: 0 28px 28px;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 16px;
+            pointer-events: auto;
+        }
+        .crawler-card {
+            background: rgba(12, 12, 12, 0.72);
+            border: 1px solid var(--glass-stroke-strong);
+            border-radius: 10px;
+            padding: 18px 18px 14px;
+            color: rgba(255,255,255,0.86);
+            overflow: auto;
+        }
+        .crawler-card h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+        .crawler-note { color: rgba(255,255,255,0.55); font-size: 13px; line-height: 1.45; margin: 0 0 14px; }
+        .crawler-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 13px; border-top: 1px solid var(--glass-stroke); }
+        #c-clients .crawler-row span:first-child { word-break: break-all; text-align: left; }
+        .crawler-controls { display: flex; gap: 8px; margin-top: 14px; }
+        .crawler-controls button, .crawler-fields input {
+            background: #1a1a1a;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+        .crawler-controls button { cursor: pointer; flex: 1; }
+        .crawler-controls button:disabled { opacity: 0.4; cursor: default; }
+        .crawler-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .crawler-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: rgba(255,255,255,0.5); }
+        .state-running { color: #8d8; }
+        .state-idle, .state-done, .state-stopped { color: rgba(255,255,255,0.7); }
+        .peer { padding: 8px 0; border-top: 1px solid var(--glass-stroke); font-size: 13px; }
+        .peer code { color: rgba(255,255,255,0.92); }
+        .peer em { color: rgba(255,255,255,0.45); font-style: normal; }
+        @media (max-width: 800px) {
+            .crawler-wrap { grid-template-columns: 1fr; margin: 0 12px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="index.html">Anatomy of Bitcoin</a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-dropdown">
+                    <button type="button" class="nav-link nav-dropdown-toggle" aria-expanded="false">Explore</button>
+                    <ul class="nav-dropdown-panel">
+                        <li><a href="network.html" class="nav-link">Network</a></li>
+                        <li><a href="crawler.html" class="nav-link active">Crawler</a></li>
+                        <li><a href="monitor.html" class="nav-link">Monitor</a></li>
+                        <li><a href="node.html" class="nav-link">Node</a></li>
+                        <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
+                        <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
+                        <li><a href="block.html" class="nav-link">Block</a></li>
+                        <li><a href="transaction.html" class="nav-link">Transaction</a></li>
+                        <li><a href="address.html" class="nav-link">Address</a></li>
+                        <li><a href="mempool.html" class="nav-link">Mempool</a></li>
+                        <li><a href="curve.html" class="nav-link">Curve</a></li>
+                        <li><a href="script.html" class="nav-link">Script</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+        <div id="scene"></div>
+        <div id="ui" class="crawler-ui">
+            <div class="header">
+                <h1>Crawler</h1>
+                <div class="subtitle" id="crawler-subtitle">Clearnet gossip, no local node</div>
+            </div>
+            <div class="crawler-wrap">
+                <section class="crawler-card">
+                    <h2>Sync</h2>
+                    <p class="crawler-note">This process speaks the Bitcoin P2P protocol itself. It resolves DNS seeds, handshakes, and asks peers for addresses. A Bitcoin Core node is not required.</p>
+                    <div class="crawler-row"><span>State</span><span id="c-state">—</span></div>
+                    <div class="crawler-row"><span>Known addresses</span><span id="c-nodes">—</span></div>
+                    <div class="crawler-row"><span>Seen in last 24h</span><span id="c-recent">—</span></div>
+                    <div class="crawler-row"><span>Clearnet</span><span id="c-clearnet">—</span></div>
+                    <div class="crawler-row"><span>Tor</span><span id="c-tor">—</span></div>
+                    <div class="crawler-row"><span>Dials</span><span id="c-visited">—</span></div>
+                    <div class="crawler-row"><span>Handshakes</span><span id="c-hands">—</span></div>
+                    <div class="crawler-row"><span>Open connections</span><span id="c-conns">—</span></div>
+                    <div class="crawler-row"><span>Queued</span><span id="c-queued">—</span></div>
+                    <div class="crawler-fields">
+                        <label>Seconds<input id="c-timeout" type="number" min="30" max="3600" value="300"></label>
+                        <label>Workers<input id="c-workers" type="number" min="1" max="256" value="128"></label>
+                    </div>
+                    <div class="crawler-controls">
+                        <button id="c-start" type="button">Start</button>
+                        <button id="c-stop" type="button">Stop</button>
+                    </div>
+                    <p class="crawler-note" id="c-error" style="margin-top:12px"></p>
+                    <h2 style="margin-top:16px">Client versions</h2>
+                    <p class="crawler-note">From peers that completed a handshake. Gossiped addresses usually have no user agent.</p>
+                    <div id="c-clients"><p class="crawler-note">No handshakes yet.</p></div>
+                </section>
+                <section class="crawler-card">
+                    <h2>Recent handshakes</h2>
+                    <div id="c-peers"><p class="crawler-note">No connections yet.</p></div>
+                </section>
+            </div>
+        </div>
+    </div>
+    <script src="js/nav.js"></script>
+    <script>
+        const $ = (id) => document.getElementById(id);
+        const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        function fmt(n) { return (n == null) ? '—' : Number(n).toLocaleString(); }
+        async function readJson(res) {
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (err) {
+                throw new Error('This server has no crawler API. Stop the static server and run: python3 explorer/serve.py --port 8080');
+            }
+        }
+        async function refresh() {
+            let doc;
+            try {
+                doc = await readJson(await fetch('/api/crawler'));
+            } catch (err) {
+                $('c-error').textContent = err.message;
+                $('c-start').disabled = true;
+                $('c-stop').disabled = true;
+                return;
+            }
+            $('c-error').textContent = '';
+            const state = doc.state || 'idle';
+            $('c-state').textContent = state;
+            $('c-state').className = 'state-' + state;
+            $('c-nodes').textContent = fmt(doc.nodes);
+            $('c-recent').textContent = fmt(doc.seen_24h);
+            $('c-clearnet').textContent = fmt(doc.clearnet);
+            $('c-tor').textContent = fmt(doc.tor);
+            $('c-visited').textContent = fmt(doc.visited);
+            $('c-hands').textContent = fmt(doc.handshakes);
+            $('c-conns').textContent = fmt(doc.connections);
+            $('c-queued').textContent = fmt(doc.queued);
+            const running = state === 'running' || state === 'stopping';
+            $('c-start').disabled = running;
+            $('c-stop').disabled = !running;
+            const clients = doc.clients || [];
+            $('c-clients').innerHTML = clients.length ? clients.map((c) =>
+                '<div class="crawler-row"><span>' + esc(c.userAgent) + '</span><span>' + fmt(c.count) + '</span></div>'
+            ).join('') : '<p class="crawler-note">No handshakes yet.</p>';
+            const peers = doc.recent || [];
+            $('c-peers').innerHTML = peers.length ? peers.slice().reverse().map((p) =>
+                '<div class="peer"><code>' + esc(p.addr) + ':' + esc(p.port) + '</code><br><em>' +
+                esc(p.userAgent || 'no user agent') + '</em></div>'
+            ).join('') : '<p class="crawler-note">No connections yet.</p>';
+        }
+        async function post(path, body) {
+            $('c-error').textContent = '';
+            const res = await fetch(path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body || {}),
+            });
+            const doc = await readJson(res);
+            if (!res.ok || doc.ok === false) $('c-error').textContent = doc.error || 'Request failed';
+            refresh();
+        }
+        $('c-start').onclick = () => post('/api/crawler/start', {
+            timeout: Number($('c-timeout').value),
+            workers: Number($('c-workers').value),
+        });
+        $('c-stop').onclick = () => post('/api/crawler/stop');
+        refresh();
+        setInterval(refresh, 2000);
+    </script>
+</body>
+</html>
