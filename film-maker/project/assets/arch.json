@@ -1,0 +1,14 @@
+{
+  "id": "arch",
+  "name": "Arch",
+  "description": "Marble archway, 3.2m to the springline.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/arch.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "set"
+}

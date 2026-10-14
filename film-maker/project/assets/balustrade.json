@@ -1,0 +1,14 @@
+{
+  "id": "balustrade",
+  "name": "Balustrade",
+  "description": "6m marble railing.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/balustrade.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "prop"
+}

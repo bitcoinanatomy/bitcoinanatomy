@@ -1,0 +1,15 @@
+{
+  "id": "glass_sphere",
+  "name": "Glass Sphere",
+  "description": "Floating transparent sphere (alpha-blended glass).",
+  "tags": [
+    "light",
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/glass_sphere.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#dfe7ff",
+  "kind": "fx"
+}

@@ -1,0 +1,494 @@
+{
+  "id": "light_plaza",
+  "name": "Light Plaza",
+  "description": "Sunlit puzzle plaza: stepping blocks over a sunken court, ringed by a colonnade under a blue midday sky.",
+  "tags": [],
+  "refs": [
+    "media/refs/light_environments.png"
+  ],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#cfe3f5",
+  "fog": {
+    "color": "#cfe1f2",
+    "near": 30,
+    "far": 140
+  },
+  "lighting": {
+    "ambient": 0.35,
+    "key": 1.8,
+    "keyColor": "#fff4e2",
+    "keyPosition": [
+      -5,
+      12,
+      6
+    ]
+  },
+  "hdri": "media/hdri/noon.hdr",
+  "hdriIntensity": 0.55,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 0.5,
+    "vignette": 0.3,
+    "grain": 0.03,
+    "exposure": 0.8
+  },
+  "preview": {
+    "position": [
+      -6,
+      3,
+      10
+    ],
+    "target": [
+      0.5,
+      2.5,
+      -6
+    ],
+    "fov": 55
+  },
+  "props": [
+    {
+      "assetId": "marble_floor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "marble_block",
+      "position": [
+        -1.5,
+        0,
+        -1.5
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "marble_block",
+      "position": [
+        -0.3,
+        0,
+        -2.6
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "marble_block",
+      "position": [
+        1,
+        0,
+        -3.8
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "marble_block",
+      "position": [
+        2.4,
+        0,
+        -5
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "marble_steps",
+      "position": [
+        0,
+        0,
+        -8
+      ],
+      "rotationY": 0,
+      "scale": 1.2
+    },
+    {
+      "assetId": "statue",
+      "position": [
+        0,
+        0.95,
+        -11.5
+      ],
+      "rotationY": 0,
+      "scale": 1.4
+    },
+    {
+      "assetId": "floor_ring",
+      "position": [
+        0.4,
+        0,
+        -3.3
+      ],
+      "rotationY": 0,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        8.990512940013137,
+        0,
+        0.3784331758582731
+      ],
+      "rotationY": 64.03364292144954,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        9.999903223243438,
+        0,
+        -3.956005389358268
+      ],
+      "rotationY": 89.74792863573525,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        9.028690032345647,
+        0,
+        -8.299157626770896
+      ],
+      "rotationY": 115.46221435002097,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        6.2692340509251885,
+        0,
+        -11.790808970493382
+      ],
+      "rotationY": 141.17650006430668,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        2.268079378609083,
+        0,
+        -13.739395049607971
+      ],
+      "rotationY": 166.8907857785924,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -2.182296230808694,
+        0,
+        -13.758974493306056
+      ],
+      "rotationY": 192.60507149287812,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -6.200441307607933,
+        0,
+        -11.845669352637112
+      ],
+      "rotationY": 218.31935720716382,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -8.990512940013135,
+        0,
+        -8.378433175858277
+      ],
+      "rotationY": 244.03364292144954,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -9.999903223243438,
+        0,
+        -4.043994610641735
+      ],
+      "rotationY": 269.74792863573526,
+      "scale": 0.9
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -9.028690032345649,
+        0,
+        0.2991576267708922
+      ],
+      "rotationY": 295.462214350021,
+      "scale": 0.9
+    },
+    {
+      "assetId": "tree",
+      "position": [
+        -5,
+        0,
+        -6
+      ],
+      "rotationY": 0,
+      "scale": 1.2
+    },
+    {
+      "assetId": "tree",
+      "position": [
+        5.5,
+        0,
+        -7
+      ],
+      "rotationY": 0,
+      "scale": 1.5
+    },
+    {
+      "assetId": "planter",
+      "position": [
+        -3.5,
+        0,
+        0.5
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "planter",
+      "position": [
+        4,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "bench",
+      "position": [
+        -6,
+        0,
+        -2
+      ],
+      "rotationY": 70,
+      "scale": 1
+    },
+    {
+      "assetId": "banner",
+      "position": [
+        -4.5,
+        0,
+        -9
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "banner",
+      "position": [
+        4.5,
+        0,
+        -9
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "fountain",
+      "position": [
+        -9,
+        0,
+        -12
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -14,
+        0,
+        -26
+      ],
+      "rotationY": 0,
+      "scale": 1.8
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        9,
+        0,
+        -30
+      ],
+      "rotationY": 0,
+      "scale": 2.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        22,
+        0,
+        -18
+      ],
+      "rotationY": 20,
+      "scale": 1.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -24,
+        0,
+        -14
+      ],
+      "rotationY": 10,
+      "scale": 1.6
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        0,
+        0,
+        -44
+      ],
+      "rotationY": 0,
+      "scale": 3
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -34,
+        0,
+        -36
+      ],
+      "rotationY": 0,
+      "scale": 2.2
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        32,
+        0,
+        -40
+      ],
+      "rotationY": 15,
+      "scale": 2.6
+    },
+    {
+      "assetId": "floating_isle",
+      "position": [
+        -12,
+        9,
+        -18
+      ],
+      "rotationY": 20,
+      "scale": 1.1
+    },
+    {
+      "assetId": "floating_isle",
+      "position": [
+        14,
+        13,
+        -26
+      ],
+      "rotationY": 140,
+      "scale": 1.6
+    },
+    {
+      "assetId": "floating_isle",
+      "position": [
+        3,
+        18,
+        -38
+      ],
+      "rotationY": 70,
+      "scale": 2.2
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        -20,
+        18,
+        -34
+      ],
+      "rotationY": 10,
+      "scale": 2.2
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        18,
+        24,
+        -40
+      ],
+      "rotationY": 60,
+      "scale": 3
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        -4,
+        30,
+        -55
+      ],
+      "rotationY": 120,
+      "scale": 4
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        26,
+        12,
+        -22
+      ],
+      "rotationY": 30,
+      "scale": 1.6
+    },
+    {
+      "assetId": "glass_sphere",
+      "position": [
+        3.2,
+        2.6,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "glass_sphere",
+      "position": [
+        -5,
+        4.5,
+        -8
+      ],
+      "rotationY": 0,
+      "scale": 1.2
+    },
+    {
+      "assetId": "glass_sphere",
+      "position": [
+        8,
+        6.5,
+        -12
+      ],
+      "rotationY": 0,
+      "scale": 1.7
+    },
+    {
+      "assetId": "glass_sphere",
+      "position": [
+        -2.4,
+        1.6,
+        -1.5
+      ],
+      "rotationY": 0,
+      "scale": 0.3
+    }
+  ],
+  "marks": []
+}

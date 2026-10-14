@@ -1,0 +1,30 @@
+{
+  "id": "ep02",
+  "number": 2,
+  "title": "Into the Dark",
+  "status": "wip",
+  "synopsis": "Following the signal down into a world of black monoliths, the trio help a new node find its peers, follow a transaction across the network, and watch a block being mined.",
+  "theme": "Rules anyone can check make the dark less scary.",
+  "arc": {
+    "tension": 0.85,
+    "beat": "climax",
+    "note": ""
+  },
+  "credits": {
+    "intro": true,
+    "outro": true
+  },
+  "scenes": [
+    "ep02_sc01",
+    "ep02_sc02",
+    "ep02_sc03"
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": []
+  }
+}

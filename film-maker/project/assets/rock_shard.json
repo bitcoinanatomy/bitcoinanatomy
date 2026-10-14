@@ -1,0 +1,14 @@
+{
+  "id": "rock_shard",
+  "name": "Rock Shard",
+  "description": "Cluster of tilted obsidian spikes.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/rock_shard.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#151515",
+  "kind": "set"
+}

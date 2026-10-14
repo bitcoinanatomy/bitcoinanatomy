@@ -1,0 +1,14 @@
+{
+  "id": "floor_ring",
+  "name": "Floor Ring",
+  "description": "Glowing rune circle on the floor, 6m.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/floor_ring.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#8cc8ff",
+  "kind": "fx"
+}

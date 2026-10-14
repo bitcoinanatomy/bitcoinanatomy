@@ -1,0 +1,59 @@
+{
+  "id": "intro",
+  "name": "Intro",
+  "enabled": true,
+  "duration": 10.5,
+  "background": "#000000",
+  "color": "#ffffff",
+  "fade": 0.6,
+  "cards": [
+    {
+      "id": "title",
+      "start": 0.3,
+      "duration": 3.3,
+      "align": "center",
+      "lines": [
+        {
+          "text": "{project}",
+          "size": "xl"
+        },
+        {
+          "text": "Mili · Sati · Bit",
+          "size": "sm"
+        }
+      ]
+    },
+    {
+      "id": "season",
+      "start": 3.8,
+      "duration": 2.9,
+      "align": "center",
+      "lines": [
+        {
+          "text": "{season}",
+          "size": "md"
+        }
+      ]
+    },
+    {
+      "id": "episode",
+      "start": 6.9,
+      "duration": 3.4,
+      "align": "center",
+      "lines": [
+        {
+          "text": "Episode {episode.number}",
+          "size": "sm"
+        },
+        {
+          "text": "{episode.title}",
+          "size": "lg"
+        }
+      ]
+    }
+  ],
+  "music": {
+    "cueId": "cue_intro",
+    "gain": 0.55
+  }
+}

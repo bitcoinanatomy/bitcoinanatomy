@@ -1,0 +1,703 @@
+{
+  "id": "ep02_sc02",
+  "title": "The Journey",
+  "status": "wip",
+  "summary": "Act 2 — A transaction. A glowing orb: signed, verified, relayed peer to peer, then waiting in the mempool.",
+  "environmentId": "mempool_sea",
+  "arc": {
+    "tension": 0.65,
+    "beat": "midpoint",
+    "note": "They understand what they protect: value moving peer to peer."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "A shiny one",
+      "duration": 7,
+      "status": "wip",
+      "description": "A warm glowing orb drifts down between them, ringed with light. Mili reaches for it; other travellers drift past in the distance.",
+      "notes": "",
+      "characters": [
+        "sati",
+        "mili",
+        "bit",
+        "folk1",
+        "folk3",
+        "folk5"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -0.4,
+            0,
+            0.6
+          ],
+          "rotationY": 20
+        },
+        "mili": {
+          "position": [
+            -0.8,
+            0,
+            2
+          ],
+          "rotationY": 160,
+          "moves": [
+            {
+              "t": 2.1,
+              "position": [
+                -0.4,
+                0,
+                1.4
+              ],
+              "rotationY": 160
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            1.8,
+            0,
+            0.4
+          ],
+          "rotationY": -30
+        },
+        "folk1": {
+          "position": [
+            -5,
+            0,
+            -4
+          ],
+          "rotationY": 70,
+          "moves": [
+            {
+              "t": 7,
+              "position": [
+                -1.5,
+                0,
+                -6
+              ]
+            }
+          ]
+        },
+        "folk3": {
+          "position": [
+            4,
+            0,
+            -3
+          ],
+          "rotationY": -120
+        },
+        "folk5": {
+          "position": [
+            5,
+            0,
+            -7
+          ],
+          "rotationY": -100,
+          "moves": [
+            {
+              "t": 7,
+              "position": [
+                2,
+                0,
+                -8.5
+              ]
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          },
+          {
+            "t": 2.1,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 2.554,
+            "expression": "determined"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_h0evpl",
+            "start": 0,
+            "duration": 7,
+            "image": "media/boards/new_perspectives.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_6n86wa",
+            "start": 0,
+            "duration": 7,
+            "label": "push-in",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.4,
+                  1.4000000000000001,
+                  3.8000000000000003
+                ],
+                "target": [
+                  0.4,
+                  1.3,
+                  0.6
+                ],
+                "fov": 38
+              },
+              {
+                "t": 7,
+                "position": [
+                  0.4,
+                  1.36,
+                  2.8000000000000003
+                ],
+                "target": [
+                  0.4,
+                  1.3,
+                  0.6
+                ],
+                "fov": 38
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_egme21",
+            "start": 0.6,
+            "duration": 1.604,
+            "characterId": "mili",
+            "text": "Ooh. A shiny one.",
+            "audio": "media/audio/dialog/818716b96d14.wav",
+            "audioHash": "818716b96d14",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_qcnrpb",
+            "start": 2.554,
+            "duration": 3.563,
+            "characterId": "sati",
+            "text": "That's a transaction. Someone's sending value across the network.",
+            "audio": "media/audio/dialog/d71d8a563e5c.wav",
+            "audioHash": "d71d8a563e5c",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_cjb27j",
+            "start": 0.2,
+            "duration": 1.4,
+            "file": "media/audio/sfx/sparkle.wav",
+            "gain": 0.7
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "The key fits",
+      "duration": 4.5,
+      "status": "todo",
+      "description": "Close on Sati holding up a hand; the ring around the orb clicks into alignment and flashes.",
+      "notes": "Protocol: nodes check each input’s signature against the public key it spends from before relaying.",
+      "characters": [
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -0.4,
+            0,
+            0.6
+          ],
+          "rotationY": 20
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0.6,
+            "expression": "determined"
+          },
+          {
+            "t": 2.933,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_lfl8dt",
+            "start": 0,
+            "duration": 4.5,
+            "label": "static",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.2,
+                  1.2,
+                  2.2
+                ],
+                "target": [
+                  0.2,
+                  1.3,
+                  0.6
+                ],
+                "fov": 32
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_0qhz0w",
+            "start": 0.6,
+            "duration": 1.833,
+            "characterId": "sati",
+            "text": "Its signature matches the key.",
+            "audio": "media/audio/dialog/e2835b9f2947.wav",
+            "audioHash": "e2835b9f2947",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_cshgzq",
+            "start": 2.933,
+            "duration": 0.752,
+            "characterId": "sati",
+            "text": "It's valid.",
+            "audio": "media/audio/dialog/d15528d65166.wav",
+            "audioHash": "d15528d65166",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_mdzywh",
+            "start": 1.6,
+            "duration": 0.08,
+            "file": "media/audio/sfx/click.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_mwgxtz",
+            "start": 1.7,
+            "duration": 2.5,
+            "file": "media/audio/sfx/chime.wav",
+            "gain": 0.5
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Peer to peer",
+      "duration": 4,
+      "status": "todo",
+      "description": "Mili grabs the orb and blurs off — lightning zig-zags from bubble to bubble across the dark.",
+      "notes": "",
+      "characters": [
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -2,
+            0,
+            1
+          ],
+          "rotationY": 30,
+          "moves": [
+            {
+              "t": 1.4,
+              "position": [
+                1,
+                0,
+                -1
+              ],
+              "rotationY": 60
+            },
+            {
+              "t": 2.4,
+              "position": [
+                3,
+                0,
+                -4
+              ],
+              "rotationY": 20
+            },
+            {
+              "t": 4,
+              "position": [
+                6,
+                0,
+                -8
+              ],
+              "rotationY": 40
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.45,
+            "pose": "point"
+          },
+          {
+            "t": 3.41,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_ghog96",
+            "start": 0,
+            "duration": 4,
+            "label": "whip-pan",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -2,
+                  1,
+                  3
+                ],
+                "target": [
+                  -1,
+                  0.6,
+                  0
+                ],
+                "fov": 45
+              },
+              {
+                "t": 4,
+                "position": [
+                  3,
+                  1.4,
+                  2
+                ],
+                "target": [
+                  4,
+                  0.6,
+                  -5
+                ],
+                "fov": 45
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_21i22v",
+            "start": 0.6,
+            "duration": 2.41,
+            "characterId": "mili",
+            "text": "Passing it on! Peer to peer to peer!",
+            "audio": "media/audio/dialog/5fb4358a93c7.wav",
+            "audioHash": "5fb4358a93c7",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_gfu02q",
+            "start": 0.1,
+            "duration": 0.7,
+            "file": "media/audio/sfx/zap.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_zk05bn",
+            "start": 0.5,
+            "duration": 1.6,
+            "file": "media/audio/sfx/whoosh.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_r4yipe",
+            "start": 1.4,
+            "duration": 0.7,
+            "file": "media/audio/sfx/zap.wav",
+            "gain": 0.5
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "The waiting room",
+      "duration": 6,
+      "status": "todo",
+      "description": "The orb settles into a glass bubble among hundreds of others, all floating, all waiting. Other folk wait beside theirs.",
+      "notes": "Protocol: valid, unconfirmed transactions wait in each node’s mempool until a miner includes them in a block.",
+      "characters": [
+        "sati",
+        "bit",
+        "mili",
+        "folk1",
+        "folk3",
+        "folk5"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -0.6,
+            0,
+            1.2
+          ],
+          "rotationY": 170
+        },
+        "bit": {
+          "position": [
+            1,
+            0,
+            1
+          ],
+          "rotationY": 190
+        },
+        "mili": {
+          "position": [
+            0.1,
+            0,
+            1.6
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 3,
+              "position": [
+                0.1,
+                0,
+                0.8
+              ],
+              "rotationY": 180
+            }
+          ]
+        },
+        "folk1": {
+          "position": [
+            -5,
+            0,
+            -4
+          ],
+          "rotationY": 70,
+          "moves": [
+            {
+              "t": 6,
+              "position": [
+                -1.5,
+                0,
+                -6
+              ]
+            }
+          ]
+        },
+        "folk3": {
+          "position": [
+            4,
+            0,
+            -3
+          ],
+          "rotationY": -120
+        },
+        "folk5": {
+          "position": [
+            5,
+            0,
+            -7
+          ],
+          "rotationY": -100,
+          "moves": [
+            {
+              "t": 6,
+              "position": [
+                2,
+                0,
+                -8.5
+              ]
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "bit": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          }
+        ],
+        "mili": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 3,
+            "expression": "determined"
+          }
+        ],
+        "folk1": [
+          {
+            "t": 0.15,
+            "expression": "worried"
+          }
+        ],
+        "folk3": [
+          {
+            "t": 0,
+            "expression": "worried"
+          }
+        ],
+        "folk5": [
+          {
+            "t": 0.3,
+            "expression": "worried"
+          }
+        ]
+      },
+      "poses": {
+        "bit": [
+          {
+            "t": 0.45,
+            "pose": "think"
+          },
+          {
+            "t": 2.207,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_51pzv8",
+            "start": 0,
+            "duration": 6,
+            "label": "crane",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0,
+                  0.7,
+                  4.5
+                ],
+                "target": [
+                  0,
+                  1.2,
+                  -4
+                ],
+                "fov": 50
+              },
+              {
+                "t": 6,
+                "position": [
+                  0,
+                  2.4,
+                  3.2249999999999996
+                ],
+                "target": [
+                  0,
+                  1.2,
+                  -4
+                ],
+                "fov": 50
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_ju2qmn",
+            "start": 0.6,
+            "duration": 1.207,
+            "characterId": "bit",
+            "text": "So many bubbles.",
+            "audio": "media/audio/dialog/57b3d6fdfcda.wav",
+            "audioHash": "57b3d6fdfcda",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_m17p54",
+            "start": 2.157,
+            "duration": 2.919,
+            "characterId": "sati",
+            "text": "They're all waiting for the next block. Let's follow ours.",
+            "audio": "media/audio/dialog/8c3aabe5b131.wav",
+            "audioHash": "8c3aabe5b131",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": [
+      {
+        "id": "scr_t0xvb3",
+        "start": 0,
+        "duration": 21.5,
+        "cueId": "cue_ep02_sc02",
+        "offset": 0,
+        "gain": 0.5
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "pedestal",
+  "name": "Pedestal",
+  "description": "Stepped octagonal dais with glowing trim.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/pedestal.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#ffcc73",
+  "kind": "set"
+}

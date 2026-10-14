@@ -1,0 +1,981 @@
+{
+  "id": "ep02_sc01",
+  "title": "Finding Signals",
+  "status": "wip",
+  "summary": "Act 1 — Nodes. The beacon is a brand-new node calling for peers; the trio carry its handshake.",
+  "environmentId": "dark_monoliths",
+  "arc": {
+    "tension": 0.5,
+    "beat": "rising",
+    "note": "Fear of the dark turns into purpose: they connect a lonely node."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "Into the dark",
+      "duration": 6,
+      "status": "wip",
+      "description": "The trio step into a forest of black monoliths, huddled close. Their own glow is the only light.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.9,
+            0,
+            2.4
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 6,
+              "position": [
+                -0.6,
+                0,
+                0.4
+              ],
+              "rotationY": 175
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            0,
+            0,
+            2.2
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 6,
+              "position": [
+                0,
+                0,
+                0.2
+              ],
+              "rotationY": 180
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            1.3,
+            0,
+            2
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 6,
+              "position": [
+                1.1,
+                0,
+                0
+              ],
+              "rotationY": 185
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "worried"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ],
+        "bit": [
+          {
+            "t": 3.623,
+            "expression": "determined"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.6,
+            "pose": "crouch"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_92ugff",
+            "start": 0,
+            "duration": 6,
+            "image": "media/boards/into_the_dark.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_c27092",
+            "start": 0,
+            "duration": 6,
+            "label": "leading",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.4,
+                  1,
+                  -3
+                ],
+                "target": [
+                  0,
+                  0.6,
+                  2.2
+                ],
+                "fov": 42
+              },
+              {
+                "t": 6,
+                "position": [
+                  0.3,
+                  0.9,
+                  -4.4
+                ],
+                "target": [
+                  0,
+                  0.6,
+                  0.2
+                ],
+                "fov": 42
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_ahyhwm",
+            "start": 1.5,
+            "duration": 1.773,
+            "characterId": "mili",
+            "text": "It's so dark down here.",
+            "audio": "media/audio/dialog/1e4bbd91509d.wav",
+            "audioHash": "1e4bbd91509d",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_d6ul19",
+            "start": 3.623,
+            "duration": 1.011,
+            "characterId": "bit",
+            "text": "Stay close.",
+            "audio": "media/audio/dialog/b9f21ec47712.wav",
+            "audioHash": "b9f21ec47712",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_7u2iqr",
+            "start": 0,
+            "duration": 4,
+            "file": "media/audio/sfx/hum.wav",
+            "gain": 0.4
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "The beacon",
+      "duration": 3.5,
+      "status": "wip",
+      "description": "A glowing hexagon hums in a clearing, pulsing like a heartbeat. Sati steps closer.",
+      "notes": "",
+      "environmentId": "signal_chamber",
+      "characters": [
+        "sati",
+        "mili",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            0,
+            0,
+            0.2
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 1.75,
+              "position": [
+                0,
+                0,
+                -1.4
+              ],
+              "rotationY": 180
+            }
+          ]
+        },
+        "mili": {
+          "position": [
+            -1,
+            0,
+            -0.9
+          ],
+          "rotationY": 200
+        },
+        "bit": {
+          "position": [
+            1.2,
+            0,
+            -1
+          ],
+          "rotationY": 160
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          },
+          {
+            "t": 1.75,
+            "expression": "determined"
+          }
+        ],
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_xzazmv",
+            "start": 0,
+            "duration": 3.5,
+            "image": "media/boards/finding_signals.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_f58txu",
+            "start": 0,
+            "duration": 3.5,
+            "label": "reveal",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -2.8,
+                  0.7,
+                  2.2
+                ],
+                "target": [
+                  0,
+                  1,
+                  -4
+                ],
+                "fov": 40
+              },
+              {
+                "t": 3.5,
+                "position": [
+                  -1.9,
+                  0.9,
+                  1.4
+                ],
+                "target": [
+                  0,
+                  1.2,
+                  -4
+                ],
+                "fov": 40
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_v82u5v",
+            "start": 0.6,
+            "duration": 1.887,
+            "characterId": "sati",
+            "text": "It's a node. A brand new one.",
+            "audio": "media/audio/dialog/751a4e2a3e7e.wav",
+            "audioHash": "751a4e2a3e7e",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_5oatmz",
+            "start": 0.2,
+            "duration": 2.4,
+            "file": "media/audio/sfx/pulse.wav",
+            "gain": 0.6
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "No one answers",
+      "duration": 4.5,
+      "status": "todo",
+      "description": "Close on Sati, the beacon light pulsing across their face.",
+      "notes": "",
+      "environmentId": "signal_chamber",
+      "characters": [
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            0,
+            0,
+            -1.4
+          ],
+          "rotationY": 160
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0.6,
+            "expression": "sad"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_n9v1um",
+            "start": 0,
+            "duration": 4.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  3.7307640089224975e-16,
+                  0.762784,
+                  -4.446400000000001
+                ],
+                "target": [
+                  0,
+                  0.58,
+                  -1.4
+                ],
+                "fov": 28
+              },
+              {
+                "t": 4.5,
+                "position": [
+                  3.3310392936808007e-16,
+                  0.7432,
+                  -4.12
+                ],
+                "target": [
+                  0,
+                  0.58,
+                  -1.4
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_9x7bjd",
+            "start": 0.6,
+            "duration": 2.626,
+            "characterId": "sati",
+            "text": "It's calling for peers, but no one's answering.",
+            "audio": "media/audio/dialog/a62641b0b9b9.wav",
+            "audioHash": "a62641b0b9b9",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_hut62u",
+            "start": 1,
+            "duration": 2.5,
+            "file": "media/audio/sfx/chime.wav",
+            "gain": 0.3
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "Carry the hello",
+      "duration": 3.5,
+      "status": "todo",
+      "description": "Close on Mili, crackling with lightning, raring to go.",
+      "notes": "",
+      "environmentId": "signal_chamber",
+      "characters": [
+        "sati",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            0,
+            0,
+            -1.4
+          ],
+          "rotationY": 120
+        },
+        "mili": {
+          "position": [
+            -0.9,
+            0,
+            -1.2
+          ],
+          "rotationY": 60
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "happy"
+          },
+          {
+            "t": 0.6,
+            "expression": "determined"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.45,
+            "pose": "wave"
+          },
+          {
+            "t": 3.039,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_6sbg60",
+            "start": 0,
+            "duration": 3.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.6744737799792052,
+                  0.3645312,
+                  -0.6269384094549753
+                ],
+                "target": [
+                  -0.9,
+                  0.264,
+                  -1.2
+                ],
+                "fov": 28
+              },
+              {
+                "t": 3.5,
+                "position": [
+                  0.5057801606957187,
+                  0.35376,
+                  -0.6883378655847994
+                ],
+                "target": [
+                  -0.9,
+                  0.264,
+                  -1.2
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_nclimg",
+            "start": 0.6,
+            "duration": 2.039,
+            "characterId": "mili",
+            "text": "I'll take its hello to the others!",
+            "audio": "media/audio/dialog/f0584dc1c554.wav",
+            "audioHash": "f0584dc1c554",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh05",
+      "name": "Version, then wait",
+      "duration": 4.5,
+      "status": "todo",
+      "description": "Sati hands over the node's 'version' message. Mili spins and blurs off into the dark.",
+      "notes": "Protocol: a new node opens a connection and sends a `version` message; the peer replies with its own `version` and a `verack`.",
+      "environmentId": "signal_chamber",
+      "characters": [
+        "sati",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            0,
+            0,
+            -1.4
+          ],
+          "rotationY": 120
+        },
+        "mili": {
+          "position": [
+            -0.9,
+            0,
+            -1.2
+          ],
+          "rotationY": 60,
+          "moves": [
+            {
+              "t": 3.69,
+              "position": [
+                -0.9,
+                0,
+                -1.2
+              ],
+              "rotationY": -90
+            },
+            {
+              "t": 4.5,
+              "position": [
+                -9,
+                0,
+                -3
+              ],
+              "rotationY": -90
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ],
+        "mili": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_0tgbpx",
+            "start": 0,
+            "duration": 4.5,
+            "label": "over-shoulder",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.4001548635466936,
+                  0.352,
+                  -1.3412651141315088
+                ],
+                "target": [
+                  0,
+                  0.58,
+                  -1.4
+                ],
+                "fov": 32
+              },
+              {
+                "t": 4.5,
+                "position": [
+                  -1.2970695099912681,
+                  0.352,
+                  -1.364172970477159
+                ],
+                "target": [
+                  0,
+                  0.58,
+                  -1.4
+                ],
+                "fov": 32
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_r01giy",
+            "start": 0.6,
+            "duration": 2.638,
+            "characterId": "sati",
+            "text": "Tell them its version. Then wait for their answer.",
+            "audio": "media/audio/dialog/fcb3a33d79f2.wav",
+            "audioHash": "fcb3a33d79f2",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_kq0gy1",
+            "start": 4.01,
+            "duration": 0.7,
+            "file": "media/audio/sfx/zap.wav",
+            "gain": 0.7
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh06",
+      "name": "They answered",
+      "duration": 6.5,
+      "status": "todo",
+      "description": "One by one, light shafts rise from the monoliths; figures step out of the dark toward the beacon. Mili skids back in, glowing.",
+      "notes": "",
+      "environmentId": "network_awake",
+      "characters": [
+        "sati",
+        "mili",
+        "bit",
+        "folk1",
+        "folk2",
+        "folk3",
+        "folk4",
+        "folk5",
+        "folk6"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            0,
+            0,
+            -1.4
+          ],
+          "rotationY": 0
+        },
+        "mili": {
+          "position": [
+            -7,
+            0,
+            -0.6
+          ],
+          "rotationY": 90,
+          "moves": [
+            {
+              "t": 1.3,
+              "position": [
+                -0.9,
+                0,
+                -0.6
+              ],
+              "rotationY": 10
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            1.2,
+            0,
+            -1
+          ],
+          "rotationY": -10
+        },
+        "folk1": {
+          "position": [
+            -4,
+            0,
+            -6.5
+          ],
+          "rotationY": 57.9946167919165
+        },
+        "folk2": {
+          "position": [
+            4.5,
+            0,
+            -6
+          ],
+          "rotationY": -66.03751102542182
+        },
+        "folk3": {
+          "position": [
+            -6,
+            0,
+            -2.5
+          ],
+          "rotationY": 104.0362434679265
+        },
+        "folk4": {
+          "position": [
+            6,
+            0,
+            -3
+          ],
+          "rotationY": -99.46232220802563
+        },
+        "folk5": {
+          "position": [
+            -2,
+            0,
+            -8.5
+          ],
+          "rotationY": 23.962488974578182
+        },
+        "folk6": {
+          "position": [
+            2.6,
+            0,
+            -9
+          ],
+          "rotationY": -27.474431626277134
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 1.625,
+            "expression": "happy"
+          }
+        ],
+        "bit": [
+          {
+            "t": 3.9,
+            "expression": "surprised"
+          },
+          {
+            "t": 5.2,
+            "expression": "happy"
+          }
+        ],
+        "folk1": [
+          {
+            "t": 2.1,
+            "expression": "happy"
+          }
+        ],
+        "folk2": [
+          {
+            "t": 2.25,
+            "expression": "happy"
+          }
+        ],
+        "folk3": [
+          {
+            "t": 1.95,
+            "expression": "happy"
+          }
+        ],
+        "folk4": [
+          {
+            "t": 2.1,
+            "expression": "happy"
+          }
+        ],
+        "folk5": [
+          {
+            "t": 2.25,
+            "expression": "happy"
+          }
+        ],
+        "folk6": [
+          {
+            "t": 1.95,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.45,
+            "pose": "cheer"
+          },
+          {
+            "t": 4.083,
+            "pose": "idle"
+          }
+        ],
+        "bit": [
+          {
+            "t": 3.883,
+            "pose": "point"
+          },
+          {
+            "t": 6.08,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_lzel28",
+            "start": 0,
+            "duration": 6.5,
+            "label": "crane",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.9333333333333333,
+                  0.8,
+                  5.5
+                ],
+                "target": [
+                  -1.9333333333333333,
+                  0.6,
+                  -1
+                ],
+                "fov": 55
+              },
+              {
+                "t": 6.5,
+                "position": [
+                  -1.9333333333333333,
+                  5,
+                  4.5249999999999995
+                ],
+                "target": [
+                  -1.9333333333333333,
+                  0.6,
+                  -1
+                ],
+                "fov": 55
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_ddbubv",
+            "start": 0.6,
+            "duration": 3.083,
+            "characterId": "mili",
+            "text": "They answered! Version, verack, handshake done!",
+            "audio": "media/audio/dialog/90d8070bb368.wav",
+            "audioHash": "90d8070bb368",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_5zme9o",
+            "start": 4.033,
+            "duration": 1.647,
+            "characterId": "bit",
+            "text": "Look. They're all lighting up.",
+            "audio": "media/audio/dialog/6349e0324acf.wav",
+            "audioHash": "6349e0324acf",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_68bb5m",
+            "start": 0.4,
+            "duration": 2.5,
+            "file": "media/audio/sfx/chime.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_akiivb",
+            "start": 1.4,
+            "duration": 1.4,
+            "file": "media/audio/sfx/sparkle.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_vronv1",
+            "start": 2.6,
+            "duration": 2.5,
+            "file": "media/audio/sfx/chime.wav",
+            "gain": 0.4
+          }
+        ],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": [
+      {
+        "id": "scr_rnu9e5",
+        "start": 0,
+        "duration": 28.5,
+        "cueId": "cue_ep02_sc01",
+        "offset": 0,
+        "gain": 0.5
+      }
+    ]
+  }
+}

@@ -57,6 +57,7 @@ class BitcoinDifficultyExplorer {
         this.setupOrbitControls();
         this.setupControls();
         this.setupPanelToggle();
+        this.setupEpochSourceSelector();
         this.createScene();
         this.renderer.setAnimationLoop(() => this.animate());
         this.fetchData();
@@ -751,7 +752,7 @@ class BitcoinDifficultyExplorer {
         directionalLight.castShadow = true;
         this.scene.add(directionalLight);
         
-        if (this.selectedAdjustment !== null) {
+        if (this.selectedAdjustment !== null && this.blockData) {
             this.createBlockSpiral();
         }
     }
@@ -1113,7 +1114,19 @@ class BitcoinDifficultyExplorer {
             console.log('=== END HEIGHT FETCH DEBUG ===');
             
             const fileName = `rcp_bitcoin_block_data_${firstBlock.toString().padStart(7, '0')}.json`;
-            const response = await fetch(`https://pvxg.net/bitcoin_data/difficulty_epochs/${fileName}`);
+            const src = this._epochSource || 'local';
+            let response;
+            if (src === 'pvxg') {
+                response = await fetch(`https://pvxg.net/bitcoin_data/difficulty_epochs/${fileName}`);
+            } else if (src === 'mempool') {
+                // Mempool doesn't serve pre-packaged epoch JSON; fall back to pvxg
+                response = await fetch(`https://pvxg.net/bitcoin_data/difficulty_epochs/${fileName}`);
+                if (!response.ok) response = await fetch(`data/difficulty_epochs/${fileName}`);
+            } else {
+                // local (default) — with pvxg.net as fallback
+                response = await fetch(`data/difficulty_epochs/${fileName}`);
+                if (!response.ok) response = await fetch(`https://pvxg.net/bitcoin_data/difficulty_epochs/${fileName}`);
+            }
             
             if (response.status === 429) {
                 this.hideLoadingModal();
@@ -1677,6 +1690,39 @@ class BitcoinDifficultyExplorer {
         }
     }
     
+    // ── Epoch source selector ───────────────────────────────────────────────
+    setupEpochSourceSelector() {
+        this._epochSource = 'local'; // default: local epoch files
+        const btn   = document.getElementById('epoch-source-btn');
+        const menu  = document.getElementById('epoch-source-menu');
+        const label = document.getElementById('epoch-source-label');
+        const status = document.getElementById('epoch-source-status');
+        if (!btn || !menu) return;
+
+        const sources = { local: 'Local files', pvxg: 'pvxg.net', mempool: 'Mempool.space' };
+        const open  = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+        const close = () => { menu.hidden = true;  btn.setAttribute('aria-expanded', 'false'); };
+
+        btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? open() : close(); });
+        document.addEventListener('click', (e) => { if (!btn.closest('#epoch-source-picker').contains(e.target)) close(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+        menu.querySelectorAll('.source-selector-option').forEach((opt) => {
+            opt.addEventListener('click', () => {
+                const src = opt.dataset.source;
+                if (src === this._epochSource) { close(); return; }
+                this._epochSource = src;
+                if (label) label.textContent = sources[src] || src;
+                if (status) { status.textContent = ` · source: ${sources[src]}`; status.hidden = (src === 'local'); }
+                menu.querySelectorAll('.source-selector-option').forEach(o => o.classList.toggle('active', o.dataset.source === src));
+                close();
+                // Reload epoch data with new source
+                this.fetchData();
+            });
+        });
+        if (label) label.textContent = sources[this._epochSource];
+    }
+
     // Navigation methods
     rotateLeft() {
         this.isRotating = false;

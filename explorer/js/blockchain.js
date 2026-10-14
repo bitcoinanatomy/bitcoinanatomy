@@ -34,7 +34,6 @@ class BitcoinBlockchainExplorer {
         this.epochLoadAllRunning = false;
         this.epochLoadAllPaused = false;
         this._epochLoadAllToken = 0;
-        this.lastTooltipEpochIndex = null;
         this._epochSizeLog = [];
 
         this.init();
@@ -67,6 +66,7 @@ class BitcoinBlockchainExplorer {
         this.setupOrbitControls();
         this.setupControls();
         this.setupPanelToggle();
+        this.setupEpochSourceSelector();
         this.createScene();
         this.renderer.setAnimationLoop(() => this.animate());
         this.fetchData();
@@ -303,10 +303,6 @@ class BitcoinBlockchainExplorer {
                     }
 
                     const index = intersectedObject.userData.index;
-                    if (!intersectedObject.userData.isMempool && index != null) {
-                        this.lastTooltipEpochIndex = index;
-                        this._syncLoadEpochMenuButtons();
-                    }
                     
                     // Check if it's the mempool disc
                     if (intersectedObject.userData.isMempool) {
@@ -465,8 +461,6 @@ class BitcoinBlockchainExplorer {
     onVRHover(obj) {
         if (!obj || obj.userData.special || obj.userData.isMempool || obj.userData.epochOverlay) return;
         if (obj.userData.index == null || obj.userData.t == null) return;
-        this.lastTooltipEpochIndex = obj.userData.index;
-        this._syncLoadEpochMenuButtons();
         this._scheduleEpochOverlay(obj);
     }
 
@@ -608,7 +602,20 @@ class BitcoinBlockchainExplorer {
         pageSignal.addEventListener('abort', onPageAbort);
 
         try {
-            const response = await fetch(DifficultySpiral.epochUrl(epoch), { signal: ac.signal });
+            let response;
+            const src = this._epochSource || 'local';
+            if (src === 'pvxg') {
+                response = await fetch(DifficultySpiral.epochUrlFallback(epoch), { signal: ac.signal });
+            } else if (src === 'mempool') {
+                response = await fetch(DifficultySpiral.epochUrlFallback(epoch), { signal: ac.signal });
+                if (!response.ok) response = await fetch(DifficultySpiral.epochUrl(epoch), { signal: ac.signal });
+            } else {
+                response = await fetch(DifficultySpiral.epochUrl(epoch), { signal: ac.signal });
+                if (!response.ok) {
+                    // fallback to pvxg.net
+                    response = await fetch(DifficultySpiral.epochUrlFallback(epoch), { signal: ac.signal });
+                }
+            }
             if (!response.ok) throw new Error('HTTP ' + response.status);
             const data = await response.json();
             const blocks = data && data[0];
@@ -708,41 +715,17 @@ class BitcoinBlockchainExplorer {
     _updateEpochLoadButtons() {
         const loadBtn = document.getElementById('load-all-epochs');
         const resetBtn = document.getElementById('reset-epochs');
-        const wrap = document.getElementById('load-epochs-wrap');
         if (loadBtn) {
             if (this.epochLoadAllRunning) loadBtn.textContent = 'Pause';
             else if (this.epochLoadAllPaused) loadBtn.textContent = 'Resume';
-            else loadBtn.textContent = 'Load all';
+            else loadBtn.textContent = 'Load blocks';
         }
-        if (this.epochLoadAllRunning || this.epochLoadAllPaused) {
-            this._setLoadEpochsMenuOpen(false);
-        }
-        if (wrap) wrap.classList.toggle('is-loading', !!(this.epochLoadAllRunning || this.epochLoadAllPaused));
         if (resetBtn) {
             resetBtn.disabled = this.epochSpiralCache.size === 0 && !this.epochLoadAllRunning && !this.epochLoadAllPaused;
         }
-        this._syncLoadEpochMenuButtons();
         if (this.vrManager && this.vrManager.navMenu && typeof this.vrManager.navMenu._refreshAllToggles === 'function') {
             this.vrManager.navMenu._refreshAllToggles();
         }
-    }
-
-    _setLoadEpochsMenuOpen(open) {
-        const menu = document.getElementById('load-epochs-menu');
-        const toggle = document.getElementById('load-all-epochs');
-        if (!menu || !toggle) return;
-        if (this.epochLoadAllRunning || this.epochLoadAllPaused) open = false;
-        menu.classList.toggle('is-open', open);
-        menu.hidden = !open;
-        toggle.classList.toggle('active', open);
-    }
-
-    _syncLoadEpochMenuButtons() {
-        const fromTip = document.getElementById('load-epochs-tooltip');
-        if (!fromTip) return;
-        const idx = this.lastTooltipEpochIndex;
-        fromTip.disabled = idx == null;
-        fromTip.textContent = idx == null ? 'From tooltip' : ('From epoch ' + idx);
     }
 
     toggleEpochLoadAll() {
@@ -758,9 +741,7 @@ class BitcoinBlockchainExplorer {
             this._updateEpochLoadButtons();
             return;
         }
-        const menu = document.getElementById('load-epochs-menu');
-        const open = !(menu && menu.classList.contains('is-open'));
-        this._setLoadEpochsMenuOpen(open);
+        this.startEpochLoadAll(0);
     }
 
     startEpochLoadAll(fromIndex) {
@@ -769,7 +750,6 @@ class BitcoinBlockchainExplorer {
         this._epochHoldAll = true;
         this.epochLoadAllPaused = false;
         this.epochLoadAllRunning = true;
-        this._setLoadEpochsMenuOpen(false);
         this._updateEpochLoadButtons();
         this._runEpochLoadAll(start);
     }
@@ -1052,35 +1032,8 @@ class BitcoinBlockchainExplorer {
         }
 
         const loadAllBtn = document.getElementById('load-all-epochs');
-        const loadMenu = document.getElementById('load-epochs-menu');
-        const loadWrap = document.getElementById('load-epochs-wrap');
         if (loadAllBtn) {
             loadAllBtn.addEventListener('click', () => this.toggleEpochLoadAll());
-        }
-        if (loadWrap && loadMenu) {
-            loadWrap.addEventListener('mouseenter', () => {
-                if (!this.epochLoadAllRunning && !this.epochLoadAllPaused) {
-                    this._setLoadEpochsMenuOpen(true);
-                }
-            });
-            loadWrap.addEventListener('mouseleave', () => {
-                this._setLoadEpochsMenuOpen(false);
-            });
-        }
-        const fromGenesisBtn = document.getElementById('load-epochs-genesis');
-        if (fromGenesisBtn) {
-            fromGenesisBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.startEpochLoadAll(0);
-            });
-        }
-        const fromTooltipBtn = document.getElementById('load-epochs-tooltip');
-        if (fromTooltipBtn) {
-            fromTooltipBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (this.lastTooltipEpochIndex == null) return;
-                this.startEpochLoadAll(this.lastTooltipEpochIndex);
-            });
         }
         const resetEpochsBtn = document.getElementById('reset-epochs');
         if (resetEpochsBtn) {
@@ -1213,6 +1166,39 @@ class BitcoinBlockchainExplorer {
         }
     }
     
+    // ── Epoch source selector ───────────────────────────────────────────────
+    setupEpochSourceSelector() {
+        this._epochSource = 'local';
+        const btn    = document.getElementById('epoch-source-btn');
+        const menu   = document.getElementById('epoch-source-menu');
+        const label  = document.getElementById('epoch-source-label');
+        const status = document.getElementById('epoch-source-status');
+        if (!btn || !menu) return;
+
+        const sources = { local: 'Local files', pvxg: 'pvxg.net', mempool: 'Mempool.space' };
+        const open  = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+        const close = () => { menu.hidden = true;  btn.setAttribute('aria-expanded', 'false'); };
+
+        btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? open() : close(); });
+        document.addEventListener('click', (e) => { if (!btn.closest('#epoch-source-picker').contains(e.target)) close(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+        menu.querySelectorAll('.source-selector-option').forEach((opt) => {
+            opt.addEventListener('click', () => {
+                const src = opt.dataset.source;
+                if (src === this._epochSource) { close(); return; }
+                this._epochSource = src;
+                if (label) label.textContent = sources[src] || src;
+                if (status) { status.textContent = ` · source: ${sources[src]}`; status.hidden = (src === 'local'); }
+                menu.querySelectorAll('.source-selector-option').forEach(o => o.classList.toggle('active', o.dataset.source === src));
+                close();
+                // Invalidate epoch cache so next load uses new source
+                if (this.epochJsonCache) this.epochJsonCache.clear();
+            });
+        });
+        if (label) label.textContent = sources[this._epochSource];
+    }
+
     rotateLeft() {
         // Stop automatic rotation
         this.isRotating = false;

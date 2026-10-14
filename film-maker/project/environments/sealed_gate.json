@@ -1,0 +1,284 @@
+{
+  "id": "sealed_gate",
+  "name": "Sealed Gate",
+  "description": "A colossal city wall under a heavy overcast sky; its great arch is blocked by a giant marble block. Statues stand guard.",
+  "tags": [],
+  "refs": [
+    "media/refs/light_environments.png"
+  ],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#c4c9cf",
+  "fog": {
+    "color": "#b4bac3",
+    "near": 22,
+    "far": 90
+  },
+  "lighting": {
+    "ambient": 0.45,
+    "key": 0.9,
+    "keyColor": "#e9eef5",
+    "keyPosition": [
+      5,
+      9,
+      6
+    ]
+  },
+  "hdri": "media/hdri/overcast.hdr",
+  "hdriIntensity": 0.6,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 0.2,
+    "vignette": 0.55,
+    "grain": 0.06,
+    "exposure": 0.8
+  },
+  "preview": {
+    "position": [
+      3,
+      1.6,
+      9
+    ],
+    "target": [
+      0,
+      3.5,
+      -4
+    ],
+    "fov": 50
+  },
+  "props": [
+    {
+      "assetId": "marble_floor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "arch",
+      "position": [
+        0,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 2.2
+    },
+    {
+      "assetId": "marble_block",
+      "position": [
+        0,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 4.4
+    },
+    {
+      "assetId": "wall",
+      "position": [
+        -9.6,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 1.1
+    },
+    {
+      "assetId": "wall",
+      "position": [
+        9.6,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 1.1
+    },
+    {
+      "assetId": "statue",
+      "position": [
+        -4.6,
+        0,
+        -2.6
+      ],
+      "rotationY": 15,
+      "scale": 1.3
+    },
+    {
+      "assetId": "statue",
+      "position": [
+        4.6,
+        0,
+        -2.6
+      ],
+      "rotationY": -15,
+      "scale": 1.3
+    },
+    {
+      "assetId": "obelisk",
+      "position": [
+        -7,
+        0,
+        1
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "obelisk",
+      "position": [
+        7,
+        0,
+        1
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "tree",
+      "position": [
+        -6,
+        0,
+        3
+      ],
+      "rotationY": 0,
+      "scale": 1.1
+    },
+    {
+      "assetId": "lamp_post",
+      "position": [
+        -2.8,
+        0,
+        0.5
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "lamp_post",
+      "position": [
+        2.8,
+        0,
+        0.5
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -14,
+        0,
+        -36
+      ],
+      "rotationY": 0,
+      "scale": 1.8
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        9,
+        0,
+        -40
+      ],
+      "rotationY": 0,
+      "scale": 2.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        22,
+        0,
+        -28
+      ],
+      "rotationY": 20,
+      "scale": 1.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -24,
+        0,
+        -24
+      ],
+      "rotationY": 10,
+      "scale": 1.6
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        0,
+        0,
+        -54
+      ],
+      "rotationY": 0,
+      "scale": 3
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -34,
+        0,
+        -46
+      ],
+      "rotationY": 0,
+      "scale": 2.2
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        32,
+        0,
+        -50
+      ],
+      "rotationY": 15,
+      "scale": 2.6
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        -20,
+        20,
+        -34
+      ],
+      "rotationY": 10,
+      "scale": 2.2
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        18,
+        26,
+        -40
+      ],
+      "rotationY": 60,
+      "scale": 3
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        -4,
+        32,
+        -55
+      ],
+      "rotationY": 120,
+      "scale": 4
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        26,
+        14,
+        -22
+      ],
+      "rotationY": 30,
+      "scale": 1.6
+    }
+  ],
+  "marks": []
+}

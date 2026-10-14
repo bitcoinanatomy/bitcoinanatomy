@@ -1,0 +1,14 @@
+{
+  "id": "halo_ring",
+  "name": "Halo Ring",
+  "description": "Floating golden ring.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/halo_ring.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#ffd58c",
+  "kind": "fx"
+}

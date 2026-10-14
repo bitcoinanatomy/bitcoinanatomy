@@ -1,0 +1,14 @@
+{
+  "id": "obelisk",
+  "name": "Obelisk",
+  "description": "10m marble obelisk with a gold tip.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/obelisk.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "set"
+}

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Explorer - Monitor</title>
+    <meta name="description" content="Sync difficulty epoch block index files">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        #ui.crawler-ui { display: flex; flex-direction: column; pointer-events: none; }
+        .crawler-wrap {
+            position: relative; flex: 1; min-height: 0; margin: 0 28px 28px;
+            display: grid; grid-template-columns: 360px 1fr; gap: 16px; pointer-events: auto;
+        }
+        .crawler-card {
+            background: rgba(12, 12, 12, 0.72); border: 1px solid var(--glass-stroke-strong);
+            border-radius: 10px; padding: 18px 18px 14px; color: rgba(255,255,255,0.86); overflow: auto;
+        }
+        .crawler-card h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+        .crawler-note { color: rgba(255,255,255,0.55); font-size: 13px; line-height: 1.45; margin: 0 0 14px; }
+        .crawler-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 13px; border-top: 1px solid var(--glass-stroke); }
+        .crawler-row span:last-child { font-variant-numeric: tabular-nums; text-align: right; }
+        .crawler-controls { display: flex; gap: 8px; margin-top: 14px; }
+        .crawler-controls button, .crawler-fields input, .crawler-fields select {
+            background: #1a1a1a; color: white; border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 4px; padding: 8px 10px; font-size: 13px;
+        }
+        .crawler-controls button { cursor: pointer; flex: 1; }
+        .crawler-controls button:disabled { opacity: 0.4; cursor: default; }
+        .crawler-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .crawler-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: rgba(255,255,255,0.5); }
+        .crawler-fields .wide { grid-column: 1 / -1; }
+        .rpc-line { display: flex; gap: 8px; }
+        .rpc-line input { flex: 1; min-width: 0; }
+        .rpc-line button { cursor: pointer; white-space: nowrap; }
+        .state-running { color: #8d8; }
+        .state-error { color: #e88; }
+        .state-idle, .state-done, .state-stopped, .state-stopping { color: rgba(255,255,255,0.7); }
+        @media (max-width: 800px) { .crawler-wrap { grid-template-columns: 1fr; margin: 0 12px 16px; } }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <nav class="navbar">
+            <div class="nav-brand"><a href="index.html">Anatomy of Bitcoin</a></div>
+            <ul class="nav-menu">
+                <li class="nav-dropdown">
+                    <button type="button" class="nav-link nav-dropdown-toggle" aria-expanded="false">Explore</button>
+                    <ul class="nav-dropdown-panel">
+                        <li><a href="network.html" class="nav-link">Network</a></li>
+                        <li><a href="crawler.html" class="nav-link">Crawler</a></li>
+                        <li><a href="monitor.html" class="nav-link active">Monitor</a></li>
+                        <li><a href="node.html" class="nav-link">Node</a></li>
+                        <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
+                        <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
+                        <li><a href="block.html" class="nav-link">Block</a></li>
+                        <li><a href="transaction.html" class="nav-link">Transaction</a></li>
+                        <li><a href="address.html" class="nav-link">Address</a></li>
+                        <li><a href="mempool.html" class="nav-link">Mempool</a></li>
+                        <li><a href="curve.html" class="nav-link">Curve</a></li>
+                        <li><a href="script.html" class="nav-link">Script</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+        <div id="scene"></div>
+        <div id="ui" class="crawler-ui">
+            <div class="header">
+                <h1>Monitor</h1>
+                <div class="subtitle">Sync difficulty epoch block files</div>
+            </div>
+            <div class="crawler-wrap">
+                <section class="crawler-card">
+                    <h2>Epoch index</h2>
+                    <p class="crawler-note">Writes <code>data/difficulty_epochs</code> the same way <code>scripts/epoch_indexer.py</code> does. Default source is mempool.space. RPC needs a local Bitcoin Core node.</p>
+                    <div class="crawler-row"><span>State</span><span id="e-state">—</span></div>
+                    <div class="crawler-row"><span>Tip</span><span id="e-tip">—</span></div>
+                    <div class="crawler-row"><span>Epoch</span><span id="e-epoch">—</span></div>
+                    <div class="crawler-row"><span>Progress</span><span id="e-blocks">—</span></div>
+                    <div class="crawler-row"><span>Mode</span><span id="e-mode">—</span></div>
+                    <div class="crawler-fields">
+                        <label class="wide">Epochs<input id="e-epochs" type="text" value="current" placeholder="current, 481, 471-481, all"></label>
+                        <label class="wide">Source
+                            <select id="e-source">
+                                <option value="api" selected>mempool.space</option>
+                                <option value="rpc">Bitcoin Core RPC</option>
+                            </select>
+                        </label>
+                        <label class="wide">RPC URL
+                            <span class="rpc-line">
+                                <input id="e-rpc" type="text" value="http://127.0.0.1:8332" placeholder="user:password@host:8332">
+                                <button id="e-paste" type="button" title="Paste user:password@host:8332">Paste</button>
+                            </span>
+                        </label>
+                        <label>RPC user<input id="e-user" type="text" value="bitcoin"></label>
+                        <label>RPC password<input id="e-pass" type="password" value=""></label>
+                    </div>
+                    <div class="crawler-controls">
+                        <button id="e-start" type="button">Sync</button>
+                        <button id="e-stop" type="button">Stop</button>
+                    </div>
+                    <p class="crawler-note" id="e-error" style="margin-top:12px"></p>
+                </section>
+                <section class="crawler-card">
+                    <h2>Output</h2>
+                    <p class="crawler-note" id="e-out">Waiting for a sync.</p>
+                </section>
+            </div>
+        </div>
+    </div>
+    <script src="js/nav.js"></script>
+    <script>
+        const $ = (id) => document.getElementById(id);
+        function fmt(n) { return (n == null || n === '') ? '—' : Number(n).toLocaleString(); }
+        async function readJson(res) {
+            const text = await res.text();
+            try { return JSON.parse(text); }
+            catch (err) {
+                throw new Error('This server has no epoch API. Stop the static server and run: python3 explorer/serve.py --port 8080');
+            }
+        }
+        async function refresh() {
+            let doc;
+            try { doc = await readJson(await fetch('/api/epoch')); }
+            catch (err) {
+                $('e-error').textContent = err.message;
+                $('e-start').disabled = true;
+                $('e-stop').disabled = true;
+                return;
+            }
+            if (!$('e-error').dataset.sticky) $('e-error').textContent = doc.error || '';
+            const state = doc.state || 'idle';
+            $('e-state').textContent = state;
+            $('e-state').className = 'state-' + state;
+            $('e-tip').textContent = fmt(doc.tip);
+            const epoch = doc.epoch != null ? doc.epoch : '—';
+            const idx = doc.epochIndex && doc.epochsTotal ? ' (' + doc.epochIndex + '/' + doc.epochsTotal + ')' : '';
+            $('e-epoch').textContent = epoch + idx;
+            $('e-blocks').textContent = doc.expected ? fmt(doc.blocks) + ' / ' + fmt(doc.expected) : fmt(doc.blocks);
+            $('e-mode').textContent = doc.mode || '—';
+            const running = state === 'running' || state === 'stopping';
+            $('e-start').disabled = running;
+            $('e-stop').disabled = !running;
+            const start = doc.epochStart != null ? ' start block ' + doc.epochStart : '';
+            $('e-out').textContent = (doc.outDir || 'data/difficulty_epochs') + start;
+        }
+        async function post(path, body) {
+            $('e-error').dataset.sticky = '';
+            $('e-error').textContent = '';
+            const res = await fetch(path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body || {}),
+            });
+            const doc = await readJson(res);
+            if (!res.ok || doc.ok === false) {
+                $('e-error').dataset.sticky = '1';
+                $('e-error').textContent = doc.error || 'Request failed';
+            }
+            refresh();
+        }
+        function applyRpc(raw) {
+            const text = String(raw || '').trim();
+            if (!text) return false;
+            const withScheme = /^https?:\/\//i.test(text) ? text : 'http://' + text;
+            let url;
+            try { url = new URL(withScheme); } catch (err) { return false; }
+            if (!url.hostname) return false;
+            if (url.username) $('e-user').value = decodeURIComponent(url.username);
+            if (url.password) $('e-pass').value = decodeURIComponent(url.password);
+            $('e-rpc').value = url.protocol + '//' + url.host;
+            $('e-source').value = 'rpc';
+            return true;
+        }
+        $('e-paste').onclick = async () => {
+            let text = '';
+            try { text = await navigator.clipboard.readText(); }
+            catch (err) {
+                $('e-error').dataset.sticky = '1';
+                $('e-error').textContent = 'Clipboard blocked. Paste user:password@host:8332 into the RPC URL field.';
+                return;
+            }
+            if (!applyRpc(text)) {
+                $('e-error').dataset.sticky = '1';
+                $('e-error').textContent = 'Expected user:password@host:8332';
+            }
+        };
+        $('e-rpc').addEventListener('paste', (event) => {
+            const text = (event.clipboardData && event.clipboardData.getData('text')) || '';
+            if (text.includes('@') && applyRpc(text)) event.preventDefault();
+        });
+        $('e-start').onclick = () => post('/api/epoch/start', {
+            epochs: $('e-epochs').value.trim() || 'current',
+            api: $('e-source').value === 'api',
+            rpcUrl: $('e-rpc').value.trim(),
+            rpcUser: $('e-user').value,
+            rpcPassword: $('e-pass').value,
+        });
+        $('e-stop').onclick = () => post('/api/epoch/stop');
+        refresh();
+        setInterval(refresh, 2000);
+    </script>
+</body>
+</html>

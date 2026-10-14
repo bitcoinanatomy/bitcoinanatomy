@@ -1,0 +1,15 @@
+{
+  "id": "miner_rig",
+  "name": "Miner Rig",
+  "description": "Obsidian rack with glowing slots.",
+  "tags": [
+    "dark",
+    "protocol"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/miner_rig.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#ff9a40",
+  "kind": "prop"
+}

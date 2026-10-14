@@ -1,0 +1,14 @@
+{
+  "id": "cloud",
+  "name": "Cloud",
+  "description": "Soft white cloud bank, floats at any height.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/cloud.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#ffffff",
+  "kind": "fx"
+}

@@ -1,0 +1,394 @@
+{
+  "id": "open_gate",
+  "name": "Open Gate",
+  "description": "Bit holds the block overhead — golden-hour light pours through the open arch from the city beyond.",
+  "tags": [],
+  "refs": [
+    "media/refs/light_environments.png"
+  ],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#ffc27a",
+  "fog": {
+    "color": "#f5c08a",
+    "near": 26,
+    "far": 110
+  },
+  "lighting": {
+    "ambient": 0.35,
+    "key": 2.2,
+    "keyColor": "#ffb066",
+    "keyPosition": [
+      -3,
+      5,
+      -10
+    ]
+  },
+  "hdri": "media/hdri/golden.hdr",
+  "hdriIntensity": 0.55,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 1,
+    "vignette": 0.4,
+    "grain": 0.04,
+    "exposure": 0.8
+  },
+  "preview": {
+    "position": [
+      -5,
+      1.8,
+      9
+    ],
+    "target": [
+      0,
+      4,
+      -10
+    ],
+    "fov": 55
+  },
+  "props": [
+    {
+      "assetId": "marble_floor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "arch",
+      "position": [
+        0,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 2.2
+    },
+    {
+      "assetId": "marble_block",
+      "position": [
+        1.4,
+        1.45,
+        -1.3
+      ],
+      "rotationY": 12,
+      "scale": 1.3
+    },
+    {
+      "assetId": "wall",
+      "position": [
+        -9.6,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 1.1
+    },
+    {
+      "assetId": "wall",
+      "position": [
+        9.6,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 1.1
+    },
+    {
+      "assetId": "statue",
+      "position": [
+        -4.6,
+        0,
+        -2.6
+      ],
+      "rotationY": 15,
+      "scale": 1.3
+    },
+    {
+      "assetId": "statue",
+      "position": [
+        4.6,
+        0,
+        -2.6
+      ],
+      "rotationY": -15,
+      "scale": 1.3
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        0,
+        0,
+        -6
+      ],
+      "rotationY": 0,
+      "scale": 1.4
+    },
+    {
+      "assetId": "fountain",
+      "position": [
+        0,
+        0,
+        -14
+      ],
+      "rotationY": 0,
+      "scale": 1.2
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -3.5,
+        0,
+        -9
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -3.5,
+        0,
+        -13
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -3.5,
+        0,
+        -17
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -3.5,
+        0,
+        -21
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -3.5,
+        0,
+        -25
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        3.5,
+        0,
+        -9
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        3.5,
+        0,
+        -13
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        3.5,
+        0,
+        -17
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        3.5,
+        0,
+        -21
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        3.5,
+        0,
+        -25
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "motes",
+      "position": [
+        0,
+        0,
+        -5
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -14,
+        0,
+        -36
+      ],
+      "rotationY": 0,
+      "scale": 1.8
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        9,
+        0,
+        -40
+      ],
+      "rotationY": 0,
+      "scale": 2.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        22,
+        0,
+        -28
+      ],
+      "rotationY": 20,
+      "scale": 1.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -24,
+        0,
+        -24
+      ],
+      "rotationY": 10,
+      "scale": 1.6
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        0,
+        0,
+        -54
+      ],
+      "rotationY": 0,
+      "scale": 3
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -34,
+        0,
+        -46
+      ],
+      "rotationY": 0,
+      "scale": 2.2
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        32,
+        0,
+        -50
+      ],
+      "rotationY": 15,
+      "scale": 2.6
+    },
+    {
+      "assetId": "floating_isle",
+      "position": [
+        -12,
+        9,
+        -18
+      ],
+      "rotationY": 20,
+      "scale": 1.1
+    },
+    {
+      "assetId": "floating_isle",
+      "position": [
+        14,
+        13,
+        -26
+      ],
+      "rotationY": 140,
+      "scale": 1.6
+    },
+    {
+      "assetId": "floating_isle",
+      "position": [
+        3,
+        18,
+        -38
+      ],
+      "rotationY": 70,
+      "scale": 2.2
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        -20,
+        16,
+        -34
+      ],
+      "rotationY": 10,
+      "scale": 2.2
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        18,
+        22,
+        -40
+      ],
+      "rotationY": 60,
+      "scale": 3
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        -4,
+        28,
+        -55
+      ],
+      "rotationY": 120,
+      "scale": 4
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        26,
+        10,
+        -22
+      ],
+      "rotationY": 30,
+      "scale": 1.6
+    }
+  ],
+  "marks": []
+}

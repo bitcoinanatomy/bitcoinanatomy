@@ -1,0 +1,14 @@
+{
+  "id": "planter",
+  "name": "Planter",
+  "description": "Marble planter with a round bush.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/planter.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#7aa86a",
+  "kind": "prop"
+}

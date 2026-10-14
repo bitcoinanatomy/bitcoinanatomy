@@ -1,0 +1,14 @@
+{
+  "id": "crystal_gold",
+  "name": "Gold Crystal",
+  "description": "Glowing amber crystal cluster.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/crystal_gold.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#ffc066",
+  "kind": "fx"
+}

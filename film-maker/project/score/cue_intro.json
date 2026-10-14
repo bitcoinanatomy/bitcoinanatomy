@@ -1,0 +1,40 @@
+{
+  "id": "cue_intro",
+  "name": "Intro theme",
+  "seed": 3297,
+  "key": "D",
+  "mode": "major",
+  "tempo": 137,
+  "bars": 6,
+  "beatsPerBar": 4,
+  "density": 0.85,
+  "instruments": {
+    "pad": {
+      "on": true,
+      "enter": 0,
+      "gain": 0.5
+    },
+    "bass": {
+      "on": true,
+      "enter": 0.17,
+      "gain": 0.7
+    },
+    "arp": {
+      "on": true,
+      "enter": 0,
+      "gain": 0.4
+    },
+    "lead": {
+      "on": true,
+      "enter": 0.34,
+      "gain": 0.5
+    },
+    "perc": {
+      "on": true,
+      "enter": 0.17,
+      "gain": 0.45
+    }
+  },
+  "overrides": [],
+  "notes": "Upbeat: I-vi-IV-V, syncopated bass, 16th up/down arp, bouncy lead. 6 bars @137 = 10.5s."
+}

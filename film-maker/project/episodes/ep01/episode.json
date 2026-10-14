@@ -1,0 +1,41 @@
+{
+  "id": "ep01",
+  "number": 1,
+  "title": "Mili, Sati & Bit",
+  "status": "wip",
+  "synopsis": "In a city of white marble and floating glass, three glowing friends — fast little Mili, clever Sati and mighty Bit — discover that every one of them counts. Then something calls from the dark below.",
+  "theme": "Every one of us counts — small, smart or strong.",
+  "arc": {
+    "tension": 0.4,
+    "beat": "setup",
+    "note": ""
+  },
+  "credits": {
+    "intro": true,
+    "outro": true
+  },
+  "scenes": [
+    "ep01_sc01",
+    "ep01_sc02",
+    "ep01_sc03",
+    "ep01_sc04",
+    "ep01_sc05"
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": [
+      {
+        "id": "scr_qg4prz",
+        "start": 0,
+        "duration": 98,
+        "cueId": "cue_ep01",
+        "offset": 0,
+        "gain": 0.45
+      }
+    ]
+  }
+}

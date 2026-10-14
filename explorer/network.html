@@ -20,6 +20,8 @@
                     <button type="button" class="nav-link nav-dropdown-toggle" aria-expanded="false">Explore</button>
                     <ul class="nav-dropdown-panel">
                         <li><a href="network.html" class="nav-link active">Network</a></li>
+                        <li><a href="crawler.html" class="nav-link">Crawler</a></li>
+                        <li><a href="monitor.html" class="nav-link">Monitor</a></li>
                         <li><a href="node.html" class="nav-link">Node</a></li>
                         <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
                         <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
@@ -42,19 +44,6 @@
             <div class="header">
                 <h1>Network</h1>
                 <div class="subtitle" id="network-subtitle">Loading...</div>
-                <div class="snapshot-navigation">
-                    <div class="snapshot-nav-row">
-                        <button id="prev-snapshot" class="snapshot-nav-btn" disabled title="Previous snapshot">← Prev</button>
-                        <button id="next-snapshot" class="snapshot-nav-btn" disabled title="Next snapshot">Next →</button>
-                    </div>
-                    <div class="archive-picker" id="archive-picker">
-                        <button type="button" id="archive-select-btn" class="archive-picker-trigger" aria-haspopup="listbox" aria-expanded="false" title="Load historical weekly snapshot">
-                            <span class="archive-picker-label">Load Archive</span>
-                            <span class="archive-picker-chevron" aria-hidden="true"></span>
-                        </button>
-                        <div class="archive-picker-menu" id="archive-menu" role="listbox" hidden></div>
-                    </div>
-                </div>
             </div>
             
             <div class="sidebar">
@@ -180,7 +169,37 @@
     </div>
 
     <div class="disclaimer">
-        Data sources: <a class="disclaimer-link" href="https://btcnodes.io/api/" target="_blank" rel="noopener">BTC Nodes API</a><span id="disclaimer-error" class="disclaimer-error" hidden> · unavailable</span><span id="disclaimer-archive" class="disclaimer-archive" hidden> · local bitnode.io archive fallback</span>
+        <span class="source-selector">
+            <span class="source-selector-label">Node data:</span>
+            <span class="source-selector-picker" id="node-source-picker">
+                <button type="button" id="node-source-btn" class="source-selector-btn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="node-source-label">Crawler archive</span>
+                </button>
+                <div class="source-selector-menu" id="node-source-menu" role="listbox" hidden>
+                    <button class="source-selector-option active" data-source="crawler-archive" role="option">
+                        <span class="src-name">Crawler archive</span>
+                        <span class="src-desc">Clearnet peers found by the local crawler — no Bitcoin node required</span>
+                    </button>
+                    <div class="source-selector-separator"></div>
+                    <button class="source-selector-option" data-source="btcnodes-live" role="option">
+                        <span class="src-name">BTC Nodes · live</span>
+                        <span class="src-desc">Live btcnodes.io API via local proxy</span>
+                    </button>
+                    <div class="source-selector-separator"></div>
+                    <button class="source-selector-option" data-source="btcnodes-archive" role="option">
+                        <span class="src-name">BTC Nodes · archive</span>
+                        <span class="src-desc">Saved fallback snapshot — date is when it was captured</span>
+                    </button>
+                    <div class="source-selector-separator"></div>
+                    <button class="source-selector-option" data-source="bitnodes-archive" role="option">
+                        <span class="src-name">Bitnodes · archive</span>
+                        <span class="src-desc">bitnodes.io geo cache — 25k geolocated IPs</span>
+                    </button>
+                </div>
+            </span>
+        </span>
+        <span id="disclaimer-error" class="disclaimer-error" hidden></span>
+        <span id="disclaimer-archive" class="disclaimer-archive" hidden> · archive active</span>
     </div>
 
     <!-- Three.js + WebXR addons via importmap -->
@@ -208,7 +227,7 @@
     <script src="js/vr/VRManager.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/vr/ExplorerRouter.js"></script>
-    <script src="js/network.js"></script>
+    <script src="js/network.js?v=5"></script>
     <script>
         // Mobile panel management
         document.addEventListener('DOMContentLoaded', () => {

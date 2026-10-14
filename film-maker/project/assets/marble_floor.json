@@ -1,0 +1,16 @@
+{
+  "id": "marble_floor",
+  "name": "Marble Floor",
+  "description": "Polished white marble tiles (procedural texture).",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/marble_floor.glb",
+  "textures": {
+    "baseColor": "media/textures/marble.png"
+  },
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "set"
+}

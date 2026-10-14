@@ -189,38 +189,22 @@
                     onSelect: click('toggle-discs')
                 },
                 {
-                    label: 'LOAD ALL',
+                    label: 'LOAD BLOCKS',
                     kind: 'action',
                     getState: function () { return false; },
                     getLabel: function () {
                         var ex = vrManager && vrManager.explorer;
-                        if (!ex) return 'PAUSE';
+                        if (!ex) return 'LOAD BLOCKS';
                         if (ex.epochLoadAllRunning) return 'PAUSE';
                         if (ex.epochLoadAllPaused) return 'RESUME';
-                        return 'GENESIS';
+                        return 'LOAD BLOCKS';
                     },
                     onSelect: function (mesh) {
-                        var ex = vrManager && vrManager.explorer;
-                        if (ex && (ex.epochLoadAllRunning || ex.epochLoadAllPaused)) {
-                            clickDomButton('load-all-epochs');
-                        } else {
-                            clickDomButton('load-epochs-genesis');
-                        }
+                        clickDomButton('load-all-epochs');
                         if (mesh && vrManager && vrManager.navMenu) {
                             setTimeout(function () { vrManager.navMenu._refreshToggle(mesh); }, 0);
                         }
                     }
-                },
-                {
-                    label: 'FROM HOVER',
-                    kind: 'action',
-                    getState: function () { return false; },
-                    getLabel: function () {
-                        var ex = vrManager && vrManager.explorer;
-                        if (!ex || ex.lastTooltipEpochIndex == null) return 'FROM HOVER';
-                        return 'EPOCH ' + ex.lastTooltipEpochIndex;
-                    },
-                    onSelect: click('load-epochs-tooltip')
                 },
                 {
                     label: 'RESET',
