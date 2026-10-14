@@ -1,0 +1,24 @@
+{
+  "id": "bit",
+  "name": "Bit",
+  "description": "The largest. Strong, loyal, supportive. A hundred million Satis make one Bit.",
+  "tags": [
+    "sidekick",
+    "trio"
+  ],
+  "refs": [
+    "media/refs/bit_card.png",
+    "media/refs/bit_turnaround.png",
+    "media/refs/bit_expressions.png"
+  ],
+  "mesh": "media/meshes/bit.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#7fa883",
+  "voice": "en_US-joe-medium",
+  "voiceTune": {
+    "pitch": -3,
+    "speed": 0.9
+  },
+  "role": "The muscle"
+}

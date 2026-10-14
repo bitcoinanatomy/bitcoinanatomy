@@ -1,0 +1,874 @@
+{
+  "id": "mempool_sea",
+  "name": "Mempool Sea",
+  "description": "Hundreds of glass bubbles drifting over a mirror-black sea under a teal nebula, each holding a waiting transaction.",
+  "tags": [],
+  "refs": [
+    "media/refs/dark_environments.png"
+  ],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#01060a",
+  "fog": {
+    "color": "#04121a",
+    "near": 10,
+    "far": 55
+  },
+  "lighting": {
+    "ambient": 0.22,
+    "key": 1,
+    "keyColor": "#ffe9cf",
+    "keyPosition": [
+      3,
+      8,
+      5
+    ]
+  },
+  "hdri": "media/hdri/teal.hdr",
+  "hdriIntensity": 1.3,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 1,
+    "vignette": 0.45,
+    "grain": 0.05,
+    "exposure": 1.1
+  },
+  "preview": {
+    "position": [
+      -2,
+      2.4,
+      8
+    ],
+    "target": [
+      0,
+      2.4,
+      -8
+    ],
+    "fov": 55
+  },
+  "props": [
+    {
+      "assetId": "obsidian_floor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "tx_orb",
+      "position": [
+        0.4,
+        1.5,
+        0.6
+      ],
+      "rotationY": 0,
+      "scale": 1.2
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        -6,
+        0,
+        -10
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        16.66598412835835,
+        0,
+        3.4228218076436265
+      ],
+      "rotationY": 29.027102245017886,
+      "scale": 1.659710732428357
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -12.687112729414029,
+        0,
+        -21.309528941471807
+      ],
+      "rotationY": 43.86345437262207,
+      "scale": 3.5023085473105313
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -17.182317655477096,
+        0,
+        -11.995241342572648
+      ],
+      "rotationY": 45.29449353693053,
+      "scale": 1.4376548710279167
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -6.477603998996113,
+        0,
+        -31.092903833672338
+      ],
+      "rotationY": 12.593602461274713,
+      "scale": 1.7464139085263013
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -13.226954102584838,
+        0,
+        -13.681780589689135
+      ],
+      "rotationY": 86.56772646820173,
+      "scale": 1.8341209081001577
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        19.69699664030732,
+        0,
+        -10.451400850748506
+      ],
+      "rotationY": 77.88455152418464,
+      "scale": 0.9691634440328926
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        17.492288560837885,
+        0,
+        -2.839214723786739
+      ],
+      "rotationY": 35.25693350471556,
+      "scale": 1.9136394809000192
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        5.552598892987577,
+        0,
+        13.174678024586353
+      ],
+      "rotationY": 45.86441167630255,
+      "scale": 0.6909912549890578
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -30.60086128999636,
+        0,
+        -7.198187480214053
+      ],
+      "rotationY": 62.24490419961512,
+      "scale": 1.8281069739721714
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -21.498942112018415,
+        0,
+        -19.986389684956908
+      ],
+      "rotationY": 42.28777530603111,
+      "scale": 0.6010573763865977
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        11.364651016223801,
+        0,
+        11.63665229679094
+      ],
+      "rotationY": 2.0528470468707383,
+      "scale": 0.8594134048093109
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        16.851530874164823,
+        0,
+        0.3263886729731049
+      ],
+      "rotationY": 54.64401612058282,
+      "scale": 3.4828421836718917
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        0,
+        0.8,
+        -2
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        3.512408538865985,
+        4.65,
+        -10
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -7.371618105385221,
+        1.35,
+        -18
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        7.619211492951867,
+        5.2,
+        -26
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -2.05705601843116,
+        1.9000000000000001,
+        -6.800000000000001
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -7.512020852006089,
+        5.75,
+        -14.8
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        15.643655980098305,
+        2.45,
+        -22.8
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -2.662701100744514,
+        6.3,
+        -3.6
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        1.785237629863456,
+        3,
+        -11.600000000000001
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        2.821253638246582,
+        6.8500000000000005,
+        -19.6
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -8.69355227526359,
+        3.55,
+        -27.6
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        11.260564115013825,
+        7.4,
+        -8.4
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -7.025050214287995,
+        4.1000000000000005,
+        -16.4
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -3.4708911527933815,
+        0.8,
+        -24.400000000000002
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        2.4532987635793253,
+        4.65,
+        -5.2
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -5.157250037904202,
+        1.35,
+        -13.200000000000001
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        4.772235823792019,
+        5.2,
+        -21.200000000000003
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        0.3906552705587027,
+        1.9000000000000001,
+        -2
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -8.317945521488188,
+        5.75,
+        -10
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        13.984601270430295,
+        2.45,
+        -18
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -12.445725513443405,
+        6.3,
+        -26
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        0.40233668293697145,
+        3,
+        -6.800000000000001
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        2.9664316949143665,
+        6.8500000000000005,
+        -14.8
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -7.218187354443401,
+        3.55,
+        -22.8
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        8.333619238852014,
+        7.4,
+        -3.6
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -3.596765329006157,
+        4.1000000000000005,
+        -11.600000000000001
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -5.859762503257956,
+        0.8,
+        -19.6
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        14.937849650478729,
+        4.65,
+        -27.6
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -2.8239945530976893,
+        1.35,
+        -8.4
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        2.4241069121732948,
+        5.2,
+        -16.4
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        1.8782928844390685,
+        1.9000000000000001,
+        -24.400000000000002
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -8.068895148515756,
+        5.75,
+        -5.2
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        11.631851063521594,
+        2.45,
+        -13.200000000000001
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -8.585667045296447,
+        6.3,
+        -21.200000000000003
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -1.3173694384484016,
+        3,
+        -2
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        2.1995709602198765,
+        6.8500000000000005,
+        -10
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -5.199899990982608,
+        3.55,
+        -18
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        5.48760872894697,
+        7.4,
+        -26
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -0.8992848008748302,
+        4.1000000000000005,
+        -6.800000000000001
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -7.12032410483888,
+        0.8,
+        -14.8
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        13.770228436080828,
+        4.65,
+        -22.8
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -13.7240818664721,
+        1.35,
+        -3.6
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        0.7974040673673817,
+        5.2,
+        -11.600000000000001
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        2.3668582528791218,
+        1.9000000000000001,
+        -19.6
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -6.934340559474209,
+        5.75,
+        -27.6
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        8.897457652010738,
+        2.45,
+        -8.4
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -5.071489362465048,
+        6.3,
+        -16.4
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -4.101631723234623,
+        3,
+        -24.400000000000002
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        13.962150733977014,
+        6.8500000000000005,
+        -5.2
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -2.9342649189216425,
+        3.55,
+        -13.200000000000001
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        3.0191781579040344,
+        7.4,
+        -21.200000000000003
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        0.9013956981888651,
+        4.1000000000000005,
+        -2
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -7.298451644486676,
+        0.8,
+        -10
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        11.792977215983214,
+        4.65,
+        -18
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -9.991160619398086,
+        1.35,
+        -26
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        0.8599541117661437,
+        5.2,
+        -6.800000000000001
+      ],
+      "rotationY": 0,
+      "scale": 0.5
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        1.9061019685116807,
+        1.9000000000000001,
+        -14.8
+      ],
+      "rotationY": 0,
+      "scale": 1.1600000000000001
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -5.148599710732092,
+        5.75,
+        -22.8
+      ],
+      "rotationY": 0,
+      "scale": 0.72
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        6.103833165593553,
+        2.45,
+        -3.6
+      ],
+      "rotationY": 0,
+      "scale": 1.38
+    },
+    {
+      "assetId": "mempool_bubble",
+      "position": [
+        -2.172976864266176,
+        6.3,
+        -11.600000000000001
+      ],
+      "rotationY": 0,
+      "scale": 0.94
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        -6.738658088578216,
+        0,
+        -15.680086332809093
+      ],
+      "rotationY": 150.02615936100483,
+      "scale": 0.6293502829503268
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        -3.817477361755988,
+        0,
+        2.569861771016443
+      ],
+      "rotationY": 238.88617426156998,
+      "scale": 1.0874831752851604
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        -5.695921292548313,
+        0,
+        9.021229519903043
+      ],
+      "rotationY": 258.9105851110071,
+      "scale": 0.8531129753217102
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        12.557808351886854,
+        0,
+        0.8659065908825334
+      ],
+      "rotationY": 102.09278225898743,
+      "scale": 1.1067559770774096
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        10.429831605065221,
+        0,
+        -12.829705762149198
+      ],
+      "rotationY": 344.51613147743046,
+      "scale": 1.0822929535992443
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        -6.939953673579438,
+        0,
+        -13.213064680375844
+      ],
+      "rotationY": 64.61109945550561,
+      "scale": 0.7037860721815378
+    },
+    {
+      "assetId": "motes",
+      "position": [
+        0,
+        0,
+        -6
+      ],
+      "rotationY": 0,
+      "scale": 1.3
+    }
+  ],
+  "marks": []
+}

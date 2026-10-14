@@ -1,0 +1,15 @@
+{
+  "id": "hex_beacon",
+  "name": "Hex Beacon",
+  "description": "Glowing hexagonal frame — a new node calling for peers.",
+  "tags": [
+    "dark",
+    "protocol"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/hex_beacon.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#cfe0ff",
+  "kind": "prop"
+}

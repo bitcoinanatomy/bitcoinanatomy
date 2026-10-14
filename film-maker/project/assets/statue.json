@@ -1,0 +1,14 @@
+{
+  "id": "statue",
+  "name": "Statue",
+  "description": "Marble statue of a sphere-headed figure on a plinth.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/statue.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "set"
+}

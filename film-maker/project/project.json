@@ -1,0 +1,20 @@
+{
+  "title": "Sati",
+  "fps": 24,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "episodes": [
+    "ep01",
+    "ep02"
+  ],
+  "season": {
+    "title": "Season 1 — Into the Protocol",
+    "logline": "Three glowing friends of very different sizes leave their bright marble city to answer a call from the dark — and discover the rules that let strangers agree on value."
+  },
+  "tts": {
+    "engine": "piper",
+    "defaultVoice": "en_US-lessac-medium"
+  }
+}

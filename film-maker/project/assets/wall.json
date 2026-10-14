@@ -1,0 +1,14 @@
+{
+  "id": "wall",
+  "name": "Wall",
+  "description": "12m crenellated marble city wall.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/wall.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "set"
+}

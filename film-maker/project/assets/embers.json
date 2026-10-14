@@ -1,0 +1,14 @@
+{
+  "id": "embers",
+  "name": "Embers",
+  "description": "Drifting embers over 16m.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/embers.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#ff8a33",
+  "kind": "fx"
+}

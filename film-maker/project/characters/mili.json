@@ -1,0 +1,24 @@
+{
+  "id": "mili",
+  "name": "Mili",
+  "description": "The smallest. Curious, playful, impossibly fast — leaves a lightning trail. A thousand Milis make one Sati.",
+  "tags": [
+    "sidekick",
+    "trio"
+  ],
+  "refs": [
+    "media/refs/mili_card.png",
+    "media/refs/mili_turnaround.png",
+    "media/refs/mili_expressions.png"
+  ],
+  "mesh": "media/meshes/mili.glb",
+  "textures": {},
+  "scale": 0.8,
+  "color": "#c26a6a",
+  "voice": "en_US-amy-medium",
+  "voiceTune": {
+    "pitch": 5,
+    "speed": 1.15
+  },
+  "role": "Speed"
+}

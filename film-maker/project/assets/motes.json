@@ -1,0 +1,15 @@
+{
+  "id": "motes",
+  "name": "Motes",
+  "description": "Floating light motes over 16m.",
+  "tags": [
+    "dark",
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/motes.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#e0ecff",
+  "kind": "fx"
+}

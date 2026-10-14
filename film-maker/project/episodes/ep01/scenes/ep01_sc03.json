@@ -1,0 +1,824 @@
+{
+  "id": "ep01_sc03",
+  "title": "Together",
+  "status": "wip",
+  "summary": "A giant block seals the archway. Enter Bit.",
+  "environmentId": "sealed_gate",
+  "arc": {
+    "tension": 0.6,
+    "beat": "crisis",
+    "note": "A wall none of them can move alone. Enter Bit."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "Dead end",
+      "duration": 4,
+      "status": "wip",
+      "description": "The arch is sealed by a marble block three times their height. Mili pushes with all their might; nothing.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.3,
+            0,
+            -2.3
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 0.8,
+              "position": [
+                -0.3,
+                0,
+                -2.42
+              ],
+              "rotationY": 180
+            },
+            {
+              "t": 1.4,
+              "position": [
+                -0.3,
+                0,
+                -2.3
+              ],
+              "rotationY": 180
+            },
+            {
+              "t": 2,
+              "position": [
+                -0.3,
+                0,
+                -2.42
+              ],
+              "rotationY": 180
+            },
+            {
+              "t": 2.8,
+              "position": [
+                -0.4,
+                0,
+                -1.6
+              ],
+              "rotationY": 30
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            0.8,
+            0,
+            -1.2
+          ],
+          "rotationY": 160
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 0.6,
+            "expression": "sad"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "worried"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0,
+            "pose": "reach"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_5sp5rs",
+            "start": 0,
+            "duration": 4,
+            "image": "media/boards/together.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_wo7t0i",
+            "start": 0,
+            "duration": 4,
+            "label": "static",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  2.6,
+                  0.8,
+                  2.2
+                ],
+                "target": [
+                  0,
+                  1.1,
+                  -3
+                ],
+                "fov": 45
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_j5snda",
+            "start": 0.6,
+            "duration": 2.473,
+            "characterId": "mili",
+            "text": "Hnnnngh! Dead end!",
+            "audio": "media/audio/dialog/44b8e3d4ae35.wav",
+            "audioHash": "44b8e3d4ae35",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_9nnskc",
+            "start": 0.6,
+            "duration": 2,
+            "file": "media/audio/sfx/stone_grind.wav",
+            "gain": 0.35
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "Too heavy",
+      "duration": 3,
+      "status": "todo",
+      "description": "Close on Sati looking up at the block, thinking hard — and coming up empty.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.4,
+            0,
+            -1.6
+          ],
+          "rotationY": 30
+        },
+        "sati": {
+          "position": [
+            0.8,
+            0,
+            -1.2
+          ],
+          "rotationY": 160
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 0.6,
+            "expression": "worried"
+          }
+        ]
+      },
+      "poses": {
+        "sati": [
+          {
+            "t": 0.15,
+            "pose": "reach"
+          }
+        ],
+        "mili": [
+          {
+            "t": 0.9,
+            "pose": "crouch"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_qg2ded",
+            "start": 0,
+            "duration": 3,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.2709981915554629,
+                  0.762784,
+                  -4.200118338776391
+                ],
+                "target": [
+                  0.8,
+                  0.58,
+                  -1.2
+                ],
+                "fov": 28
+              },
+              {
+                "t": 3,
+                "position": [
+                  0.32767695674594916,
+                  0.7432,
+                  -3.8786770881932062
+                ],
+                "target": [
+                  0.8,
+                  0.58,
+                  -1.2
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_zdzywq",
+            "start": 0.6,
+            "duration": 1.346,
+            "characterId": "sati",
+            "text": "It's too heavy for us.",
+            "audio": "media/audio/dialog/f53058412a2e.wav",
+            "audioHash": "f53058412a2e",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Enter Bit",
+      "duration": 6,
+      "status": "todo",
+      "description": "A big shadow. Bit strides in, cracks knuckles, and lifts the block overhead in one smooth move.",
+      "notes": "",
+      "environmentId": "open_gate",
+      "characters": [
+        "bit",
+        "sati",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "bit": {
+          "position": [
+            4.5,
+            0,
+            0.4
+          ],
+          "rotationY": -90,
+          "moves": [
+            {
+              "t": 1.8,
+              "position": [
+                1.4,
+                0,
+                -1.3
+              ],
+              "rotationY": -15
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            -0.5,
+            0,
+            0.4
+          ],
+          "rotationY": 150,
+          "moves": [
+            {
+              "t": 1.5,
+              "position": [
+                -0.5,
+                0,
+                0.4
+              ],
+              "rotationY": 100
+            }
+          ]
+        },
+        "mili": {
+          "position": [
+            -1.4,
+            0,
+            0.6
+          ],
+          "rotationY": 160,
+          "moves": [
+            {
+              "t": 1.5,
+              "position": [
+                -1.4,
+                0,
+                0.6
+              ],
+              "rotationY": 95
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "bit": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 1.4,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 1.5,
+            "expression": "surprised"
+          }
+        ],
+        "mili": [
+          {
+            "t": 1.5,
+            "expression": "surprised"
+          }
+        ]
+      },
+      "poses": {
+        "bit": [
+          {
+            "t": 0,
+            "pose": "lift"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_yjx8vh",
+            "start": 0,
+            "duration": 6,
+            "label": "low-angle hero",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -0.6,
+                  0.35,
+                  3.4
+                ],
+                "target": [
+                  1.2,
+                  1.4,
+                  -1.3
+                ],
+                "fov": 50
+              },
+              {
+                "t": 6,
+                "position": [
+                  -0.3,
+                  0.3,
+                  2.6
+                ],
+                "target": [
+                  1.2,
+                  1.9,
+                  -1.3
+                ],
+                "fov": 50
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_4fwr0h",
+            "start": 1.4,
+            "duration": 1.532,
+            "characterId": "bit",
+            "text": "Leave the heavy stuff to me.",
+            "audio": "media/audio/dialog/ad2ac9f646c2.wav",
+            "audioHash": "ad2ac9f646c2",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_62yd5q",
+            "start": 0.3,
+            "duration": 0.9,
+            "file": "media/audio/sfx/thud.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_5c1hix",
+            "start": 0.9,
+            "duration": 2,
+            "file": "media/audio/sfx/stone_grind.wav",
+            "gain": 0.7
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "Jaws drop",
+      "duration": 2.5,
+      "status": "todo",
+      "description": "Close on Mili, mouth open, staring up — then delight.",
+      "notes": "",
+      "characters": [
+        "bit",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "bit": {
+          "position": [
+            1.4,
+            0,
+            -1.3
+          ],
+          "rotationY": -15
+        },
+        "mili": {
+          "position": [
+            -1.4,
+            0,
+            0.6
+          ],
+          "rotationY": 95
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          },
+          {
+            "t": 1.5,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.375,
+            "pose": "crouch"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_5w8yn8",
+            "start": 0,
+            "duration": 2.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.17447377997920532,
+                  0.3645312,
+                  1.1730615905450246
+                ],
+                "target": [
+                  -1.4,
+                  0.264,
+                  0.6
+                ],
+                "fov": 28
+              },
+              {
+                "t": 2.5,
+                "position": [
+                  0.00578016069571885,
+                  0.35376,
+                  1.1116621344152007
+                ],
+                "target": [
+                  -1.4,
+                  0.264,
+                  0.6
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh05",
+      "name": "Show off",
+      "duration": 3.5,
+      "status": "todo",
+      "description": "Mili and Sati grin up at Bit, still holding the block like it weighs nothing.",
+      "notes": "",
+      "environmentId": "open_gate",
+      "characters": [
+        "bit",
+        "sati",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "bit": {
+          "position": [
+            1.4,
+            0,
+            -1.3
+          ],
+          "rotationY": -30
+        },
+        "sati": {
+          "position": [
+            -0.5,
+            0,
+            0.4
+          ],
+          "rotationY": 60
+        },
+        "mili": {
+          "position": [
+            -1.4,
+            0,
+            0.6
+          ],
+          "rotationY": 55,
+          "moves": [
+            {
+              "t": 1.4,
+              "position": [
+                -0.6,
+                0,
+                0.1
+              ],
+              "rotationY": 55
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "bit": [
+          {
+            "t": 0,
+            "pose": "lift"
+          }
+        ],
+        "mili": [
+          {
+            "t": 0.7,
+            "pose": "arms_crossed"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_enxkf4",
+            "start": 0,
+            "duration": 3.5,
+            "label": "orbit",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.705757311632176,
+                  1.2,
+                  4.1286167935365885
+                ],
+                "target": [
+                  -0.16666666666666666,
+                  0.6,
+                  -0.10000000000000002
+                ],
+                "fov": 40
+              },
+              {
+                "t": 1.75,
+                "position": [
+                  -0.7540345316568987,
+                  1.2,
+                  4.361501876182147
+                ],
+                "target": [
+                  -0.16666666666666666,
+                  0.6,
+                  -0.10000000000000002
+                ],
+                "fov": 40
+              },
+              {
+                "t": 3.5,
+                "position": [
+                  0.22553417569779508,
+                  1.2,
+                  4.382876141412855
+                ],
+                "target": [
+                  -0.16666666666666666,
+                  0.6,
+                  -0.10000000000000002
+                ],
+                "fov": 40
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_vippho",
+            "start": 0.6,
+            "duration": 1.577,
+            "characterId": "mili",
+            "text": "Bit! Show off.",
+            "audio": "media/audio/dialog/0b272af23bd9.wav",
+            "audioHash": "0b272af23bd9",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh06",
+      "name": "Supportive",
+      "duration": 3.5,
+      "status": "todo",
+      "description": "Close on Bit: a modest, enormous smile.",
+      "notes": "",
+      "characters": [
+        "bit",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "bit": {
+          "position": [
+            1.4,
+            0,
+            -1.3
+          ],
+          "rotationY": -30
+        },
+        "mili": {
+          "position": [
+            -0.6,
+            0,
+            0.1
+          ],
+          "rotationY": 55
+        }
+      },
+      "expressions": {
+        "bit": [
+          {
+            "t": 0.6,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "bit": [
+          {
+            "t": 0.35,
+            "pose": "arms_crossed"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_9jtpzf",
+            "start": 0,
+            "duration": 3.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -2.9756458590956023,
+                  1.84272,
+                  2.3716028265295126
+                ],
+                "target": [
+                  1.4,
+                  1.5,
+                  -1.3
+                ],
+                "fov": 28
+              },
+              {
+                "t": 3.5,
+                "position": [
+                  -2.5068266599067877,
+                  1.806,
+                  1.9782168094013504
+                ],
+                "target": [
+                  1.4,
+                  1.5,
+                  -1.3
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_6hocau",
+            "start": 0.6,
+            "duration": 1.408,
+            "characterId": "bit",
+            "text": "Just being supportive.",
+            "audio": "media/audio/dialog/f538cd6f3da4.wav",
+            "audioHash": "f538cd6f3da4",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": []
+  }
+}

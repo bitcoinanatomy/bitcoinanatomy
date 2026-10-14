@@ -1,0 +1,14 @@
+{
+  "id": "tx_orb",
+  "name": "Transaction Orb",
+  "description": "A glowing transaction with its signature ring.",
+  "tags": [
+    "protocol"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/tx_orb.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#ffd58c",
+  "kind": "prop"
+}

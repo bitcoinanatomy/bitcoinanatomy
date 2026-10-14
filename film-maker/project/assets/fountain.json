@@ -1,0 +1,14 @@
+{
+  "id": "fountain",
+  "name": "Fountain",
+  "description": "Round marble fountain with a glowing spout.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/fountain.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#dfe9ff",
+  "kind": "set"
+}

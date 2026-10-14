@@ -1,0 +1,24 @@
+{
+  "id": "sati",
+  "name": "Sati",
+  "description": "Intelligent, resourceful, leads the way. Calm under pressure, figures out how things work.",
+  "tags": [
+    "hero",
+    "trio"
+  ],
+  "refs": [
+    "media/refs/sati_card.png",
+    "media/refs/sati_turnaround.png",
+    "media/refs/sati_expressions.png"
+  ],
+  "mesh": "media/meshes/sati.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#6f93a8",
+  "voice": "en_US-lessac-medium",
+  "voiceTune": {
+    "pitch": 2,
+    "speed": 1
+  },
+  "role": "The hero"
+}

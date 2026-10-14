@@ -1,0 +1,14 @@
+{
+  "id": "crystal",
+  "name": "Crystal",
+  "description": "Glowing cyan crystal cluster.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/crystal.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#7fe6ff",
+  "kind": "fx"
+}

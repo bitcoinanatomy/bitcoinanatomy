@@ -1,0 +1,14 @@
+{
+  "id": "marble_steps",
+  "name": "Marble Steps",
+  "description": "Four broad steps.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/marble_steps.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "set"
+}

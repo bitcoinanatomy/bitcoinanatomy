@@ -1,0 +1,15 @@
+{
+  "id": "hash_block",
+  "name": "Hash Block",
+  "description": "Dark block with glowing edges — a mining attempt.",
+  "tags": [
+    "dark",
+    "protocol"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/hash_block.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#9fb6ff",
+  "kind": "prop"
+}

@@ -1,0 +1,972 @@
+{
+  "id": "ep01_sc01",
+  "title": "Explore",
+  "status": "wip",
+  "summary": "Dawn over the light city. Mili arrives at full speed — and stops less gracefully.",
+  "environmentId": "light_city",
+  "arc": {
+    "tension": 0.25,
+    "beat": "setup",
+    "note": "Meet Mili — speed and curiosity — in a bright, safe world."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "Dawn over the city",
+      "duration": 6,
+      "status": "wip",
+      "description": "Wide establishing shot. Sun rising between marble towers; glass spheres drift in the air. Citizens stroll the plaza; three small glows among them.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit",
+        "folk1",
+        "folk2",
+        "folk3",
+        "folk4",
+        "folk5",
+        "folk6"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.1,
+            0,
+            0.35
+          ],
+          "rotationY": 15
+        },
+        "sati": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotationY": 0
+        },
+        "bit": {
+          "position": [
+            1.6,
+            0,
+            -0.25
+          ],
+          "rotationY": -12
+        },
+        "folk1": {
+          "position": [
+            -7,
+            0,
+            -5
+          ],
+          "rotationY": 90,
+          "moves": [
+            {
+              "t": 6,
+              "position": [
+                7,
+                0,
+                -5
+              ]
+            }
+          ]
+        },
+        "folk2": {
+          "position": [
+            3.5,
+            0,
+            -3.6
+          ],
+          "rotationY": -40
+        },
+        "folk3": {
+          "position": [
+            4.2,
+            0,
+            -3.1
+          ],
+          "rotationY": -100
+        },
+        "folk4": {
+          "position": [
+            6.5,
+            0,
+            -7.5
+          ],
+          "rotationY": -90,
+          "moves": [
+            {
+              "t": 6,
+              "position": [
+                -6,
+                0,
+                -7.5
+              ]
+            }
+          ]
+        },
+        "folk5": {
+          "position": [
+            -4.2,
+            0,
+            -3.2
+          ],
+          "rotationY": 40
+        },
+        "folk6": {
+          "position": [
+            -3.5,
+            0,
+            -3.8
+          ],
+          "rotationY": -80
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_auvhcf",
+            "start": 0,
+            "duration": 6,
+            "image": "media/boards/hero_banner.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_pk5lv7",
+            "start": 0,
+            "duration": 6,
+            "label": "crane",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.16666666666666666,
+                  0.6,
+                  9.033333333333333
+                ],
+                "target": [
+                  0.16666666666666666,
+                  0.6,
+                  0.033333333333333326
+                ],
+                "fov": 50
+              },
+              {
+                "t": 6,
+                "position": [
+                  0.16666666666666666,
+                  4.5,
+                  7.683333333333333
+                ],
+                "target": [
+                  0.16666666666666666,
+                  0.6,
+                  0.033333333333333326
+                ],
+                "fov": 50
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [],
+        "sfx": [
+          {
+            "id": "sfx_s3llck",
+            "start": 1.2,
+            "duration": 1.4,
+            "file": "media/audio/sfx/sparkle.wav",
+            "gain": 0.5
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "Mili zooms in",
+      "duration": 4,
+      "status": "wip",
+      "description": "Mili streaks across frame trailing lightning, scattering passers-by, and skids to a stop.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "folk1",
+        "folk2",
+        "folk3",
+        "folk4",
+        "folk5",
+        "folk6"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -5,
+            0,
+            1.6
+          ],
+          "rotationY": 90,
+          "moves": [
+            {
+              "t": 1.4,
+              "position": [
+                -1.5,
+                0,
+                2.2
+              ],
+              "rotationY": 60
+            },
+            {
+              "t": 2.4,
+              "position": [
+                -0.4,
+                0,
+                0.8
+              ],
+              "rotationY": 25
+            }
+          ]
+        },
+        "folk1": {
+          "position": [
+            -7,
+            0,
+            -5
+          ],
+          "rotationY": 90,
+          "moves": [
+            {
+              "t": 4,
+              "position": [
+                7,
+                0,
+                -5
+              ]
+            }
+          ]
+        },
+        "folk2": {
+          "position": [
+            3.5,
+            0,
+            -3.6
+          ],
+          "rotationY": -40
+        },
+        "folk3": {
+          "position": [
+            4.2,
+            0,
+            -3.1
+          ],
+          "rotationY": -100
+        },
+        "folk4": {
+          "position": [
+            6.5,
+            0,
+            -7.5
+          ],
+          "rotationY": -90,
+          "moves": [
+            {
+              "t": 4,
+              "position": [
+                -6,
+                0,
+                -7.5
+              ]
+            }
+          ]
+        },
+        "folk5": {
+          "position": [
+            -4.2,
+            0,
+            -3.2
+          ],
+          "rotationY": 40
+        },
+        "folk6": {
+          "position": [
+            -3.5,
+            0,
+            -3.8
+          ],
+          "rotationY": -80
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "folk1": [
+          {
+            "t": 0.75,
+            "expression": "surprised"
+          },
+          {
+            "t": 2.95,
+            "expression": "happy"
+          }
+        ],
+        "folk2": [
+          {
+            "t": 0.9,
+            "expression": "surprised"
+          },
+          {
+            "t": 3.1,
+            "expression": "happy"
+          }
+        ],
+        "folk3": [
+          {
+            "t": 0.6,
+            "expression": "surprised"
+          },
+          {
+            "t": 2.8,
+            "expression": "happy"
+          }
+        ],
+        "folk4": [
+          {
+            "t": 0.75,
+            "expression": "surprised"
+          },
+          {
+            "t": 2.95,
+            "expression": "happy"
+          }
+        ],
+        "folk5": [
+          {
+            "t": 0.9,
+            "expression": "surprised"
+          },
+          {
+            "t": 3.1,
+            "expression": "happy"
+          }
+        ],
+        "folk6": [
+          {
+            "t": 0.6,
+            "expression": "surprised"
+          },
+          {
+            "t": 2.8,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_qhrz7u",
+            "start": 0,
+            "duration": 4,
+            "image": "media/boards/explore.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_6gbbj3",
+            "start": 0,
+            "duration": 4,
+            "label": "whip-follow",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -3,
+                  0.5,
+                  3.4
+                ],
+                "target": [
+                  -2.6,
+                  0.3,
+                  1.8
+                ],
+                "fov": 38
+              },
+              {
+                "t": 4,
+                "position": [
+                  1.2,
+                  0.45,
+                  2.2
+                ],
+                "target": [
+                  -0.4,
+                  0.26,
+                  0.8
+                ],
+                "fov": 38
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_ar9abb",
+            "start": 0.8,
+            "duration": 2.33,
+            "characterId": "mili",
+            "text": "Wheee! Out of the way, out of the way!",
+            "audio": "media/audio/dialog/47a0ec609bef.wav",
+            "audioHash": "47a0ec609bef",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_v3e7hi",
+            "start": 0.1,
+            "duration": 0.7,
+            "file": "media/audio/sfx/zap.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_b5bto3",
+            "start": 0.6,
+            "duration": 1.6,
+            "file": "media/audio/sfx/whoosh.wav",
+            "gain": 0.5
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Bonk",
+      "duration": 5.5,
+      "status": "todo",
+      "description": "Mili bounces off a floating glass sphere — BONK — and spins to a stop, dizzy but delighted.",
+      "notes": "",
+      "characters": [
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.4,
+            0,
+            -0.5
+          ],
+          "rotationY": -20,
+          "moves": [
+            {
+              "t": 0.66,
+              "position": [
+                -1.8,
+                0,
+                -0.9
+              ],
+              "rotationY": 160
+            },
+            {
+              "t": 1.65,
+              "position": [
+                -1.8,
+                0,
+                -0.9
+              ],
+              "rotationY": -20
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0.44,
+            "expression": "surprised"
+          },
+          {
+            "t": 1.1,
+            "expression": "worried"
+          },
+          {
+            "t": 2.161,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0,
+            "pose": "crouch"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_6viiy1",
+            "start": 0,
+            "duration": 5.5,
+            "label": "push-in",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.8,
+                  0.41400000000000003,
+                  1.5
+                ],
+                "target": [
+                  -1.8,
+                  0.264,
+                  -0.9
+                ],
+                "fov": 35
+              },
+              {
+                "t": 5.5,
+                "position": [
+                  -1.8,
+                  0.354,
+                  0.4999999999999999
+                ],
+                "target": [
+                  -1.8,
+                  0.264,
+                  -0.9
+                ],
+                "fov": 35
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_dev7tj",
+            "start": 1.1,
+            "duration": 0.561,
+            "characterId": "mili",
+            "text": "Ow.",
+            "audio": "media/audio/dialog/d60c835556c1.wav",
+            "audioHash": "d60c835556c1",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_znox7c",
+            "start": 2.161,
+            "duration": 2.48,
+            "characterId": "mili",
+            "text": "Did you see that? I was SO fast!",
+            "audio": "media/audio/dialog/c289000c53cd.wav",
+            "audioHash": "c289000c53cd",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_66tqtm",
+            "start": 0.3,
+            "duration": 2.5,
+            "file": "media/audio/sfx/chime.wav",
+            "gain": 0.6
+          },
+          {
+            "id": "sfx_nic1sy",
+            "start": 0.35,
+            "duration": 0.9,
+            "file": "media/audio/sfx/thud.wav",
+            "gain": 0.4
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "Sati arrives",
+      "duration": 3.5,
+      "status": "todo",
+      "description": "Sati walks in calmly, arms behind back, one eyebrow raised. Mili spins round.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "folk2",
+        "folk3"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.8,
+            0,
+            -0.9
+          ],
+          "rotationY": -20,
+          "moves": [
+            {
+              "t": 1.925,
+              "position": [
+                -1.8,
+                0,
+                -0.9
+              ],
+              "rotationY": 30
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            1.6,
+            0,
+            1.4
+          ],
+          "rotationY": -100,
+          "moves": [
+            {
+              "t": 2.625,
+              "position": [
+                -0.3,
+                0,
+                -0.2
+              ],
+              "rotationY": -60
+            }
+          ]
+        },
+        "folk2": {
+          "position": [
+            3.5,
+            0,
+            -3.6
+          ],
+          "rotationY": -40
+        },
+        "folk3": {
+          "position": [
+            4.2,
+            0,
+            -3.1
+          ],
+          "rotationY": -100
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ],
+        "mili": [
+          {
+            "t": 1.925,
+            "expression": "surprised"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_nxnaxx",
+            "start": 0,
+            "duration": 3.5,
+            "label": "orbit",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -0.9137606738915693,
+                  0.7,
+                  3.286300913130284
+                ],
+                "target": [
+                  -0.6,
+                  0.4,
+                  -0.3
+                ],
+                "fov": 40
+              },
+              {
+                "t": 1.75,
+                "position": [
+                  -0.1301057080078143,
+                  0.7,
+                  3.2692015009457176
+                ],
+                "target": [
+                  -0.6,
+                  0.4,
+                  -0.3
+                ],
+                "fov": 40
+              },
+              {
+                "t": 3.5,
+                "position": [
+                  0.6312725159724074,
+                  0.7,
+                  3.0828934348292707
+                ],
+                "target": [
+                  -0.6,
+                  0.4,
+                  -0.3
+                ],
+                "fov": 40
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh05",
+      "name": "The whole city saw",
+      "duration": 4,
+      "status": "todo",
+      "description": "Close on Sati: deadpan, then the corner of a smile.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.8,
+            0,
+            -0.9
+          ],
+          "rotationY": 30
+        },
+        "sati": {
+          "position": [
+            -0.3,
+            0,
+            -0.2
+          ],
+          "rotationY": -60
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0.6,
+            "expression": "determined"
+          },
+          {
+            "t": 3.4,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_hmbri3",
+            "start": 0,
+            "duration": 4,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -2.047343255699827,
+                  0.762784,
+                  2.295464787721985
+                ],
+                "target": [
+                  -0.3,
+                  0.58,
+                  -0.2
+                ],
+                "fov": 28
+              },
+              {
+                "t": 4,
+                "position": [
+                  -1.8601279068748453,
+                  0.7432,
+                  2.0280935604660577
+                ],
+                "target": [
+                  -0.3,
+                  0.58,
+                  -0.2
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_n81dws",
+            "start": 0.6,
+            "duration": 2.233,
+            "characterId": "sati",
+            "text": "We saw, Mili. The whole city saw.",
+            "audio": "media/audio/dialog/fd97625830c1.wav",
+            "audioHash": "fd97625830c1",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh06",
+      "name": "Hehe",
+      "duration": 2.5,
+      "status": "todo",
+      "description": "Close on Mili, sheepish grin.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.8,
+            0,
+            -0.9
+          ],
+          "rotationY": 30
+        },
+        "sati": {
+          "position": [
+            -0.3,
+            0,
+            -0.2
+          ],
+          "rotationY": -60
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "worried"
+          },
+          {
+            "t": 0.6,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_etl6d6",
+            "start": 0,
+            "duration": 2.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.509049005355505,
+                  0.3645312,
+                  0.750065086327015
+                ],
+                "target": [
+                  -1.8,
+                  0.264,
+                  -0.9
+                ],
+                "fov": 28
+              },
+              {
+                "t": 2.5,
+                "position": [
+                  -1.5402223262102723,
+                  0.35376,
+                  0.5732723985062632
+                ],
+                "target": [
+                  -1.8,
+                  0.264,
+                  -0.9
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_2me8xt",
+            "start": 0.6,
+            "duration": 0.693,
+            "characterId": "mili",
+            "text": "Hehe.",
+            "audio": "media/audio/dialog/29849fd6fc77.wav",
+            "audioHash": "29849fd6fc77",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": []
+  }
+}

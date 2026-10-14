@@ -1,0 +1,14 @@
+{
+  "id": "floating_isle",
+  "name": "Floating Isle",
+  "description": "Inverted rock island with turf and a tree.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/floating_isle.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#cfc9bd",
+  "kind": "set"
+}

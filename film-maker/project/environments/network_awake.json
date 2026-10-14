@@ -1,0 +1,644 @@
+{
+  "id": "network_awake",
+  "name": "Network Awake",
+  "description": "After the handshake: light shafts rise from peers all the way to the horizon, rune rings glow — the network is connected.",
+  "tags": [],
+  "refs": [
+    "media/refs/dark_environments.png"
+  ],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#03050c",
+  "fog": {
+    "color": "#070c1a",
+    "near": 14,
+    "far": 70
+  },
+  "lighting": {
+    "ambient": 0.25,
+    "key": 1.3,
+    "keyColor": "#dfe8ff",
+    "keyPosition": [
+      2,
+      9,
+      4
+    ]
+  },
+  "hdri": "media/hdri/network.hdr",
+  "hdriIntensity": 1.3,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 1.2,
+    "vignette": 0.4,
+    "grain": 0.05,
+    "exposure": 1.15
+  },
+  "preview": {
+    "position": [
+      0,
+      4,
+      10
+    ],
+    "target": [
+      0,
+      2,
+      -10
+    ],
+    "fov": 58
+  },
+  "props": [
+    {
+      "assetId": "obsidian_floor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        0,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 1.4
+    },
+    {
+      "assetId": "floor_ring",
+      "position": [
+        0,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 2.2
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        11.09669696823186,
+        0,
+        -2.1824396566486772
+      ],
+      "rotationY": 36.49695192463696,
+      "scale": 1.5786401879973708
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -14.322009582344382,
+        0,
+        0.08508332952653097
+      ],
+      "rotationY": 14.035352754872292,
+      "scale": 1.6217509258538483
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        1.7828080639778712,
+        0,
+        -23.085403387577273
+      ],
+      "rotationY": 48.126557297073305,
+      "scale": 1.115142030781135
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -8.398798659125,
+        0,
+        25.032174936493192
+      ],
+      "rotationY": 12.929164746310562,
+      "scale": 4.572228584438562
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        8.831642930764763,
+        0,
+        9.933050890127062
+      ],
+      "rotationY": 82.16466371901333,
+      "scale": 4.166557932738214
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -20.955494300889853,
+        0,
+        -10.353240738892257
+      ],
+      "rotationY": 82.90843740804121,
+      "scale": 1.9523855852894485
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        5.010532464077481,
+        0,
+        -12.444803565661646
+      ],
+      "rotationY": 1.815850285347551,
+      "scale": 1.0997734197881073
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        21.356869056824966,
+        0,
+        10.199667764332276
+      ],
+      "rotationY": 85.15990536427125,
+      "scale": 1.1974019851535558
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -6.807817739853953,
+        0,
+        -25.52185696670745
+      ],
+      "rotationY": 11.996393410954624,
+      "scale": 2.747170831542462
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        13.912953857951436,
+        0,
+        -11.461685711940463
+      ],
+      "rotationY": 3.926820068154484,
+      "scale": 1.4850922465790062
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -11.297974804403417,
+        0,
+        -28.775827463290344
+      ],
+      "rotationY": 82.78902102028951,
+      "scale": 1.7572085341904313
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        15.122482539837788,
+        0,
+        10.680953629060536
+      ],
+      "rotationY": 75.41617278009653,
+      "scale": 1.8474908726755528
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -24.050708125803336,
+        0,
+        -19.176306550185966
+      ],
+      "rotationY": 0.5129947699606419,
+      "scale": 1.367995574977249
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -16.31197384093426,
+        0,
+        -4.653014482479907
+      ],
+      "rotationY": 87.9240562627092,
+      "scale": 1.3692931426689028
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -24.50418047999177,
+        0,
+        -12.268741637306565
+      ],
+      "rotationY": 49.65270377928391,
+      "scale": 1.4992919601500034
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -5.573257259981854,
+        0,
+        10.482861125620046
+      ],
+      "rotationY": 75.00320215243846,
+      "scale": 0.6337019292172045
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -6.944105318201662,
+        0,
+        -10.450943614705894
+      ],
+      "rotationY": 89.53745709965006,
+      "scale": 1.4328552910126744
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -5.150149787323075,
+        0,
+        25.97408981510281
+      ],
+      "rotationY": 74.7125010075979,
+      "scale": 1.7268844173755498
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        18.991986941931522,
+        0,
+        19.68445519635436
+      ],
+      "rotationY": 35.65496494062245,
+      "scale": 3.484114699764177
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        6.362007402328224,
+        0,
+        22.21800938858992
+      ],
+      "rotationY": 89.12186077795923,
+      "scale": 1.6302870200015604
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -18.9310410318215,
+        0,
+        -18.523362725944374
+      ],
+      "rotationY": 52.5606933538802,
+      "scale": 1.2849077100399882
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        7.589269847768202,
+        0,
+        -28.71090457503146
+      ],
+      "rotationY": 47.30811696499586,
+      "scale": 1.3768543714191765
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        6.310752370405953,
+        0,
+        10.45618786256064
+      ],
+      "rotationY": 0.2889931225217879,
+      "scale": 3.171292049344629
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        4.81818658035124,
+        0,
+        6.190928995660915
+      ],
+      "rotationY": 5.410779342055321,
+      "scale": 1.8268270989879967
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        8.19004497256891,
+        0,
+        12.938640865208429
+      ],
+      "rotationY": 32.40142642054707,
+      "scale": 1.6252680371981114
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        6.184075988112901,
+        0,
+        -26.161168906649785
+      ],
+      "rotationY": 37.094895858317614,
+      "scale": 1.341985757416114
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        11.09669696823186,
+        0,
+        -2.1824396566486772
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        1.7828080639778712,
+        0,
+        -23.085403387577273
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        8.831642930764763,
+        0,
+        9.933050890127062
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        5.010532464077481,
+        0,
+        -12.444803565661646
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        -6.807817739853953,
+        0,
+        -25.52185696670745
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        -11.297974804403417,
+        0,
+        -28.775827463290344
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        -24.050708125803336,
+        0,
+        -19.176306550185966
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        -24.50418047999177,
+        0,
+        -12.268741637306565
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        -6.944105318201662,
+        0,
+        -10.450943614705894
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        18.991986941931522,
+        0,
+        19.68445519635436
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        -18.9310410318215,
+        0,
+        -18.523362725944374
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        6.310752370405953,
+        0,
+        10.45618786256064
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        8.19004497256891,
+        0,
+        12.938640865208429
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        -15.623540036180747,
+        0,
+        4.078986557298894
+      ],
+      "rotationY": 171.61524270661175,
+      "scale": 1.029431691020727
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        18.620834103708173,
+        0,
+        -18.01649695629272
+      ],
+      "rotationY": 279.4765563402325,
+      "scale": 1.0657064653467387
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        5.787874419686601,
+        0,
+        11.317711701941397
+      ],
+      "rotationY": 34.90135867148638,
+      "scale": 1.0040473707951605
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        11.494795594176853,
+        0,
+        -9.69528482970625
+      ],
+      "rotationY": 18.54341539554298,
+      "scale": 1.2939910096582024
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        -13.661157872542399,
+        0,
+        -2.0264611528474026
+      ],
+      "rotationY": 35.21664052270353,
+      "scale": 1.0794184294063598
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        -11.169480345223027,
+        0,
+        -22.95980518999082
+      ],
+      "rotationY": 212.07387174479663,
+      "scale": 1.1893052536062896
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        6.216125001082871,
+        0,
+        11.004309389269853
+      ],
+      "rotationY": 228.81221847608685,
+      "scale": 0.9868933958001435
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        -14.463987773116179,
+        0,
+        4.336144349269198
+      ],
+      "rotationY": 271.20518716983497,
+      "scale": 1.1491540852934121
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        -9.385266213394294,
+        0,
+        18.910699219718534
+      ],
+      "rotationY": 230.5607433244586,
+      "scale": 1.2768864691723136
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        2.3840319695407346,
+        0,
+        7.7607989340949
+      ],
+      "rotationY": 11.459155902616464,
+      "scale": 0.5
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        11.377166630497499,
+        0,
+        -0.18423278200907411
+      ],
+      "rotationY": 71.45915590261646,
+      "scale": 0.5
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        8.993134660956763,
+        0,
+        -11.945031716103975
+      ],
+      "rotationY": 131.4591559026165,
+      "scale": 0.5
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        -2.384031969540735,
+        0,
+        -15.7607989340949
+      ],
+      "rotationY": 191.45915590261646,
+      "scale": 0.5
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        -11.377166630497497,
+        0,
+        -7.815767217990928
+      ],
+      "rotationY": 251.45915590261646,
+      "scale": 0.5
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        -8.993134660956763,
+        0,
+        3.945031716103978
+      ],
+      "rotationY": 311.4591559026165,
+      "scale": 0.5
+    },
+    {
+      "assetId": "motes",
+      "position": [
+        0,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 1.2
+    },
+    {
+      "assetId": "motes",
+      "position": [
+        0,
+        0,
+        -18
+      ],
+      "rotationY": 0,
+      "scale": 1.6
+    }
+  ],
+  "marks": []
+}

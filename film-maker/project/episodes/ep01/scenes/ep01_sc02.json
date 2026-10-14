@@ -1,0 +1,534 @@
+{
+  "id": "ep01_sc02",
+  "title": "Discover",
+  "status": "wip",
+  "summary": "Sati works out the stepping-block puzzle: each block only lights after the one before it.",
+  "environmentId": "light_plaza",
+  "arc": {
+    "tension": 0.35,
+    "beat": "rising",
+    "note": "Sati leads with brains, not speed: follow the chain, one block at a time."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "The stepping blocks",
+      "duration": 6,
+      "status": "wip",
+      "description": "A row of marble blocks leads up the steps. Sati studies them, head tilted; the first block glows faintly.",
+      "notes": "",
+      "characters": [
+        "sati",
+        "mili",
+        "folk5",
+        "folk6"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -2.4,
+            0,
+            -0.4
+          ],
+          "rotationY": 35
+        },
+        "mili": {
+          "position": [
+            -3.4,
+            0,
+            0.2
+          ],
+          "rotationY": 40,
+          "moves": [
+            {
+              "t": 3,
+              "position": [
+                -3,
+                0,
+                -0.2
+              ],
+              "rotationY": 60
+            }
+          ]
+        },
+        "folk5": {
+          "position": [
+            -5,
+            0,
+            -6
+          ],
+          "rotationY": 20
+        },
+        "folk6": {
+          "position": [
+            -4.4,
+            0,
+            -6.4
+          ],
+          "rotationY": -40
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ],
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          }
+        ]
+      },
+      "poses": {
+        "sati": [
+          {
+            "t": 0.45,
+            "pose": "point"
+          },
+          {
+            "t": 5.182,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_fcc6cw",
+            "start": 0,
+            "duration": 6,
+            "image": "media/boards/discover.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_9b4n3v",
+            "start": 0,
+            "duration": 6,
+            "label": "over-shoulder",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -4.6,
+                  1.1,
+                  2.4
+                ],
+                "target": [
+                  -2.4,
+                  0.58,
+                  -0.4
+                ],
+                "fov": 36
+              },
+              {
+                "t": 6,
+                "position": [
+                  -3.2,
+                  0.9,
+                  1.8
+                ],
+                "target": [
+                  0,
+                  0.3,
+                  -2.6
+                ],
+                "fov": 36
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_yruxdy",
+            "start": 0.6,
+            "duration": 4.182,
+            "characterId": "sati",
+            "text": "Look. They only light up in order. Every block follows the one before it.",
+            "audio": "media/audio/dialog/ff937123690e.wav",
+            "audioHash": "ff937123690e",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_5jn769",
+            "start": 2.2,
+            "duration": 0.25,
+            "file": "media/audio/sfx/blip.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_c4aoda",
+            "start": 2.8,
+            "duration": 0.25,
+            "file": "media/audio/sfx/blip.wav",
+            "gain": 0.7
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "Penny drops",
+      "duration": 2.5,
+      "status": "todo",
+      "description": "Close on Mili: the idea lands. Eyes go wide, then a huge grin.",
+      "notes": "",
+      "characters": [
+        "sati",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -2.4,
+            0,
+            -0.4
+          ],
+          "rotationY": 35
+        },
+        "mili": {
+          "position": [
+            -3,
+            0,
+            -0.2
+          ],
+          "rotationY": 60
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          },
+          {
+            "t": 1.25,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "sati": [
+          {
+            "t": 0.25,
+            "pose": "think"
+          }
+        ],
+        "mili": [
+          {
+            "t": 1,
+            "pose": "think"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_fpc8vc",
+            "start": 0,
+            "duration": 2.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.7164772146652898,
+                  0.3645312,
+                  0.8770034957819905
+                ],
+                "target": [
+                  -3,
+                  0.264,
+                  -0.2
+                ],
+                "fov": 28
+              },
+              {
+                "t": 2.5,
+                "position": [
+                  -1.853997513094009,
+                  0.35376,
+                  0.7616102640910629
+                ],
+                "target": [
+                  -3,
+                  0.264,
+                  -0.2
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Follow the chain",
+      "duration": 7,
+      "status": "todo",
+      "description": "Mili hops onto the first block, then the next — each lights as they land. Sati follows, a step behind.",
+      "notes": "",
+      "characters": [
+        "sati",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -2.4,
+            0,
+            -0.4
+          ],
+          "rotationY": 35,
+          "moves": [
+            {
+              "t": 2.1,
+              "position": [
+                -1.5,
+                0.5,
+                -1.5
+              ],
+              "rotationY": 35
+            },
+            {
+              "t": 3.85,
+              "position": [
+                -0.3,
+                0.5,
+                -2.6
+              ],
+              "rotationY": 35
+            },
+            {
+              "t": 5.6,
+              "position": [
+                1,
+                0.5,
+                -3.8
+              ],
+              "rotationY": 30
+            }
+          ]
+        },
+        "mili": {
+          "position": [
+            -2.6,
+            0,
+            -0.6
+          ],
+          "rotationY": 40,
+          "moves": [
+            {
+              "t": 0.84,
+              "position": [
+                -1.5,
+                0.5,
+                -1.5
+              ],
+              "rotationY": 30
+            },
+            {
+              "t": 2.1,
+              "position": [
+                -0.3,
+                0.5,
+                -2.6
+              ],
+              "rotationY": 35
+            },
+            {
+              "t": 3.36,
+              "position": [
+                1,
+                0.5,
+                -3.8
+              ],
+              "rotationY": 30
+            },
+            {
+              "t": 4.62,
+              "position": [
+                2.4,
+                0.5,
+                -5
+              ],
+              "rotationY": 20
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 2.776,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.45,
+            "pose": "think"
+          },
+          {
+            "t": 2.826,
+            "pose": "idle"
+          }
+        ],
+        "sati": [
+          {
+            "t": 2.626,
+            "pose": "point"
+          },
+          {
+            "t": 6.141,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_69t991",
+            "start": 0,
+            "duration": 7,
+            "label": "orbit",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  3.83022221559489,
+                  1.7999999999999998,
+                  0.6139380484326966
+                ],
+                "target": [
+                  0,
+                  0.4,
+                  -2.6
+                ],
+                "fov": 42
+              },
+              {
+                "t": 3.5,
+                "position": [
+                  2.6864980417341195,
+                  1.7999999999999998,
+                  1.6169572290644285
+                ],
+                "target": [
+                  0,
+                  0.4,
+                  -2.6
+                ],
+                "fov": 42
+              },
+              {
+                "t": 7,
+                "position": [
+                  1.2940952255126037,
+                  1.7999999999999998,
+                  2.2296291314453414
+                ],
+                "target": [
+                  0,
+                  0.4,
+                  -2.6
+                ],
+                "fov": 42
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_749mtf",
+            "start": 0.6,
+            "duration": 1.826,
+            "characterId": "mili",
+            "text": "So we just... follow the chain?",
+            "audio": "media/audio/dialog/2f98f6b5ee45.wav",
+            "audioHash": "2f98f6b5ee45",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_4z38h9",
+            "start": 2.776,
+            "duration": 2.965,
+            "characterId": "sati",
+            "text": "Exactly. One block at a time. This way!",
+            "audio": "media/audio/dialog/65acb94693da.wav",
+            "audioHash": "65acb94693da",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_x4hq3f",
+            "start": 0.4,
+            "duration": 0.25,
+            "file": "media/audio/sfx/blip.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_1b2x65",
+            "start": 1.1,
+            "duration": 0.25,
+            "file": "media/audio/sfx/blip.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_zbti2p",
+            "start": 1.8,
+            "duration": 0.25,
+            "file": "media/audio/sfx/blip.wav",
+            "gain": 0.7
+          }
+        ],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": []
+  }
+}

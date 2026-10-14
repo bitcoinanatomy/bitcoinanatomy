@@ -1,0 +1,14 @@
+{
+  "id": "light_shaft",
+  "name": "Light Shaft",
+  "description": "Volumetric-looking beam of light (alpha, emissive).",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/light_shaft.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#ffffff",
+  "kind": "fx"
+}

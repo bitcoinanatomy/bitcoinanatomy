@@ -1,0 +1,495 @@
+{
+  "id": "ep01_sc05",
+  "title": "The Protocol",
+  "status": "wip",
+  "summary": "At the rim of the city, a pulse from the dark world below. Cliffhanger.",
+  "environmentId": "city_edge",
+  "arc": {
+    "tension": 0.75,
+    "beat": "inciting",
+    "note": "The call to adventure — the season’s inciting incident."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "A pulse",
+      "duration": 5,
+      "status": "wip",
+      "description": "A deep pulse rolls through the plaza. The glass spheres tremble. Everyone freezes — the onlookers too.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit",
+        "folk2",
+        "folk3",
+        "folk4"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1,
+            0,
+            1.2
+          ],
+          "rotationY": 160
+        },
+        "sati": {
+          "position": [
+            0,
+            0,
+            1
+          ],
+          "rotationY": 180
+        },
+        "bit": {
+          "position": [
+            1.5,
+            0,
+            0.8
+          ],
+          "rotationY": 200
+        },
+        "folk2": {
+          "position": [
+            -4,
+            0,
+            1.5
+          ],
+          "rotationY": 160
+        },
+        "folk3": {
+          "position": [
+            -3.4,
+            0,
+            1.9
+          ],
+          "rotationY": 170
+        },
+        "folk4": {
+          "position": [
+            4.5,
+            0,
+            1
+          ],
+          "rotationY": 200
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0.25,
+            "expression": "surprised"
+          },
+          {
+            "t": 1.8,
+            "expression": "worried"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0.25,
+            "expression": "surprised"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0.25,
+            "expression": "surprised"
+          }
+        ],
+        "folk2": [
+          {
+            "t": 0.7,
+            "expression": "surprised"
+          },
+          {
+            "t": 3.3,
+            "expression": "worried"
+          }
+        ],
+        "folk3": [
+          {
+            "t": 0.4,
+            "expression": "surprised"
+          },
+          {
+            "t": 3,
+            "expression": "worried"
+          }
+        ],
+        "folk4": [
+          {
+            "t": 0.55,
+            "expression": "surprised"
+          },
+          {
+            "t": 3.15,
+            "expression": "worried"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 1.65,
+            "pose": "think"
+          },
+          {
+            "t": 3.187,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_3ij9c7",
+            "start": 0,
+            "duration": 5,
+            "image": "media/boards/the_protocol.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_djutfn",
+            "start": 0,
+            "duration": 5,
+            "label": "static",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0,
+                  1,
+                  4.6
+                ],
+                "target": [
+                  0,
+                  0.7,
+                  0
+                ],
+                "fov": 40
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_cajurh",
+            "start": 1.8,
+            "duration": 0.987,
+            "characterId": "mili",
+            "text": "What was that?",
+            "audio": "media/audio/dialog/2f848c66ce9d.wav",
+            "audioHash": "2f848c66ce9d",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_vyjc3v",
+            "start": 0,
+            "duration": 2.4,
+            "file": "media/audio/sfx/pulse.wav",
+            "gain": 0.7
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "Sati listens",
+      "duration": 3,
+      "status": "todo",
+      "description": "Close on Sati, very still, listening. Fear gives way to resolve.",
+      "notes": "",
+      "characters": [
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            0,
+            0,
+            1
+          ],
+          "rotationY": 180
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "worried"
+          },
+          {
+            "t": 1.65,
+            "expression": "determined"
+          }
+        ]
+      },
+      "poses": {
+        "sati": [
+          {
+            "t": 0.45,
+            "pose": "think"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_af145f",
+            "start": 0,
+            "duration": 3,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  3.7307640089224975e-16,
+                  0.762784,
+                  -2.0464000000000007
+                ],
+                "target": [
+                  0,
+                  0.58,
+                  1
+                ],
+                "fov": 26
+              },
+              {
+                "t": 3,
+                "position": [
+                  3.3310392936808007e-16,
+                  0.7432,
+                  -1.7200000000000002
+                ],
+                "target": [
+                  0,
+                  0.58,
+                  1
+                ],
+                "fov": 26
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Something is calling",
+      "duration": 6,
+      "status": "todo",
+      "description": "Reverse: the trio walk to the edge, silhouetted, looking down. Far below, a hex beacon pulses in the dark.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1,
+            0,
+            -0.4
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 2.1,
+              "position": [
+                -1,
+                0,
+                -1.8
+              ],
+              "rotationY": 180
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            0,
+            0,
+            -0.6
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 1.8,
+              "position": [
+                0,
+                0,
+                -2
+              ],
+              "rotationY": 180
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            1.5,
+            0,
+            -0.7
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 2.4,
+              "position": [
+                1.5,
+                0,
+                -2.1
+              ],
+              "rotationY": 180
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ],
+        "mili": [
+          {
+            "t": 0,
+            "expression": "worried"
+          },
+          {
+            "t": 3.482,
+            "expression": "happy"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ]
+      },
+      "poses": {
+        "sati": [
+          {
+            "t": 0.45,
+            "pose": "point"
+          },
+          {
+            "t": 2.982,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_v3s5qi",
+            "start": 0,
+            "duration": 6,
+            "label": "over-the-edge",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0,
+                  1.6,
+                  2.8
+                ],
+                "target": [
+                  0,
+                  -2,
+                  -20
+                ],
+                "fov": 42
+              },
+              {
+                "t": 6,
+                "position": [
+                  0,
+                  2.4,
+                  1.4
+                ],
+                "target": [
+                  0,
+                  -7,
+                  -24
+                ],
+                "fov": 42
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_xv649k",
+            "start": 0.6,
+            "duration": 1.982,
+            "characterId": "sati",
+            "text": "Something's calling. From down there.",
+            "audio": "media/audio/dialog/f3ec158d4d86.wav",
+            "audioHash": "f3ec158d4d86",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_z59aps",
+            "start": 3.182,
+            "duration": 1.398,
+            "characterId": "bit",
+            "text": "Then we go together.",
+            "audio": "media/audio/dialog/84d6f8b1f742.wav",
+            "audioHash": "84d6f8b1f742",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_8pkgsk",
+            "start": 0.8,
+            "duration": 2.5,
+            "file": "media/audio/sfx/chime.wav",
+            "gain": 0.4
+          },
+          {
+            "id": "sfx_gzhjrx",
+            "start": 3,
+            "duration": 2.4,
+            "file": "media/audio/sfx/pulse.wav",
+            "gain": 0.5
+          }
+        ],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": []
+  }
+}

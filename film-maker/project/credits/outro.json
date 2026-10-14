@@ -1,0 +1,69 @@
+{
+  "id": "outro",
+  "name": "Outro",
+  "enabled": true,
+  "duration": 16,
+  "background": "#000000",
+  "color": "#ffffff",
+  "fade": 0.8,
+  "cards": [
+    {
+      "id": "end",
+      "start": 12.2,
+      "duration": 3.6,
+      "align": "center",
+      "lines": [
+        {
+          "text": "{project}",
+          "size": "xl"
+        },
+        {
+          "text": "Thanks for watching",
+          "size": "sm"
+        }
+      ]
+    }
+  ],
+  "roll": {
+    "start": 0.4,
+    "duration": 11.5,
+    "sections": [
+      {
+        "heading": "Starring",
+        "names": [
+          "Mili",
+          "Sati",
+          "Bit"
+        ]
+      },
+      {
+        "heading": "Written & directed by",
+        "names": [
+          "Your name here"
+        ]
+      },
+      {
+        "heading": "Voices",
+        "names": [
+          "Piper TTS — Amy, Lessac & Joe"
+        ]
+      },
+      {
+        "heading": "Music",
+        "names": [
+          "Deterministic score — seeds 3297 · 814"
+        ]
+      },
+      {
+        "heading": "Previz",
+        "names": [
+          "Film Maker · three.js · Blender"
+        ]
+      }
+    ]
+  },
+  "music": {
+    "cueId": "cue_outro",
+    "gain": 0.5
+  }
+}

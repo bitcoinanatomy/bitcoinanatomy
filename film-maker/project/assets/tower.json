@@ -1,0 +1,14 @@
+{
+  "id": "tower",
+  "name": "Tower",
+  "description": "Tall stepped marble tower for the skyline.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/tower.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "set"
+}

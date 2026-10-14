@@ -1,0 +1,683 @@
+{
+  "id": "ep01_sc04",
+  "title": "Names",
+  "status": "wip",
+  "summary": "Walking through the gate, the trio compare sizes — and units.",
+  "environmentId": "light_plaza",
+  "arc": {
+    "tension": 0.3,
+    "beat": "resolution",
+    "note": "Theme stated: big or small, every one counts."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "Why so small?",
+      "duration": 8,
+      "status": "todo",
+      "description": "Walking side by side. Mili jogs to keep up, looking up at the others. Folk pass the other way.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit",
+        "folk1",
+        "folk4"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1,
+            0,
+            1.4
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 8,
+              "position": [
+                -1,
+                0,
+                -1
+              ],
+              "rotationY": 170
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            0,
+            0,
+            1.2
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 8,
+              "position": [
+                0,
+                0,
+                -1.2
+              ],
+              "rotationY": 180
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            1.5,
+            0,
+            1
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 8,
+              "position": [
+                1.5,
+                0,
+                -1.4
+              ],
+              "rotationY": 185
+            }
+          ]
+        },
+        "folk1": {
+          "position": [
+            -3,
+            0,
+            -6
+          ],
+          "rotationY": 0,
+          "moves": [
+            {
+              "t": 8,
+              "position": [
+                -3,
+                0,
+                -1
+              ]
+            }
+          ]
+        },
+        "folk4": {
+          "position": [
+            3.5,
+            0,
+            -7
+          ],
+          "rotationY": 0,
+          "moves": [
+            {
+              "t": 8,
+              "position": [
+                3.5,
+                0,
+                -2
+              ]
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0.6,
+            "expression": "sad"
+          },
+          {
+            "t": 3.863,
+            "expression": "surprised"
+          }
+        ],
+        "sati": [
+          {
+            "t": 3.563,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.45,
+            "pose": "wave"
+          },
+          {
+            "t": 3.613,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_z9q4og",
+            "start": 0,
+            "duration": 8,
+            "label": "walk-and-talk (leading)",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.6,
+                  1,
+                  -4.2
+                ],
+                "target": [
+                  0,
+                  0.6,
+                  1.2
+                ],
+                "fov": 38
+              },
+              {
+                "t": 8,
+                "position": [
+                  0.6,
+                  1,
+                  -5.4
+                ],
+                "target": [
+                  0,
+                  0.6,
+                  -1.2
+                ],
+                "fov": 38
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_f3gym1",
+            "start": 0.6,
+            "duration": 2.613,
+            "characterId": "mili",
+            "text": "Hey. Why am I always the smallest?",
+            "audio": "media/audio/dialog/9b08a7dd33bd.wav",
+            "audioHash": "9b08a7dd33bd",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_zj4pb2",
+            "start": 3.563,
+            "duration": 3.172,
+            "characterId": "sati",
+            "text": "Because you're a Mili. A thousand of you make one Sati.",
+            "audio": "media/audio/dialog/3318fa6276b5.wav",
+            "audioHash": "3318fa6276b5",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "A hundred million",
+      "duration": 5.5,
+      "status": "todo",
+      "description": "Mili turns to Bit. Bit beams down.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.5,
+            0,
+            0.6
+          ],
+          "rotationY": 60
+        },
+        "bit": {
+          "position": [
+            0.9,
+            0,
+            0.2
+          ],
+          "rotationY": -40
+        }
+      },
+      "expressions": {
+        "bit": [
+          {
+            "t": 0,
+            "expression": "happy"
+          },
+          {
+            "t": 2.991,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.45,
+            "pose": "think"
+          },
+          {
+            "t": 3.041,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_oyaiyt",
+            "start": 0,
+            "duration": 5.5,
+            "label": "over-shoulder",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.0076846443543546,
+                  0.352,
+                  0.4887928874271414
+                ],
+                "target": [
+                  0.9,
+                  1.5,
+                  0.2
+                ],
+                "fov": 32
+              },
+              {
+                "t": 5.5,
+                "position": [
+                  -0.9061477154834836,
+                  0.352,
+                  0.45978233632117826
+                ],
+                "target": [
+                  0.9,
+                  1.5,
+                  0.2
+                ],
+                "fov": 32
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_qcr0k9",
+            "start": 0.6,
+            "duration": 2.041,
+            "characterId": "mili",
+            "text": "And how many Satis make a Bit?",
+            "audio": "media/audio/dialog/00bc00260d6d.wav",
+            "audioHash": "00bc00260d6d",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_iiz5hn",
+            "start": 2.991,
+            "duration": 1.222,
+            "characterId": "bit",
+            "text": "A hundred million.",
+            "audio": "media/audio/dialog/729962e3d230.wav",
+            "audioHash": "729962e3d230",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Whoa",
+      "duration": 3,
+      "status": "todo",
+      "description": "Close on Mili doing the maths on tiny fingers, eyes going wide.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.5,
+            0,
+            0.6
+          ],
+          "rotationY": 60
+        },
+        "bit": {
+          "position": [
+            0.9,
+            0,
+            0.2
+          ],
+          "rotationY": -40
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 1.2,
+            "expression": "surprised"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.6,
+            "pose": "shrug"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_rbvjaq",
+            "start": 0,
+            "duration": 3,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.6847715540136841,
+                  0.3645312,
+                  1.7847715540136844
+                ],
+                "target": [
+                  -0.5,
+                  0.264,
+                  0.6
+                ],
+                "fov": 28
+              },
+              {
+                "t": 3,
+                "position": [
+                  0.5578317446550749,
+                  0.35376,
+                  1.6578317446550752
+                ],
+                "target": [
+                  -0.5,
+                  0.264,
+                  0.6
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_rbtens",
+            "start": 1.2,
+            "duration": 0.574,
+            "characterId": "mili",
+            "text": "Whoa.",
+            "audio": "media/audio/dialog/87bc8d622d17.wav",
+            "audioHash": "87bc8d622d17",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "Every one counts",
+      "duration": 4,
+      "status": "wip",
+      "description": "Sati walks over and puts an arm around Mili. Behind them, the light city opens up — wide and bright.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit",
+        "folk1",
+        "folk2",
+        "folk3",
+        "folk4",
+        "folk5",
+        "folk6"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.1,
+            0,
+            0.35
+          ],
+          "rotationY": 15
+        },
+        "sati": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotationY": 0,
+          "moves": [
+            {
+              "t": 1.6,
+              "position": [
+                -0.6,
+                0,
+                0.3
+              ],
+              "rotationY": -20
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            1.6,
+            0,
+            -0.25
+          ],
+          "rotationY": -12
+        },
+        "folk1": {
+          "position": [
+            -7,
+            0,
+            -5
+          ],
+          "rotationY": 90,
+          "moves": [
+            {
+              "t": 4,
+              "position": [
+                7,
+                0,
+                -5
+              ]
+            }
+          ]
+        },
+        "folk2": {
+          "position": [
+            3.5,
+            0,
+            -3.6
+          ],
+          "rotationY": -40
+        },
+        "folk3": {
+          "position": [
+            4.2,
+            0,
+            -3.1
+          ],
+          "rotationY": -100
+        },
+        "folk4": {
+          "position": [
+            6.5,
+            0,
+            -7.5
+          ],
+          "rotationY": -90,
+          "moves": [
+            {
+              "t": 4,
+              "position": [
+                -6,
+                0,
+                -7.5
+              ]
+            }
+          ]
+        },
+        "folk5": {
+          "position": [
+            -4.2,
+            0,
+            -3.2
+          ],
+          "rotationY": 40
+        },
+        "folk6": {
+          "position": [
+            -3.5,
+            0,
+            -3.8
+          ],
+          "rotationY": -80
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "mili": [
+          {
+            "t": 1.6,
+            "expression": "happy"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_4xr8yy",
+            "start": 0,
+            "duration": 4,
+            "image": "media/boards/a_more_open_world.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_o0ra9u",
+            "start": 0,
+            "duration": 4,
+            "label": "pull-out",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.16666666666666666,
+                  0.8999999999999999,
+                  3.433333333333333
+                ],
+                "target": [
+                  0.16666666666666666,
+                  0.6,
+                  0.033333333333333326
+                ],
+                "fov": 45
+              },
+              {
+                "t": 4,
+                "position": [
+                  0.16666666666666666,
+                  1.79,
+                  8.033333333333333
+                ],
+                "target": [
+                  0.16666666666666666,
+                  0.6,
+                  0.033333333333333326
+                ],
+                "fov": 45
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_b9mze9",
+            "start": 0.6,
+            "duration": 2.218,
+            "characterId": "sati",
+            "text": "Big or small, every one of us counts.",
+            "audio": "media/audio/dialog/9b649f34b5d0.wav",
+            "audioHash": "9b649f34b5d0",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_mlxapa",
+            "start": 0.5,
+            "duration": 1.4,
+            "file": "media/audio/sfx/sparkle.wav",
+            "gain": 0.4
+          }
+        ],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": []
+  }
+}
