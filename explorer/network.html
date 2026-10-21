@@ -20,6 +20,8 @@
                     <button type="button" class="nav-link nav-dropdown-toggle" aria-expanded="false">Explore</button>
                     <ul class="nav-dropdown-panel">
                         <li><a href="network.html" class="nav-link active">Network</a></li>
+                        <li><a href="crawler.html" class="nav-link">Crawler</a></li>
+                        <li><a href="monitor.html" class="nav-link">Monitor</a></li>
                         <li><a href="node.html" class="nav-link">Node</a></li>
                         <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
                         <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
@@ -42,19 +44,6 @@
             <div class="header">
                 <h1>Network</h1>
                 <div class="subtitle" id="network-subtitle">Loading...</div>
-                <div class="snapshot-navigation">
-                    <div class="snapshot-nav-row">
-                        <button id="prev-snapshot" class="snapshot-nav-btn" disabled title="Previous snapshot">← Prev</button>
-                        <button id="next-snapshot" class="snapshot-nav-btn" disabled title="Next snapshot">Next →</button>
-                    </div>
-                    <div class="archive-picker" id="archive-picker">
-                        <button type="button" id="archive-select-btn" class="archive-picker-trigger" aria-haspopup="listbox" aria-expanded="false" title="Load historical weekly snapshot">
-                            <span class="archive-picker-label">Load Archive</span>
-                            <span class="archive-picker-chevron" aria-hidden="true"></span>
-                        </button>
-                        <div class="archive-picker-menu" id="archive-menu" role="listbox" hidden></div>
-                    </div>
-                </div>
             </div>
             
             <div class="sidebar">
@@ -189,7 +178,7 @@
                 <div class="source-selector-menu" id="node-source-menu" role="listbox" hidden>
                     <button class="source-selector-option active" data-source="crawler-archive" role="option">
                         <span class="src-name">Crawler archive</span>
-                        <span class="src-desc">Your node's addrman — IPs seen via P2P gossip</span>
+                        <span class="src-desc">Clearnet peers found by the local crawler — no Bitcoin node required</span>
                     </button>
                     <div class="source-selector-separator"></div>
                     <button class="source-selector-option" data-source="btcnodes-live" role="option">
@@ -199,7 +188,7 @@
                     <div class="source-selector-separator"></div>
                     <button class="source-selector-option" data-source="btcnodes-archive" role="option">
                         <span class="src-name">BTC Nodes · archive</span>
-                        <span class="src-desc">pvxg.net local snapshot (static JSON)</span>
+                        <span class="src-desc">Saved fallback snapshot — date is when it was captured</span>
                     </button>
                     <div class="source-selector-separator"></div>
                     <button class="source-selector-option" data-source="bitnodes-archive" role="option">
@@ -238,7 +227,7 @@
     <script src="js/vr/VRManager.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/vr/ExplorerRouter.js"></script>
-    <script src="js/network.js?v=4src"></script>
+    <script src="js/network.js?v=5"></script>
     <script>
         // Mobile panel management
         document.addEventListener('DOMContentLoaded', () => {

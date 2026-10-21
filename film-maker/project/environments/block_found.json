@@ -1,0 +1,414 @@
+{
+  "id": "block_found",
+  "name": "Block Found",
+  "description": "The winning block on a glowing dais: a golden shaft of light opens from above and the transaction is sealed inside.",
+  "tags": [],
+  "refs": [
+    "media/refs/dark_environments.png"
+  ],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#120c06",
+  "fog": {
+    "color": "#0c0804",
+    "near": 12,
+    "far": 60
+  },
+  "lighting": {
+    "ambient": 0.3,
+    "key": 1.8,
+    "keyColor": "#fff2dd",
+    "keyPosition": [
+      0,
+      12,
+      4
+    ]
+  },
+  "hdri": "media/hdri/gold.hdr",
+  "hdriIntensity": 1.2,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 1.3,
+    "vignette": 0.45,
+    "grain": 0.05,
+    "exposure": 1.1
+  },
+  "preview": {
+    "position": [
+      0,
+      2.8,
+      9
+    ],
+    "target": [
+      0,
+      1.8,
+      -3
+    ],
+    "fov": 52
+  },
+  "props": [
+    {
+      "assetId": "obsidian_floor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "pedestal",
+      "position": [
+        0,
+        0,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -9.58415037994773,
+        0,
+        1.837841435915026
+      ],
+      "rotationY": 74.34973670169711,
+      "scale": 2.5605150426737966
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        18.873279136341036,
+        0,
+        -20.03330710514007
+      ],
+      "rotationY": 52.5526527618058,
+      "scale": 0.8530456341337412
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -23.541674221116963,
+        0,
+        -2.3954285799480752
+      ],
+      "rotationY": 6.734897985588759,
+      "scale": 1.3503296203911304
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -17.255063467068915,
+        0,
+        6.974194150431439
+      ],
+      "rotationY": 22.4526566429995,
+      "scale": 0.6805328500457107
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        9.195083539487403,
+        0,
+        7.577181169963794
+      ],
+      "rotationY": 46.89667054452002,
+      "scale": 0.6115609219763428
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -21.65203285079456,
+        0,
+        0.2849924925199909
+      ],
+      "rotationY": 24.822214781306684,
+      "scale": 0.9626879175193608
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -4.675950258192051,
+        0,
+        -21.089500335426088
+      ],
+      "rotationY": 10.478537678718567,
+      "scale": 1.4238791156560182
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -7.2088369007156725,
+        0,
+        16.74126334989481
+      ],
+      "rotationY": 81.60373215330765,
+      "scale": 3.8059984262101354
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -25.9948015267096,
+        0,
+        -1.1879569792942652
+      ],
+      "rotationY": 58.5369695071131,
+      "scale": 1.1273713344708085
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        10.398702431565344,
+        0,
+        -17.808818273044825
+      ],
+      "rotationY": 68.55619729030877,
+      "scale": 1.3937216320540755
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -12.713625257013565,
+        0,
+        9.788330372809515
+      ],
+      "rotationY": 49.084350143093616,
+      "scale": 1.264538501854986
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        7.165706541631698,
+        0,
+        -21.690741815015436
+      ],
+      "rotationY": 42.3387918015942,
+      "scale": 1.3261415991466492
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -16.947663550798982,
+        0,
+        -16.852646547505593
+      ],
+      "rotationY": 10.502026872709394,
+      "scale": 2.474686423316598
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        17.486631362968637,
+        0,
+        0.9460656011942703
+      ],
+      "rotationY": 28.03387310123071,
+      "scale": 1.2104009175673127
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        0,
+        0.9,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1.6
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        0,
+        0,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1.6
+    },
+    {
+      "assetId": "tx_orb",
+      "position": [
+        0,
+        2.3,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1.4
+    },
+    {
+      "assetId": "halo_ring",
+      "position": [
+        0,
+        3.6,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "halo_ring",
+      "position": [
+        0,
+        5,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1.4
+    },
+    {
+      "assetId": "crystal_gold",
+      "position": [
+        1.0330805201343183,
+        0,
+        2.0963462047744565
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "crystal_gold",
+      "position": [
+        4.334159201969046,
+        0,
+        -0.12683728062835842
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "crystal_gold",
+      "position": [
+        5.0963462047744565,
+        0,
+        -4.033080520134318
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "crystal_gold",
+      "position": [
+        2.873162719371641,
+        0,
+        -7.334159201969046
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "crystal_gold",
+      "position": [
+        -1.0330805201343187,
+        0,
+        -8.096346204774456
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "crystal_gold",
+      "position": [
+        -4.334159201969046,
+        0,
+        -5.873162719371642
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "crystal_gold",
+      "position": [
+        -5.0963462047744565,
+        0,
+        -1.9669194798656817
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "crystal_gold",
+      "position": [
+        -2.8731627193716416,
+        0,
+        1.3341592019690456
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        -6.5,
+        0,
+        -9
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        -3.9000000000000004,
+        0,
+        -9
+      ],
+      "rotationY": 17,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        -1.3,
+        0,
+        -9
+      ],
+      "rotationY": 34,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        1.3,
+        0,
+        -9
+      ],
+      "rotationY": 51,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        3.9000000000000004,
+        0,
+        -9
+      ],
+      "rotationY": 68,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        6.5,
+        0,
+        -9
+      ],
+      "rotationY": 85,
+      "scale": 1
+    },
+    {
+      "assetId": "embers",
+      "position": [
+        0,
+        0,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1
+    }
+  ],
+  "marks": []
+}

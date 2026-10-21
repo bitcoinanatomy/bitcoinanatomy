@@ -1,0 +1,14 @@
+{
+  "id": "tree",
+  "name": "Tree",
+  "description": "Rounded stylised tree.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/tree.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#6c8f5e",
+  "kind": "prop"
+}

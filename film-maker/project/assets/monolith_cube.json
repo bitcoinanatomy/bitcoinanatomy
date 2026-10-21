@@ -1,0 +1,14 @@
+{
+  "id": "monolith_cube",
+  "name": "Monolith Cube",
+  "description": "Black glossy 2m cube.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/monolith_cube.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#151515",
+  "kind": "set"
+}

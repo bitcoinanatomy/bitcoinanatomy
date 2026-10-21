@@ -1,0 +1,14 @@
+{
+  "id": "obsidian_floor",
+  "name": "Obsidian Floor",
+  "description": "Glossy black reflective ground.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/obsidian_floor.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#111111",
+  "kind": "set"
+}

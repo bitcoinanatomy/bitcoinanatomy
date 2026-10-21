@@ -1,0 +1,14 @@
+{
+  "id": "bench",
+  "name": "Bench",
+  "description": "Marble bench.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/bench.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "prop"
+}

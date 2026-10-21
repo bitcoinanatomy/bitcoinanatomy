@@ -1,0 +1,18 @@
+{
+  "id": "folk5",
+  "name": "Folk 5",
+  "description": "A round citizen of the light city. Fills the background; never speaks.",
+  "tags": [
+    "extra"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/folk_round.glb",
+  "textures": {},
+  "scale": 1.08,
+  "color": "#9ab8b5",
+  "voiceTune": {
+    "pitch": 0,
+    "speed": 1
+  },
+  "role": "Background"
+}

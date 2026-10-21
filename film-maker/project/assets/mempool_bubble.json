@@ -1,0 +1,14 @@
+{
+  "id": "mempool_bubble",
+  "name": "Mempool Bubble",
+  "description": "Glass bubble holding a waiting transaction.",
+  "tags": [
+    "protocol"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/mempool_bubble.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#dfe7ff",
+  "kind": "fx"
+}

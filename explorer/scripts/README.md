@@ -52,7 +52,7 @@ Options:
 Environment:
   BTC_NODES_OUT      Alternative to --out
 
-Output: cache/btc_nodes.json
+Output: data/btc_nodes.json (committed; the Network page loads it directly)
   {"generated_at": 1234567890, "count": 35000, "nodes": [
     {"addr": "1.2.3.4", "port": 8333, "services": 1033,
      "userAgent": "/Satoshi:28.1.0/", "timestamp": 0}
@@ -113,7 +113,7 @@ The dashboard server (`ambro-dashboard.py`) serves all four node data sources:
 
 | Source | API endpoint | Data file |
 |--------|-------------|-----------|
-| Crawler archive | `/api/addrman` | `cache/btc_nodes.json` |
+| Crawler archive | `data/btc_nodes.json` | `data/btc_nodes.json` |
 | Bitnodes archive | `/api/bitnodes-archive` | `cache/bitnodes_geo_cache.json` |
 | BTC Nodes live | `/api/btcnodes` | live proxy to btcnodes.io |
 | BTC Nodes archive | static | `explorer/js/pvxg-nodes-snapshot-*.json` |

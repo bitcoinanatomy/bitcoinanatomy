@@ -1,0 +1,14 @@
+{
+  "id": "banner",
+  "name": "Banner",
+  "description": "Tall gold pole with an orange banner.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/banner.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#f29a33",
+  "kind": "prop"
+}

@@ -1,0 +1,532 @@
+{
+  "id": "city_edge",
+  "name": "City Edge",
+  "description": "A balustraded terrace at the rim of the light city, at dusk. Below, the dark world; far away, a lone beacon pulses.",
+  "tags": [],
+  "refs": [],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#2a2c5c",
+  "fog": {
+    "color": "#3b2f4f",
+    "near": 30,
+    "far": 120
+  },
+  "lighting": {
+    "ambient": 0.3,
+    "key": 1.5,
+    "keyColor": "#ff9a6a",
+    "keyPosition": [
+      -6,
+      8,
+      4
+    ]
+  },
+  "hdri": "media/hdri/dusk.hdr",
+  "hdriIntensity": 0.7,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 0.8,
+    "vignette": 0.45,
+    "grain": 0.05,
+    "exposure": 1
+  },
+  "preview": {
+    "position": [
+      2.5,
+      3.2,
+      6.5
+    ],
+    "target": [
+      0,
+      -7,
+      -32
+    ],
+    "fov": 55
+  },
+  "props": [
+    {
+      "assetId": "marble_floor",
+      "position": [
+        0,
+        0,
+        37.5
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "balustrade",
+      "position": [
+        -12,
+        0,
+        -2.4
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "balustrade",
+      "position": [
+        -6,
+        0,
+        -2.4
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "balustrade",
+      "position": [
+        0,
+        0,
+        -2.4
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "balustrade",
+      "position": [
+        6,
+        0,
+        -2.4
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "balustrade",
+      "position": [
+        12,
+        0,
+        -2.4
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "marble_block",
+      "position": [
+        -3,
+        0,
+        -1
+      ],
+      "rotationY": 0,
+      "scale": 0.6
+    },
+    {
+      "assetId": "marble_block",
+      "position": [
+        3.2,
+        0,
+        -1.2
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "lamp_post",
+      "position": [
+        -5,
+        0,
+        -1.6
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "lamp_post",
+      "position": [
+        5,
+        0,
+        -1.6
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "statue",
+      "position": [
+        -9,
+        0,
+        -0.5
+      ],
+      "rotationY": 20,
+      "scale": 1.2
+    },
+    {
+      "assetId": "bench",
+      "position": [
+        2,
+        0,
+        1.5
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "obsidian_floor",
+      "position": [
+        0,
+        -14,
+        -40
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "hex_beacon",
+      "position": [
+        0,
+        -14,
+        -32
+      ],
+      "rotationY": 0,
+      "scale": 5
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        0,
+        -14,
+        -32
+      ],
+      "rotationY": 0,
+      "scale": 2.6
+    },
+    {
+      "assetId": "floor_ring",
+      "position": [
+        0,
+        -14,
+        -32
+      ],
+      "rotationY": 0,
+      "scale": 3
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -1.9835870496649486,
+        -14,
+        -45.47943235942591
+      ],
+      "rotationY": 43.30623760353774,
+      "scale": 0.7048992135096341
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -13.058127248724551,
+        -14,
+        -33.90867602685477
+      ],
+      "rotationY": 7.52335935132578,
+      "scale": 4.120950343133881
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -4.362393045655298,
+        -14,
+        -53.84077413770838
+      ],
+      "rotationY": 62.152325513307005,
+      "scale": 1.831682657683268
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -5.3110678929925275,
+        -14,
+        -12.407490663831911
+      ],
+      "rotationY": 1.0445355903357267,
+      "scale": 1.7644273874815553
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        11.512731971057702,
+        -14,
+        -46.177059201216515
+      ],
+      "rotationY": 64.32156731374562,
+      "scale": 1.677116921544075
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        9.718909765413631,
+        -14,
+        -20.827388026728002
+      ],
+      "rotationY": 43.047827635891736,
+      "scale": 1.8060504976194354
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        14.243153065246446,
+        -14,
+        -51.55498227114468
+      ],
+      "rotationY": 52.35931280767545,
+      "scale": 1.7008377643767743
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        15.5849489471673,
+        -14,
+        -27.55606621630318
+      ],
+      "rotationY": 41.7569619929418,
+      "scale": 1.7739287774078547
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -21.199058198628713,
+        -14,
+        -34.56846273518907
+      ],
+      "rotationY": 33.5060152458027,
+      "scale": 1.7976222204510122
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -8.890314610094652,
+        -14,
+        -57.03085203153164
+      ],
+      "rotationY": 64.1355369030498,
+      "scale": 1.970326698105782
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -12.714897733480555,
+        -14,
+        -60.79866026172292
+      ],
+      "rotationY": 48.38335959473625,
+      "scale": 2.0389354394283146
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        11.101906602154491,
+        -14,
+        -47.51234385602574
+      ],
+      "rotationY": 49.677891691681,
+      "scale": 1.005901892716065
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -15.575945244118104,
+        -14,
+        -43.28840502923187
+      ],
+      "rotationY": 57.8767242282629,
+      "scale": 0.8421948885079473
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        0.10436177156417407,
+        -14,
+        -60.1453814693084
+      ],
+      "rotationY": 62.16375918360427,
+      "scale": 3.5324026906862858
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        3.324344562966741,
+        -14,
+        -56.94926408471368
+      ],
+      "rotationY": 52.452609739266336,
+      "scale": 1.9864303264301268
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        21.722358571348405,
+        -14,
+        -53.78249045941266
+      ],
+      "rotationY": 84.95536773232743,
+      "scale": 1.042534479079768
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -16.847769725891965,
+        -14,
+        -21.23253444892496
+      ],
+      "rotationY": 23.076041559688747,
+      "scale": 1.483445551432669
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        7.983525239379271,
+        -14,
+        -42.38045296612823
+      ],
+      "rotationY": 80.05280409241095,
+      "scale": 0.7236061269417404
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        22.787248519073938,
+        -14,
+        -30.7946114336762
+      ],
+      "rotationY": 47.10324937943369,
+      "scale": 1.0031573688611388
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        4.28426112431478,
+        -14,
+        -25.961861845316328
+      ],
+      "rotationY": 74.49495506007224,
+      "scale": 1.5082490220200269
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -9.694609365482966,
+        -14,
+        -59.005914960811786
+      ],
+      "rotationY": 54.82838760595769,
+      "scale": 2.6091597634367645
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -9.62401520032793,
+        -14,
+        -54.04122894830691
+      ],
+      "rotationY": 8.490365040488541,
+      "scale": 1.045834855083376
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        13.422017221198876,
+        -14,
+        -38.029214794353464
+      ],
+      "rotationY": 49.62911385577172,
+      "scale": 1.2965829755645246
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -4.060429149038858,
+        -14,
+        -12.171091671844156
+      ],
+      "rotationY": 30.307540821377188,
+      "scale": 1.2484352875035256
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -16.34987774144594,
+        -14,
+        -29.629929551151236
+      ],
+      "rotationY": 16.643120034132153,
+      "scale": 2.13109107138589
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        18.945247141693212,
+        -14,
+        -15.646795790053073
+      ],
+      "rotationY": 5.8021582290530205,
+      "scale": 1.774931496987119
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -14,
+        0,
+        14
+      ],
+      "rotationY": 0,
+      "scale": 1.8
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        9,
+        0,
+        10
+      ],
+      "rotationY": 0,
+      "scale": 2.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        22,
+        0,
+        22
+      ],
+      "rotationY": 20,
+      "scale": 1.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -24,
+        0,
+        26
+      ],
+      "rotationY": 10,
+      "scale": 1.6
+    },
+    {
+      "assetId": "floating_isle",
+      "position": [
+        -14,
+        -2,
+        -16
+      ],
+      "rotationY": 0,
+      "scale": 1.2
+    },
+    {
+      "assetId": "floating_isle",
+      "position": [
+        16,
+        2,
+        -24
+      ],
+      "rotationY": 90,
+      "scale": 1.8
+    }
+  ],
+  "marks": []
+}

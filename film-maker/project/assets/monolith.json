@@ -1,0 +1,14 @@
+{
+  "id": "monolith",
+  "name": "Monolith",
+  "description": "Black glossy pillar, 5m.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/monolith.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#151515",
+  "kind": "set"
+}

@@ -1,0 +1,574 @@
+{
+  "id": "mining_hall",
+  "name": "Mining Hall",
+  "description": "A vast forge-lit hall: rows of glowing miner rigs and hash blocks, embers drifting under towering pylons.",
+  "tags": [],
+  "refs": [
+    "media/refs/dark_environments.png"
+  ],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#050302",
+  "fog": {
+    "color": "#120804",
+    "near": 10,
+    "far": 55
+  },
+  "lighting": {
+    "ambient": 0.18,
+    "key": 1.2,
+    "keyColor": "#ffb070",
+    "keyPosition": [
+      4,
+      10,
+      2
+    ]
+  },
+  "hdri": "media/hdri/forge.hdr",
+  "hdriIntensity": 1.2,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 1,
+    "vignette": 0.5,
+    "grain": 0.07,
+    "exposure": 1.05
+  },
+  "preview": {
+    "position": [
+      3,
+      2.6,
+      9
+    ],
+    "target": [
+      0,
+      1.4,
+      -8
+    ],
+    "fov": 55
+  },
+  "props": [
+    {
+      "assetId": "obsidian_floor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -10.455436778124795,
+        0,
+        2.277645202816392
+      ],
+      "rotationY": 74.34973670169711,
+      "scale": 2.5605150426737966
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        20.58903178509931,
+        0,
+        -21.581789569243714
+      ],
+      "rotationY": 52.5526527618058,
+      "scale": 0.8530456341337412
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -25.681826423036682,
+        0,
+        -2.3404675417615364
+      ],
+      "rotationY": 6.734897985588759,
+      "scale": 1.3503296203911304
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -18.823705600438817,
+        0,
+        7.880939073197933
+      ],
+      "rotationY": 22.4526566429995,
+      "scale": 0.6805328500457107
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        10.03100022489535,
+        0,
+        8.538743094505955
+      ],
+      "rotationY": 46.89667054452002,
+      "scale": 0.6115609219763428
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -23.620399473594063,
+        0,
+        0.5836281736581714
+      ],
+      "rotationY": 24.822214781306684,
+      "scale": 0.9626879175193608
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -5.10103664530042,
+        0,
+        -22.734000365919368
+      ],
+      "rotationY": 10.478537678718567,
+      "scale": 1.4238791156560182
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -7.864185709871642,
+        0,
+        18.535923654430697
+      ],
+      "rotationY": 81.60373215330765,
+      "scale": 3.8059984262101354
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -28.35796530186502,
+        0,
+        -1.023225795593744
+      ],
+      "rotationY": 58.5369695071131,
+      "scale": 1.1273713344708085
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        11.344039016253102,
+        0,
+        -19.15507447968526
+      ],
+      "rotationY": 68.55619729030877,
+      "scale": 1.3937216320540755
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -13.869409371287524,
+        0,
+        10.950905861246744
+      ],
+      "rotationY": 49.084350143093616,
+      "scale": 1.264538501854986
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        7.817134409052762,
+        0,
+        -23.389900161835023
+      ],
+      "rotationY": 42.3387918015942,
+      "scale": 1.3261415991466492
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        -6.300000000000001,
+        0,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        -4.2,
+        0,
+        -3
+      ],
+      "rotationY": 13,
+      "scale": 1.25
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        -2.1,
+        0,
+        -3
+      ],
+      "rotationY": 26,
+      "scale": 1.5
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        0,
+        0,
+        -3
+      ],
+      "rotationY": 39,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        2.1,
+        0,
+        -3
+      ],
+      "rotationY": 52,
+      "scale": 1.25
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        4.2,
+        0,
+        -3
+      ],
+      "rotationY": 65,
+      "scale": 1.5
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        6.300000000000001,
+        0,
+        -3
+      ],
+      "rotationY": 78,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        -6.300000000000001,
+        0,
+        -6
+      ],
+      "rotationY": 91,
+      "scale": 1.25
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        -4.2,
+        0,
+        -6
+      ],
+      "rotationY": 104,
+      "scale": 1.5
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        -2.1,
+        0,
+        -6
+      ],
+      "rotationY": 117,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        0,
+        0,
+        -6
+      ],
+      "rotationY": 130,
+      "scale": 1.25
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        2.1,
+        0,
+        -6
+      ],
+      "rotationY": 143,
+      "scale": 1.5
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        4.2,
+        0,
+        -6
+      ],
+      "rotationY": 156,
+      "scale": 1
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        6.300000000000001,
+        0,
+        -6
+      ],
+      "rotationY": 169,
+      "scale": 1.25
+    },
+    {
+      "assetId": "hash_block",
+      "position": [
+        0.9,
+        0,
+        0.4
+      ],
+      "rotationY": 20,
+      "scale": 0.8
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        -9,
+        0,
+        2
+      ],
+      "rotationY": 90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        -9,
+        0,
+        -1
+      ],
+      "rotationY": 90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        -9,
+        0,
+        -4
+      ],
+      "rotationY": 90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        -9,
+        0,
+        -7
+      ],
+      "rotationY": 90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        -9,
+        0,
+        -10
+      ],
+      "rotationY": 90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        -9,
+        0,
+        -13
+      ],
+      "rotationY": 90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        -9,
+        0,
+        -16
+      ],
+      "rotationY": 90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        9,
+        0,
+        2
+      ],
+      "rotationY": -90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        9,
+        0,
+        -1
+      ],
+      "rotationY": -90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        9,
+        0,
+        -4
+      ],
+      "rotationY": -90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        9,
+        0,
+        -7
+      ],
+      "rotationY": -90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        9,
+        0,
+        -10
+      ],
+      "rotationY": -90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        9,
+        0,
+        -13
+      ],
+      "rotationY": -90,
+      "scale": 1
+    },
+    {
+      "assetId": "miner_rig",
+      "position": [
+        9,
+        0,
+        -16
+      ],
+      "rotationY": -90,
+      "scale": 1
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        -12,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        -12,
+        0,
+        -8
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        -12,
+        0,
+        -16
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        -12,
+        0,
+        -24
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        12,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        12,
+        0,
+        -8
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        12,
+        0,
+        -16
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "pylon",
+      "position": [
+        12,
+        0,
+        -24
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    },
+    {
+      "assetId": "embers",
+      "position": [
+        0,
+        0,
+        -4
+      ],
+      "rotationY": 0,
+      "scale": 1.2
+    },
+    {
+      "assetId": "embers",
+      "position": [
+        0,
+        0,
+        -16
+      ],
+      "rotationY": 0,
+      "scale": 1.6
+    }
+  ],
+  "marks": []
+}

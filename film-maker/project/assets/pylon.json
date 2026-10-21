@@ -1,0 +1,14 @@
+{
+  "id": "pylon",
+  "name": "Pylon",
+  "description": "14m obsidian pylon with glowing strips.",
+  "tags": [
+    "dark"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/pylon.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#99c4ff",
+  "kind": "set"
+}

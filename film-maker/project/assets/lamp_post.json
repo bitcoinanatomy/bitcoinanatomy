@@ -1,0 +1,14 @@
+{
+  "id": "lamp_post",
+  "name": "Lamp Post",
+  "description": "Gold double lamp post with glowing globes.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/lamp_post.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#ffdf9e",
+  "kind": "prop"
+}

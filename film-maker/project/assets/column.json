@@ -1,0 +1,14 @@
+{
+  "id": "column",
+  "name": "Column",
+  "description": "5.3m marble column with a gold band.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/column.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "set"
+}

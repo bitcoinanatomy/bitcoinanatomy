@@ -1,0 +1,14 @@
+{
+  "id": "marble_block",
+  "name": "Marble Block",
+  "description": "A 1m white marble cube — scale it for stepping stones or the giant gate block.",
+  "tags": [
+    "light"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/marble_block.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#eeeeee",
+  "kind": "prop"
+}

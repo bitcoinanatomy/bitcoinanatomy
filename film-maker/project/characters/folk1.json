@@ -1,0 +1,18 @@
+{
+  "id": "folk1",
+  "name": "Folk 1",
+  "description": "A tall citizen of the light city. Fills the background; never speaks.",
+  "tags": [
+    "extra"
+  ],
+  "refs": [],
+  "mesh": "media/meshes/folk_tall.glb",
+  "textures": {},
+  "scale": 1,
+  "color": "#9aa6b8",
+  "voiceTune": {
+    "pitch": 0,
+    "speed": 1
+  },
+  "role": "Background"
+}
