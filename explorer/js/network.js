@@ -156,6 +156,9 @@ class BitcoinNetworkExplorer {
         
         console.log('  4.6️⃣ Setting up archive dropdown...');
         this.setupArchiveDropdown();
+
+        console.log('  4.7️⃣ Setting up source selector...');
+        this.setupSourceSelector();
         
         console.log('  5️⃣ Creating scene...');
         this.createScene();
@@ -1109,7 +1112,7 @@ class BitcoinNetworkExplorer {
     }
     
     async loadLocalArchive() {
-        const ARCHIVE_PATH = 'js/bitnodes-snapshot-1772712282.json';
+        const ARCHIVE_PATH = 'js/pvxg-nodes-snapshot-1791229381.json';
         this.showLoadingModal('Loading archive snapshot...');
         try {
             this.updateLoadingProgress('Loading archive snapshot...', 10);
@@ -1831,155 +1834,191 @@ class BitcoinNetworkExplorer {
 
     async fetchData() {
         this.showLoadingModal('Loading network data...');
-        
-        // Check cache first
-        const cachedData = this.getCachedData();
-        if (cachedData) {
-            this.updateLoadingProgress('Loading from cache...', 50);
-            this.nodeData = cachedData;
-            
-            // Sample nodes logging
-            const sampleNodes = Object.entries(this.nodeData.nodes).slice(0, 3);
-            console.log('📍 Sample nodes from cache:');
-            sampleNodes.forEach(([address, nodeInfo], idx) => {
-                console.log(`  Node ${idx}:`, {
-                    address,
-                    userAgent: nodeInfo[1],
-                    height: nodeInfo[4],
-                    city: nodeInfo[6],
-                    country: nodeInfo[7],
-                    lat: nodeInfo[8],
-                    lng: nodeInfo[9]
-                });
-            });
-            
+
+        const src = this._nodeSource || 'crawler-archive';
+
+        // ── Helper: convert flat node list → snapshot format ─────────────────
+        const nodeListToSnapshot = (nodeList) => {
+            const nodes = {};
+            const now = Math.floor(Date.now() / 1000);
+            for (const n of nodeList) {
+                const addr = n.addr || n.address || '';
+                const port = n.port || 8333;
+                const isIpv6 = addr.includes(':') && !addr.includes('.onion');
+                const key = isIpv6 ? `[${addr}]:${port}` : `${addr}:${port}`;
+                nodes[key] = [
+                    n.version   ?? 70015,
+                    n.userAgent ?? n.user_agent ?? '/Satoshi:0.0.0/',
+                    n.connectedSince ?? n.connected_since ?? 0,
+                    n.services  ?? 0,
+                    n.height    ?? 0,
+                    n.hostname  ?? null,
+                    n.city      ?? null,
+                    n.country   ?? null,
+                    n.lat       ?? n.latitude  ?? 0.0,
+                    n.lng       ?? n.longitude ?? n.lon ?? 0.0,
+                    n.timezone  ?? null,
+                    n.asn       ?? null,
+                    n.org       ?? n.organization ?? null,
+                ];
+            }
+            return { timestamp: now, total_nodes: nodeList.length, nodes };
+        };
+
+        // ── Helper: finalize and render ───────────────────────────────────────
+        const render = (snapshot, srcLabel) => {
+            this.nodeData = snapshot;
+            this.latestSnapshot = { timestamp: snapshot.timestamp, total_nodes: snapshot.total_nodes };
+            this.snapshotsData = null;
+            this.updateDataSourceDisclaimer(false);
+            this.updateNodeSourceLabel(srcLabel);
             this.updateLoadingProgress('Creating visualization...', 80);
             this.createNetworkVisualization();
-            this.updateDataSourceDisclaimer(false);
-
-            // If the cache predates geo enrichment, keep filling clearnet locations
-            const sample = Object.values(this.nodeData.nodes);
-            let withGeo = 0;
-            for (let i = 0; i < sample.length; i++) {
-                const info = sample[i];
-                if (info && info[8] != null && info[9] != null && info[8] !== 0.0 && info[9] !== 0.0) withGeo += 1;
-            }
-            if (withGeo < sample.length * 0.25) {
-                this._btcnodesListExhausted = false;
-                this._btcnodesNextPage = 1;
-            } else {
-                // Cache already has clearnet coords — don't re-paginate on every load
-                this._btcnodesListExhausted = true;
-                this._btcnodesNextPage = null;
-            }
-            
-            // Still fetch snapshots list for navigation (lightweight call)
+            this.updateSnapshotNavButtons();
+            this.syncUrlParams();
+            this.hideLoadingModal();
             this.fetchSnapshotsList();
-            return;
-        }
-        
-        try {
-            // First, get the latest snapshot metadata
-            this.updateLoadingProgress('Fetching latest snapshot...', 20);
-            const snapshotsUrl = this.apiUrl('/v1/snapshots/?limit=100');
-            console.log('📡 Fetching snapshots from:', snapshotsUrl);
-            const snapshotsResponse = await fetch(snapshotsUrl);
-            
-            if (snapshotsResponse.status === 429) {
+        };
+
+        // ══════════════════════════════════════════════════════════════════════
+        // SOURCE: Crawler archive — pure addrman from our Bitcoin node
+        // ══════════════════════════════════════════════════════════════════════
+        if (src === 'crawler-archive') {
+            try {
+                this.updateLoadingProgress('Loading crawler node data...', 20);
+                const resp = await fetch('/api/addrman');
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const raw = await resp.json();
+                const nodeList = Array.isArray(raw.nodes) ? raw.nodes : (Array.isArray(raw) ? raw : null);
+                if (!nodeList || nodeList.length < 100) throw new Error('Empty crawler response');
+                console.log('✅ [crawler-archive] Loaded', nodeList.length, 'nodes');
+                render(nodeListToSnapshot(nodeList), 'crawler-archive');
+                return;
+            } catch (err) {
+                console.error('[crawler-archive] Failed:', err.message);
                 this.hideLoadingModal();
-                this.showRateLimitError('BTC Nodes API');
+                this.showPopupMessage('Crawler archive unavailable', err.message, 'error', [], null, '');
                 return;
             }
+        }
 
-            if (snapshotsResponse.status === 502 || snapshotsResponse.status === 503) {
-                const err = new Error('BTC Nodes API is temporarily unavailable');
-                err.status = snapshotsResponse.status;
-                throw err;
+        // ══════════════════════════════════════════════════════════════════════
+        // SOURCE: BTC Nodes live — live btcnodes.io via same-origin proxy
+        // ══════════════════════════════════════════════════════════════════════
+        if (src === 'btcnodes-live') {
+            // Check localStorage cache first
+            const cachedData = this.getCachedData();
+            if (cachedData) {
+                this.updateLoadingProgress('Loading from cache...', 50);
+                render(cachedData, 'btcnodes-live');
+                return;
             }
-            
-            if (!snapshotsResponse.ok) {
-                const err = new Error(`HTTP error! status: ${snapshotsResponse.status}`);
-                err.status = snapshotsResponse.status;
-                throw err;
-            }
-            
-            const snapshotsData = await snapshotsResponse.json();
-            
-            if (snapshotsData.results && snapshotsData.results.length > 0) {
-                // Store the full snapshots response for navigation
+            try {
+                this.updateLoadingProgress('Fetching latest snapshot...', 20);
+                const snapshotsUrl = this.apiUrl('/v1/snapshots/?limit=100');
+                const snapshotsResponse = await fetch(snapshotsUrl);
+                if (snapshotsResponse.status === 429) { this.hideLoadingModal(); this.showRateLimitError('BTC Nodes API'); return; }
+                if (!snapshotsResponse.ok) throw Object.assign(new Error(`HTTP ${snapshotsResponse.status}`), { status: snapshotsResponse.status });
+                const snapshotsData = await snapshotsResponse.json();
+                if (!snapshotsData.results || !snapshotsData.results.length) throw new Error('No snapshots in BTC Nodes response');
+
                 this.snapshotsData = this.normalizeSnapshotsList(snapshotsData);
                 this.currentSnapshotIndex = 0;
                 this.latestSnapshot = this.snapshotsData.results[0];
-                
-                // Snapshot (all nodes) + first geo pages (clearnet coords) in parallel so
-                // clearnet land on the globe at first paint — snapshot rows have no lat/lon.
                 this.updateLoadingProgress('Loading nodes + locations...', 40);
-                const snapPromise = this.fetchSnapshotByUrl(this.latestSnapshot.url);
-                const geoBootstrapPromise = this.fetchLatestNodesSnapshot(
-                    (msg, pct) => this.updateLoadingProgress(msg, Math.min(70, pct)),
-                    { maxPages: 5, pageDelayMs: 80 }
-                ).catch((geoErr) => {
-                    console.warn('Location bootstrap skipped; clearnet will fill in shortly', geoErr);
-                    return null;
-                });
 
-                const [nodeData, bootstrap] = await Promise.all([snapPromise, geoBootstrapPromise]);
-                if (!nodeData || !nodeData.nodes) {
-                    throw new Error('No node data in BTC Nodes response');
-                }
+                const [nodeData, bootstrap] = await Promise.all([
+                    this.fetchSnapshotByUrl(this.latestSnapshot.url),
+                    this.fetchLatestNodesSnapshot(
+                        (msg, pct) => this.updateLoadingProgress(msg, Math.min(70, pct)),
+                        { maxPages: 5, pageDelayMs: 80 }
+                    ).catch(e => { console.warn('Location bootstrap skipped:', e); return null; }),
+                ]);
+                if (!nodeData || !nodeData.nodes) throw new Error('No node data in BTC Nodes response');
 
                 if (bootstrap && bootstrap.nodes) {
                     let n = 0;
-                    for (const [addr, info] of Object.entries(bootstrap.nodes)) {
-                        nodeData.nodes[addr] = info;
-                        n += 1;
-                    }
-                    if (bootstrap.latest_height) {
-                        nodeData.latest_height = bootstrap.latest_height;
-                    }
+                    for (const [addr, info] of Object.entries(bootstrap.nodes)) { nodeData.nodes[addr] = info; n++; }
+                    if (bootstrap.latest_height) nodeData.latest_height = bootstrap.latest_height;
                     console.log(`✅ Bootstrapped locations for ${n.toLocaleString()} nodes`);
                 }
 
                 this.nodeData = nodeData;
-                this.subtitlePrefix = '';
+                this.setCachedData(nodeData);
                 this.updateDataSourceDisclaimer(false);
-
+                this.updateNodeSourceLabel('btcnodes-live');
                 this.updateLoadingProgress('Creating visualization...', 80);
-                const loadedCount = Object.keys(this.nodeData.nodes).length;
-                console.log('✅ Fetched node data from btcnodes.io');
-                console.log(`📊 Loaded ${loadedCount.toLocaleString()} / ${(this.nodeData.total_nodes || loadedCount).toLocaleString()} nodes`);
-
-                this.setCachedData(this.nodeData);
-
-                // Start node creation (this will handle progress updates and modal hiding)
-                // updateUI() will be called AFTER nodes are created
                 this.createNetworkVisualization();
-
-                // Update snapshot navigation buttons
                 this.updateSnapshotNavButtons();
+            } catch (error) {
+                console.error('[btcnodes-live] Failed:', error);
+                this.hideLoadingModal();
+                const busy = error && (error.status === 502 || error.status === 503 || error.status === 504);
+                this.showPopupMessage(
+                    busy ? 'BTC Nodes API Unavailable' : 'Failed to load BTC Nodes data',
+                    busy ? 'Live API temporarily unavailable.' : `${error && error.message ? error.message : 'Network request failed'}.`,
+                    busy ? 'warning' : 'error', [], null, ''
+                );
             }
-        } catch (error) {
-            console.error('Error fetching network data:', error);
-            this.hideLoadingModal();
-            this.updateDataSourceDisclaimer(false, 'live API unavailable');
-            if (error && error.status === 429) {
-                this.showRateLimitError('BTC Nodes API');
+            return;
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // SOURCE: BTC Nodes archive — pvxg local static snapshot
+        // ══════════════════════════════════════════════════════════════════════
+        if (src === 'btcnodes-archive') {
+            try {
+                this.updateLoadingProgress('Loading pvxg archive snapshot...', 30);
+                const localResp = await fetch('js/pvxg-nodes-snapshot-1791229381.json');
+                if (!localResp.ok) throw new Error(`HTTP ${localResp.status}`);
+                const localData = await localResp.json();
+                if (!localData || !localData.nodes || Object.keys(localData.nodes).length < 100) throw new Error('Archive snapshot empty or too small');
+                console.log('✅ [btcnodes-archive] Loaded', Object.keys(localData.nodes).length, 'nodes');
+                this.nodeData = localData;
+                this.latestSnapshot = { timestamp: localData.timestamp, total_nodes: Object.keys(localData.nodes).length };
+                this.snapshotsData = null;
+                this.updateDataSourceDisclaimer(false);
+                this.updateNodeSourceLabel('btcnodes-archive');
+                this.updateLoadingProgress('Creating visualization...', 80);
+                this.createNetworkVisualization();
+                this.updateSnapshotNavButtons();
+                this.syncUrlParams();
+                this.hideLoadingModal();
+                this.fetchSnapshotsList();
+                return;
+            } catch (err) {
+                console.error('[btcnodes-archive] Failed:', err.message);
+                this.hideLoadingModal();
+                this.showPopupMessage('BTC Nodes archive unavailable', err.message, 'error', [], null, '');
                 return;
             }
-            // Upstream busy / unavailable → always ask before loading the archive
-            const self = this;
-            const busy = error && (error.status === 502 || error.status === 503 || error.status === 504);
-            this.showPopupMessage(
-                busy ? 'BTC Nodes API Unavailable' : 'Failed to load BTC Nodes data',
-                busy
-                    ? 'The live BTC Nodes API is temporarily unavailable. Load the local archive snapshot instead?'
-                    : `${error && error.message ? error.message : 'Network request failed'}.`,
-                busy ? 'warning' : 'error',
-                [{ label: 'Load Archive', onClick: function () { self.loadLocalArchive(); } }],
-                null,
-                'Local archive is available if the live API stays down.'
-            );
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // SOURCE: Bitnodes archive — pure bitnodes.io geo cache
+        // ══════════════════════════════════════════════════════════════════════
+        if (src === 'bitnodes-archive') {
+            try {
+                this.updateLoadingProgress('Loading Bitnodes archive...', 20);
+                const resp = await fetch('/api/bitnodes-archive');
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const raw = await resp.json();
+                const nodeList = Array.isArray(raw.nodes) ? raw.nodes : (Array.isArray(raw) ? raw : null);
+                if (!nodeList || nodeList.length < 100) throw new Error('Empty bitnodes archive response');
+                console.log('✅ [bitnodes-archive] Loaded', nodeList.length, 'nodes');
+                render(nodeListToSnapshot(nodeList), 'bitnodes-archive');
+                return;
+            } catch (err) {
+                console.error('[bitnodes-archive] Failed:', err.message);
+                this.hideLoadingModal();
+                this.showPopupMessage('Bitnodes archive unavailable', err.message, 'error', [], null, '');
+                return;
+            }
+        }
+
+        // Unknown source
+        this.hideLoadingModal();
+        console.error('[fetchData] Unknown source:', src);
     }
 
     /**
@@ -3401,6 +3440,63 @@ this.updateCameraCoordsDisplay();
         if (!trigger || !menu) return;
         menu.hidden = true;
         trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    // ── Source selector (bottom-right disclaimer) ──────────────────────────
+    setupSourceSelector() {
+        this._nodeSource = 'crawler-archive'; // default
+        const btn = document.getElementById('node-source-btn');
+        const menu = document.getElementById('node-source-menu');
+        const label = document.getElementById('node-source-label');
+        if (!btn || !menu) return;
+
+        const sources = {
+            'crawler-archive':  'Crawler archive',
+            'btcnodes-live':    'BTC Nodes · live',
+            'btcnodes-archive': 'BTC Nodes · archive',
+            'bitnodes-archive': 'Bitnodes · archive',
+        };
+
+        const open  = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+        const close = () => { menu.hidden = true;  btn.setAttribute('aria-expanded', 'false'); };
+
+        btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? open() : close(); });
+        document.addEventListener('click', (e) => { if (!btn.closest('#node-source-picker').contains(e.target)) close(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+        menu.querySelectorAll('.source-selector-option').forEach((opt) => {
+            opt.addEventListener('click', async () => {
+                const src = opt.dataset.source;
+                if (src === this._nodeSource) { close(); return; }
+                this._nodeSource = src;
+                label.textContent = sources[src] || src;
+                menu.querySelectorAll('.source-selector-option').forEach(o => o.classList.toggle('active', o.dataset.source === src));
+                close();
+                this.clearCache();
+                await this.fetchData();
+            });
+        });
+
+        label.textContent = sources[this._nodeSource];
+    }
+
+    updateNodeSourceLabel(src) {
+        const label = document.getElementById('node-source-label');
+        const menu  = document.getElementById('node-source-menu');
+        if (!label || !menu) return;
+        const names = {
+            'crawler-archive':  'Crawler archive',
+            'btcnodes-live':    'BTC Nodes · live',
+            'btcnodes-archive': 'BTC Nodes · archive',
+            'bitnodes-archive': 'Bitnodes · archive',
+        };
+        if (names[src]) {
+            label.textContent = names[src];
+            this._nodeSource = src;
+            menu.querySelectorAll('.source-selector-option').forEach(o => {
+                o.classList.toggle('active', o.dataset.source === src);
+            });
+        }
     }
     
     async loadArchiveSnapshot(timestamp) {

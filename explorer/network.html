@@ -180,7 +180,37 @@
     </div>
 
     <div class="disclaimer">
-        Data sources: <a class="disclaimer-link" href="https://btcnodes.io/api/" target="_blank" rel="noopener">BTC Nodes API</a><span id="disclaimer-error" class="disclaimer-error" hidden> · unavailable</span><span id="disclaimer-archive" class="disclaimer-archive" hidden> · local bitnode.io archive fallback</span>
+        <span class="source-selector">
+            <span class="source-selector-label">Node data:</span>
+            <span class="source-selector-picker" id="node-source-picker">
+                <button type="button" id="node-source-btn" class="source-selector-btn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="node-source-label">Crawler archive</span>
+                </button>
+                <div class="source-selector-menu" id="node-source-menu" role="listbox" hidden>
+                    <button class="source-selector-option active" data-source="crawler-archive" role="option">
+                        <span class="src-name">Crawler archive</span>
+                        <span class="src-desc">Your node's addrman — IPs seen via P2P gossip</span>
+                    </button>
+                    <div class="source-selector-separator"></div>
+                    <button class="source-selector-option" data-source="btcnodes-live" role="option">
+                        <span class="src-name">BTC Nodes · live</span>
+                        <span class="src-desc">Live btcnodes.io API via local proxy</span>
+                    </button>
+                    <div class="source-selector-separator"></div>
+                    <button class="source-selector-option" data-source="btcnodes-archive" role="option">
+                        <span class="src-name">BTC Nodes · archive</span>
+                        <span class="src-desc">pvxg.net local snapshot (static JSON)</span>
+                    </button>
+                    <div class="source-selector-separator"></div>
+                    <button class="source-selector-option" data-source="bitnodes-archive" role="option">
+                        <span class="src-name">Bitnodes · archive</span>
+                        <span class="src-desc">bitnodes.io geo cache — 25k geolocated IPs</span>
+                    </button>
+                </div>
+            </span>
+        </span>
+        <span id="disclaimer-error" class="disclaimer-error" hidden></span>
+        <span id="disclaimer-archive" class="disclaimer-archive" hidden> · archive active</span>
     </div>
 
     <!-- Three.js + WebXR addons via importmap -->
@@ -208,7 +238,7 @@
     <script src="js/vr/VRManager.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/vr/ExplorerRouter.js"></script>
-    <script src="js/network.js"></script>
+    <script src="js/network.js?v=4src"></script>
     <script>
         // Mobile panel management
         document.addEventListener('DOMContentLoaded', () => {

@@ -1,0 +1,2 @@
+explorer/data/difficulty_epochs/*.json -text
+explorer/js/pvxg-nodes-snapshot-*.json -text

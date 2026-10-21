@@ -1,0 +1,5 @@
+# Node crawler and geo cache — large, machine-specific, regenerate with scripts/
+cache/
+
+# macOS
+.DS_Store

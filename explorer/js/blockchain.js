@@ -67,6 +67,7 @@ class BitcoinBlockchainExplorer {
         this.setupOrbitControls();
         this.setupControls();
         this.setupPanelToggle();
+        this.setupEpochSourceSelector();
         this.createScene();
         this.renderer.setAnimationLoop(() => this.animate());
         this.fetchData();
@@ -608,7 +609,20 @@ class BitcoinBlockchainExplorer {
         pageSignal.addEventListener('abort', onPageAbort);
 
         try {
-            const response = await fetch(DifficultySpiral.epochUrl(epoch), { signal: ac.signal });
+            let response;
+            const src = this._epochSource || 'local';
+            if (src === 'pvxg') {
+                response = await fetch(DifficultySpiral.epochUrlFallback(epoch), { signal: ac.signal });
+            } else if (src === 'mempool') {
+                response = await fetch(DifficultySpiral.epochUrlFallback(epoch), { signal: ac.signal });
+                if (!response.ok) response = await fetch(DifficultySpiral.epochUrl(epoch), { signal: ac.signal });
+            } else {
+                response = await fetch(DifficultySpiral.epochUrl(epoch), { signal: ac.signal });
+                if (!response.ok) {
+                    // fallback to pvxg.net
+                    response = await fetch(DifficultySpiral.epochUrlFallback(epoch), { signal: ac.signal });
+                }
+            }
             if (!response.ok) throw new Error('HTTP ' + response.status);
             const data = await response.json();
             const blocks = data && data[0];
@@ -1213,6 +1227,39 @@ class BitcoinBlockchainExplorer {
         }
     }
     
+    // ── Epoch source selector ───────────────────────────────────────────────
+    setupEpochSourceSelector() {
+        this._epochSource = 'local';
+        const btn    = document.getElementById('epoch-source-btn');
+        const menu   = document.getElementById('epoch-source-menu');
+        const label  = document.getElementById('epoch-source-label');
+        const status = document.getElementById('epoch-source-status');
+        if (!btn || !menu) return;
+
+        const sources = { local: 'Local files', pvxg: 'pvxg.net', mempool: 'Mempool.space' };
+        const open  = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+        const close = () => { menu.hidden = true;  btn.setAttribute('aria-expanded', 'false'); };
+
+        btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? open() : close(); });
+        document.addEventListener('click', (e) => { if (!btn.closest('#epoch-source-picker').contains(e.target)) close(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+        menu.querySelectorAll('.source-selector-option').forEach((opt) => {
+            opt.addEventListener('click', () => {
+                const src = opt.dataset.source;
+                if (src === this._epochSource) { close(); return; }
+                this._epochSource = src;
+                if (label) label.textContent = sources[src] || src;
+                if (status) { status.textContent = ` · source: ${sources[src]}`; status.hidden = (src === 'local'); }
+                menu.querySelectorAll('.source-selector-option').forEach(o => o.classList.toggle('active', o.dataset.source === src));
+                close();
+                // Invalidate epoch cache so next load uses new source
+                if (this.epochJsonCache) this.epochJsonCache.clear();
+            });
+        });
+        if (label) label.textContent = sources[this._epochSource];
+    }
+
     rotateLeft() {
         // Stop automatic rotation
         this.isRotating = false;

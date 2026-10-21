@@ -96,7 +96,21 @@
     </div>
     
     <div class="disclaimer">
-        Data sources: pvxg.net, Mempool.space
+        <span class="source-selector">
+            <span class="source-selector-label">Epoch data:</span>
+            <span class="source-selector-picker" id="epoch-source-picker">
+                <button type="button" id="epoch-source-btn" class="source-selector-btn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="epoch-source-label">Local files</span>
+                </button>
+                <div class="source-selector-menu" id="epoch-source-menu" role="listbox" hidden>
+                    <button class="source-selector-option active" data-source="local" role="option">Local epoch files</button>
+                    <div class="source-selector-separator"></div>
+                    <button class="source-selector-option" data-source="pvxg" role="option">pvxg.net</button>
+                    <button class="source-selector-option" data-source="mempool" role="option">Mempool.space</button>
+                </div>
+            </span>
+        </span>
+        <span id="epoch-source-status" class="disclaimer-archive" hidden></span>
     </div>
 
     <!-- Three.js + WebXR addons via importmap -->
