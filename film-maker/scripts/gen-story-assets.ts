@@ -67,7 +67,15 @@ function face(b: Build) {
     g.rotateZ(Math.PI + Math.PI * 0.1);
     // pivot on the arc itself, so flipping Y turns the smile into a frown in place
     g.translate(0, sw * 0.65, 0);
-    parts.push({ name: 'mouth', geometry: g, material: LINE, translation: [0, Y - R * 0.18 + sw * 0.6 - sw * 0.65, R * 0.93] });
+    const at: [number, number, number] = [0, Y - R * 0.18 + sw * 0.6 - sw * 0.65, R * 0.93];
+    parts.push({ name: 'mouth', geometry: g, material: LINE, translation: at });
+    // Extra shapes from the mouth sheet. The preview scales these to 0 unless the expression needs them.
+    const hole = new THREE.SphereGeometry(sw * 0.7, 18, 12).scale(1.2, 0.95, 0.32);
+    parts.push({ name: 'mouth_open', geometry: hole, material: { name: 'mouth_hole', color: [0.06, 0.035, 0.03], roughness: 0.9 }, translation: [at[0], at[1] - sw * 0.02, at[2] + R * 0.015] });
+    const tongue = new THREE.SphereGeometry(sw * 0.36, 12, 8).scale(0.65, 1.2, 0.4);
+    parts.push({ name: 'mouth_tongue', geometry: tongue, material: { name: 'tongue', color: [0.86, 0.4, 0.45], roughness: 0.45 }, translation: [at[0], at[1] - sw * 0.42, at[2] + R * 0.03] });
+    const teeth = merge([-1.5, -0.5, 0.5, 1.5].map((i) => box(sw * 0.16, sw * 0.2, sw * 0.07, i * sw * 0.22, sw * 0.22, 0)));
+    parts.push({ name: 'mouth_teeth', geometry: teeth, material: { name: 'teeth', color: [0.97, 0.96, 0.93], roughness: 0.3 }, translation: [at[0], at[1], at[2] + R * 0.02] });
   }
   return parts;
 }
@@ -75,17 +83,52 @@ function face(b: Build) {
 /** A pair of limbs: pivot at [±x, y, z], hanging `len` metres, splayed outward by `splay` rad, with an optional round end (hand/foot). */
 interface Limb { at: [number, number, number]; r: number; len: number; splay?: number; end?: number }
 
+/** Tapered bone hanging from its origin (y = 0) down to y = -len. Thicker at the top. */
+function taperedBone(rTop: number, rBot: number, len: number) {
+  const h = Math.max(0.001, len);
+  const cyl = new THREE.CylinderGeometry(rTop, rBot, h, 12);
+  cyl.translate(0, -h / 2, 0);
+  const capTop = new THREE.SphereGeometry(rTop, 12, 8);
+  const capBot = new THREE.SphereGeometry(rBot, 12, 8).translate(0, -h, 0);
+  return merge([cyl, capTop, capBot]);
+}
+
+/**
+ * Two-bone limbs. The shoulder/hip node keeps the old name and pivots there; the forearm
+ * or shin is a child whose origin is the elbow or knee, so the preview can bend it.
+ * Splay is baked into both segments so the rest pose still hangs outward.
+ */
 function limbs(kind: 'arm' | 'leg', l: Limb, mat: GlbMaterial): GlbPart[] {
-  return [-1, 1].map((side) => {
-    const g = [placed(new THREE.CapsuleGeometry(l.r, Math.max(0.001, l.len - 2 * l.r), 6, 16), 0, -l.len / 2 + l.r * 0.5, 0)];
-    if (l.end) g.push(kind === 'leg' ? sphere(l.end, 0, -l.len + l.end * 0.7, l.end * 0.35, 16, 12).scale(1, 0.7, 1.3) : sphere(l.end, 0, -l.len + l.end * 0.6, 0, 16, 12));
-    const geo = merge(g).rotateZ(side * (l.splay ?? 0));
-    return { name: `${kind}_${side < 0 ? 'l' : 'r'}`, geometry: geo, material: mat, translation: [side * l.at[0], l.at[1], l.at[2]] as [number, number, number] };
+  return [-1, 1].flatMap((side) => {
+    const s = side < 0 ? 'l' : 'r';
+    const ang = side * (l.splay ?? 0);
+    const upper = l.len * 0.52;
+    const lower = l.len * 0.48;
+    const r = l.r;
+    const lowerParts = [taperedBone(r * 0.9, r * 0.58, lower)];
+    if (l.end && kind === 'arm') lowerParts.push(sphere(l.end, 0, -lower + l.end * 0.45, 0, 16, 12));
+    const elbow: [number, number, number] = [Math.sin(ang) * upper, -Math.cos(ang) * upper, 0];
+    const ankle: [number, number, number] = [Math.sin(ang) * lower, -Math.cos(ang) * lower, 0];
+    const upperName = `${kind}_${s}`;
+    const lowerName = `${kind === 'arm' ? 'forearm' : 'shin'}_${s}`;
+    const parts: GlbPart[] = [
+      { name: upperName, geometry: taperedBone(r * 1.12, r * 0.92, upper).rotateZ(ang), material: mat, translation: [side * l.at[0], l.at[1], l.at[2]] },
+      { name: lowerName, geometry: merge(lowerParts).rotateZ(ang), material: mat, translation: elbow, parent: upperName },
+    ];
+    // Feet are their own ankle joint: both point +Z and sit on the same sole, so a knee bend can be cancelled without yawing one foot out.
+    if (kind === 'leg' && l.end) {
+      const sole = l.end * 0.42;
+      const foot = sphere(l.end, 0, -sole * 0.55, l.end * 0.2, 16, 12).scale(1.05, 0.42, 1.35);
+      parts.push({ name: `foot_${s}`, geometry: foot, material: mat, translation: ankle, parent: lowerName });
+    }
+    return parts;
   });
 }
 
 function character(name: string, b: Build, skinMat = SKIN) {
-  const skin = merge([sphere(b.headR, 0, b.headY, 0, 48, 32), ...b.body]);
+  const neckR = b.headR * 0.28;
+  const neck = capsule(neckR, b.headR * 0.42, 0, b.headY - b.headR * 0.78);
+  const skin = merge([sphere(b.headR, 0, b.headY, 0, 48, 32), neck, ...b.body]);
   write(`media/meshes/${name}.glb`, writeGlb(name, [{ name: 'body', geometry: skin, material: skinMat }, ...limbs('arm', b.arms, skinMat), ...limbs('leg', b.legs, skinMat), ...face(b), ...(b.extra ?? [])]));
 }
 
@@ -134,7 +177,7 @@ export function genCharacters() {
   character('mili', {
     headR: 0.22, headY: 0.33, eye: 0.19, eyeSpread: 0.36, smile: 0.32, brows: 'soft',
     body: [capsule(0.075, 0.08, 0, 0.15)],
-    arms: { at: [0.07, 0.21, 0], r: 0.026, len: 0.115, splay: 0.6, end: 0.032 }, legs: { at: [0.04, 0.1, 0], r: 0.032, len: 0.1, end: 0.036 },
+    arms: { at: [0.09, 0.08, 0], r: 0.026, len: 0.07, splay: 0.35, end: 0.032 }, legs: { at: [0.04, 0.1, 0], r: 0.032, len: 0.1, end: 0.036 },
     extra: [{ name: 'lightning', geometry: merge(trail), material: { name: 'lightning', color: [1, 0.78, 0.45], emissive: [1, 0.7, 0.35], emissiveStrength: 4, opacity: 0.85 } }],
   });
 
@@ -142,7 +185,7 @@ export function genCharacters() {
   character('sati', {
     headR: 0.32, headY: 0.58, eye: 0.15, eyeSpread: 0.34, brows: 'determined', smile: 0.18,
     body: [capsule(0.12, 0.14, 0, 0.27)],
-    arms: { at: [0.115, 0.37, 0], r: 0.04, len: 0.21, splay: 0.4, end: 0.048 }, legs: { at: [0.06, 0.16, 0], r: 0.05, len: 0.16, end: 0.055 },
+    arms: { at: [0.15, 0.16, 0], r: 0.04, len: 0.12, splay: 0.22, end: 0.048 }, legs: { at: [0.06, 0.16, 0], r: 0.05, len: 0.16, end: 0.055 },
   });
 
   // Bit — the muscle (~2.1m), broad torso, huge arms, a big round head with small friendly eyes

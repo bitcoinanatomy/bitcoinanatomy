@@ -24,6 +24,8 @@ export interface GlbPart {
   geometry: BufferGeometry;
   material: GlbMaterial;
   translation?: [number, number, number];
+  /** Parent part name. Omitted parts hang off the root. */
+  parent?: string;
 }
 
 export function writeGlb(rootName: string, parts: GlbPart[]): Uint8Array {
@@ -119,6 +121,21 @@ export function writeGlb(rootName: string, parts: GlbPart[]): Uint8Array {
     meshes.push({ name: part.name, primitives: [prim] });
     nodes.push({ name: part.name, mesh: meshes.length - 1, ...(part.translation ? { translation: part.translation } : {}) });
     (nodes[0] as { children: number[] }).children.push(nodes.length - 1);
+  }
+  const byName = new Map<string, number>();
+  nodes.forEach((n, i) => {
+    if (i) byName.set((n as { name: string }).name, i);
+  });
+  for (const part of parts) {
+    if (!part.parent) continue;
+    const child = byName.get(part.name);
+    const parent = byName.get(part.parent);
+    if (child == null || parent == null) continue;
+    const rootKids = (nodes[0] as { children: number[] }).children;
+    const at = rootKids.indexOf(child);
+    if (at >= 0) rootKids.splice(at, 1);
+    const p = nodes[parent] as { children?: number[] };
+    (p.children ??= []).push(child);
   }
   pad4();
 
