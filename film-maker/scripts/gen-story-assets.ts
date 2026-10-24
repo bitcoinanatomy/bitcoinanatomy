@@ -183,15 +183,16 @@ export function genCharacters() {
 
   // Sati — the hero (~0.9m), steady eyes, determined brows
   character('sati', {
-    headR: 0.32, headY: 0.58, eye: 0.15, eyeSpread: 0.34, brows: 'determined', smile: 0.18,
+    headR: 0.32, headY: 0.5, eye: 0.15, eyeSpread: 0.34, brows: 'determined', smile: 0.18,
     body: [capsule(0.12, 0.14, 0, 0.27)],
     arms: { at: [0.15, 0.16, 0], r: 0.04, len: 0.12, splay: 0.22, end: 0.048 }, legs: { at: [0.06, 0.16, 0], r: 0.05, len: 0.16, end: 0.055 },
   });
 
-  // Bit — the muscle (~2.1m), broad torso, huge arms, a big round head with small friendly eyes
+  // Bit — the muscle, broad torso, huge arms, a big round head with small friendly eyes.
+  // Head is 1.5× the previous radius; the bottom of the head stays put so it still sits on the neck.
   const torso = new THREE.SphereGeometry(0.42, 40, 28).scale(1.15, 1.05, 0.9).translate(0, 0.66, 0);
   character('bit', {
-    headR: 0.6, headY: 1.5, eye: 0.12, eyeSpread: 0.3, smile: 0.3, brows: 'soft',
+    headR: 0.9, headY: 1.8, eye: 0.12, eyeSpread: 0.3, smile: 0.3, brows: 'soft',
     body: [torso, sphere(0.2, -0.5, 0.86), sphere(0.2, 0.5, 0.86)],
     arms: { at: [0.56, 0.86, 0], r: 0.17, len: 0.66, splay: 0.16, end: 0.17 }, legs: { at: [0.2, 0.34, 0], r: 0.14, len: 0.34, end: 0.15 },
   });

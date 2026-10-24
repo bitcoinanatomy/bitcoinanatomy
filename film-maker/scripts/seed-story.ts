@@ -89,7 +89,7 @@ const characters: Record<string, Character> = Object.fromEntries(
       refs: ['media/refs/mili_card.png', 'media/refs/mili_turnaround.png', 'media/refs/mili_expressions.png'], tags: ['sidekick', 'trio'],
     },
     {
-      id: 'bit', name: 'Bit', role: 'The muscle', color: '#7fa883', mesh: 'media/meshes/bit.glb',
+      id: 'bit', name: 'Bit', role: 'The muscle', color: '#7fa883', mesh: 'media/meshes/bit.glb', scale: 1.5,
       description: 'The largest. Strong, loyal, supportive. A hundred million Satis make one Bit.',
       voice: 'en_US-joe-medium', voiceTune: { pitch: -3, speed: 0.9 },
       refs: ['media/refs/bit_card.png', 'media/refs/bit_turnaround.png', 'media/refs/bit_expressions.png'], tags: ['sidekick', 'trio'],
@@ -133,8 +133,8 @@ type Who = 'sati' | 'mili' | 'bit';
 type Blocking = Partial<Record<Who, [Vec3, number?]>>;
 const TRIO: Blocking = { mili: [[-1.1, 0, 0.35], 15], sati: [[0, 0, 0]], bit: [[1.6, 0, -0.25], -12] };
 // head-centre heights and head radii (after character scale), for framing
-const HEAD = { mili: 0.264, sati: 0.58, bit: 1.5 };
-const HEAD_R = { mili: 0.176, sati: 0.32, bit: 0.6 };
+const HEAD = { mili: 0.264, sati: 0.5, bit: 2.7 };
+const HEAD_R = { mili: 0.176, sati: 0.32, bit: 1.35 };
 const at = (b: Blocking, who: keyof typeof HEAD): Vec3 => {
   const pos = b[who]?.[0] ?? [0, 0, 0];
   return [pos[0], HEAD[who], pos[2]];
@@ -769,7 +769,7 @@ export const STYLE_BOARD: Treatment[] = [
     principles: ['One shape per character', 'Strong silhouette', 'Almost no texture', 'Works at any size'],
     palette: ['#2489F5', '#65B5FF', '#D7EAFF', '#0B1936', '#FFFDF5', '#FFD12F', '#FF9564', '#F4F9FF'],
     characters: { mili: 'Smallest. Lightning bolts when she moves. Squash and stretch.', sati: 'Medium sphere, confident brows, the story focus.', bit: 'Largest sphere, slow and heavy.' },
-    camera: 'Orthographic. Side-on, three-quarter, or a light isometric. Same blocking as the Pixar camera.', light: 'Flat bands only. Soft disc shadows. No HDRI.', line: 'Silhouette first. Outlines only where a shape needs them.', materials: 'Unlit or 3-tone toon. White characters, four to six colors per scene.', notes: 'Preview toggle: Flat. The world sheet is the board.', board: 'media/boards/treatment-iconic.jpg' }),
+    camera: 'Same lenses and blocking as the Pixar camera.', light: 'Flat fills. Soft disc shadows. No HDRI.', line: 'Silhouette first. Outlines only where a shape needs them.', materials: 'Unlit white characters, four to six colors per scene.', notes: 'Preview toggle: Flat. The world sheet is the board.', board: 'media/boards/treatment-iconic.jpg' }),
   ref({ id: 'tx_stopmotion', name: 'Stop-motion', order: 7, reference: true, chosen: false, status: 'review', medium: 'stopmotion',
     adjectives: ['tangible', 'textured', 'crafted', 'charming'],
     principles: ['Practical materials', 'Visible craft', 'Tactile light', 'Charming imperfection'],
