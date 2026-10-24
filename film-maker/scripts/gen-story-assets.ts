@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { encodeWav } from '../src/audio/wav';
 import { mulberry32 } from '../src/score/compose';
 import { encodePng, writeGlb, type GlbMaterial, type GlbPart } from './lib/glb';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { merge, placed, write } from './gen-assets';
 
 // ---------------------------------------------------------------- materials
@@ -280,7 +281,7 @@ export function genSets() {
   ]);
   glb('mempool_bubble', [
     { name: 'bubble', geometry: sphere(0.5, 0, 0, 0, 32, 20), material: { ...GLASS, name: 'bubble', opacity: 0.18 } },
-    { name: 'tx', geometry: sphere(0.08), material: { name: 'bubble_tx', color: [1, 0.85, 0.55], emissive: [1, 0.72, 0.35], emissiveStrength: 3 } },
+    { name: 'tx', geometry: placed(new RoundedBoxGeometry(0.15, 0.15, 0.15, 2, 0.025), 0, 0, 0, 0.35, 0.6), material: { name: 'bubble_tx', color: [1, 0.93, 0.78], emissive: [1, 0.88, 0.66], emissiveStrength: 3 } },
   ]);
 }
 

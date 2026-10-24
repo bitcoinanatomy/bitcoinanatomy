@@ -14,7 +14,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { mediaUrl } from '../lib/api';
-import { contactShadow, illustratedKey, isDarkHex, lightningTrail, plantShadow, stylizeFlat, type Look } from './look';
+import { applyFlatPalette, contactShadow, FLAT_DARK, FLAT_LIGHT, flatUniforms, GLOW_SLOTS, illustratedKey, isDarkHex, lightningTrail, paintedSky, plantShadow, stylizeFlat, type FlatPalette, type GlowSource, type Look } from './look';
 import type { Blocking, CameraKey, Environment, Expression, ExpressionKey, Pose, PoseKey, ProjectData, Shot, Vec3 } from '../model/schema';
 import { EXPRESSIONS } from '../model/schema';
 import { blockingFor, bodyPoseAt, expressionAt, poseAt } from '../model/timeline';
@@ -46,19 +46,26 @@ export interface SceneContent {
 }
 
 /** Shadows: everything opaque casts (characters, sets), floors and big skies only receive. Flat restyles after. */
-function shade(obj: THREE.Object3D | null, kind: string, illustrated = false) {
+function shade(obj: THREE.Object3D | null, kind: string, illustrated = false, palette?: FlatPalette) {
   if (!obj) return obj;
-  if (illustrated) stylizeFlat(obj, kind === 'character' ? 'character' : 'set');
+  if (illustrated) stylizeFlat(obj, kind === 'character' ? 'character' : 'set', palette);
   const noCast = /floor|cloud|motes|embers|light_shaft|floor_ring/.test(kind);
   obj.traverse((n) => {
     const m = n as THREE.Mesh;
     if (!m.isMesh) return;
     const mat = m.material as THREE.MeshStandardMaterial;
     if (!illustrated && mat.emissiveIntensity > 2.5) mat.emissiveIntensity = 2.5;
-    m.castShadow = !noCast && !mat.transparent;
+    m.castShadow = !illustrated && !noCast && !mat.transparent;
     m.receiveShadow = !mat.transparent;
   });
   return obj;
+}
+
+/** Dark worlds are lit by their glows, light worlds by the sky; `env.flat` overrides either. */
+function flatPalette(env?: Environment): FlatPalette {
+  const base = isDarkHex(env?.background) ? FLAT_DARK : FLAT_LIGHT;
+  const o = env?.flat;
+  return o ? { ...base, ...Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) } : base;
 }
 
 /** Face-rig targets per expression: eye scale, mouth-arc scale (negative y = frown), open-mouth / tongue / teeth visibility, brow lift (m) and inner-brow tilt (rad, + = worried). */
@@ -353,11 +360,16 @@ function loadHdr(url: string) {
 
 /** Vignette, film grain and a whisper of chromatic fringing, applied after tone mapping. */
 const FinishShader = {
-  uniforms: { tDiffuse: { value: null }, vignette: { value: 0.35 }, grain: { value: 0.04 }, time: { value: 0 } },
+  uniforms: { tDiffuse: { value: null }, vignette: { value: 0.35 }, grain: { value: 0.04 }, time: { value: 0 }, paper: { value: 0 }, toe: { value: new THREE.Vector4(0, 0, 0, 0) } },
   vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float vignette; uniform float grain; uniform float time; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float vignette; uniform float grain; uniform float time; uniform float paper; uniform vec4 toe; varying vec2 vUv;
     float rand(vec2 c) { return fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453); }
+    float vnoise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(rand(i), rand(i + vec2(1, 0)), f.x), mix(rand(i + vec2(0, 1)), rand(i + vec2(1, 1)), f.x), f.y);
+    }
     void main() {
       vec2 d = vUv - 0.5;
       float r2 = dot(d, d);
@@ -365,6 +377,10 @@ const FinishShader = {
       vec3 c = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
       c *= mix(1.0, smoothstep(0.85, 0.15, r2 * 1.6), vignette);
       c += (rand(vUv * 913.0 + fract(time * 7.0)) - 0.5) * grain;
+      // painted look: blacks lift into a milky blue toe, fixed paper tooth (same every frame)
+      c = c + toe.rgb * toe.a * (1.0 - c);
+      vec2 px = gl_FragCoord.xy;
+      c *= 1.0 + (vnoise(px / 2.5) * 0.55 + vnoise(px / 9.0) * 0.3 + vnoise(px / 40.0) * 0.15 - 0.5) * paper;
       gl_FragColor = vec4(c, 1.0);
     }`,
 };
@@ -374,6 +390,10 @@ export class SceneView {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 500);
   private look: Look = 'cinematic';
+  private palette: FlatPalette = FLAT_DARK;
+  private sky = paintedSky();
+  /** painted-look meshes that light the world (bubbles, beacons, shafts) */
+  private glows: { mesh: THREE.Mesh; source: GlowSource; r: number }[] = [];
   private lookTarget = new THREE.Vector3(0, 1, 0);
   readonly controls: OrbitControls;
   private composer: EffectComposer;
@@ -415,6 +435,8 @@ export class SceneView {
     this.scene.environment = this.studio;
     this.scene.environmentIntensity = 0.5;
     this.scene.add(this.root);
+    this.sky.visible = false;
+    this.scene.add(this.sky);
     this.composer = new EffectComposer(this.renderer);
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
@@ -439,7 +461,32 @@ export class SceneView {
     this.animateActors(now);
     for (const a of this.animated) ANIMATED[a.kind]?.(a, now);
     this.finish.uniforms.time.value = now;
+    if (this.look === 'flat') this.paintFrame();
     this.composer.render();
+  }
+
+  /** Several views share the painted uniforms, so each one loads its palette and nearest glows right before drawing. */
+  private paintFrame() {
+    applyFlatPalette(this.palette);
+    this.sky.position.copy(this.camera.position);
+    (this.sky.material as THREE.ShaderMaterial).uniforms.uStars!.value = this.palette.stars;
+    const cam = this.camera.position;
+    const v = new THREE.Vector3();
+    const ranked = this.glows.map((g) => {
+      g.mesh.updateWorldMatrix(true, false);
+      const sphere = g.mesh.geometry.boundingSphere!;
+      const p = v.copy(sphere.center).applyMatrix4(g.mesh.matrixWorld).clone();
+      const r = sphere.radius * g.mesh.matrixWorld.getMaxScaleOnAxis();
+      return { g, p, r, score: (g.source.strength * Math.min(r, 3)) / (1 + p.distanceTo(cam) * 0.15) };
+    }).sort((a, b) => b.score - a.score);
+    const n = Math.min(GLOW_SLOTS, ranked.length);
+    for (let i = 0; i < n; i++) {
+      const { g, p, r } = ranked[i]!;
+      flatUniforms.uGlowPos.value[i]!.set(p.x, p.y, p.z, Math.min(r, 3));
+      const c = g.source.color;
+      flatUniforms.uGlowCol.value[i]!.set(c.r, c.g, c.b, g.source.strength * this.palette.glow);
+    }
+    flatUniforms.uGlowCount.value = n;
   }
 
   resize() {
@@ -460,7 +507,10 @@ export class SceneView {
     this.look = look;
     this.contentKey = '';
     this.renderer.toneMapping = look === 'flat' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.enabled = look !== 'flat';
+    this.sky.visible = look === 'flat';
+    this.finish.uniforms.paper.value = 0;
+    this.finish.uniforms.toe.value.set(0, 0, 0, 0);
   }
 
   /** Resolves once every mesh of the current content has loaded. */
@@ -475,6 +525,8 @@ export class SceneView {
     this.root.clear();
     this.actors = [];
     this.animated = [];
+    this.glows = [];
+    this.palette = flatPalette(env);
     this.previewCamera = env?.preview;
     loads.push(this.applyEnvironment(env));
     const place = (obj: THREE.Object3D | null, pos: Vec3, rotY = 0, scale = 1, kind?: string) => {
@@ -491,14 +543,14 @@ export class SceneView {
     for (const p of env?.props ?? []) {
       const a = data.assets[p.assetId];
       if (a) loads.push(this.addMesh(a.mesh, a.color, a.scale * p.scale, 'box').then((o) => {
-        shade(o, p.assetId, this.look === 'flat');
+        shade(o, p.assetId, this.look === 'flat', this.palette);
         place(o, p.position, p.rotationY, 1, p.assetId);
       }));
     }
     content.assets.forEach((id, i) => {
       const a = data.assets[id];
       if (a) loads.push(this.addMesh(a.mesh, a.color, a.scale, 'box').then((o) => {
-        shade(o, id, this.look === 'flat');
+        shade(o, id, this.look === 'flat', this.palette);
         place(o, [2 + i * 1.5, 0, 1], 0, 1, id);
       }));
     });
@@ -507,7 +559,7 @@ export class SceneView {
       if (!c) return;
       loads.push(this.addMesh(c.mesh, c.color, c.scale, 'capsule').then((o) => {
         if (!o) return;
-        shade(o, 'character', this.look === 'flat');
+        shade(o, 'character', this.look === 'flat', this.palette);
         let shadow: THREE.Object3D | undefined;
         if (this.look === 'flat') {
           const box = new THREE.Box3().setFromObject(o);
@@ -525,8 +577,21 @@ export class SceneView {
         this.actors.push({ id: b.id, obj: o, shadow, blocking: b, expressions: content.expressions?.[b.id], poses: content.poses?.[b.id], talk: content.talk?.[b.id] ?? [], face: rigFace(o, i * 1.7), body: rigBody(o) });
       }));
     });
-    this.ready = Promise.all(loads).then(() => undefined);
+    this.ready = Promise.all(loads).then(() => {
+      if (this.look === 'flat') this.collectGlows();
+    });
     return this.ready;
+  }
+
+  private collectGlows() {
+    this.glows = [];
+    this.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      const source = mesh.isMesh ? ((mesh.material as THREE.Material).userData?.glow as GlowSource | undefined) : undefined;
+      if (!source) return;
+      mesh.geometry.computeBoundingSphere();
+      this.glows.push({ mesh, source, r: mesh.geometry.boundingSphere!.radius });
+    });
   }
 
   /** Point the camera at everything in the scene (meshes only, lights ignored). */
@@ -642,35 +707,25 @@ export class SceneView {
     this.root.add(rim);
   }
 
-  /** Solid sky, hemisphere light, no HDRI, no bloom or grain. */
+  /** Painted sky + haze, glows light the world, wide soft bloom, milky toe and paper tooth. Three's lights are unused. */
   private async applyFlatEnvironment(env: Environment | undefined, contentKey: string) {
     const dark = isDarkHex(env?.background);
-    const sky = dark ? '#0B1936' : '#F4F9FF';
-    const fog = dark ? '#0B1936' : '#D7EAFF';
-    this.bloom.strength = 0.08;
-    this.bloom.threshold = 0.97;
-    this.finish.uniforms.vignette.value = 0.16;
+    this.bloom.strength = dark ? 0.5 : 0.22;
+    this.bloom.radius = 0.7;
+    this.bloom.threshold = 1;
+    this.finish.uniforms.vignette.value = dark ? 0.32 : 0.18;
     this.finish.uniforms.grain.value = 0;
+    this.finish.uniforms.paper.value = 0.035;
+    this.finish.uniforms.toe.value.set(...(dark ? [0.1, 0.13, 0.26] : [0.55, 0.6, 0.75]) as [number, number, number], dark ? 0.16 : 0.08);
     this.renderer.toneMapping = THREE.NeutralToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.toneMappingExposure = 1;
     this.scene.environment = null;
-    this.scene.background = new THREE.Color(sky);
-    this.scene.fog = new THREE.Fog(fog, dark ? 18 : 28, dark ? 70 : 90);
+    this.scene.background = new THREE.Color(this.palette.horizon);
+    this.scene.fog = null;
     if (contentKey !== this.contentKey || this.disposed) return;
-    illustratedKey.value.set(4, 8, 6).normalize();
-    this.root.add(new THREE.HemisphereLight(dark ? '#1d4e86' : '#F4F9FF', dark ? '#0B1936' : '#65B5FF', 0.32));
-    const key = new THREE.DirectionalLight('#fff8ee', 0.9);
-    key.position.set(4, 8, 6);
-    key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
-    key.shadow.radius = 6;
-    key.shadow.bias = -0.0004;
-    this.root.add(key);
-    const rim = new THREE.DirectionalLight('#9fd0ff', 0.55);
-    rim.position.set(-4, 2.5, -5);
-    this.root.add(rim);
+    illustratedKey.value.set(...(env?.lighting.keyPosition ?? [4, 8, 6])).normalize();
   }
+
   private async addMesh(mesh: string | undefined, color: string, scale: number, fallback: 'box' | 'capsule') {
     const contentKey = this.contentKey;
     let obj: THREE.Object3D | null = null;
@@ -780,6 +835,10 @@ export function glbThumbnail(mesh: string | undefined, color: string, size: [num
         const cam = new THREE.PerspectiveCamera(35, size[0] / size[1], 0.01, 1000);
         cam.position.copy(c).add(new THREE.Vector3(0.9, 0.6, 1.4).normalize().multiplyScalar(r * 3));
         cam.lookAt(c);
+        if (look === 'flat') {
+          applyFlatPalette(FLAT_DARK, false);
+          flatUniforms.uGlowCount.value = 0;
+        }
         thumbRenderer.render(scene, cam);
         return thumbRenderer.domElement.toDataURL('image/png');
       })(),
@@ -849,6 +908,10 @@ function renderCards() {
     poseFace(c.rig, expression ?? EXPRESSIONS[Math.floor((now + c.phase) / 2.2) % EXPRESSIONS.length], now);
     c.camera.aspect = w / h;
     c.camera.updateProjectionMatrix();
+    if (c.look === 'flat') {
+      applyFlatPalette(FLAT_DARK, false);
+      flatUniforms.uGlowCount.value = 0;
+    }
     r.toneMapping = c.look === 'flat' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = c.look === 'flat' ? 1.05 : 1.1;
     r.setSize(w, h, false);

@@ -267,6 +267,21 @@ export const Environment = z.object({
   post: z
     .object({ bloom: z.number().min(0).max(3).default(0.6), vignette: z.number().min(0).max(1).default(0.35), grain: z.number().min(0).max(1).default(0.04), exposure: z.number().positive().default(1) })
     .default({ bloom: 0.6, vignette: 0.35, grain: 0.04, exposure: 1 }),
+  /** Flat (painted) look overrides; unset fields use the dark or light default picked from `background` */
+  flat: z
+    .object({
+      skyTop: z.string().optional(),
+      horizon: z.string().optional(),
+      shade: z.string().optional(),
+      set: z.string().optional(),
+      floor: z.string().optional(),
+      glass: z.string().optional(),
+      glassRim: z.string().optional(),
+      haze: z.number().min(0).max(1).optional(),
+      stars: z.number().min(0).max(1).optional(),
+      glow: z.number().min(0).max(4).optional(),
+    })
+    .optional(),
   /** establishing camera for thumbnails and shots without a camera */
   preview: z.object({ position: Vec3, target: Vec3, fov: z.number().default(45) }).optional(),
   props: z.array(Placement).default([]),
