@@ -80,12 +80,12 @@ export interface FlatPalette {
 }
 
 export const FLAT_DARK: FlatPalette = {
-  skyTop: '#070C1E', horizon: '#2A4C8C', light: '#C9D8F4', shade: '#3A3F86', ink: FLAT.navy, set: '#1A2A55', floor: '#16244A',
-  glass: '#1E4FA8', glassRim: '#9FD4FF', haze: 0.5, hazeNear: 14, hazeFar: 75, stars: 0.6, glow: 1,
+  skyTop: '#050A1C', horizon: '#173470', light: '#E6EEFF', shade: '#262C6E', ink: '#070C20', set: '#24489A', floor: '#183B82',
+  glass: '#4A92F0', glassRim: '#E2F3FF', haze: 0.35, hazeNear: 22, hazeFar: 110, stars: 0.7, glow: 1,
 };
 export const FLAT_LIGHT: FlatPalette = {
-  skyTop: '#A9CBEE', horizon: '#EEF4FB', light: '#FFF9F0', shade: '#9AA6D8', ink: '#5A6A9E', set: '#C9D8EE', floor: '#DCE6F3',
-  glass: '#5D9BE6', glassRim: '#E4F2FF', haze: 0.45, hazeNear: 14, hazeFar: 90, stars: 0, glow: 0.6,
+  skyTop: '#7FB2EC', horizon: '#E4EFFB', light: '#FFF9F0', shade: '#7F8CCB', ink: '#3E4D86', set: '#D3E0F2', floor: '#DCE6F3',
+  glass: '#4D93EC', glassRim: '#F2F9FF', haze: 0.3, hazeNear: 25, hazeFar: 130, stars: 0, glow: 0.6,
 };
 
 const col = (hex: string) => new THREE.Color(hex);
@@ -146,52 +146,57 @@ const FLAT_COMMON = `
     float dist = length(vFlatWorld - cameraPosition);
     float far = smoothstep(uHaze.y, uHaze.z, dist);
     // low-lying haze: the ground melts into the horizon before the sky does
-    float low = exp(-max(vFlatWorld.y, 0.0) / 3.0) * smoothstep(uHaze.y * 0.5, uHaze.z, dist) * 0.25;
+    float low = exp(-max(vFlatWorld.y, 0.0) / 3.0) * smoothstep(uHaze.y * 0.5, uHaze.z, dist) * 0.12;
     // a deeper horizon, so silhouettes stay darker than the sky behind them
     return mix(c, uHorizon * 0.62, clamp((far + low) * uHaze.x * amount, 0.0, 1.0));
   }
+`;
+
+// cel step with a slightly soft, painted edge
+const CEL = `
+  float cel(float x, float edge) { return smoothstep(edge - 0.035, edge + 0.035, x); }
 `;
 
 const FLAT_FRAGMENT = `
   vec3 n = normalize(normal);
   vec3 vd = normalize(vViewPosition);
   vec3 wn = normalize((vec4(n, 0.0) * viewMatrix).xyz);
-  float fres = pow(1.0 - clamp(abs(dot(n, vd)), 0.0, 1.0), 2.2);
+  float facing = clamp(abs(dot(n, vd)), 0.0, 1.0);
   float key = dot(wn, uKeyDir) * 0.5 + 0.5;
   vec3 albedo = diffuseColor.rgb;
   vec3 c;
   #ifdef ILLUSTRATED_CHARACTER
-    // white clay: warm top, blue-lavender underside, glow bounce and a glow rim
-    float lit = smoothstep(0.2, 0.85, key);
-    c = mix(vec3(0.74, 0.77, 0.94), vec3(1.0, 0.975, 0.94), lit) * albedo;
+    // white clay: two tones with a crisp lavender terminator, a glow rim on the edge
+    float lit = cel(key, 0.42);
+    c = mix(vec3(0.72, 0.76, 0.94), vec3(0.93, 0.925, 0.91), lit) * albedo;
     vec3 bounce = flatGlow(vFlatWorld, wn, 0.8);
-    c += bounce * 0.12 * (1.0 - lit * 0.6);
-    c += fres * min(bounce, vec3(1.0)) * 0.3;
-    // stays under the bloom threshold: characters read white, only glows flare
-    c = min(c * 0.9, vec3(0.9));
-    c = flatHaze(c, 0.5);
-  #elif defined(ILLUSTRATED_FLOOR)
-    // pools of light under the glows, otherwise the floor colour
-    vec3 pool = flatGlow(vFlatWorld, wn, 0.0);
-    c = albedo * mix(uShade, uLight, 0.42) + albedo * pool * 1.6 + pool * 0.1;
-    c = max(c, uInk);
-    c = flatHaze(c, 1.0);
+    float rim = cel(1.0 - facing, 0.72) * min(1.0, dot(bounce, vec3(0.4)));
+    c = mix(c, vec3(0.92, 0.96, 1.0), rim * 0.8);
+    c = min(c, vec3(0.93));
+    c = flatHaze(c, 0.4);
   #elif defined(ILLUSTRATED_GLASS)
-    // self-lit bubble: luminous rim, deeper middle, painted crescent highlights
-    c = mix(uGlass * 1.15, uGlassRim * 1.5, pow(fres, 1.1));
-    vec2 dir = normalize(vec2(-0.55, 0.8));
+    // bubble: solid blue fill lighter at the top, bright rim line, crisp highlight strokes
+    float top = n.y * 0.5 + 0.5;
+    c = mix(uGlass * 0.7, min(uGlass * 1.12, vec3(0.95)), smoothstep(0.2, 0.9, top));
+    float edge = 1.0 - facing;
+    c = mix(c, min(uGlass * 1.2 + 0.04, vec3(0.98)), cel(edge, 0.66) * 0.55);
+    c = mix(c, uGlassRim * 1.25, cel(edge, 0.9));
+    vec2 dir = normalize(vec2(-0.6, 0.8));
     float side = dot(normalize(n.xy + 1e-4), dir);
-    float band = smoothstep(0.3, 0.55, fres) * (1.0 - smoothstep(0.65, 0.9, fres)) * smoothstep(0.6, 0.95, side);
-    float spot = smoothstep(0.86, 0.95, dot(n, normalize(vec3(-0.38, 0.5, 0.78))));
-    c += (band * 0.55 + spot * 0.45) * vec3(0.92, 0.97, 1.0);
-    diffuseColor.a = mix(0.58, 0.97, fres);
-    c = flatHaze(c, 0.6);
+    float stroke = cel(edge, 0.5) * (1.0 - cel(edge, 0.7)) * cel(side, 0.8);
+    float dash = cel(dot(n, normalize(vec3(0.42, -0.35, 0.84))), 0.975);
+    c = mix(c, uGlassRim * 0.95, max(stroke, dash * 0.8) * 0.8);
+    diffuseColor.a = mix(0.82, 1.0, cel(edge, 0.62));
+    c = flatHaze(c, 0.5);
   #else
-    // form within the navy range, edge light only where a face looks at a glow
-    float lit = smoothstep(0.15, 0.95, key);
-    c = albedo * mix(uShade, uLight, lit);
-    vec3 g = flatGlow(vFlatWorld, wn, 0.15);
-    c += albedo * g * 1.2 + g * 0.02;
+    // sets and floors: three cel tones (lit tops, mid faces, navy sides) and stepped pools of glow light
+    float t = 0.5 * cel(key, 0.52) + 0.5 * cel(key, 0.84);
+    c = albedo * mix(uShade, uLight, t);
+    vec3 g = flatGlow(vFlatWorld, wn, 0.1);
+    float gl = dot(g, vec3(0.333));
+    vec3 hue = g / max(gl, 1e-3) * 0.333;
+    float pool = 0.5 * cel(gl, 0.25) + 0.5 * cel(gl, 0.7);
+    c += (albedo * 1.6 + 0.04) * hue * pool;
     c = max(c, uInk);
     c = flatHaze(c, 1.0);
   #endif
@@ -202,6 +207,8 @@ const FLAT_FRAGMENT = `
 const GLOW_FRAGMENT = `
   #ifdef GLOW_ADDITIVE
     outgoingLight *= 1.0 - length(flatHaze(vec3(0.0), 0.8)) / max(length(uHorizon * 0.62), 1e-3);
+    // light shafts: bright at the base, gone by the top
+    outgoingLight *= exp(-max(vFlatWorld.y, 0.0) / 6.0);
   #else
     outgoingLight = flatHaze(outgoingLight, 0.55);
   #endif
@@ -214,7 +221,7 @@ function paintShader(mat: THREE.Material, fragment: string) {
       .replace('#include <common>', '#include <common>\nvarying vec3 vFlatWorld;')
       .replace('#include <project_vertex>', FLAT_VERTEX);
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\n${FLAT_COMMON}`)
+      .replace('#include <common>', `#include <common>\n${FLAT_COMMON}\n${CEL}`)
       .replace('#include <opaque_fragment>', `${fragment}\n#include <opaque_fragment>`);
   };
 }
@@ -235,7 +242,8 @@ function glowMaterial(color: THREE.Color, side: THREE.Side, opacity = 1) {
   const additive = opacity < 0.95;
   const mat = new THREE.MeshBasicMaterial({
     color, side, toneMapped: true, fog: false,
-    transparent: additive, opacity: additive ? opacity * 0.6 : 1,
+    // opaque cores are still 'transparent' so they sort after (and draw over) the bubble around them
+    transparent: true, opacity: additive ? opacity * 0.6 : 1,
     blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: !additive,
   });
   mat.userData.illustrated = true;
@@ -264,6 +272,7 @@ export function stylizeFlat(obj: THREE.Object3D, role: 'character' | 'set', pale
     const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     const next = list.map((src) => illustratedMaterial(src as THREE.MeshStandardMaterial, mesh.name, role, palette));
     mesh.material = Array.isArray(mesh.material) ? next : next[0]!;
+    if (next.some((m) => m.userData.glow && (m as THREE.Material).blending === THREE.NormalBlending)) mesh.renderOrder = 2;
   });
 }
 
@@ -286,7 +295,8 @@ function illustratedMaterial(src: THREE.MeshStandardMaterial, name: string, role
   const translucent = !!src?.transparent && (src.opacity ?? 1) < 0.92;
   if (role !== 'character' && emissive && (src.emissiveIntensity > 1.5 || (translucent && src.emissiveIntensity > 0.5))) {
     // cores glow above white so they bloom; translucent shafts add
-    const c = src.emissive.clone().multiplyScalar(translucent ? 1 : 2.2);
+    // transaction cubes read as flat cream paint; beacons, rings and strips glow past white so they bloom
+    const c = translucent ? src.emissive.clone() : name === 'tx' ? src.emissive.clone().lerp(new THREE.Color('#ffffff'), 0.4).multiplyScalar(1.05) : src.emissive.clone().multiplyScalar(1.6);
     const glow = glowMaterial(c, side, translucent ? src.opacity : 1);
     glow.userData.glow = { color: src.emissive.clone(), strength: translucent ? 0.1 : Math.min(1.5, src.emissiveIntensity * 0.3) } satisfies GlowSource;
     return glow;

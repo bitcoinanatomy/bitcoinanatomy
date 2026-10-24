@@ -281,7 +281,7 @@ export function genSets() {
   ]);
   glb('mempool_bubble', [
     { name: 'bubble', geometry: sphere(0.5, 0, 0, 0, 32, 20), material: { ...GLASS, name: 'bubble', opacity: 0.18 } },
-    { name: 'tx', geometry: placed(new RoundedBoxGeometry(0.15, 0.15, 0.15, 2, 0.025), 0, 0, 0, 0.35, 0.6), material: { name: 'bubble_tx', color: [1, 0.93, 0.78], emissive: [1, 0.88, 0.66], emissiveStrength: 3 } },
+    { name: 'tx', geometry: placed(new RoundedBoxGeometry(0.28, 0.28, 0.28, 2, 0.03), 0, 0, 0, 0.35, 0.6), material: { name: 'bubble_tx', color: [1, 0.93, 0.78], emissive: [1, 0.88, 0.66], emissiveStrength: 3 } },
   ]);
 }
 

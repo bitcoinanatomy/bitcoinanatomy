@@ -710,13 +710,13 @@ export class SceneView {
   /** Painted sky + haze, glows light the world, wide soft bloom, milky toe and paper tooth. Three's lights are unused. */
   private async applyFlatEnvironment(env: Environment | undefined, contentKey: string) {
     const dark = isDarkHex(env?.background);
-    this.bloom.strength = dark ? 0.5 : 0.22;
-    this.bloom.radius = 0.7;
+    this.bloom.strength = dark ? 0.42 : 0.2;
+    this.bloom.radius = 0.3;
     this.bloom.threshold = 1;
-    this.finish.uniforms.vignette.value = dark ? 0.32 : 0.18;
+    this.finish.uniforms.vignette.value = dark ? 0.38 : 0.18;
     this.finish.uniforms.grain.value = 0;
-    this.finish.uniforms.paper.value = 0.035;
-    this.finish.uniforms.toe.value.set(...(dark ? [0.1, 0.13, 0.26] : [0.55, 0.6, 0.75]) as [number, number, number], dark ? 0.16 : 0.08);
+    this.finish.uniforms.paper.value = 0.015;
+    this.finish.uniforms.toe.value.set(...(dark ? [0.1, 0.13, 0.26] : [0.55, 0.6, 0.75]) as [number, number, number], dark ? 0.05 : 0.03);
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1;
     this.scene.environment = null;
