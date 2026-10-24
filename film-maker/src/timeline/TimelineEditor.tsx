@@ -19,6 +19,25 @@ import { LOOK_LABEL, LOOKS, useLook } from '../preview/look';
 import { cameraAt, Monitor, type MonitorMode, type ViewportHandle } from './Monitor';
 
 const ROW_H: Record<TrackKind, number> = { storyboard: 54, camera: 36, subtitles: 34, dialog: 50, sfx: 42, score: 52 };
+
+type IconName = 'start' | 'prev' | 'play' | 'pause' | 'next' | 'loop' | 'board' | 'split' | '3d' | 'cinematic' | 'shaded' | 'flat';
+
+function Icon({ name }: { name: IconName }) {
+  const stroke = { width: 12, height: 12, viewBox: '0 0 12 12', fill: 'none', stroke: 'currentColor', strokeWidth: 1.2, 'aria-hidden': true as const };
+  const fill = { width: 12, height: 12, viewBox: '0 0 12 12', fill: 'currentColor', 'aria-hidden': true as const };
+  if (name === 'start') return <svg {...fill}><path d="M1.6 1.4h1.3v9.2H1.6zM10.6 1.8 4.2 6l6.4 4.2z" /></svg>;
+  if (name === 'prev') return <svg {...fill}><path d="M6.4 1.8 1.2 6l5.2 4.2zM11 1.8 5.8 6 11 10.2z" /></svg>;
+  if (name === 'play') return <svg {...fill}><path d="M3 1.6v8.8L10.4 6z" /></svg>;
+  if (name === 'pause') return <svg {...fill}><path d="M2.4 1.6h2.2v8.8H2.4zM7.4 1.6h2.2v8.8H7.4z" /></svg>;
+  if (name === 'next') return <svg {...fill}><path d="M1 1.8 6.2 6 1 10.2zM5.6 1.8 10.8 6 5.6 10.2z" /></svg>;
+  if (name === 'loop') return <svg {...stroke}><path d="M9.4 3.4A3.8 3.8 0 1 0 10 7.2" /><path d="M9.4 1.3v2.3H7.1" /></svg>;
+  if (name === 'board') return <svg {...stroke}><rect x="1.2" y="2.2" width="9.6" height="7.6" rx="0.6" /></svg>;
+  if (name === 'split') return <svg {...stroke}><rect x="1.2" y="1.4" width="9.6" height="4" rx="0.5" /><rect x="1.2" y="6.6" width="9.6" height="4" rx="0.5" /></svg>;
+  if (name === '3d') return <svg {...stroke}><path d="M6 1.4 10.6 4 6 6.6 1.4 4zM1.4 4v4.2L6 10.6V6.6M10.6 4v4.2L6 10.6" /></svg>;
+  if (name === 'cinematic') return <svg {...stroke}><circle cx="6" cy="6" r="2.1" /><path d="M6 1.3v1.5M6 9.2v1.5M1.3 6h1.5M9.2 6h1.5M2.7 2.7l1.1 1.1M8.2 8.2l1.1 1.1M9.3 2.7 8.2 3.8M3.8 8.2 2.7 9.3" /></svg>;
+  if (name === 'shaded') return <svg {...stroke}><circle cx="6" cy="6" r="4.2" /><path d="M6 1.8a4.2 4.2 0 0 1 0 8.4z" fill="currentColor" stroke="none" /></svg>;
+  return <svg {...stroke}><rect x="1.6" y="1.6" width="8.8" height="8.8" /></svg>;
+}
 const HEAD_W = 168;
 const clipKey = (rc: { track: TrackKind; clip: AnyClip; derived?: boolean }) => `${rc.track}:${rc.clip.id}${rc.derived ? ':d' : ''}`;
 
@@ -348,41 +367,42 @@ export function TimelineEditor({ scope }: { scope: Scope }) {
   return (
     <div className="editor" style={{ ['--monitor-h' as string]: `${monitorH}%` }}>
       <div className="toolbar">
-        <button className="btn icon" title="Start (Home)" onClick={() => seek(0)}>⏮</button>
+        <button className="btn icon" title="Start (Home)" onClick={() => seek(0)}><Icon name="start" /></button>
         <button className="btn icon" title="Previous shot (↑)" onClick={() => {
           const t = usePlayback.getState().time;
           const prev = [...tl.shots].reverse().find((s) => s.start < t - 0.05);
           seek(prev?.start ?? 0);
-        }}>⏪</button>
-        <button className={`btn icon ${playing ? 'on' : ''}`} style={{ width: 40 }} title="Play/pause (space)" onClick={toggle}>{loading ? '…' : playing ? '❚❚' : '▶'}</button>
+        }}><Icon name="prev" /></button>
+        <button className={`btn icon ${playing ? 'on' : ''}`} title="Play/pause (space)" onClick={toggle}>{loading ? '…' : <Icon name={playing ? 'pause' : 'play'} />}</button>
         <button className="btn icon" title="Next shot (↓)" onClick={() => {
           const t = usePlayback.getState().time;
           seek(tl.shots.find((s) => s.start > t + 0.05)?.start ?? tl.duration);
-        }}>⏩</button>
-        <button className={`btn icon ${loop ? 'on' : ''}`} title="Loop" onClick={() => setLoop(!loop)}>⟳</button>
-        <span className="tc">{timecode(time, fps)}</span>
-        <span className="muted mono" style={{ fontSize: 11.5 }}>/ {timecode(tl.duration, fps)}</span>
+        }}><Icon name="next" /></button>
+        <button className={`btn icon ${loop ? 'on' : ''}`} title="Loop" onClick={() => setLoop(!loop)}><Icon name="loop" /></button>
+        <span className="tc" title="Playhead / duration">{timecode(time, fps)}<span className="muted"> / {timecode(tl.duration, fps)}</span></span>
         <span className="sep" />
-        <div className="seg">
+        <div className="seg" title="Monitor layout">
           {(['board', 'split', '3d'] as const).map((m) => (
-            <button key={m} className={mode === m ? 'on' : ''} onClick={() => setMode(m)}>{m === 'board' ? 'Board' : m === '3d' ? '3D' : 'Board + 3D'}</button>
+            <button key={m} className={mode === m ? 'on' : ''} onClick={() => setMode(m)}><Icon name={m} />{m === 'board' ? 'Board' : m === '3d' ? '3D' : 'Split'}</button>
           ))}
         </div>
-        <button className={`btn sm ${pilot ? 'on' : ''}`} disabled={mode === 'board'} onClick={() => setPilot(!pilot)} title="Free camera in the 3D view">✥ Pilot</button>
-        <div className="seg" title="Preview art direction">
+        <button className={`btn icon ${pilot ? 'on' : ''}`} disabled={mode === 'board'} onClick={() => setPilot(!pilot)} title="Pilot — free camera in the 3D view">✥</button>
+        <div className="seg" title="Preview treatment">
           {LOOKS.map((k) => (
-            <button key={k} className={look === k ? 'on' : ''} disabled={mode === 'board'} onClick={() => setLook(k)}>{LOOK_LABEL[k]}</button>
+            <button key={k} className={look === k ? 'on' : ''} disabled={mode === 'board'} onClick={() => setLook(k)}><Icon name={k} />{LOOK_LABEL[k]}</button>
           ))}
         </div>
-        <button className={`btn sm ${safe ? 'on' : ''}`} onClick={() => setSafe(!safe)}>Safe area</button>
+        <button className={`btn sm ${safe ? 'on' : ''}`} onClick={() => setSafe(!safe)} title="Safe area">Safe</button>
         <span className="sep" />
         <button className={`btn sm ${snap ? 'on' : ''}`} onClick={() => setSnap(!snap)}>Snap</button>
-        <button className="btn sm" onClick={() => setZoom(Math.max(2, pps / 1.4))}>−</button>
-        <button className="btn sm" onClick={() => setZoom(0)}>Fit</button>
-        <button className="btn sm" onClick={() => setZoom(pps * 1.4)}>+</button>
+        <div className="seg" title="Timeline zoom">
+          <button type="button" onClick={() => setZoom(Math.max(2, pps / 1.4))}>−</button>
+          <button type="button" onClick={() => setZoom(0)}>Fit</button>
+          <button type="button" onClick={() => setZoom(pps * 1.4)}>+</button>
+        </div>
         <span className="grow" />
         <button className="btn sm primary" disabled={!!gen} onClick={() => void runTts()} title="Generate/refresh TTS for every dialog line in view (cached)">
-          {gen ? `Generating ${gen}` : `♪ Dialog audio${missing ? ` (${missing} missing)` : ''}`}
+          {gen ? `Generating ${gen}` : `♪ Audio${missing ? ` (${missing})` : ''}`}
         </button>
       </div>
 

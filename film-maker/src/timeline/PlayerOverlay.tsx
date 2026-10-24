@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { transport, usePlayback } from '../audio/player';
 import { resolveTimeline, timecode, type Scope } from '../model/timeline';
+import { LOOK_LABEL, LOOKS, useLook } from '../preview/look';
 import { useData } from '../store/store';
 import { Monitor, type MonitorMode, type ViewportHandle } from './Monitor';
 
@@ -12,6 +13,7 @@ export function PlayerOverlay({ scope, from = 0, onClose }: { scope: Scope; from
   const playing = usePlayback((s) => s.playing);
   const loading = usePlayback((s) => s.loading);
   const [mode, setMode] = useState<MonitorMode>(() => (localStorage.getItem('fm.monitor') as MonitorMode) || 'split');
+  const [look, setLook] = useLook();
   const viewport = useRef<ViewportHandle | null>(null);
   const tlRef = useRef(tl);
   tlRef.current = tl;
@@ -51,17 +53,22 @@ export function PlayerOverlay({ scope, from = 0, onClose }: { scope: Scope; from
   return (
     <div className="player-overlay" onClick={onClose}>
       <div className="player" onClick={(e) => e.stopPropagation()}>
-        <Monitor data={data} tl={tl} time={time} mode={mode} pilot={false} safe={false} handle={viewport} />
+        <Monitor data={data} tl={tl} time={time} mode={mode} pilot={false} look={look} safe={false} handle={viewport} />
         <div className="player-bar">
           <button className="btn sm primary" onClick={toggle} title="Play / pause (space)">{loading ? '…' : playing ? '❚❚' : '▶'}</button>
           <span className="mono muted">{timecode(time, fps)}</span>
-          <input className="grow" type="range" min={0} max={tl.duration} step={1 / fps} value={Math.min(time, tl.duration)} onChange={(e) => seek(Number(e.target.value))} />
+          <input type="range" min={0} max={tl.duration} step={1 / fps} value={Math.min(time, tl.duration)} onChange={(e) => seek(Number(e.target.value))} />
           <span className="mono muted">{timecode(tl.duration, fps)}</span>
-          <select className="select" value={mode} onChange={(e) => setMode(e.target.value as MonitorMode)}>
+          <select className="select" value={mode} onChange={(e) => setMode(e.target.value as MonitorMode)} title="Monitor layout">
             <option value="split">Split</option>
             <option value="board">Board</option>
             <option value="3d">3D</option>
           </select>
+          <div className="seg" title="Preview treatment">
+            {LOOKS.map((k) => (
+              <button key={k} type="button" className={look === k ? 'on' : ''} disabled={mode === 'board'} onClick={() => setLook(k)}>{LOOK_LABEL[k]}</button>
+            ))}
+          </div>
           <button className="btn sm ghost" onClick={onClose} title="Close (Esc)">✕</button>
         </div>
       </div>

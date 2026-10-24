@@ -279,8 +279,15 @@ export function LibraryDetail({ kind }: { kind: Kind }) {
   const data = useData();
   const navigate = useNavigate();
   const tts = useStore((s) => s.tts);
+  const [openRef, setOpenRef] = useState<string | null>(null);
   const doc = data[kind][id] as Doc | undefined;
   const uses = useMemo(() => usages(data, kind, id), [data, kind, id]);
+  useEffect(() => {
+    if (!openRef) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenRef(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openRef]);
   if (!doc) return <div className="empty">Not found</div>;
   const up = (fn: (d: Doc) => void, c?: string) => updateLib(kind, id, fn as never, c);
 
@@ -369,10 +376,18 @@ export function LibraryDetail({ kind }: { kind: Kind }) {
               <h3>Reference images</h3>
               <div className="refs">
                 {doc.refs.map((r) => (
-                  <img key={r} src={mediaUrl(r)} alt="" title={r} onDoubleClick={() => up((d) => void (d.refs = d.refs.filter((x) => x !== r)))} />
+                  <div key={r} className="ref">
+                    <img src={mediaUrl(r)} alt="" title={r} onClick={() => setOpenRef(r)} />
+                    <button type="button" className="ref-x" title="Remove" onClick={() => up((d) => void (d.refs = d.refs.filter((x) => x !== r)))}>✕</button>
+                  </div>
                 ))}
               </div>
-              <Upload dir={`media/refs/${id}`} accept="image/*" onDone={(p) => up((d) => void d.refs.push(p))}>Drop reference images (double-click one to remove)</Upload>
+              <Upload dir={`media/refs/${id}`} accept="image/*" onDone={(p) => up((d) => void d.refs.push(p))}>Drop reference images (click to enlarge, ✕ to remove)</Upload>
+              {openRef && (
+                <div className="ref-modal" onClick={() => setOpenRef(null)}>
+                  <img src={mediaUrl(openRef)} alt="" onClick={(e) => e.stopPropagation()} />
+                </div>
+              )}
             </div>
             <Field label="Tags (comma separated)">
               <TextInput value={doc.tags.join(', ')} onChange={(v) => up((d) => void (d.tags = v.split(',').map((t) => t.trim()).filter(Boolean)), 'tags')} />

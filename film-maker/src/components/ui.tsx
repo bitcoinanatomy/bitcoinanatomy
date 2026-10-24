@@ -107,6 +107,18 @@ export function useView(def: ViewMode): [ViewMode, (v: ViewMode) => void] {
   return [v, (nv) => setSp((p) => (p.set('view', nv), p), { replace: true })];
 }
 
+function HistoryIcon({ dir }: { dir: 'undo' | 'redo' }) {
+  const flip = dir === 'redo';
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <g transform={flip ? 'translate(14 0) scale(-1 1)' : undefined}>
+        <path d="M4.2 4.2H8.6a3.2 3.2 0 1 1 0 6.4H6.2" />
+        <path d="M6.1 2.3 3.6 4.2 6.1 6.1" />
+      </g>
+    </svg>
+  );
+}
+
 function ViewIcon({ mode }: { mode: ViewMode }) {
   const common = { width: 11, height: 11, viewBox: '0 0 12 12', fill: 'none', stroke: 'currentColor', strokeWidth: 1.2, 'aria-hidden': true as const };
   if (mode === 'grid') {
@@ -172,9 +184,13 @@ export function Header({ crumbs, children }: { crumbs: { label: string; to?: str
       </div>
       <div className="spacer" />
       {children}
-      <div className="row" style={{ gap: 2 }}>
-        <button className="btn ghost icon" title="Undo (⌘Z)" disabled={!past} onClick={() => useStore.getState().undo()}>↶</button>
-        <button className="btn ghost icon" title="Redo (⇧⌘Z)" disabled={!future} onClick={() => useStore.getState().redo()}>↷</button>
+      <div className="history" role="group" aria-label="Edit history">
+        <button className="btn ghost icon" title="Undo (⌘Z)" aria-label="Undo" disabled={!past} onClick={() => useStore.getState().undo()}>
+          <HistoryIcon dir="undo" />
+        </button>
+        <button className="btn ghost icon" title="Redo (⇧⌘Z)" aria-label="Redo" disabled={!future} onClick={() => useStore.getState().redo()}>
+          <HistoryIcon dir="redo" />
+        </button>
       </div>
       <span className={`saving ${saving}`} title={error}>
         <span className="dot" />
