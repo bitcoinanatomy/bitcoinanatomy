@@ -1,20 +1,19 @@
 /**
  * Preview art direction. Cinematic keeps the Pixar-style PBR preview.
- * Shaded keeps that lighting and swaps the finish pass for a graded, textured image.
- * Flat uses the same illustrated materials, white characters, and a disc shadow.
+ * Flat uses illustrated materials, white characters, and a disc shadow.
  */
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 
-export type Look = 'cinematic' | 'shaded' | 'flat';
-export const LOOKS: Look[] = ['cinematic', 'shaded', 'flat'];
-export const LOOK_LABEL: Record<Look, string> = { cinematic: 'Pixar', shaded: 'Shaded', flat: 'Flat' };
+export type Look = 'cinematic' | 'flat';
+export const LOOKS: Look[] = ['cinematic', 'flat'];
+export const LOOK_LABEL: Record<Look, string> = { cinematic: 'Pixar', flat: 'Flat' };
 export const LOOK_KEY = 'fm.look';
 const LOOK_EVENT = 'fm-look';
 
 export function readLook(): Look {
   const stored = localStorage.getItem(LOOK_KEY);
-  return stored === 'flat' || stored === 'shaded' ? stored : 'cinematic';
+  return stored === 'flat' ? stored : 'cinematic';
 }
 
 /** Shared with the timeline monitor, the character lineup, and environment previews. */

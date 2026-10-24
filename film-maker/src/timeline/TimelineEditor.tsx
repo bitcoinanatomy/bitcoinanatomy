@@ -20,7 +20,7 @@ import { cameraAt, Monitor, type MonitorMode, type ViewportHandle } from './Moni
 
 const ROW_H: Record<TrackKind, number> = { storyboard: 54, camera: 36, subtitles: 34, dialog: 50, sfx: 42, score: 52 };
 
-type IconName = 'start' | 'prev' | 'play' | 'pause' | 'next' | 'loop' | 'board' | 'split' | '3d' | 'cinematic' | 'shaded' | 'flat';
+type IconName = 'start' | 'prev' | 'play' | 'pause' | 'next' | 'loop' | 'board' | 'split' | '3d' | 'cinematic' | 'flat';
 
 function Icon({ name }: { name: IconName }) {
   const stroke = { width: 12, height: 12, viewBox: '0 0 12 12', fill: 'none', stroke: 'currentColor', strokeWidth: 1.2, 'aria-hidden': true as const };
@@ -35,7 +35,6 @@ function Icon({ name }: { name: IconName }) {
   if (name === 'split') return <svg {...stroke}><rect x="1.2" y="1.4" width="9.6" height="4" rx="0.5" /><rect x="1.2" y="6.6" width="9.6" height="4" rx="0.5" /></svg>;
   if (name === '3d') return <svg {...stroke}><path d="M6 1.4 10.6 4 6 6.6 1.4 4zM1.4 4v4.2L6 10.6V6.6M10.6 4v4.2L6 10.6" /></svg>;
   if (name === 'cinematic') return <svg {...stroke}><circle cx="6" cy="6" r="2.1" /><path d="M6 1.3v1.5M6 9.2v1.5M1.3 6h1.5M9.2 6h1.5M2.7 2.7l1.1 1.1M8.2 8.2l1.1 1.1M9.3 2.7 8.2 3.8M3.8 8.2 2.7 9.3" /></svg>;
-  if (name === 'shaded') return <svg {...stroke}><circle cx="6" cy="6" r="4.2" /><path d="M6 1.8a4.2 4.2 0 0 1 0 8.4z" fill="currentColor" stroke="none" /></svg>;
   return <svg {...stroke}><rect x="1.6" y="1.6" width="8.8" height="8.8" /></svg>;
 }
 const HEAD_W = 168;

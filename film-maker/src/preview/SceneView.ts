@@ -498,7 +498,7 @@ export class SceneView {
     content.assets.forEach((id, i) => {
       const a = data.assets[id];
       if (a) loads.push(this.addMesh(a.mesh, a.color, a.scale, 'box').then((o) => {
-        shade(o, id);
+        shade(o, id, this.look === 'flat');
         place(o, [2 + i * 1.5, 0, 1], 0, 1, id);
       }));
     });
@@ -507,7 +507,7 @@ export class SceneView {
       if (!c) return;
       loads.push(this.addMesh(c.mesh, c.color, c.scale, 'capsule').then((o) => {
         if (!o) return;
-        shade(o, 'character');
+        shade(o, 'character', this.look === 'flat');
         let shadow: THREE.Object3D | undefined;
         if (this.look === 'flat') {
           const box = new THREE.Box3().setFromObject(o);
@@ -600,12 +600,13 @@ export class SceneView {
     if (this.look === 'flat') return this.applyFlatEnvironment(env, contentKey);
     const post = env?.post ?? { bloom: 0.6, vignette: 0.35, grain: 0.04, exposure: 1 };
     // UnrealBloom sums five mips, so env `bloom` 1 ≈ a gentle halo rather than full strength
-    this.bloom.strength = Math.min(0.28, post.bloom * 0.2);
-    this.bloom.threshold = 0.84;
-    this.finish.uniforms.vignette.value = Math.min(0.28, post.vignette);
-    this.finish.uniforms.grain.value = 0;
-    this.renderer.toneMappingExposure = 1.05 * post.exposure;
-    this.scene.fog = env?.fog ? new THREE.Fog(isDarkHex(env.fog.color) ? '#0c2348' : env.fog.color, env.fog.near, env.fog.far) : null;
+    this.bloom.strength = post.bloom * 0.12;
+    this.bloom.threshold = 1.2;
+    this.finish.uniforms.vignette.value = post.vignette;
+    this.finish.uniforms.grain.value = post.grain;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.1 * post.exposure;
+    this.scene.fog = env?.fog ? new THREE.Fog(env.fog.color, env.fog.near, env.fog.far) : null;
     const l = env?.lighting ?? { ambient: 0.3, key: 1.2, keyColor: '#ffffff', keyPosition: [4, 6, 3] as Vec3 };
     const hdr = env?.hdri ? await loadHdr(mediaUrl(env.hdri)!) : null;
     if (contentKey !== this.contentKey || this.disposed) return;
@@ -614,20 +615,19 @@ export class SceneView {
       if (!pm) this.envMaps.set(env.hdri!, (pm = this.pmrem.fromEquirectangular(hdr).texture));
       const rot = THREE.MathUtils.degToRad(env.hdriRotation);
       this.scene.environment = pm;
-      this.scene.environmentIntensity = Math.min(0.16, env.hdriIntensity * 0.2);
+      this.scene.environmentIntensity = env.hdriIntensity;
       this.scene.environmentRotation.set(0, rot, 0);
-      this.scene.background = new THREE.Color(env.background);
-      this.scene.backgroundIntensity = 1;
+      this.scene.background = env.hdriBackground ? hdr : new THREE.Color(env.background);
+      this.scene.backgroundIntensity = env.hdriIntensity;
       this.scene.backgroundRotation.set(0, rot, 0);
     } else {
       this.scene.environment = this.studio;
-      this.scene.environmentIntensity = 0.12;
+      this.scene.environmentIntensity = 0.5;
       this.scene.background = new THREE.Color(env?.background ?? '#05060a');
     }
     // with an HDRI the sky already fills the shadows, so ambient is only a lift
-    illustratedKey.value.set(...l.keyPosition).normalize();
-    this.root.add(new THREE.AmbientLight('#8eb6e4', l.ambient * (hdr ? 0.35 : 0.7)));
-    const key = new THREE.DirectionalLight('#fff6ea', l.key * 1.25);
+    this.root.add(new THREE.AmbientLight('#ffffff', l.ambient * (hdr ? 0.8 : 2)));
+    const key = new THREE.DirectionalLight(l.keyColor, l.key * 2);
     key.position.set(...l.keyPosition).normalize().multiplyScalar(30);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
@@ -637,8 +637,8 @@ export class SceneView {
     key.shadow.radius = 4;
     key.target.position.set(0, 0, -3);
     this.root.add(key, key.target);
-    const rim = new THREE.DirectionalLight('#8ec4ff', 0.72);
-    rim.position.set(-5, 3, -6);
+    const rim = new THREE.DirectionalLight('#6688ff', 0.4);
+    rim.position.set(-4, 2, -5);
     this.root.add(rim);
   }
 
@@ -752,21 +752,27 @@ export function glbThumbnail(mesh: string | undefined, color: string, size: [num
         thumbRenderer ??= new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
         thumbRenderer.setSize(size[0], size[1]);
         thumbRenderer.outputColorSpace = THREE.SRGBColorSpace;
-        thumbRenderer.toneMapping = THREE.NeutralToneMapping;
-        thumbRenderer.toneMappingExposure = 1.05;
+        thumbRenderer.toneMapping = look === 'flat' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+        thumbRenderer.toneMappingExposure = look === 'flat' ? 1.05 : 1.1;
         const scene = new THREE.Scene();
         let obj: THREE.Object3D;
         const gltf = mesh ? await loadGltf(mediaUrl(mesh)!) : null;
         if (gltf) obj = gltf.scene.clone(true);
         else obj = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 6, 16), new THREE.MeshStandardMaterial({ color }));
-        stylizeFlat(obj, look === 'flat' ? 'character' : 'set');
-        scene.add(new THREE.HemisphereLight('#c5ddff', '#1a3f78', 0.45));
-        const keyLight = new THREE.DirectionalLight('#fff6ea', 1.25);
-        keyLight.position.set(3, 5, 4);
-        scene.add(keyLight);
-        const rimLight = new THREE.DirectionalLight('#8ec4ff', 0.45);
-        rimLight.position.set(-3, 2, -3);
-        scene.add(rimLight);
+        if (look === 'flat') {
+          stylizeFlat(obj, 'character');
+          scene.add(new THREE.HemisphereLight('#c5ddff', '#1a3f78', 0.45));
+          const keyLight = new THREE.DirectionalLight('#fff6ea', 1.25);
+          keyLight.position.set(3, 5, 4);
+          scene.add(keyLight);
+        } else {
+          scene.environment = studioEnv(thumbRenderer);
+          scene.environmentIntensity = 0.7;
+          scene.add(new THREE.AmbientLight('#ffffff', 0.8));
+          const d = new THREE.DirectionalLight('#ffffff', 2.5);
+          d.position.set(3, 5, 4);
+          scene.add(d);
+        }
         scene.add(obj);
         const box = new THREE.Box3().setFromObject(obj);
         const c = box.getCenter(new THREE.Vector3());
@@ -774,8 +780,7 @@ export function glbThumbnail(mesh: string | undefined, color: string, size: [num
         const cam = new THREE.PerspectiveCamera(35, size[0] / size[1], 0.01, 1000);
         cam.position.copy(c).add(new THREE.Vector3(0.9, 0.6, 1.4).normalize().multiplyScalar(r * 3));
         cam.lookAt(c);
-        if (look === 'shaded') renderShaded(thumbRenderer, scene, cam);
-        else thumbRenderer.render(scene, cam);
+        thumbRenderer.render(scene, cam);
         return thumbRenderer.domElement.toDataURL('image/png');
       })(),
     );
@@ -844,11 +849,10 @@ function renderCards() {
     poseFace(c.rig, expression ?? EXPRESSIONS[Math.floor((now + c.phase) / 2.2) % EXPRESSIONS.length], now);
     c.camera.aspect = w / h;
     c.camera.updateProjectionMatrix();
-    r.toneMapping = THREE.NeutralToneMapping;
-    r.toneMappingExposure = 1.05;
+    r.toneMapping = c.look === 'flat' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+    r.toneMappingExposure = c.look === 'flat' ? 1.05 : 1.1;
     r.setSize(w, h, false);
-    if (c.look === 'shaded') renderShaded(r, c.scene, c.camera);
-    else r.render(c.scene, c.camera);
+    r.render(c.scene, c.camera);
     const ctx = c.canvas.getContext('2d')!;
     ctx.clearRect(0, 0, w, h);
     ctx.drawImage(r.domElement, 0, 0);
@@ -865,26 +869,30 @@ export function mountCharacterCard(canvas: HTMLCanvasElement, mesh: string | und
     if (!cardRenderer) {
       cardRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       cardRenderer.outputColorSpace = THREE.SRGBColorSpace;
-      cardRenderer.toneMapping = THREE.NeutralToneMapping;
-      cardRenderer.toneMappingExposure = 1.05;
+      cardRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+      cardRenderer.toneMappingExposure = 1.1;
       cardRenderer.setAnimationLoop(() => cards.size && renderCards());
     }
     const scene = new THREE.Scene();
     const obj = gltf ? gltf.scene.clone(true) : new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 6, 16).translate(0, 0.9, 0), new THREE.MeshStandardMaterial({ color }));
     let shadow: THREE.Object3D | undefined;
-    stylizeFlat(obj, 'character');
     if (look === 'flat') {
+      stylizeFlat(obj, 'character');
       const box = new THREE.Box3().setFromObject(obj);
       shadow = contactShadow(Math.max(0.18, box.getSize(new THREE.Vector3()).x * 0.46));
       scene.add(shadow);
+      scene.add(new THREE.HemisphereLight('#c5ddff', '#1a3f78', 0.45));
+      const key = new THREE.DirectionalLight('#fff6ea', 1.25);
+      key.position.set(3, 5, 4);
+      scene.add(key);
+    } else {
+      scene.environment = studioEnv(cardRenderer);
+      scene.environmentIntensity = 0.7;
+      scene.add(new THREE.AmbientLight('#ffffff', 0.8));
+      const d = new THREE.DirectionalLight('#ffffff', 2.5);
+      d.position.set(3, 5, 4);
+      scene.add(d);
     }
-    scene.add(new THREE.HemisphereLight('#c5ddff', '#1a3f78', 0.45));
-    const key = new THREE.DirectionalLight('#fff6ea', 1.25);
-    key.position.set(3, 5, 4);
-    scene.add(key);
-    const rim = new THREE.DirectionalLight('#8ec4ff', 0.45);
-    rim.position.set(-3, 2, -3);
-    scene.add(rim);
     if (mesh?.includes('mili.glb')) {
       const baked = obj.getObjectByName('lightning');
       if (baked) baked.visible = false;

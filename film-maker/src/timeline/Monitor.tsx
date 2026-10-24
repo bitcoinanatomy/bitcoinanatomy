@@ -132,7 +132,7 @@ export function Monitor({ data, tl, time, mode, pilot, look = 'cinematic', safe,
           <div className="pane">
             <Viewport data={data} tl={tl} time={time} pilot={pilot} look={look} handle={handle} />
             {pilot && <div className="pilot-hint">PILOT — orbit/zoom/pan, then “Set key”</div>}
-            {overlay(look === 'flat' ? 'flat' : look === 'shaded' ? 'shaded' : '3d preview')}
+            {overlay(look === 'flat' ? 'flat' : '3d preview')}
           </div>
         )}
       </div>
