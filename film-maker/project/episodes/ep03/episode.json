@@ -1,0 +1,30 @@
+{
+  "id": "ep03",
+  "number": 3,
+  "title": "The Right Key",
+  "status": "wip",
+  "synopsis": "Back in the light city, Mili finds a glowing coin that is not theirs. Speed and strength cannot make it move. Sati shows that the signature ring only turns for the matching key — and that anyone can see when it does not.",
+  "theme": "Only the key that owns it can spend it.",
+  "arc": {
+    "tension": 0.35,
+    "beat": "resolution",
+    "note": ""
+  },
+  "credits": {
+    "intro": true,
+    "outro": true
+  },
+  "scenes": [
+    "ep03_sc01",
+    "ep03_sc02",
+    "ep03_sc03"
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": []
+  }
+}

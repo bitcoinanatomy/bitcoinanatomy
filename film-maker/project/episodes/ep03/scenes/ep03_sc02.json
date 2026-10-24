@@ -1,0 +1,604 @@
+{
+  "id": "ep03_sc02",
+  "title": "Won't Turn",
+  "status": "wip",
+  "summary": "Bit shoves and Mili crackles. The signature ring stays dark.",
+  "environmentId": "sealed_gate",
+  "arc": {
+    "tension": 0.7,
+    "beat": "crisis",
+    "note": "Strength and speed are the wrong key."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "Still waiting",
+      "duration": 4,
+      "status": "wip",
+      "description": "The orb now sits under the sealed arch, ring dim. The trio have been here a while. Mili bounces on their toes.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.1,
+            0,
+            -0.4
+          ],
+          "rotationY": 180
+        },
+        "sati": {
+          "position": [
+            0.2,
+            0,
+            0.4
+          ],
+          "rotationY": 190
+        },
+        "bit": {
+          "position": [
+            1.6,
+            0,
+            0.2
+          ],
+          "rotationY": 170
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "worried"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "neutral"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_m6sz4n",
+            "start": 0,
+            "duration": 4,
+            "image": "media/boards/together.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_ccm11i",
+            "start": 0,
+            "duration": 4,
+            "label": "static",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.2,
+                  1.3,
+                  4.2
+                ],
+                "target": [
+                  0.2,
+                  0.7,
+                  -1.5
+                ],
+                "fov": 40
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_u24oux",
+            "start": 0.6,
+            "duration": 1.595,
+            "characterId": "mili",
+            "text": "What if nobody comes?",
+            "audio": "media/audio/dialog/57b63a51f567.wav",
+            "audioHash": "57b63a51f567",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_h5hcmo",
+            "start": 0,
+            "duration": 4,
+            "file": "media/audio/sfx/hum.wav",
+            "gain": 0.25
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "Let me",
+      "duration": 7.5,
+      "status": "todo",
+      "description": "Bit steps up and leans a shoulder into the ring of light, the way he moved the gate. The ring does not click.",
+      "notes": "",
+      "characters": [
+        "bit",
+        "sati",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "bit": {
+          "position": [
+            1.2,
+            0,
+            -0.2
+          ],
+          "rotationY": 180,
+          "moves": [
+            {
+              "t": 2.625,
+              "position": [
+                0.4,
+                0,
+                -0.8
+              ],
+              "rotationY": 180
+            },
+            {
+              "t": 5.25,
+              "position": [
+                0.7,
+                0,
+                -0.4
+              ],
+              "rotationY": 180
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            -0.6,
+            0,
+            0.8
+          ],
+          "rotationY": 160
+        },
+        "mili": {
+          "position": [
+            -1.6,
+            0,
+            0.4
+          ],
+          "rotationY": 150
+        }
+      },
+      "expressions": {
+        "bit": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 0.6,
+            "expression": "determined"
+          },
+          {
+            "t": 2.388,
+            "expression": "worried"
+          },
+          {
+            "t": 5.625,
+            "expression": "sad"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_9o0ny3",
+            "start": 0,
+            "duration": 7.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.2139955110628742,
+                  1.84272,
+                  -5.376830079553345
+                ],
+                "target": [
+                  1.2,
+                  1.5,
+                  -0.2
+                ],
+                "fov": 28
+              },
+              {
+                "t": 7.5,
+                "position": [
+                  -0.9553531348775663,
+                  1.806,
+                  -4.8221697138869155
+                ],
+                "target": [
+                  1.2,
+                  1.5,
+                  -0.2
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_3dt5am",
+            "start": 0.6,
+            "duration": 0.621,
+            "characterId": "bit",
+            "text": "Let me.",
+            "audio": "media/audio/dialog/466732d0ba00.wav",
+            "audioHash": "466732d0ba00",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_1xws1i",
+            "start": 2.388,
+            "duration": 2.345,
+            "characterId": "bit",
+            "text": "Huh. It does not care how strong I am.",
+            "audio": "media/audio/dialog/33e201d08bc2.wav",
+            "audioHash": "33e201d08bc2",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_u31jgq",
+            "start": 1.2,
+            "duration": 0.9,
+            "file": "media/audio/sfx/thud.wav",
+            "gain": 0.45
+          },
+          {
+            "id": "sfx_mmg6sq",
+            "start": 1.5,
+            "duration": 0.08,
+            "file": "media/audio/sfx/click.wav",
+            "gain": 0.3
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Zap",
+      "duration": 6.5,
+      "status": "todo",
+      "description": "Mili blurs a loop around the orb, lightning skittering over the ring. The ring stays dark. Mili skids to a stop, frazzled.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "bit",
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.4,
+            0,
+            0.6
+          ],
+          "rotationY": 0,
+          "moves": [
+            {
+              "t": 1.625,
+              "position": [
+                1.2,
+                0,
+                -0.2
+              ],
+              "rotationY": 90
+            },
+            {
+              "t": 3.25,
+              "position": [
+                0.2,
+                0,
+                -1.4
+              ],
+              "rotationY": 180
+            },
+            {
+              "t": 4.875,
+              "position": [
+                -1.2,
+                0,
+                0.2
+              ],
+              "rotationY": -20
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            0.7,
+            0,
+            -0.4
+          ],
+          "rotationY": 180
+        },
+        "sati": {
+          "position": [
+            -0.4,
+            0,
+            1.4
+          ],
+          "rotationY": 180
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 2.314,
+            "expression": "worried"
+          },
+          {
+            "t": 5.2,
+            "expression": "sad"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_zuglxx",
+            "start": 0,
+            "duration": 6.5,
+            "label": "orbit",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -2.809259583475516,
+                  1.2999999999999998,
+                  3.4443022171854496
+                ],
+                "target": [
+                  -0.3666666666666667,
+                  0.6,
+                  0.5333333333333333
+                ],
+                "fov": 42
+              },
+              {
+                "t": 3.25,
+                "position": [
+                  -0.8626661971028626,
+                  1.2999999999999998,
+                  4.3008238065538125
+                ],
+                "target": [
+                  -0.3666666666666667,
+                  0.6,
+                  0.5333333333333333
+                ],
+                "fov": 42
+              },
+              {
+                "t": 6.5,
+                "position": [
+                  1.2392827279479912,
+                  1.2999999999999998,
+                  3.9773029240726028
+                ],
+                "target": [
+                  -0.3666666666666667,
+                  0.6,
+                  0.5333333333333333
+                ],
+                "fov": 42
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_0riwt6",
+            "start": 0.6,
+            "duration": 1.543,
+            "characterId": "mili",
+            "text": "Then speed! Zap!",
+            "audio": "media/audio/dialog/bda74385bd27.wav",
+            "audioHash": "bda74385bd27",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_t11qhl",
+            "start": 2.314,
+            "duration": 2.874,
+            "characterId": "mili",
+            "text": "Ow. It does not care about fast either.",
+            "audio": "media/audio/dialog/b2c8a92fe9a6.wav",
+            "audioHash": "b2c8a92fe9a6",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_a3mh12",
+            "start": 0.3,
+            "duration": 0.7,
+            "file": "media/audio/sfx/zap.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_j64idk",
+            "start": 0.9,
+            "duration": 0.7,
+            "file": "media/audio/sfx/zap.wav",
+            "gain": 0.5
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "Wrong key",
+      "duration": 10.5,
+      "status": "todo",
+      "description": "Close on Sati, the dim ring reflected in their eyes. Calm. Certain.",
+      "notes": "Protocol: a signature is checked against the pubkey named by the output. A mismatch is invalid, and every node rejects the spend.",
+      "characters": [
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -0.4,
+            0,
+            1.4
+          ],
+          "rotationY": 180
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_glry7n",
+            "start": 0,
+            "duration": 10.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.0333821749072214,
+                  0.762784,
+                  -1.5798288508754665
+                ],
+                "target": [
+                  -0.4,
+                  0.58,
+                  1.4
+                ],
+                "fov": 30
+              },
+              {
+                "t": 10.5,
+                "position": [
+                  -0.9655197990243047,
+                  0.7432,
+                  -1.2605614739959519
+                ],
+                "target": [
+                  -0.4,
+                  0.58,
+                  1.4
+                ],
+                "fov": 30
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_khbhxv",
+            "start": 0.6,
+            "duration": 1.494,
+            "characterId": "sati",
+            "text": "Those are the wrong keys.",
+            "audio": "media/audio/dialog/1af83a6f0e78.wav",
+            "audioHash": "1af83a6f0e78",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_eu2924",
+            "start": 3.273,
+            "duration": 4.309,
+            "characterId": "sati",
+            "text": "Every node checks the signature against the key that owns it. Ours will never match.",
+            "audio": "media/audio/dialog/637b8ecc1835.wav",
+            "audioHash": "637b8ecc1835",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_8z2esh",
+            "start": 2.2,
+            "duration": 0.25,
+            "file": "media/audio/sfx/blip.wav",
+            "gain": 0.4
+          }
+        ],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": [
+      {
+        "id": "scr_bnpjq0",
+        "start": 0,
+        "duration": 28.5,
+        "cueId": "cue_ep03_sc02",
+        "offset": 0,
+        "gain": 0.5
+      }
+    ]
+  }
+}

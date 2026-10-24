@@ -1,0 +1,668 @@
+{
+  "id": "ep03_sc01",
+  "title": "Found",
+  "status": "wip",
+  "summary": "Back in the light, Mili finds a glowing coin that is not theirs.",
+  "environmentId": "light_plaza",
+  "arc": {
+    "tension": 0.4,
+    "beat": "rising",
+    "note": "A coin left in the open still belongs to a key."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "Left behind",
+      "duration": 5,
+      "status": "wip",
+      "description": "Morning in the plaza. A warm orb sits on the marble, ringed with light, with no one standing over it. Folk stroll past.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit",
+        "folk1",
+        "folk2",
+        "folk3",
+        "folk4",
+        "folk5",
+        "folk6"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -2.2,
+            0,
+            1.6
+          ],
+          "rotationY": 40,
+          "moves": [
+            {
+              "t": 2.25,
+              "position": [
+                -0.8,
+                0,
+                0.6
+              ],
+              "rotationY": 20
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            -1.2,
+            0,
+            2.2
+          ],
+          "rotationY": 30
+        },
+        "bit": {
+          "position": [
+            0.6,
+            0,
+            2
+          ],
+          "rotationY": 20
+        },
+        "folk1": {
+          "position": [
+            -7,
+            0,
+            -5
+          ],
+          "rotationY": 90,
+          "moves": [
+            {
+              "t": 5,
+              "position": [
+                7,
+                0,
+                -5
+              ]
+            }
+          ]
+        },
+        "folk2": {
+          "position": [
+            3.5,
+            0,
+            -3.6
+          ],
+          "rotationY": -40
+        },
+        "folk3": {
+          "position": [
+            4.2,
+            0,
+            -3.1
+          ],
+          "rotationY": -100
+        },
+        "folk4": {
+          "position": [
+            6.5,
+            0,
+            -7.5
+          ],
+          "rotationY": -90,
+          "moves": [
+            {
+              "t": 5,
+              "position": [
+                -6,
+                0,
+                -7.5
+              ]
+            }
+          ]
+        },
+        "folk5": {
+          "position": [
+            -4.2,
+            0,
+            -3.2
+          ],
+          "rotationY": 40
+        },
+        "folk6": {
+          "position": [
+            -3.5,
+            0,
+            -3.8
+          ],
+          "rotationY": -80
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          },
+          {
+            "t": 2.25,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_1xz03t",
+            "start": 0,
+            "duration": 5,
+            "image": "media/boards/a_more_open_world.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_ht9o16",
+            "start": 0,
+            "duration": 5,
+            "label": "push-in",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.2,
+                  1.3499999999999999,
+                  7.6
+                ],
+                "target": [
+                  0.2,
+                  1.2,
+                  3.4
+                ],
+                "fov": 40
+              },
+              {
+                "t": 5,
+                "position": [
+                  0.2,
+                  1.29,
+                  5.8
+                ],
+                "target": [
+                  0.2,
+                  1.2,
+                  3.4
+                ],
+                "fov": 40
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_znmnuz",
+            "start": 1.2,
+            "duration": 2.424,
+            "characterId": "mili",
+            "text": "Ooh. Somebody left a shiny one.",
+            "audio": "media/audio/dialog/6f5ca639a5b8.wav",
+            "audioHash": "6f5ca639a5b8",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_6p6ab1",
+            "start": 0.4,
+            "duration": 1.4,
+            "file": "media/audio/sfx/sparkle.wav",
+            "gain": 0.45
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "Not yours",
+      "duration": 9,
+      "status": "todo",
+      "description": "Sati steps between Mili and the orb, one hand up. Close enough to see the ring, not close enough to take it.",
+      "notes": "Protocol: an output names the pubkey (or script) allowed to spend it. Finding the coin does not transfer it.",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.8,
+            0,
+            0.6
+          ],
+          "rotationY": 20
+        },
+        "sati": {
+          "position": [
+            0.2,
+            0,
+            1.1
+          ],
+          "rotationY": 10,
+          "moves": [
+            {
+              "t": 3.15,
+              "position": [
+                -0.15,
+                0,
+                0.7
+              ],
+              "rotationY": 15
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            1.4,
+            0,
+            1.6
+          ],
+          "rotationY": -10
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ],
+        "mili": [
+          {
+            "t": 3.6,
+            "expression": "worried"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_3f0qhs",
+            "start": 0,
+            "duration": 9,
+            "label": "over-shoulder",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.099096452670372,
+                  0.352,
+                  0.17496819883683992
+                ],
+                "target": [
+                  0.2,
+                  0.58,
+                  1.1
+                ],
+                "fov": 32
+              },
+              {
+                "t": 9,
+                "position": [
+                  -1.0046449413007807,
+                  0.352,
+                  0.22219395452163548
+                ],
+                "target": [
+                  0.2,
+                  0.58,
+                  1.1
+                ],
+                "fov": 32
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_xb6cth",
+            "start": 0.6,
+            "duration": 1.981,
+            "characterId": "sati",
+            "text": "Leave it. That coin isn't ours.",
+            "audio": "media/audio/dialog/3b86ffb75172.wav",
+            "audioHash": "3b86ffb75172",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_nqnubv",
+            "start": 3.608,
+            "duration": 3.258,
+            "characterId": "sati",
+            "text": "It belongs to a key. Not to whoever stands closest.",
+            "audio": "media/audio/dialog/b05365469d8d.wav",
+            "audioHash": "b05365469d8d",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "But it is right there",
+      "duration": 3.5,
+      "status": "todo",
+      "description": "Close on Mili, fingers twitching toward the glow, then dropping.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.8,
+            0,
+            0.6
+          ],
+          "rotationY": 20
+        },
+        "sati": {
+          "position": [
+            -0.15,
+            0,
+            0.7
+          ],
+          "rotationY": 15
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0.6,
+            "expression": "sad"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_grupt9",
+            "start": 0,
+            "duration": 3.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -0.6539688099114438,
+                  0.3645312,
+                  2.2691441405466817
+                ],
+                "target": [
+                  -0.8,
+                  0.264,
+                  0.6
+                ],
+                "fov": 28
+              },
+              {
+                "t": 3.5,
+                "position": [
+                  -0.6696150088495034,
+                  0.35376,
+                  2.0903072683452515
+                ],
+                "target": [
+                  -0.8,
+                  0.264,
+                  0.6
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_ugktzb",
+            "start": 0.6,
+            "duration": 1.26,
+            "characterId": "mili",
+            "text": "But it's right there.",
+            "audio": "media/audio/dialog/b3e5ca89fa79.wav",
+            "audioHash": "b3e5ca89fa79",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "We wait",
+      "duration": 5,
+      "status": "todo",
+      "description": "Bit plants himself beside the orb, arms folded, a wall with a smile. The plaza keeps moving behind them.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit",
+        "folk1",
+        "folk2",
+        "folk3",
+        "folk4",
+        "folk5",
+        "folk6"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.8,
+            0,
+            0.6
+          ],
+          "rotationY": 40
+        },
+        "sati": {
+          "position": [
+            -0.15,
+            0,
+            0.7
+          ],
+          "rotationY": 15
+        },
+        "bit": {
+          "position": [
+            1.2,
+            0,
+            0.3
+          ],
+          "rotationY": -25
+        },
+        "folk1": {
+          "position": [
+            -7,
+            0,
+            -5
+          ],
+          "rotationY": 90,
+          "moves": [
+            {
+              "t": 5,
+              "position": [
+                7,
+                0,
+                -5
+              ]
+            }
+          ]
+        },
+        "folk2": {
+          "position": [
+            3.5,
+            0,
+            -3.6
+          ],
+          "rotationY": -40
+        },
+        "folk3": {
+          "position": [
+            4.2,
+            0,
+            -3.1
+          ],
+          "rotationY": -100
+        },
+        "folk4": {
+          "position": [
+            6.5,
+            0,
+            -7.5
+          ],
+          "rotationY": -90,
+          "moves": [
+            {
+              "t": 5,
+              "position": [
+                -6,
+                0,
+                -7.5
+              ]
+            }
+          ]
+        },
+        "folk5": {
+          "position": [
+            -4.2,
+            0,
+            -3.2
+          ],
+          "rotationY": 40
+        },
+        "folk6": {
+          "position": [
+            -3.5,
+            0,
+            -3.8
+          ],
+          "rotationY": -80
+        }
+      },
+      "expressions": {
+        "bit": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 0.6,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "mili": [
+          {
+            "t": 2.5,
+            "expression": "neutral"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_i41843",
+            "start": 0,
+            "duration": 5,
+            "label": "pull-out",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.0833333333333333,
+                  0.8999999999999999,
+                  3.7333333333333334
+                ],
+                "target": [
+                  0.0833333333333333,
+                  0.6,
+                  0.5333333333333333
+                ],
+                "fov": 42
+              },
+              {
+                "t": 5,
+                "position": [
+                  0.0833333333333333,
+                  1.7199999999999998,
+                  7.033333333333333
+                ],
+                "target": [
+                  0.0833333333333333,
+                  0.6,
+                  0.5333333333333333
+                ],
+                "fov": 42
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_vqlktx",
+            "start": 0.6,
+            "duration": 2.051,
+            "characterId": "bit",
+            "text": "Then we wait. The owner will come.",
+            "audio": "media/audio/dialog/b9d92e1bca8a.wav",
+            "audioHash": "b9d92e1bca8a",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": [
+      {
+        "id": "scr_6r2skr",
+        "start": 0,
+        "duration": 22.5,
+        "cueId": "cue_ep03_sc01",
+        "offset": 0,
+        "gain": 0.5
+      }
+    ]
+  }
+}

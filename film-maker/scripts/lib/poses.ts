@@ -36,6 +36,10 @@ const BEATS: Record<string, [string, Pose, number][]> = {
   'Same direction': [['sati', 'cheer', 0.75], ['bit', 'cheer', 0.8], ['mili', 'cheer', 0.7]],
   'The hall of blocks': [['bit', 'arms_crossed', 0.2]],
   'Into the dark': [['mili', 'crouch', 0.1]],
+  'Almost': [['mili', 'reach', 0.15]],
+  'The target': [['folk2', 'reach', 0.1], ['sati', 'point', 0.35]],
+  'The joints hold': [['bit', 'reach', 0.05], ['sati', 'think', 0.2]],
+  'Still reaching': [['mili', 'reach', 0.1]],
 };
 
 const r3 = (n: number) => Math.round(n * 1000) / 1000;

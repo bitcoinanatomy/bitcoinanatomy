@@ -140,7 +140,7 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_auvhcf",
+            "id": "brd_u82hrl",
             "start": 0,
             "duration": 6,
             "image": "media/boards/hero_banner.png"
@@ -148,7 +148,7 @@
         ],
         "camera": [
           {
-            "id": "cam_pk5lv7",
+            "id": "cam_i9uquh",
             "start": 0,
             "duration": 6,
             "label": "crane",
@@ -189,7 +189,7 @@
         "dialog": [],
         "sfx": [
           {
-            "id": "sfx_s3llck",
+            "id": "sfx_dqdxza",
             "start": 1.2,
             "duration": 1.4,
             "file": "media/audio/sfx/sparkle.wav",
@@ -202,7 +202,7 @@
     {
       "id": "sh02",
       "name": "Mili zooms in",
-      "duration": 4,
+      "duration": 5,
       "status": "wip",
       "description": "Mili streaks across frame trailing lightning, scattering passers-by, and skids to a stop.",
       "notes": "",
@@ -226,7 +226,7 @@
           "rotationY": 90,
           "moves": [
             {
-              "t": 1.4,
+              "t": 1.75,
               "position": [
                 -1.5,
                 0,
@@ -235,7 +235,7 @@
               "rotationY": 60
             },
             {
-              "t": 2.4,
+              "t": 3,
               "position": [
                 -0.4,
                 0,
@@ -254,7 +254,7 @@
           "rotationY": 90,
           "moves": [
             {
-              "t": 4,
+              "t": 5,
               "position": [
                 7,
                 0,
@@ -288,7 +288,7 @@
           "rotationY": -90,
           "moves": [
             {
-              "t": 4,
+              "t": 5,
               "position": [
                 -6,
                 0,
@@ -323,61 +323,61 @@
         ],
         "folk1": [
           {
-            "t": 0.75,
+            "t": 0.9,
             "expression": "surprised"
           },
           {
-            "t": 2.95,
+            "t": 3.65,
             "expression": "happy"
           }
         ],
         "folk2": [
           {
-            "t": 0.9,
+            "t": 1.05,
             "expression": "surprised"
           },
           {
-            "t": 3.1,
+            "t": 3.8,
             "expression": "happy"
           }
         ],
         "folk3": [
           {
-            "t": 0.6,
+            "t": 0.75,
             "expression": "surprised"
           },
           {
-            "t": 2.8,
+            "t": 3.5,
             "expression": "happy"
           }
         ],
         "folk4": [
           {
-            "t": 0.75,
+            "t": 0.9,
             "expression": "surprised"
           },
           {
-            "t": 2.95,
+            "t": 3.65,
             "expression": "happy"
           }
         ],
         "folk5": [
           {
-            "t": 0.9,
+            "t": 1.05,
             "expression": "surprised"
           },
           {
-            "t": 3.1,
+            "t": 3.8,
             "expression": "happy"
           }
         ],
         "folk6": [
           {
-            "t": 0.6,
+            "t": 0.75,
             "expression": "surprised"
           },
           {
-            "t": 2.8,
+            "t": 3.5,
             "expression": "happy"
           }
         ]
@@ -385,17 +385,17 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_qhrz7u",
+            "id": "brd_obrzcb",
             "start": 0,
-            "duration": 4,
+            "duration": 5,
             "image": "media/boards/explore.png"
           }
         ],
         "camera": [
           {
-            "id": "cam_6gbbj3",
+            "id": "cam_61kwf7",
             "start": 0,
-            "duration": 4,
+            "duration": 5,
             "label": "whip-follow",
             "ease": "smooth",
             "keys": [
@@ -414,7 +414,7 @@
                 "fov": 38
               },
               {
-                "t": 4,
+                "t": 5,
                 "position": [
                   1.2,
                   0.45,
@@ -433,9 +433,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_ar9abb",
+            "id": "dlg_tzi9zl",
             "start": 0.8,
-            "duration": 2.33,
+            "duration": 2.29,
             "characterId": "mili",
             "text": "Wheee! Out of the way, out of the way!",
             "audio": "media/audio/dialog/47a0ec609bef.wav",
@@ -446,14 +446,14 @@
         ],
         "sfx": [
           {
-            "id": "sfx_v3e7hi",
+            "id": "sfx_yiqdui",
             "start": 0.1,
             "duration": 0.7,
             "file": "media/audio/sfx/zap.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_b5bto3",
+            "id": "sfx_8bu8rf",
             "start": 0.6,
             "duration": 1.6,
             "file": "media/audio/sfx/whoosh.wav",
@@ -466,7 +466,7 @@
     {
       "id": "sh03",
       "name": "Bonk",
-      "duration": 5.5,
+      "duration": 6.5,
       "status": "todo",
       "description": "Mili bounces off a floating glass sphere — BONK — and spins to a stop, dizzy but delighted.",
       "notes": "",
@@ -484,7 +484,7 @@
           "rotationY": -20,
           "moves": [
             {
-              "t": 0.66,
+              "t": 0.78,
               "position": [
                 -1.8,
                 0,
@@ -493,7 +493,7 @@
               "rotationY": 160
             },
             {
-              "t": 1.65,
+              "t": 1.95,
               "position": [
                 -1.8,
                 0,
@@ -507,7 +507,7 @@
       "expressions": {
         "mili": [
           {
-            "t": 0.44,
+            "t": 0.52,
             "expression": "surprised"
           },
           {
@@ -515,7 +515,7 @@
             "expression": "worried"
           },
           {
-            "t": 2.161,
+            "t": 2.47,
             "expression": "happy"
           }
         ]
@@ -532,9 +532,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_6viiy1",
+            "id": "cam_5jaatv",
             "start": 0,
-            "duration": 5.5,
+            "duration": 6.5,
             "label": "push-in",
             "ease": "smooth",
             "keys": [
@@ -553,7 +553,7 @@
                 "fov": 35
               },
               {
-                "t": 5.5,
+                "t": 6.5,
                 "position": [
                   -1.8,
                   0.354,
@@ -572,9 +572,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_dev7tj",
+            "id": "dlg_p0m1z5",
             "start": 1.1,
-            "duration": 0.561,
+            "duration": 0.496,
             "characterId": "mili",
             "text": "Ow.",
             "audio": "media/audio/dialog/d60c835556c1.wav",
@@ -583,9 +583,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_znox7c",
-            "start": 2.161,
-            "duration": 2.48,
+            "id": "dlg_tdqe6e",
+            "start": 2.47,
+            "duration": 2.501,
             "characterId": "mili",
             "text": "Did you see that? I was SO fast!",
             "audio": "media/audio/dialog/c289000c53cd.wav",
@@ -596,14 +596,14 @@
         ],
         "sfx": [
           {
-            "id": "sfx_66tqtm",
+            "id": "sfx_76ix5p",
             "start": 0.3,
             "duration": 2.5,
             "file": "media/audio/sfx/chime.wav",
             "gain": 0.6
           },
           {
-            "id": "sfx_nic1sy",
+            "id": "sfx_prp6ie",
             "start": 0.35,
             "duration": 0.9,
             "file": "media/audio/sfx/thud.wav",
@@ -701,7 +701,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_nxnaxx",
+            "id": "cam_8dm87t",
             "start": 0,
             "duration": 3.5,
             "label": "orbit",
@@ -761,7 +761,7 @@
     {
       "id": "sh05",
       "name": "The whole city saw",
-      "duration": 4,
+      "duration": 4.5,
       "status": "todo",
       "description": "Close on Sati: deadpan, then the corner of a smile.",
       "notes": "",
@@ -795,7 +795,7 @@
             "expression": "determined"
           },
           {
-            "t": 3.4,
+            "t": 3.825,
             "expression": "happy"
           }
         ]
@@ -804,9 +804,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_hmbri3",
+            "id": "cam_8zqo8v",
             "start": 0,
-            "duration": 4,
+            "duration": 4.5,
             "label": "close-up",
             "ease": "smooth",
             "keys": [
@@ -825,7 +825,7 @@
                 "fov": 28
               },
               {
-                "t": 4,
+                "t": 4.5,
                 "position": [
                   -1.8601279068748453,
                   0.7432,
@@ -844,9 +844,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_n81dws",
+            "id": "dlg_56770m",
             "start": 0.6,
-            "duration": 2.233,
+            "duration": 2.298,
             "characterId": "sati",
             "text": "We saw, Mili. The whole city saw.",
             "audio": "media/audio/dialog/fd97625830c1.wav",
@@ -905,7 +905,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_etl6d6",
+            "id": "cam_05m4wc",
             "start": 0,
             "duration": 2.5,
             "label": "close-up",
@@ -945,9 +945,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_2me8xt",
+            "id": "dlg_ahx12r",
             "start": 0.6,
-            "duration": 0.693,
+            "duration": 0.741,
             "characterId": "mili",
             "text": "Hehe.",
             "audio": "media/audio/dialog/29849fd6fc77.wav",

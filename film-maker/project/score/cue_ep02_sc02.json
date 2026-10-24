@@ -5,7 +5,7 @@
   "key": "A",
   "mode": "dorian",
   "tempo": 88,
-  "bars": 8,
+  "bars": 10,
   "beatsPerBar": 4,
   "density": 0.65,
   "instruments": {

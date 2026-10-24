@@ -13,7 +13,7 @@
     {
       "id": "sh01",
       "name": "The hall of blocks",
-      "duration": 7.5,
+      "duration": 9.5,
       "status": "wip",
       "description": "Rows of dark blocks with glowing edges, grinding into place again and again. Miners pace between them.",
       "notes": "Protocol: proof of work — miners vary the nonce and re-hash the block header until the hash is below the target.",
@@ -63,7 +63,7 @@
           "rotationY": 90,
           "moves": [
             {
-              "t": 3.75,
+              "t": 4.75,
               "position": [
                 5.5,
                 0,
@@ -72,7 +72,7 @@
               "rotationY": 90
             },
             {
-              "t": 7.5,
+              "t": 9.5,
               "position": [
                 -5.5,
                 0,
@@ -91,7 +91,7 @@
           "rotationY": -90,
           "moves": [
             {
-              "t": 4.5,
+              "t": 5.7,
               "position": [
                 -4,
                 0,
@@ -100,7 +100,7 @@
               "rotationY": -90
             },
             {
-              "t": 7.5,
+              "t": 9.5,
               "position": [
                 -1,
                 0,
@@ -135,7 +135,7 @@
           "rotationY": 0,
           "moves": [
             {
-              "t": 7.5,
+              "t": 9.5,
               "position": [
                 2,
                 0,
@@ -161,7 +161,7 @@
         ],
         "sati": [
           {
-            "t": 2.497,
+            "t": 3.708,
             "expression": "determined"
           }
         ],
@@ -199,7 +199,7 @@
       "poses": {
         "bit": [
           {
-            "t": 1.5,
+            "t": 1.9,
             "pose": "arms_crossed"
           }
         ]
@@ -207,17 +207,17 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_7zajcd",
+            "id": "brd_u3kvnw",
             "start": 0,
-            "duration": 7.5,
+            "duration": 9.5,
             "image": "media/boards/overcome.png"
           }
         ],
         "camera": [
           {
-            "id": "cam_1xfh8y",
+            "id": "cam_lgzdhd",
             "start": 0,
-            "duration": 7.5,
+            "duration": 9.5,
             "label": "descending",
             "ease": "smooth",
             "keys": [
@@ -236,7 +236,7 @@
                 "fov": 45
               },
               {
-                "t": 7.5,
+                "t": 9.5,
                 "position": [
                   2.5,
                   1.5,
@@ -255,9 +255,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_4ltvcw",
+            "id": "dlg_q286ks",
             "start": 0.6,
-            "duration": 1.397,
+            "duration": 1.631,
             "characterId": "sati",
             "text": "This is where blocks are made.",
             "audio": "media/audio/dialog/de3285502b19.wav",
@@ -266,9 +266,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_wmgqr8",
-            "start": 2.497,
-            "duration": 3.912,
+            "id": "dlg_qmih5t",
+            "start": 3.708,
+            "duration": 3.868,
             "characterId": "sati",
             "text": "Miners try number after number, until the hash comes out just right.",
             "audio": "media/audio/dialog/3fa0e07cbe45.wav",
@@ -279,7 +279,7 @@
         ],
         "sfx": [
           {
-            "id": "sfx_zd0n8g",
+            "id": "sfx_qauiea",
             "start": 0.4,
             "duration": 2,
             "file": "media/audio/sfx/stone_grind.wav",
@@ -292,7 +292,7 @@
     {
       "id": "sh02",
       "name": "Heavy!",
-      "duration": 2.5,
+      "duration": 3,
       "status": "todo",
       "description": "Close on Bit, straining, shoving a block into its slot.",
       "notes": "",
@@ -311,7 +311,7 @@
           "rotationY": -60,
           "moves": [
             {
-              "t": 1.25,
+              "t": 1.5,
               "position": [
                 0.6,
                 0,
@@ -320,7 +320,7 @@
               "rotationY": -60
             },
             {
-              "t": 2.5,
+              "t": 3,
               "position": [
                 0.4,
                 0,
@@ -338,7 +338,7 @@
             "expression": "determined"
           },
           {
-            "t": 2,
+            "t": 2.4,
             "expression": "happy"
           }
         ]
@@ -355,9 +355,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_4xb1gi",
+            "id": "cam_1aq4xe",
             "start": 0,
-            "duration": 2.5,
+            "duration": 3,
             "label": "close-up",
             "ease": "smooth",
             "keys": [
@@ -376,7 +376,7 @@
                 "fov": 28
               },
               {
-                "t": 2.5,
+                "t": 3,
                 "position": [
                   -1.6499999999999995,
                   1.806,
@@ -395,9 +395,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_9elnvu",
+            "id": "dlg_xlqczr",
             "start": 0.6,
-            "duration": 0.554,
+            "duration": 0.555,
             "characterId": "bit",
             "text": "Heavy!",
             "audio": "media/audio/dialog/f3a98b9a3123.wav",
@@ -413,19 +413,19 @@
     {
       "id": "sh03",
       "name": "Heavy lifting",
-      "duration": 5,
+      "duration": 4.5,
       "status": "todo",
       "description": "Mili spins through numbers so fast they become a blur, zig-zagging between blocks; Sati watches the hashes.",
       "notes": "",
       "characters": [
+        "bit",
         "mili",
         "sati",
         "folk1",
         "folk2",
         "folk4",
         "folk5",
-        "folk6",
-        "bit"
+        "folk6"
       ],
       "assets": [],
       "tension": 0.85,
@@ -447,7 +447,7 @@
           "rotationY": 30,
           "moves": [
             {
-              "t": 1,
+              "t": 0.9,
               "position": [
                 -2.2,
                 0,
@@ -456,7 +456,7 @@
               "rotationY": 0
             },
             {
-              "t": 2,
+              "t": 1.8,
               "position": [
                 -0.2,
                 0,
@@ -465,7 +465,7 @@
               "rotationY": 180
             },
             {
-              "t": 3,
+              "t": 2.7,
               "position": [
                 -2.2,
                 0,
@@ -474,7 +474,7 @@
               "rotationY": 0
             },
             {
-              "t": 4,
+              "t": 3.6,
               "position": [
                 -1.2,
                 0,
@@ -501,7 +501,7 @@
           "rotationY": 90,
           "moves": [
             {
-              "t": 2.5,
+              "t": 2.25,
               "position": [
                 5.5,
                 0,
@@ -510,7 +510,7 @@
               "rotationY": 90
             },
             {
-              "t": 5,
+              "t": 4.5,
               "position": [
                 -5.5,
                 0,
@@ -529,7 +529,7 @@
           "rotationY": -90,
           "moves": [
             {
-              "t": 3,
+              "t": 2.7,
               "position": [
                 -4,
                 0,
@@ -538,7 +538,7 @@
               "rotationY": -90
             },
             {
-              "t": 5,
+              "t": 4.5,
               "position": [
                 -1,
                 0,
@@ -573,7 +573,7 @@
           "rotationY": 0,
           "moves": [
             {
-              "t": 5,
+              "t": 4.5,
               "position": [
                 2,
                 0,
@@ -646,9 +646,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_xgsw4t",
+            "id": "cam_t9vs9d",
             "start": 0,
-            "duration": 5,
+            "duration": 4.5,
             "label": "orbit",
             "ease": "linear",
             "keys": [
@@ -667,7 +667,7 @@
                 "fov": 40
               },
               {
-                "t": 2.5,
+                "t": 2.25,
                 "position": [
                   -0.6486229709906326,
                   1.2,
@@ -681,7 +681,7 @@
                 "fov": 40
               },
               {
-                "t": 5,
+                "t": 4.5,
                 "position": [
                   1.0680805733026748,
                   1.2,
@@ -700,9 +700,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_ssf2wc",
+            "id": "dlg_4edew3",
             "start": 0.6,
-            "duration": 3.133,
+            "duration": 3.217,
             "characterId": "mili",
             "text": "One, two, three, four, five, a million!",
             "audio": "media/audio/dialog/41a1a3c6ef81.wav",
@@ -713,35 +713,35 @@
         ],
         "sfx": [
           {
-            "id": "sfx_pr7fe5",
+            "id": "sfx_mix4or",
             "start": 0.2,
             "duration": 0.9,
             "file": "media/audio/sfx/thud.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_6jb913",
+            "id": "sfx_u0pwln",
             "start": 1.4,
             "duration": 0.08,
             "file": "media/audio/sfx/click.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_4lklyt",
+            "id": "sfx_q93b12",
             "start": 1.6,
             "duration": 0.08,
             "file": "media/audio/sfx/click.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_fgqwho",
+            "id": "sfx_n38k03",
             "start": 1.8,
             "duration": 0.08,
             "file": "media/audio/sfx/click.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_p7m2vr",
+            "id": "sfx_oezls7",
             "start": 2.1,
             "duration": 0.7,
             "file": "media/audio/sfx/zap.wav",
@@ -754,7 +754,7 @@
     {
       "id": "sh04",
       "name": "More zeros",
-      "duration": 5.5,
+      "duration": 6.5,
       "status": "todo",
       "description": "Sati squints at a hash scrolling across a block face. Zeros line up at the front. Eyes go wide.",
       "notes": "",
@@ -780,11 +780,11 @@
             "expression": "determined"
           },
           {
-            "t": 2.915,
+            "t": 3.808,
             "expression": "surprised"
           },
           {
-            "t": 5.06,
+            "t": 5.98,
             "expression": "happy"
           }
         ]
@@ -796,7 +796,7 @@
             "pose": "think"
           },
           {
-            "t": 2.715,
+            "t": 3.608,
             "pose": "idle"
           }
         ]
@@ -805,9 +805,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_39u7n6",
+            "id": "cam_l6w11s",
             "start": 0,
-            "duration": 5.5,
+            "duration": 6.5,
             "label": "push-in",
             "ease": "smooth",
             "keys": [
@@ -826,7 +826,7 @@
                 "fov": 32
               },
               {
-                "t": 5.5,
+                "t": 6.5,
                 "position": [
                   -0.1,
                   0.61,
@@ -845,9 +845,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_bcrx4o",
+            "id": "dlg_0hro9r",
             "start": 0.6,
-            "duration": 1.715,
+            "duration": 1.666,
             "characterId": "sati",
             "text": "We need more zeros in front...",
             "audio": "media/audio/dialog/cf314d732a48.wav",
@@ -856,9 +856,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_ixbp5p",
-            "start": 2.915,
-            "duration": 1.374,
+            "id": "dlg_ck7niq",
+            "start": 3.808,
+            "duration": 1.457,
             "characterId": "sati",
             "text": "There! That's the one!",
             "audio": "media/audio/dialog/495d95a79ec7.wav",
@@ -869,8 +869,8 @@
         ],
         "sfx": [
           {
-            "id": "sfx_en6gqp",
-            "start": 4.24,
+            "id": "sfx_94adad",
+            "start": 5.24,
             "duration": 1.8,
             "file": "media/audio/sfx/impact.wav",
             "gain": 0.6
@@ -999,7 +999,7 @@
             "expression": "happy"
           },
           {
-            "t": 2.843,
+            "t": 3.218,
             "expression": "determined"
           }
         ],
@@ -1063,7 +1063,7 @@
             "pose": "cheer"
           },
           {
-            "t": 2.893,
+            "t": 3.268,
             "pose": "idle"
           }
         ]
@@ -1071,7 +1071,7 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_l0q44x",
+            "id": "brd_kbyqk8",
             "start": 0,
             "duration": 6,
             "image": "media/boards/same_direction.png"
@@ -1079,7 +1079,7 @@
         ],
         "camera": [
           {
-            "id": "cam_0lms4k",
+            "id": "cam_5xgeif",
             "start": 0,
             "duration": 6,
             "label": "crane",
@@ -1119,9 +1119,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_8myhsd",
+            "id": "dlg_7thhfk",
             "start": 0.6,
-            "duration": 1.893,
+            "duration": 1.97,
             "characterId": "mili",
             "text": "Our transaction is in the block!",
             "audio": "media/audio/dialog/a374903ff9a5.wav",
@@ -1130,9 +1130,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_n347z8",
-            "start": 2.843,
-            "duration": 1.223,
+            "id": "dlg_inomnd",
+            "start": 3.218,
+            "duration": 1.221,
             "characterId": "bit",
             "text": "Sealed. For good.",
             "audio": "media/audio/dialog/133052393761.wav",
@@ -1143,14 +1143,14 @@
         ],
         "sfx": [
           {
-            "id": "sfx_owczxp",
+            "id": "sfx_dcij8n",
             "start": 0.2,
             "duration": 2.5,
             "file": "media/audio/sfx/chime.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_7566j6",
+            "id": "sfx_1eklh8",
             "start": 0.8,
             "duration": 1.4,
             "file": "media/audio/sfx/sparkle.wav",
@@ -1379,7 +1379,7 @@
         ],
         "mili": [
           {
-            "t": 3.505,
+            "t": 4.712,
             "pose": "cheer"
           },
           {
@@ -1387,7 +1387,7 @@
             "pose": "cheer"
           },
           {
-            "t": 5.192,
+            "t": 6.192,
             "pose": "idle"
           }
         ]
@@ -1396,7 +1396,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_33f49f",
+            "id": "cam_lp2u03",
             "start": 0,
             "duration": 7,
             "label": "pull-away",
@@ -1436,9 +1436,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_cumjpx",
+            "id": "dlg_vuurc9",
             "start": 0.6,
-            "duration": 2.555,
+            "duration": 2.705,
             "characterId": "sati",
             "text": "Light or dark, we all follow the same rules.",
             "audio": "media/audio/dialog/6d18cca38ce0.wav",
@@ -1447,9 +1447,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_nortf1",
-            "start": 3.655,
-            "duration": 1.137,
+            "id": "dlg_oc9yra",
+            "start": 4.862,
+            "duration": 1.13,
             "characterId": "mili",
             "text": "Same direction!",
             "audio": "media/audio/dialog/61b9e65dad4e.wav",
@@ -1460,7 +1460,7 @@
         ],
         "sfx": [
           {
-            "id": "sfx_9mt31k",
+            "id": "sfx_bvo7k9",
             "start": 1,
             "duration": 1.4,
             "file": "media/audio/sfx/sparkle.wav",
@@ -1479,9 +1479,9 @@
     "sfx": [],
     "score": [
       {
-        "id": "scr_whwfti",
+        "id": "scr_tbjtjv",
         "start": 0,
-        "duration": 33.5,
+        "duration": 36.5,
         "cueId": "cue_ep02_sc03",
         "offset": 0,
         "gain": 0.5

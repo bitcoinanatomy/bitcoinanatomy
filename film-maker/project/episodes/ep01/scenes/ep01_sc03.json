@@ -13,7 +13,7 @@
     {
       "id": "sh01",
       "name": "Dead end",
-      "duration": 4,
+      "duration": 3.5,
       "status": "wip",
       "description": "The arch is sealed by a marble block three times their height. Mili pushes with all their might; nothing.",
       "notes": "",
@@ -32,7 +32,7 @@
           "rotationY": 180,
           "moves": [
             {
-              "t": 0.8,
+              "t": 0.7,
               "position": [
                 -0.3,
                 0,
@@ -41,7 +41,7 @@
               "rotationY": 180
             },
             {
-              "t": 1.4,
+              "t": 1.225,
               "position": [
                 -0.3,
                 0,
@@ -50,7 +50,7 @@
               "rotationY": 180
             },
             {
-              "t": 2,
+              "t": 1.75,
               "position": [
                 -0.3,
                 0,
@@ -59,7 +59,7 @@
               "rotationY": 180
             },
             {
-              "t": 2.8,
+              "t": 2.45,
               "position": [
                 -0.4,
                 0,
@@ -107,17 +107,35 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_5sp5rs",
+            "id": "brd_cawuem",
             "start": 0,
-            "duration": 4,
+            "duration": 3.5,
             "image": "media/boards/together.png"
+          },
+          {
+            "id": "brd_dkwfbh",
+            "start": 0,
+            "duration": 3.5,
+            "image": "media/boards/ep01_sc03_sh01_1792862944620.jpg"
+          },
+          {
+            "id": "brd_22u2cd",
+            "start": 0,
+            "duration": 3.5,
+            "image": "media/boards/ep01_sc03_sh01_1792862945486.jpg"
+          },
+          {
+            "id": "brd_8l83pr",
+            "start": 0,
+            "duration": 3.5,
+            "image": "media/boards/ep01_sc03_sh01_1792862946852.jpg"
           }
         ],
         "camera": [
           {
-            "id": "cam_wo7t0i",
+            "id": "cam_fxo7s0",
             "start": 0,
-            "duration": 4,
+            "duration": 3.5,
             "label": "static",
             "ease": "linear",
             "keys": [
@@ -141,9 +159,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_j5snda",
+            "id": "dlg_7y52hp",
             "start": 0.6,
-            "duration": 2.473,
+            "duration": 2.437,
             "characterId": "mili",
             "text": "Hnnnngh! Dead end!",
             "audio": "media/audio/dialog/44b8e3d4ae35.wav",
@@ -154,7 +172,7 @@
         ],
         "sfx": [
           {
-            "id": "sfx_9nnskc",
+            "id": "sfx_834v87",
             "start": 0.6,
             "duration": 2,
             "file": "media/audio/sfx/stone_grind.wav",
@@ -167,7 +185,7 @@
     {
       "id": "sh02",
       "name": "Too heavy",
-      "duration": 3,
+      "duration": 4,
       "status": "todo",
       "description": "Close on Sati looking up at the block, thinking hard — and coming up empty.",
       "notes": "",
@@ -209,13 +227,13 @@
       "poses": {
         "sati": [
           {
-            "t": 0.15,
+            "t": 0.2,
             "pose": "reach"
           }
         ],
         "mili": [
           {
-            "t": 0.9,
+            "t": 1.2,
             "pose": "crouch"
           }
         ]
@@ -224,9 +242,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_qg2ded",
+            "id": "cam_ezz960",
             "start": 0,
-            "duration": 3,
+            "duration": 4,
             "label": "close-up",
             "ease": "smooth",
             "keys": [
@@ -245,7 +263,7 @@
                 "fov": 28
               },
               {
-                "t": 3,
+                "t": 4,
                 "position": [
                   0.32767695674594916,
                   0.7432,
@@ -264,9 +282,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_zdzywq",
+            "id": "dlg_acyyzf",
             "start": 0.6,
-            "duration": 1.346,
+            "duration": 1.322,
             "characterId": "sati",
             "text": "It's too heavy for us.",
             "audio": "media/audio/dialog/f53058412a2e.wav",
@@ -388,7 +406,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_yjx8vh",
+            "id": "cam_cxdikd",
             "start": 0,
             "duration": 6,
             "label": "low-angle hero",
@@ -428,9 +446,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_4fwr0h",
+            "id": "dlg_mg088e",
             "start": 1.4,
-            "duration": 1.532,
+            "duration": 1.64,
             "characterId": "bit",
             "text": "Leave the heavy stuff to me.",
             "audio": "media/audio/dialog/ad2ac9f646c2.wav",
@@ -441,14 +459,14 @@
         ],
         "sfx": [
           {
-            "id": "sfx_62yd5q",
+            "id": "sfx_j86e9u",
             "start": 0.3,
             "duration": 0.9,
             "file": "media/audio/sfx/thud.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_5c1hix",
+            "id": "sfx_9e6izv",
             "start": 0.9,
             "duration": 2,
             "file": "media/audio/sfx/stone_grind.wav",
@@ -512,7 +530,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_5w8yn8",
+            "id": "cam_t3ikya",
             "start": 0,
             "duration": 2.5,
             "label": "close-up",
@@ -638,7 +656,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_enxkf4",
+            "id": "cam_rhodqi",
             "start": 0,
             "duration": 3.5,
             "label": "orbit",
@@ -692,9 +710,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_vippho",
+            "id": "dlg_fweqvv",
             "start": 0.6,
-            "duration": 1.577,
+            "duration": 1.571,
             "characterId": "mili",
             "text": "Bit! Show off.",
             "audio": "media/audio/dialog/0b272af23bd9.wav",
@@ -757,7 +775,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_9jtpzf",
+            "id": "cam_ahwlzl",
             "start": 0,
             "duration": 3.5,
             "label": "close-up",
@@ -797,7 +815,7 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_6hocau",
+            "id": "dlg_hw31fq",
             "start": 0.6,
             "duration": 1.408,
             "characterId": "bit",

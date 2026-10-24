@@ -1,0 +1,691 @@
+{
+  "id": "ep04_sc02",
+  "title": "The Reach",
+  "status": "wip",
+  "summary": "They step into daylight. The same orb now reflects the dark. A stranger reaches for it the way a hand solves toward a target — only along the joints it has.",
+  "environmentId": "portal_outside",
+  "arc": {
+    "tension": 0.7,
+    "beat": "rising",
+    "note": "Outside, a person reaches for the orb. The arm only bends at its joints."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "Daylight",
+      "duration": 6.5,
+      "status": "wip",
+      "description": "Hard sun on a stone street. The orb sits in the square and holds the black chamber in its skin. The trio squint, suddenly small in a big ordinary world.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit",
+        "folk1",
+        "folk3",
+        "folk4",
+        "folk5"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.2,
+            0,
+            0.6
+          ],
+          "rotationY": 15
+        },
+        "sati": {
+          "position": [
+            0.1,
+            0,
+            1
+          ],
+          "rotationY": 0
+        },
+        "bit": {
+          "position": [
+            1.4,
+            0,
+            0.7
+          ],
+          "rotationY": -10
+        },
+        "folk1": {
+          "position": [
+            -5.5,
+            0,
+            -5
+          ],
+          "rotationY": 70
+        },
+        "folk3": {
+          "position": [
+            4.8,
+            0,
+            -4.2
+          ],
+          "rotationY": -110
+        },
+        "folk4": {
+          "position": [
+            6,
+            0,
+            -7
+          ],
+          "rotationY": -80
+        },
+        "folk5": {
+          "position": [
+            -4,
+            0,
+            -6.5
+          ],
+          "rotationY": 40
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "happy"
+          },
+          {
+            "t": 2.214,
+            "expression": "determined"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_5hw5yj",
+            "start": 0,
+            "duration": 6.5,
+            "image": "media/boards/a_more_open_world.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_gksnog",
+            "start": 0,
+            "duration": 6.5,
+            "label": "crane",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.10000000000000002,
+                  0.8,
+                  8.766666666666666
+                ],
+                "target": [
+                  0.10000000000000002,
+                  0.6,
+                  0.7666666666666666
+                ],
+                "fov": 48
+              },
+              {
+                "t": 6.5,
+                "position": [
+                  0.10000000000000002,
+                  3.2,
+                  7.566666666666666
+                ],
+                "target": [
+                  0.10000000000000002,
+                  0.6,
+                  0.7666666666666666
+                ],
+                "fov": 48
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_ddvxw8",
+            "start": 0.6,
+            "duration": 0.992,
+            "characterId": "mili",
+            "text": "We are out.",
+            "audio": "media/audio/dialog/5b51ea15ea22.wav",
+            "audioHash": "5b51ea15ea22",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_23mstw",
+            "start": 2.214,
+            "duration": 2.454,
+            "characterId": "sati",
+            "text": "Outside the protocol. This is their world.",
+            "audio": "media/audio/dialog/946c83e43c15.wav",
+            "audioHash": "946c83e43c15",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_y9uoq7",
+            "start": 0.15,
+            "duration": 1.6,
+            "file": "media/audio/sfx/whoosh.wav",
+            "gain": 0.4
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "The target",
+      "duration": 8.5,
+      "status": "todo",
+      "description": "A citizen walks up and reaches for the orb. Shoulder, then elbow, then the hand. Nothing else on the body swings free. The hand stops just short of the glass.",
+      "notes": "",
+      "characters": [
+        "sati",
+        "mili",
+        "bit",
+        "folk2"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -1.3,
+            0,
+            0.8
+          ],
+          "rotationY": 25
+        },
+        "mili": {
+          "position": [
+            -2.1,
+            0,
+            1.1
+          ],
+          "rotationY": 20
+        },
+        "bit": {
+          "position": [
+            1.6,
+            0,
+            0.9
+          ],
+          "rotationY": -20
+        },
+        "folk2": {
+          "position": [
+            1.1,
+            0,
+            1.6
+          ],
+          "rotationY": 170,
+          "moves": [
+            {
+              "t": 4.675,
+              "position": [
+                0.55,
+                0,
+                0.15
+              ],
+              "rotationY": 185
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 3.992,
+            "expression": "determined"
+          }
+        ],
+        "folk2": [
+          {
+            "t": 3.7,
+            "expression": "determined"
+          }
+        ]
+      },
+      "poses": {
+        "folk2": [
+          {
+            "t": 0.85,
+            "pose": "reach"
+          }
+        ],
+        "sati": [
+          {
+            "t": 2.975,
+            "pose": "point"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_jufr68",
+            "start": 0,
+            "duration": 8.5,
+            "label": "ik-follow",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  3.2,
+                  1.3,
+                  2.4
+                ],
+                "target": [
+                  0.4,
+                  1.1,
+                  0.2
+                ],
+                "fov": 32
+              },
+              {
+                "t": 8.5,
+                "position": [
+                  1.8,
+                  1.15,
+                  1.5
+                ],
+                "target": [
+                  0,
+                  1.3,
+                  -2.2
+                ],
+                "fov": 32
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_nw41vz",
+            "start": 0.6,
+            "duration": 2.01,
+            "characterId": "sati",
+            "text": "Watch the arm. It wants the orb.",
+            "audio": "media/audio/dialog/3b47f88bd067.wav",
+            "audioHash": "3b47f88bd067",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_eptf6u",
+            "start": 3.992,
+            "duration": 1.881,
+            "characterId": "sati",
+            "text": "It only bends where it has a joint.",
+            "audio": "media/audio/dialog/3d81fbb9a501.wav",
+            "audioHash": "3d81fbb9a501",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "The joints hold",
+      "duration": 10,
+      "status": "todo",
+      "description": "Bit reaches too, a straight grab. The big arm still folds at the shoulder and the elbow. The orb does not move to meet him.",
+      "notes": "",
+      "characters": [
+        "bit",
+        "sati",
+        "mili"
+      ],
+      "assets": [],
+      "positions": {
+        "bit": {
+          "position": [
+            0.85,
+            0,
+            0.35
+          ],
+          "rotationY": 8,
+          "moves": [
+            {
+              "t": 4,
+              "position": [
+                0.45,
+                0,
+                -0.45
+              ],
+              "rotationY": 5
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            -1.2,
+            0,
+            0.9
+          ],
+          "rotationY": 15
+        },
+        "mili": {
+          "position": [
+            -1.9,
+            0,
+            0.7
+          ],
+          "rotationY": 12
+        }
+      },
+      "expressions": {
+        "bit": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 3.77,
+            "expression": "worried"
+          },
+          {
+            "t": 6.5,
+            "expression": "worried"
+          }
+        ],
+        "mili": [
+          {
+            "t": 5,
+            "expression": "surprised"
+          }
+        ],
+        "sati": [
+          {
+            "t": 3.47,
+            "expression": "determined"
+          }
+        ]
+      },
+      "poses": {
+        "bit": [
+          {
+            "t": 0.5,
+            "pose": "reach"
+          }
+        ],
+        "sati": [
+          {
+            "t": 2,
+            "pose": "think"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_t80j0s",
+            "start": 0,
+            "duration": 10,
+            "label": "orbit",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -0.5499999999999997,
+                  1.85,
+                  2.7748711305964284
+                ],
+                "target": [
+                  0.85,
+                  1.5,
+                  0.35
+                ],
+                "fov": 36
+              },
+              {
+                "t": 5,
+                "position": [
+                  0.4845266617838556,
+                  1.85,
+                  3.126045611846669
+                ],
+                "target": [
+                  0.85,
+                  1.5,
+                  0.35
+                ],
+                "fov": 36
+              },
+              {
+                "t": 10,
+                "position": [
+                  1.5746933262870582,
+                  1.85,
+                  3.0545923136093913
+                ],
+                "target": [
+                  0.85,
+                  1.5,
+                  0.35
+                ],
+                "fov": 36
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_v6462l",
+            "start": 0.6,
+            "duration": 1.176,
+            "characterId": "bit",
+            "text": "I can just grab it.",
+            "audio": "media/audio/dialog/28908277c7d5.wav",
+            "audioHash": "28908277c7d5",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_yiv82a",
+            "start": 3.47,
+            "duration": 3.422,
+            "characterId": "sati",
+            "text": "You can want the target. The arm still has to solve the path.",
+            "audio": "media/audio/dialog/849c8402b65a.wav",
+            "audioHash": "849c8402b65a",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_eyofgb",
+            "start": 1.5,
+            "duration": 0.9,
+            "file": "media/audio/sfx/thud.wav",
+            "gain": 0.35
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "Wish and rules",
+      "duration": 9,
+      "status": "todo",
+      "description": "Wide: the stranger and Bit both reaching, the orb between them, the street busy behind. Sati stands still, reading it.",
+      "notes": "",
+      "characters": [
+        "sati",
+        "mili",
+        "bit",
+        "folk2",
+        "folk1",
+        "folk3"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -1.4,
+            0,
+            1.1
+          ],
+          "rotationY": 10
+        },
+        "mili": {
+          "position": [
+            -2.2,
+            0,
+            0.8
+          ],
+          "rotationY": 15
+        },
+        "bit": {
+          "position": [
+            0.45,
+            0,
+            -0.45
+          ],
+          "rotationY": 5
+        },
+        "folk2": {
+          "position": [
+            0.7,
+            0,
+            0.2
+          ],
+          "rotationY": 190
+        },
+        "folk1": {
+          "position": [
+            -5,
+            0,
+            -5
+          ],
+          "rotationY": 60
+        },
+        "folk3": {
+          "position": [
+            4.5,
+            0,
+            -4
+          ],
+          "rotationY": -100
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0.6,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_udvlwy",
+            "start": 0,
+            "duration": 9,
+            "label": "pull-away",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -3.5,
+                  1.6,
+                  4.2
+                ],
+                "target": [
+                  0,
+                  1.2,
+                  -1
+                ],
+                "fov": 42
+              },
+              {
+                "t": 9,
+                "position": [
+                  -2.2,
+                  1.8,
+                  5.4
+                ],
+                "target": [
+                  0,
+                  1.35,
+                  -2.2
+                ],
+                "fov": 42
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_zfq8n5",
+            "start": 0.6,
+            "duration": 1.615,
+            "characterId": "sati",
+            "text": "People out here name the goal.",
+            "audio": "media/audio/dialog/9e64d0842879.wav",
+            "audioHash": "9e64d0842879",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_y7u7yx",
+            "start": 3.558,
+            "duration": 3.975,
+            "characterId": "sati",
+            "text": "Inside, the protocol only moves along its rules. Like that arm.",
+            "audio": "media/audio/dialog/a1b78874a79d.wav",
+            "audioHash": "a1b78874a79d",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": []
+  }
+}

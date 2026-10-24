@@ -97,7 +97,7 @@
         ],
         "bit": [
           {
-            "t": 3.623,
+            "t": 3.783,
             "expression": "determined"
           }
         ]
@@ -113,7 +113,7 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_92ugff",
+            "id": "brd_jp7cl5",
             "start": 0,
             "duration": 6,
             "image": "media/boards/into_the_dark.png"
@@ -121,7 +121,7 @@
         ],
         "camera": [
           {
-            "id": "cam_c27092",
+            "id": "cam_znp3ow",
             "start": 0,
             "duration": 6,
             "label": "leading",
@@ -161,9 +161,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_ahyhwm",
+            "id": "dlg_m719sc",
             "start": 1.5,
-            "duration": 1.773,
+            "duration": 1.733,
             "characterId": "mili",
             "text": "It's so dark down here.",
             "audio": "media/audio/dialog/1e4bbd91509d.wav",
@@ -172,9 +172,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_d6ul19",
-            "start": 3.623,
-            "duration": 1.011,
+            "id": "dlg_k5w465",
+            "start": 3.783,
+            "duration": 0.983,
             "characterId": "bit",
             "text": "Stay close.",
             "audio": "media/audio/dialog/b9f21ec47712.wav",
@@ -185,7 +185,7 @@
         ],
         "sfx": [
           {
-            "id": "sfx_7u2iqr",
+            "id": "sfx_6ib7qg",
             "start": 0,
             "duration": 4,
             "file": "media/audio/sfx/hum.wav",
@@ -198,7 +198,7 @@
     {
       "id": "sh02",
       "name": "The beacon",
-      "duration": 3.5,
+      "duration": 4.5,
       "status": "wip",
       "description": "A glowing hexagon hums in a clearing, pulsing like a heartbeat. Sati steps closer.",
       "notes": "",
@@ -219,7 +219,7 @@
           "rotationY": 180,
           "moves": [
             {
-              "t": 1.75,
+              "t": 2.25,
               "position": [
                 0,
                 0,
@@ -253,7 +253,7 @@
             "expression": "surprised"
           },
           {
-            "t": 1.75,
+            "t": 2.25,
             "expression": "determined"
           }
         ],
@@ -267,17 +267,17 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_xzazmv",
+            "id": "brd_o744zf",
             "start": 0,
-            "duration": 3.5,
+            "duration": 4.5,
             "image": "media/boards/finding_signals.png"
           }
         ],
         "camera": [
           {
-            "id": "cam_f58txu",
+            "id": "cam_s8gp3h",
             "start": 0,
-            "duration": 3.5,
+            "duration": 4.5,
             "label": "reveal",
             "ease": "smooth",
             "keys": [
@@ -296,7 +296,7 @@
                 "fov": 40
               },
               {
-                "t": 3.5,
+                "t": 4.5,
                 "position": [
                   -1.9,
                   0.9,
@@ -315,9 +315,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_v82u5v",
+            "id": "dlg_2j1a7y",
             "start": 0.6,
-            "duration": 1.887,
+            "duration": 1.76,
             "characterId": "sati",
             "text": "It's a node. A brand new one.",
             "audio": "media/audio/dialog/751a4e2a3e7e.wav",
@@ -328,7 +328,7 @@
         ],
         "sfx": [
           {
-            "id": "sfx_5oatmz",
+            "id": "sfx_wjm61z",
             "start": 0.2,
             "duration": 2.4,
             "file": "media/audio/sfx/pulse.wav",
@@ -341,7 +341,7 @@
     {
       "id": "sh03",
       "name": "No one answers",
-      "duration": 4.5,
+      "duration": 5,
       "status": "todo",
       "description": "Close on Sati, the beacon light pulsing across their face.",
       "notes": "",
@@ -372,9 +372,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_n9v1um",
+            "id": "cam_1jrc7r",
             "start": 0,
-            "duration": 4.5,
+            "duration": 5,
             "label": "close-up",
             "ease": "smooth",
             "keys": [
@@ -393,7 +393,7 @@
                 "fov": 28
               },
               {
-                "t": 4.5,
+                "t": 5,
                 "position": [
                   3.3310392936808007e-16,
                   0.7432,
@@ -412,9 +412,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_9x7bjd",
+            "id": "dlg_kzkxlm",
             "start": 0.6,
-            "duration": 2.626,
+            "duration": 2.743,
             "characterId": "sati",
             "text": "It's calling for peers, but no one's answering.",
             "audio": "media/audio/dialog/a62641b0b9b9.wav",
@@ -425,7 +425,7 @@
         ],
         "sfx": [
           {
-            "id": "sfx_hut62u",
+            "id": "sfx_2obw2i",
             "start": 1,
             "duration": 2.5,
             "file": "media/audio/sfx/chime.wav",
@@ -438,7 +438,7 @@
     {
       "id": "sh04",
       "name": "Carry the hello",
-      "duration": 3.5,
+      "duration": 4.5,
       "status": "todo",
       "description": "Close on Mili, crackling with lightning, raring to go.",
       "notes": "",
@@ -485,7 +485,7 @@
             "pose": "wave"
           },
           {
-            "t": 3.039,
+            "t": 3.602,
             "pose": "idle"
           }
         ]
@@ -494,9 +494,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_6sbg60",
+            "id": "cam_m1jemn",
             "start": 0,
-            "duration": 3.5,
+            "duration": 4.5,
             "label": "close-up",
             "ease": "smooth",
             "keys": [
@@ -515,7 +515,7 @@
                 "fov": 28
               },
               {
-                "t": 3.5,
+                "t": 4.5,
                 "position": [
                   0.5057801606957187,
                   0.35376,
@@ -534,9 +534,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_nclimg",
+            "id": "dlg_w40vzo",
             "start": 0.6,
-            "duration": 2.039,
+            "duration": 1.96,
             "characterId": "mili",
             "text": "I'll take its hello to the others!",
             "audio": "media/audio/dialog/f0584dc1c554.wav",
@@ -552,7 +552,7 @@
     {
       "id": "sh05",
       "name": "Version, then wait",
-      "duration": 4.5,
+      "duration": 5.5,
       "status": "todo",
       "description": "Sati hands over the node's 'version' message. Mili spins and blurs off into the dark.",
       "notes": "Protocol: a new node opens a connection and sends a `version` message; the peer replies with its own `version` and a `verack`.",
@@ -580,7 +580,7 @@
           "rotationY": 60,
           "moves": [
             {
-              "t": 3.69,
+              "t": 4.51,
               "position": [
                 -0.9,
                 0,
@@ -589,7 +589,7 @@
               "rotationY": -90
             },
             {
-              "t": 4.5,
+              "t": 5.5,
               "position": [
                 -9,
                 0,
@@ -618,9 +618,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_0tgbpx",
+            "id": "cam_i83m4u",
             "start": 0,
-            "duration": 4.5,
+            "duration": 5.5,
             "label": "over-shoulder",
             "ease": "smooth",
             "keys": [
@@ -639,7 +639,7 @@
                 "fov": 32
               },
               {
-                "t": 4.5,
+                "t": 5.5,
                 "position": [
                   -1.2970695099912681,
                   0.352,
@@ -658,9 +658,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_r01giy",
+            "id": "dlg_xj5gug",
             "start": 0.6,
-            "duration": 2.638,
+            "duration": 2.548,
             "characterId": "sati",
             "text": "Tell them its version. Then wait for their answer.",
             "audio": "media/audio/dialog/fcb3a33d79f2.wav",
@@ -671,8 +671,8 @@
         ],
         "sfx": [
           {
-            "id": "sfx_kq0gy1",
-            "start": 4.01,
+            "id": "sfx_3d94pv",
+            "start": 5.01,
             "duration": 0.7,
             "file": "media/audio/sfx/zap.wav",
             "gain": 0.7
@@ -853,17 +853,17 @@
             "pose": "cheer"
           },
           {
-            "t": 4.083,
+            "t": 3.268,
             "pose": "idle"
           }
         ],
         "bit": [
           {
-            "t": 3.883,
+            "t": 3.068,
             "pose": "point"
           },
           {
-            "t": 6.08,
+            "t": 6.088,
             "pose": "idle"
           }
         ]
@@ -872,7 +872,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_lzel28",
+            "id": "cam_yks1az",
             "start": 0,
             "duration": 6.5,
             "label": "crane",
@@ -912,9 +912,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_ddbubv",
+            "id": "dlg_scnle9",
             "start": 0.6,
-            "duration": 3.083,
+            "duration": 3.078,
             "characterId": "mili",
             "text": "They answered! Version, verack, handshake done!",
             "audio": "media/audio/dialog/90d8070bb368.wav",
@@ -923,9 +923,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_5zme9o",
-            "start": 4.033,
-            "duration": 1.647,
+            "id": "dlg_ubouog",
+            "start": 3.218,
+            "duration": 1.616,
             "characterId": "bit",
             "text": "Look. They're all lighting up.",
             "audio": "media/audio/dialog/6349e0324acf.wav",
@@ -936,21 +936,21 @@
         ],
         "sfx": [
           {
-            "id": "sfx_68bb5m",
+            "id": "sfx_ugktgd",
             "start": 0.4,
             "duration": 2.5,
             "file": "media/audio/sfx/chime.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_akiivb",
+            "id": "sfx_bg5vqt",
             "start": 1.4,
             "duration": 1.4,
             "file": "media/audio/sfx/sparkle.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_vronv1",
+            "id": "sfx_9zb367",
             "start": 2.6,
             "duration": 2.5,
             "file": "media/audio/sfx/chime.wav",
@@ -969,9 +969,9 @@
     "sfx": [],
     "score": [
       {
-        "id": "scr_rnu9e5",
+        "id": "scr_3ql59g",
         "start": 0,
-        "duration": 28.5,
+        "duration": 32,
         "cueId": "cue_ep02_sc01",
         "offset": 0,
         "gain": 0.5

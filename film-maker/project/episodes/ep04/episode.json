@@ -1,0 +1,39 @@
+{
+  "id": "ep04",
+  "number": 4,
+  "title": "The Reflection Orb",
+  "status": "wip",
+  "synopsis": "Deep in the protocol the trio find a reflection orb that does not show their own faces. One side of the glass is inside Bitcoin. The other side is the real world, outside the protocol. People out there reach for the orb the way an arm reaches a target: the hand can want it, and the body can only fold at the joints it has. They step through, and they step back. The portal stays open. It does not let either world skip the rules.",
+  "theme": "A wish starts outside. The protocol only bends along its rules.",
+  "arc": {
+    "tension": 0.55,
+    "beat": "rising",
+    "note": "The orb is the door between the real world and the protocol."
+  },
+  "credits": {
+    "intro": true,
+    "outro": true
+  },
+  "scenes": [
+    "ep04_sc01",
+    "ep04_sc02",
+    "ep04_sc03"
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": [
+      {
+        "id": "scr_ny6trk",
+        "start": 0,
+        "duration": 82.5,
+        "cueId": "cue_ep04",
+        "offset": 0,
+        "gain": 0.45
+      }
+    ]
+  }
+}

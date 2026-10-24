@@ -13,7 +13,7 @@
     {
       "id": "sh01",
       "name": "Why so small?",
-      "duration": 8,
+      "duration": 9,
       "status": "todo",
       "description": "Walking side by side. Mili jogs to keep up, looking up at the others. Folk pass the other way.",
       "notes": "",
@@ -35,7 +35,7 @@
           "rotationY": 180,
           "moves": [
             {
-              "t": 8,
+              "t": 9,
               "position": [
                 -1,
                 0,
@@ -54,7 +54,7 @@
           "rotationY": 180,
           "moves": [
             {
-              "t": 8,
+              "t": 9,
               "position": [
                 0,
                 0,
@@ -73,7 +73,7 @@
           "rotationY": 180,
           "moves": [
             {
-              "t": 8,
+              "t": 9,
               "position": [
                 1.5,
                 0,
@@ -92,7 +92,7 @@
           "rotationY": 0,
           "moves": [
             {
-              "t": 8,
+              "t": 9,
               "position": [
                 -3,
                 0,
@@ -110,7 +110,7 @@
           "rotationY": 0,
           "moves": [
             {
-              "t": 8,
+              "t": 9,
               "position": [
                 3.5,
                 0,
@@ -127,13 +127,13 @@
             "expression": "sad"
           },
           {
-            "t": 3.863,
+            "t": 3.852,
             "expression": "surprised"
           }
         ],
         "sati": [
           {
-            "t": 3.563,
+            "t": 3.552,
             "expression": "happy"
           }
         ]
@@ -145,7 +145,7 @@
             "pose": "wave"
           },
           {
-            "t": 3.613,
+            "t": 3.602,
             "pose": "idle"
           }
         ]
@@ -154,9 +154,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_z9q4og",
+            "id": "cam_p7optr",
             "start": 0,
-            "duration": 8,
+            "duration": 9,
             "label": "walk-and-talk (leading)",
             "ease": "smooth",
             "keys": [
@@ -175,7 +175,7 @@
                 "fov": 38
               },
               {
-                "t": 8,
+                "t": 9,
                 "position": [
                   0.6,
                   1,
@@ -194,9 +194,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_f3gym1",
+            "id": "dlg_wvxdya",
             "start": 0.6,
-            "duration": 2.613,
+            "duration": 2.713,
             "characterId": "mili",
             "text": "Hey. Why am I always the smallest?",
             "audio": "media/audio/dialog/9b08a7dd33bd.wav",
@@ -205,9 +205,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_zj4pb2",
-            "start": 3.563,
-            "duration": 3.172,
+            "id": "dlg_gqt2pg",
+            "start": 3.552,
+            "duration": 2.862,
             "characterId": "sati",
             "text": "Because you're a Mili. A thousand of you make one Sati.",
             "audio": "media/audio/dialog/3318fa6276b5.wav",
@@ -223,7 +223,7 @@
     {
       "id": "sh02",
       "name": "A hundred million",
-      "duration": 5.5,
+      "duration": 6,
       "status": "todo",
       "description": "Mili turns to Bit. Bit beams down.",
       "notes": "",
@@ -257,7 +257,7 @@
             "expression": "happy"
           },
           {
-            "t": 2.991,
+            "t": 3.552,
             "expression": "happy"
           }
         ]
@@ -269,7 +269,7 @@
             "pose": "think"
           },
           {
-            "t": 3.041,
+            "t": 3.602,
             "pose": "idle"
           }
         ]
@@ -278,9 +278,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_oyaiyt",
+            "id": "cam_c8p55y",
             "start": 0,
-            "duration": 5.5,
+            "duration": 6,
             "label": "over-shoulder",
             "ease": "smooth",
             "keys": [
@@ -299,7 +299,7 @@
                 "fov": 32
               },
               {
-                "t": 5.5,
+                "t": 6,
                 "position": [
                   -0.9061477154834836,
                   0.352,
@@ -318,9 +318,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_qcr0k9",
+            "id": "dlg_1unssp",
             "start": 0.6,
-            "duration": 2.041,
+            "duration": 1.989,
             "characterId": "mili",
             "text": "And how many Satis make a Bit?",
             "audio": "media/audio/dialog/00bc00260d6d.wav",
@@ -329,9 +329,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_iiz5hn",
-            "start": 2.991,
-            "duration": 1.222,
+            "id": "dlg_oy6pil",
+            "start": 3.552,
+            "duration": 1.22,
             "characterId": "bit",
             "text": "A hundred million.",
             "audio": "media/audio/dialog/729962e3d230.wav",
@@ -398,7 +398,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_rbvjaq",
+            "id": "cam_nb7301",
             "start": 0,
             "duration": 3,
             "label": "close-up",
@@ -438,9 +438,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_rbtens",
+            "id": "dlg_4c10v5",
             "start": 1.2,
-            "duration": 0.574,
+            "duration": 0.529,
             "characterId": "mili",
             "text": "Whoa.",
             "audio": "media/audio/dialog/87bc8d622d17.wav",
@@ -456,7 +456,7 @@
     {
       "id": "sh04",
       "name": "Every one counts",
-      "duration": 4,
+      "duration": 5,
       "status": "wip",
       "description": "Sati walks over and puts an arm around Mili. Behind them, the light city opens up — wide and bright.",
       "notes": "",
@@ -490,7 +490,7 @@
           "rotationY": 0,
           "moves": [
             {
-              "t": 1.6,
+              "t": 2,
               "position": [
                 -0.6,
                 0,
@@ -517,7 +517,7 @@
           "rotationY": 90,
           "moves": [
             {
-              "t": 4,
+              "t": 5,
               "position": [
                 7,
                 0,
@@ -551,7 +551,7 @@
           "rotationY": -90,
           "moves": [
             {
-              "t": 4,
+              "t": 5,
               "position": [
                 -6,
                 0,
@@ -586,7 +586,7 @@
         ],
         "mili": [
           {
-            "t": 1.6,
+            "t": 2,
             "expression": "happy"
           }
         ],
@@ -600,17 +600,17 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_4xr8yy",
+            "id": "brd_bw7dll",
             "start": 0,
-            "duration": 4,
+            "duration": 5,
             "image": "media/boards/a_more_open_world.png"
           }
         ],
         "camera": [
           {
-            "id": "cam_o0ra9u",
+            "id": "cam_10ug8o",
             "start": 0,
-            "duration": 4,
+            "duration": 5,
             "label": "pull-out",
             "ease": "smooth",
             "keys": [
@@ -629,7 +629,7 @@
                 "fov": 45
               },
               {
-                "t": 4,
+                "t": 5,
                 "position": [
                   0.16666666666666666,
                   1.79,
@@ -648,9 +648,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_b9mze9",
+            "id": "dlg_l4qbm6",
             "start": 0.6,
-            "duration": 2.218,
+            "duration": 2.344,
             "characterId": "sati",
             "text": "Big or small, every one of us counts.",
             "audio": "media/audio/dialog/9b649f34b5d0.wav",
@@ -661,7 +661,7 @@
         ],
         "sfx": [
           {
-            "id": "sfx_mlxapa",
+            "id": "sfx_q7135c",
             "start": 0.5,
             "duration": 1.4,
             "file": "media/audio/sfx/sparkle.wav",

@@ -137,7 +137,7 @@
             "pose": "think"
           },
           {
-            "t": 3.187,
+            "t": 3.464,
             "pose": "idle"
           }
         ]
@@ -145,7 +145,7 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_3ij9c7",
+            "id": "brd_twymau",
             "start": 0,
             "duration": 5,
             "image": "media/boards/the_protocol.png"
@@ -153,7 +153,7 @@
         ],
         "camera": [
           {
-            "id": "cam_djutfn",
+            "id": "cam_ttz6tb",
             "start": 0,
             "duration": 5,
             "label": "static",
@@ -179,9 +179,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_cajurh",
+            "id": "dlg_p48659",
             "start": 1.8,
-            "duration": 0.987,
+            "duration": 1.031,
             "characterId": "mili",
             "text": "What was that?",
             "audio": "media/audio/dialog/2f848c66ce9d.wav",
@@ -192,7 +192,7 @@
         ],
         "sfx": [
           {
-            "id": "sfx_vyjc3v",
+            "id": "sfx_r54v8i",
             "start": 0,
             "duration": 2.4,
             "file": "media/audio/sfx/pulse.wav",
@@ -247,7 +247,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_af145f",
+            "id": "cam_wygw3f",
             "start": 0,
             "duration": 3,
             "label": "close-up",
@@ -293,7 +293,7 @@
     {
       "id": "sh03",
       "name": "Something is calling",
-      "duration": 6,
+      "duration": 6.5,
       "status": "todo",
       "description": "Reverse: the trio walk to the edge, silhouetted, looking down. Far below, a hex beacon pulses in the dark.",
       "notes": "",
@@ -313,7 +313,7 @@
           "rotationY": 180,
           "moves": [
             {
-              "t": 2.1,
+              "t": 2.275,
               "position": [
                 -1,
                 0,
@@ -332,7 +332,7 @@
           "rotationY": 180,
           "moves": [
             {
-              "t": 1.8,
+              "t": 1.95,
               "position": [
                 0,
                 0,
@@ -351,7 +351,7 @@
           "rotationY": 180,
           "moves": [
             {
-              "t": 2.4,
+              "t": 2.6,
               "position": [
                 1.5,
                 0,
@@ -375,7 +375,7 @@
             "expression": "worried"
           },
           {
-            "t": 3.482,
+            "t": 3.723,
             "expression": "happy"
           }
         ],
@@ -393,7 +393,7 @@
             "pose": "point"
           },
           {
-            "t": 2.982,
+            "t": 3.223,
             "pose": "idle"
           }
         ]
@@ -402,9 +402,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_v3s5qi",
+            "id": "cam_1uh2y1",
             "start": 0,
-            "duration": 6,
+            "duration": 6.5,
             "label": "over-the-edge",
             "ease": "smooth",
             "keys": [
@@ -423,7 +423,7 @@
                 "fov": 42
               },
               {
-                "t": 6,
+                "t": 6.5,
                 "position": [
                   0,
                   2.4,
@@ -442,9 +442,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_xv649k",
+            "id": "dlg_byxd6j",
             "start": 0.6,
-            "duration": 1.982,
+            "duration": 1.986,
             "characterId": "sati",
             "text": "Something's calling. From down there.",
             "audio": "media/audio/dialog/f3ec158d4d86.wav",
@@ -453,9 +453,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_z59aps",
-            "start": 3.182,
-            "duration": 1.398,
+            "id": "dlg_fmgjbp",
+            "start": 3.423,
+            "duration": 1.485,
             "characterId": "bit",
             "text": "Then we go together.",
             "audio": "media/audio/dialog/84d6f8b1f742.wav",
@@ -466,14 +466,14 @@
         ],
         "sfx": [
           {
-            "id": "sfx_8pkgsk",
+            "id": "sfx_mbxuo5",
             "start": 0.8,
             "duration": 2.5,
             "file": "media/audio/sfx/chime.wav",
             "gain": 0.4
           },
           {
-            "id": "sfx_gzhjrx",
+            "id": "sfx_fr3nne",
             "start": 3,
             "duration": 2.4,
             "file": "media/audio/sfx/pulse.wav",

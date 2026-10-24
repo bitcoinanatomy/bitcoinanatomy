@@ -561,6 +561,26 @@ export const ENVIRONMENTS: Record<string, Environment> = Object.fromEntries(
         p('halo_ring', [0, 3.6, -3], 1), p('halo_ring', [0, 5, -3], 1.4), ...ring('crystal_gold', 8, 5.2, 0, 0.8, -3, 0.2, false),
         ...Array.from({ length: 6 }, (_, i) => p('hash_block', [(i - 2.5) * 2.6, 0, -9], 1, i * 17)), p('embers', [0, 0, -3])],
     },
+    {
+      id: 'portal_inside', name: 'Inside the Protocol', description: 'A quiet black chamber inside the protocol. One mirror sphere hangs at eye height — the reflection orb, a portal. Its skin shows daylight that does not belong here.',
+      ...dark, fog: { color: '#05070c', near: 8, far: 36 }, background: '#010308', lighting: { ambient: 0.1, key: 0.7, keyColor: '#d5e4ff', keyPosition: [2, 8, 4] },
+      hdri: 'media/hdri/moon.hdr', hdriIntensity: 1.15, post: { bloom: 1.15, vignette: 0.55, grain: 0.05, exposure: 1.05 },
+      preview: { position: [0.4, 1.5, 6.5], target: [0, 1.35, -2.2], fov: 42 },
+      props: [p('obsidian_floor'), p('glass_sphere', [0, 1.35, -2.2], 1.35), p('floor_ring', [0, 0, -2.2], 1.15), p('light_shaft', [0, 0, -2.2], 0.55),
+        p('halo_ring', [0, 1.35, -2.2], 0.85), ...ring('crystal', 7, 6.5, 0, 0.55, -2.2, 0.15, false), ...monoliths(11, 16, 16, 2.2), p('motes', [0, 0, -2], 0.8)],
+    },
+    {
+      id: 'portal_outside', name: 'Outside the Protocol', description: 'The real world, outside Bitcoin: a sunlit street of stone, trees and ordinary people. The same reflection orb sits in the square and shows the dark chamber on its skin.',
+      ...light, lighting: { ambient: 0.4, key: 1.9, keyColor: '#fff6e4', keyPosition: [-4, 12, 6] },
+      background: '#d5e6f6', fog: { color: '#d5e4f2', near: 28, far: 120 }, hdri: 'media/hdri/noon.hdr', hdriIntensity: 0.6,
+      post: { bloom: 0.55, vignette: 0.28, grain: 0.03, exposure: 0.85 },
+      preview: { position: [-3, 1.7, 8], target: [0, 1.35, -2.2], fov: 48 },
+      props: [p('marble_floor'), p('glass_sphere', [0, 1.35, -2.2], 1.35), p('floor_ring', [0, 0, -2.2], 1.2),
+        ...row('column', [-5.5, 0, 1], [0, 0, -4], 5), ...row('column', [5.5, 0, 1], [0, 0, -4], 5),
+        p('tree', [-7, 0, -1], 1.3), p('tree', [7.2, 0, -2], 1.5), p('bench', [-3.4, 0, 1.2], 1, 80), p('bench', [3.6, 0, 0.8], 1, -70),
+        p('lamp_post', [-2.6, 0, 2]), p('lamp_post', [2.6, 0, 2]), p('planter', [-4.2, 0, -6]), p('planter', [4.4, 0, -6.2]),
+        ...skyline, ...clouds(2)],
+    },
   ].map((e) => [e.id, SCHEMAS.environment.parse({ color: '#888888', ...e })]),
 );
 

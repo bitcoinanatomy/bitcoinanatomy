@@ -13,7 +13,7 @@
     {
       "id": "sh01",
       "name": "A shiny one",
-      "duration": 7,
+      "duration": 7.5,
       "status": "wip",
       "description": "A warm glowing orb drifts down between them, ringed with light. Mili reaches for it; other travellers drift past in the distance.",
       "notes": "",
@@ -44,7 +44,7 @@
           "rotationY": 160,
           "moves": [
             {
-              "t": 2.1,
+              "t": 2.25,
               "position": [
                 -0.4,
                 0,
@@ -71,7 +71,7 @@
           "rotationY": 70,
           "moves": [
             {
-              "t": 7,
+              "t": 7.5,
               "position": [
                 -1.5,
                 0,
@@ -97,7 +97,7 @@
           "rotationY": -100,
           "moves": [
             {
-              "t": 7,
+              "t": 7.5,
               "position": [
                 2,
                 0,
@@ -114,13 +114,13 @@
             "expression": "surprised"
           },
           {
-            "t": 2.1,
+            "t": 2.25,
             "expression": "happy"
           }
         ],
         "sati": [
           {
-            "t": 2.554,
+            "t": 2.549,
             "expression": "determined"
           }
         ]
@@ -128,17 +128,17 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_h0evpl",
+            "id": "brd_9q2061",
             "start": 0,
-            "duration": 7,
+            "duration": 7.5,
             "image": "media/boards/new_perspectives.png"
           }
         ],
         "camera": [
           {
-            "id": "cam_6n86wa",
+            "id": "cam_ovigm1",
             "start": 0,
-            "duration": 7,
+            "duration": 7.5,
             "label": "push-in",
             "ease": "smooth",
             "keys": [
@@ -157,7 +157,7 @@
                 "fov": 38
               },
               {
-                "t": 7,
+                "t": 7.5,
                 "position": [
                   0.4,
                   1.36,
@@ -176,9 +176,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_egme21",
+            "id": "dlg_097w9g",
             "start": 0.6,
-            "duration": 1.604,
+            "duration": 1.633,
             "characterId": "mili",
             "text": "Ooh. A shiny one.",
             "audio": "media/audio/dialog/818716b96d14.wav",
@@ -187,9 +187,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_qcnrpb",
-            "start": 2.554,
-            "duration": 3.563,
+            "id": "dlg_68ozon",
+            "start": 2.549,
+            "duration": 3.773,
             "characterId": "sati",
             "text": "That's a transaction. Someone's sending value across the network.",
             "audio": "media/audio/dialog/d71d8a563e5c.wav",
@@ -200,7 +200,7 @@
         ],
         "sfx": [
           {
-            "id": "sfx_cjb27j",
+            "id": "sfx_vr4wv0",
             "start": 0.2,
             "duration": 1.4,
             "file": "media/audio/sfx/sparkle.wav",
@@ -213,7 +213,7 @@
     {
       "id": "sh02",
       "name": "The key fits",
-      "duration": 4.5,
+      "duration": 5.5,
       "status": "todo",
       "description": "Close on Sati holding up a hand; the ring around the orb clicks into alignment and flashes.",
       "notes": "Protocol: nodes check each input’s signature against the public key it spends from before relaying.",
@@ -238,7 +238,7 @@
             "expression": "determined"
           },
           {
-            "t": 2.933,
+            "t": 3.323,
             "expression": "happy"
           }
         ]
@@ -247,9 +247,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_lfl8dt",
+            "id": "cam_l69li8",
             "start": 0,
-            "duration": 4.5,
+            "duration": 5.5,
             "label": "static",
             "ease": "linear",
             "keys": [
@@ -273,9 +273,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_0qhz0w",
+            "id": "dlg_j677nl",
             "start": 0.6,
-            "duration": 1.833,
+            "duration": 1.689,
             "characterId": "sati",
             "text": "Its signature matches the key.",
             "audio": "media/audio/dialog/e2835b9f2947.wav",
@@ -284,9 +284,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_cshgzq",
-            "start": 2.933,
-            "duration": 0.752,
+            "id": "dlg_qefayr",
+            "start": 3.323,
+            "duration": 0.835,
             "characterId": "sati",
             "text": "It's valid.",
             "audio": "media/audio/dialog/d15528d65166.wav",
@@ -297,14 +297,14 @@
         ],
         "sfx": [
           {
-            "id": "sfx_mdzywh",
+            "id": "sfx_6zzijc",
             "start": 1.6,
             "duration": 0.08,
             "file": "media/audio/sfx/click.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_mwgxtz",
+            "id": "sfx_r9znv1",
             "start": 1.7,
             "duration": 2.5,
             "file": "media/audio/sfx/chime.wav",
@@ -317,7 +317,7 @@
     {
       "id": "sh03",
       "name": "Peer to peer",
-      "duration": 4,
+      "duration": 4.5,
       "status": "todo",
       "description": "Mili grabs the orb and blurs off — lightning zig-zags from bubble to bubble across the dark.",
       "notes": "",
@@ -335,7 +335,7 @@
           "rotationY": 30,
           "moves": [
             {
-              "t": 1.4,
+              "t": 1.575,
               "position": [
                 1,
                 0,
@@ -344,7 +344,7 @@
               "rotationY": 60
             },
             {
-              "t": 2.4,
+              "t": 2.7,
               "position": [
                 3,
                 0,
@@ -353,7 +353,7 @@
               "rotationY": 20
             },
             {
-              "t": 4,
+              "t": 4.5,
               "position": [
                 6,
                 0,
@@ -379,7 +379,7 @@
             "pose": "point"
           },
           {
-            "t": 3.41,
+            "t": 3.936,
             "pose": "idle"
           }
         ]
@@ -388,9 +388,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_ghog96",
+            "id": "cam_s4jblt",
             "start": 0,
-            "duration": 4,
+            "duration": 4.5,
             "label": "whip-pan",
             "ease": "smooth",
             "keys": [
@@ -409,7 +409,7 @@
                 "fov": 45
               },
               {
-                "t": 4,
+                "t": 4.5,
                 "position": [
                   3,
                   1.4,
@@ -428,9 +428,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_21i22v",
+            "id": "dlg_3ilwxf",
             "start": 0.6,
-            "duration": 2.41,
+            "duration": 2.378,
             "characterId": "mili",
             "text": "Passing it on! Peer to peer to peer!",
             "audio": "media/audio/dialog/5fb4358a93c7.wav",
@@ -441,21 +441,21 @@
         ],
         "sfx": [
           {
-            "id": "sfx_gfu02q",
+            "id": "sfx_97rwxc",
             "start": 0.1,
             "duration": 0.7,
             "file": "media/audio/sfx/zap.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_zk05bn",
+            "id": "sfx_0mlrpq",
             "start": 0.5,
             "duration": 1.6,
             "file": "media/audio/sfx/whoosh.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_r4yipe",
+            "id": "sfx_24349y",
             "start": 1.4,
             "duration": 0.7,
             "file": "media/audio/sfx/zap.wav",
@@ -468,7 +468,7 @@
     {
       "id": "sh04",
       "name": "The waiting room",
-      "duration": 6,
+      "duration": 8,
       "status": "todo",
       "description": "The orb settles into a glass bubble among hundreds of others, all floating, all waiting. Other folk wait beside theirs.",
       "notes": "Protocol: valid, unconfirmed transactions wait in each node’s mempool until a miner includes them in a block.",
@@ -507,7 +507,7 @@
           "rotationY": 180,
           "moves": [
             {
-              "t": 3,
+              "t": 4,
               "position": [
                 0.1,
                 0,
@@ -526,7 +526,7 @@
           "rotationY": 70,
           "moves": [
             {
-              "t": 6,
+              "t": 8,
               "position": [
                 -1.5,
                 0,
@@ -552,7 +552,7 @@
           "rotationY": -100,
           "moves": [
             {
-              "t": 6,
+              "t": 8,
               "position": [
                 2,
                 0,
@@ -577,7 +577,7 @@
         ],
         "sati": [
           {
-            "t": 3,
+            "t": 4,
             "expression": "determined"
           }
         ],
@@ -607,7 +607,7 @@
             "pose": "think"
           },
           {
-            "t": 2.207,
+            "t": 2.615,
             "pose": "idle"
           }
         ]
@@ -616,9 +616,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_51pzv8",
+            "id": "cam_ebmffe",
             "start": 0,
-            "duration": 6,
+            "duration": 8,
             "label": "crane",
             "ease": "smooth",
             "keys": [
@@ -637,7 +637,7 @@
                 "fov": 50
               },
               {
-                "t": 6,
+                "t": 8,
                 "position": [
                   0,
                   2.4,
@@ -656,9 +656,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_ju2qmn",
+            "id": "dlg_r4boxe",
             "start": 0.6,
-            "duration": 1.207,
+            "duration": 1.206,
             "characterId": "bit",
             "text": "So many bubbles.",
             "audio": "media/audio/dialog/57b3d6fdfcda.wav",
@@ -667,9 +667,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_m17p54",
-            "start": 2.157,
-            "duration": 2.919,
+            "id": "dlg_11brdg",
+            "start": 2.565,
+            "duration": 3.049,
             "characterId": "sati",
             "text": "They're all waiting for the next block. Let's follow ours.",
             "audio": "media/audio/dialog/8c3aabe5b131.wav",
@@ -691,9 +691,9 @@
     "sfx": [],
     "score": [
       {
-        "id": "scr_t0xvb3",
+        "id": "scr_e5qmwm",
         "start": 0,
-        "duration": 21.5,
+        "duration": 25.5,
         "cueId": "cue_ep02_sc02",
         "offset": 0,
         "gain": 0.5

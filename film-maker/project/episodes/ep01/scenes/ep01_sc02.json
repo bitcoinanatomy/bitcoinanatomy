@@ -13,7 +13,7 @@
     {
       "id": "sh01",
       "name": "The stepping blocks",
-      "duration": 6,
+      "duration": 7.5,
       "status": "wip",
       "description": "A row of marble blocks leads up the steps. Sati studies them, head tilted; the first block glows faintly.",
       "notes": "",
@@ -42,7 +42,7 @@
           "rotationY": 40,
           "moves": [
             {
-              "t": 3,
+              "t": 3.75,
               "position": [
                 -3,
                 0,
@@ -90,7 +90,7 @@
             "pose": "point"
           },
           {
-            "t": 5.182,
+            "t": 6.685,
             "pose": "idle"
           }
         ]
@@ -98,17 +98,17 @@
       "tracks": {
         "storyboard": [
           {
-            "id": "brd_fcc6cw",
+            "id": "brd_138ysf",
             "start": 0,
-            "duration": 6,
+            "duration": 7.5,
             "image": "media/boards/discover.png"
           }
         ],
         "camera": [
           {
-            "id": "cam_9b4n3v",
+            "id": "cam_v2nr34",
             "start": 0,
-            "duration": 6,
+            "duration": 7.5,
             "label": "over-shoulder",
             "ease": "smooth",
             "keys": [
@@ -127,7 +127,7 @@
                 "fov": 36
               },
               {
-                "t": 6,
+                "t": 7.5,
                 "position": [
                   -3.2,
                   0.9,
@@ -146,9 +146,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_yruxdy",
+            "id": "dlg_2hiuxh",
             "start": 0.6,
-            "duration": 4.182,
+            "duration": 3.983,
             "characterId": "sati",
             "text": "Look. They only light up in order. Every block follows the one before it.",
             "audio": "media/audio/dialog/ff937123690e.wav",
@@ -159,14 +159,14 @@
         ],
         "sfx": [
           {
-            "id": "sfx_5jn769",
+            "id": "sfx_7wiyqj",
             "start": 2.2,
             "duration": 0.25,
             "file": "media/audio/sfx/blip.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_c4aoda",
+            "id": "sfx_eu9h0j",
             "start": 2.8,
             "duration": 0.25,
             "file": "media/audio/sfx/blip.wav",
@@ -236,7 +236,7 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_fpc8vc",
+            "id": "cam_hd2713",
             "start": 0,
             "duration": 2.5,
             "label": "close-up",
@@ -282,7 +282,7 @@
     {
       "id": "sh03",
       "name": "Follow the chain",
-      "duration": 7,
+      "duration": 7.5,
       "status": "todo",
       "description": "Mili hops onto the first block, then the next — each lights as they land. Sati follows, a step behind.",
       "notes": "",
@@ -301,7 +301,7 @@
           "rotationY": 35,
           "moves": [
             {
-              "t": 2.1,
+              "t": 2.25,
               "position": [
                 -1.5,
                 0.5,
@@ -310,7 +310,7 @@
               "rotationY": 35
             },
             {
-              "t": 3.85,
+              "t": 4.125,
               "position": [
                 -0.3,
                 0.5,
@@ -319,7 +319,7 @@
               "rotationY": 35
             },
             {
-              "t": 5.6,
+              "t": 6,
               "position": [
                 1,
                 0.5,
@@ -338,7 +338,7 @@
           "rotationY": 40,
           "moves": [
             {
-              "t": 0.84,
+              "t": 0.9,
               "position": [
                 -1.5,
                 0.5,
@@ -347,7 +347,7 @@
               "rotationY": 30
             },
             {
-              "t": 2.1,
+              "t": 2.25,
               "position": [
                 -0.3,
                 0.5,
@@ -356,7 +356,7 @@
               "rotationY": 35
             },
             {
-              "t": 3.36,
+              "t": 3.6,
               "position": [
                 1,
                 0.5,
@@ -365,7 +365,7 @@
               "rotationY": 30
             },
             {
-              "t": 4.62,
+              "t": 4.95,
               "position": [
                 2.4,
                 0.5,
@@ -389,7 +389,7 @@
             "expression": "determined"
           },
           {
-            "t": 2.776,
+            "t": 3.218,
             "expression": "happy"
           }
         ]
@@ -401,17 +401,17 @@
             "pose": "think"
           },
           {
-            "t": 2.826,
+            "t": 3.268,
             "pose": "idle"
           }
         ],
         "sati": [
           {
-            "t": 2.626,
+            "t": 3.068,
             "pose": "point"
           },
           {
-            "t": 6.141,
+            "t": 6.995,
             "pose": "idle"
           }
         ]
@@ -420,9 +420,9 @@
         "storyboard": [],
         "camera": [
           {
-            "id": "cam_69t991",
+            "id": "cam_m979ej",
             "start": 0,
-            "duration": 7,
+            "duration": 7.5,
             "label": "orbit",
             "ease": "linear",
             "keys": [
@@ -441,7 +441,7 @@
                 "fov": 42
               },
               {
-                "t": 3.5,
+                "t": 3.75,
                 "position": [
                   2.6864980417341195,
                   1.7999999999999998,
@@ -455,7 +455,7 @@
                 "fov": 42
               },
               {
-                "t": 7,
+                "t": 7.5,
                 "position": [
                   1.2940952255126037,
                   1.7999999999999998,
@@ -474,9 +474,9 @@
         "subtitles": [],
         "dialog": [
           {
-            "id": "dlg_749mtf",
+            "id": "dlg_m9qhyr",
             "start": 0.6,
-            "duration": 1.826,
+            "duration": 1.785,
             "characterId": "mili",
             "text": "So we just... follow the chain?",
             "audio": "media/audio/dialog/2f98f6b5ee45.wav",
@@ -485,9 +485,9 @@
             "gain": 1
           },
           {
-            "id": "dlg_4z38h9",
-            "start": 2.776,
-            "duration": 2.965,
+            "id": "dlg_5rthqg",
+            "start": 3.218,
+            "duration": 3.045,
             "characterId": "sati",
             "text": "Exactly. One block at a time. This way!",
             "audio": "media/audio/dialog/65acb94693da.wav",
@@ -498,21 +498,21 @@
         ],
         "sfx": [
           {
-            "id": "sfx_x4hq3f",
+            "id": "sfx_r2ez83",
             "start": 0.4,
             "duration": 0.25,
             "file": "media/audio/sfx/blip.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_1b2x65",
+            "id": "sfx_9dfgkb",
             "start": 1.1,
             "duration": 0.25,
             "file": "media/audio/sfx/blip.wav",
             "gain": 0.7
           },
           {
-            "id": "sfx_zbti2p",
+            "id": "sfx_k0frw7",
             "start": 1.8,
             "duration": 0.25,
             "file": "media/audio/sfx/blip.wav",

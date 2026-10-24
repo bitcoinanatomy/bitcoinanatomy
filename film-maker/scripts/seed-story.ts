@@ -1,7 +1,11 @@
 /**
- * Seeds the project with the "Mili · Sati · Bit" story: two Pixar-style episodes.
+ * Seeds the project with the "Mili · Sati · Bit" story: three Pixar-style episodes.
  *   Ep 1 introduces the trio in the light city; Ep 2 takes them into the dark to
- *   explore the protocol — nodes, a transaction's journey, and mining.
+ *   explore the protocol — nodes, a transaction's journey, and mining. Ep 3
+ *   brings them home to learn that only the matching key can spend a coin.
+ *   Ep 4 finds the reflection orb: a portal. Inside it is the protocol. Outside
+ *   it is the real world. A reach only lands if the joints — the rules — allow it,
+ *   the way a skinned arm solves toward a target.
  *
  *   npm run seed                 (overwrites project/ episodes, libraries, score, boards, dialog cache)
  *   npm run seed -- --no-tts     (estimated timings, no audio)
@@ -11,10 +15,10 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Asset, Beat, Character, DialogClip, Environment, Episode, Expression, ExpressionKey, MoveKey, ProjectData, Scene, ScoreCue, SfxClip, StoryboardClip, Vec3 } from '../src/model/schema';
+import type { Asset, Beat, Character, DialogClip, Environment, Episode, Expression, ExpressionKey, MoveKey, ProjectData, Scene, ScoreCue, SfxClip, StoryboardClip, Treatment, Vec3 } from '../src/model/schema';
 import { SCHEMAS, Shot as ShotSchema } from '../src/model/schema';
 import { estimateSpeech, uid } from '../src/model/timeline';
-import { PROJECT_DIR, saveAll } from '../server/projectFs';
+import { PROJECT_DIR, loadProject, saveAll, saveDoc } from '../server/projectFs';
 import { synthesize } from '../server/tts';
 import { genCharacters, genExtras, genSets, genStorySfx } from './gen-story-assets';
 import { genSfx } from './gen-assets';
@@ -541,15 +545,333 @@ const EP2: SceneSpec[] = [
   },
 ];
 
+const EP3: SceneSpec[] = [
+  {
+    title: 'Found', env: 'light_plaza', arc: { tension: 0.4, beat: 'rising', note: 'A coin left in the open still belongs to a key.' }, summary: 'Back in the light, Mili finds a glowing coin that is not theirs.',
+    cue: { name: 'Found', seed: 4101, key: 'G', mode: 'mixolydian', tempo: 92, density: 0.45 },
+    shots: [
+      { name: 'Left behind', visual: 'Morning in the plaza. A warm orb sits on the marble, ringed with light, with no one standing over it. Folk stroll past.', board: 'a_more_open_world',
+        blocking: { mili: [[-2.2, 0, 1.6], 40], sati: [[-1.2, 0, 2.2], 30], bit: [[0.6, 0, 2], 20] },
+        moves: { mili: [[0.45, [-0.8, 0, 0.6], 20]] },
+        faces: { mili: [[0, 'surprised'], [0.45, 'happy']] }, crowd: 'plaza',
+        lines: [{ who: 'mili', text: 'Ooh. Somebody left a shiny one.' }], firstLineAt: 1.2, min: 5,
+        camera: (d) => cam.push([0.2, 1.2, 3.4], 4.2, 2.4, 0.15, 40)(d), sfx: [{ file: 'sparkle', at: 0.4, gain: 0.45 }] },
+      { name: 'Not yours', visual: 'Sati steps between Mili and the orb, one hand up. Close enough to see the ring, not close enough to take it.',
+        blocking: { mili: [[-0.8, 0, 0.6], 20], sati: [[0.2, 0, 1.1], 10], bit: [[1.4, 0, 1.6], -10] },
+        moves: { sati: [[0.35, [-0.15, 0, 0.7], 15]] },
+        faces: { sati: [[0, 'determined']], mili: [[0.4, 'worried']] },
+        lines: [{ who: 'sati', text: "Leave it. That coin isn't ours." }, { who: 'sati', text: 'It belongs to a key. Not to whoever stands closest.', gap: 0.4 }],
+        camera: ots('mili', 'sati'),
+        notes: 'Protocol: an output names the pubkey (or script) allowed to spend it. Finding the coin does not transfer it.' },
+      { name: 'But it is right there', visual: 'Close on Mili, fingers twitching toward the glow, then dropping.',
+        blocking: { mili: [[-0.8, 0, 0.6], 20], sati: [[-0.15, 0, 0.7], 15] },
+        lines: [{ who: 'mili', text: "But it's right there.", face: 'sad' }],
+        camera: close('mili', -15) },
+      { name: 'We wait', visual: 'Bit plants himself beside the orb, arms folded, a wall with a smile. The plaza keeps moving behind them.',
+        blocking: { mili: [[-0.8, 0, 0.6], 40], sati: [[-0.15, 0, 0.7], 15], bit: [[1.2, 0, 0.3], -25] },
+        faces: { bit: [[0, 'determined']], sati: [[0, 'happy']], mili: [[0.5, 'neutral']] },
+        crowd: 'plaza',
+        lines: [{ who: 'bit', text: "Then we wait. The owner will come.", face: 'happy' }],
+        camera: (d, b) => cam.pull(mid(b), 3.2, 6.5, 42)(d) },
+    ],
+  },
+  {
+    title: "Won't Turn", env: 'sealed_gate', arc: { tension: 0.7, beat: 'crisis', note: 'Strength and speed are the wrong key.' }, summary: 'Bit shoves and Mili crackles. The signature ring stays dark.',
+    cue: { name: "Won't Turn", seed: 5217, key: 'D', mode: 'minor', tempo: 78, density: 0.55 },
+    shots: [
+      { name: 'Still waiting', visual: 'The orb now sits under the sealed arch, ring dim. The trio have been here a while. Mili bounces on their toes.', board: 'together',
+        blocking: { mili: [[-1.1, 0, -0.4], 180], sati: [[0.2, 0, 0.4], 190], bit: [[1.6, 0, 0.2], 170] },
+        faces: { mili: [[0, 'worried']], sati: [[0, 'determined']], bit: [[0, 'neutral']] },
+        lines: [{ who: 'mili', text: 'What if nobody comes?' }], min: 4,
+        camera: (d) => cam.still([0.2, 1.3, 4.2], [0.2, 0.7, -1.5], 40)(d), sfx: [{ file: 'hum', at: 0, gain: 0.25 }] },
+      { name: 'Let me', visual: 'Bit steps up and leans a shoulder into the ring of light, the way he moved the gate. The ring does not click.',
+        blocking: { bit: [[1.2, 0, -0.2], 180], sati: [[-0.6, 0, 0.8], 160], mili: [[-1.6, 0, 0.4], 150] },
+        moves: { bit: [[0.35, [0.4, 0, -0.8], 180], [0.7, [0.7, 0, -0.4], 180]] },
+        faces: { bit: [[0, 'determined'], [0.75, 'sad']] },
+        lines: [{ who: 'bit', text: 'Let me.', face: 'determined' }, { who: 'bit', text: 'Huh. It does not care how strong I am.', gap: 0.6, face: 'worried' }], min: 5,
+        camera: close('bit', 25), sfx: [{ file: 'thud', at: 1.2, gain: 0.45 }, { file: 'click', at: 1.5, gain: 0.3 }] },
+      { name: 'Zap', visual: 'Mili blurs a loop around the orb, lightning skittering over the ring. The ring stays dark. Mili skids to a stop, frazzled.',
+        blocking: { mili: [[-1.4, 0, 0.6], 0], bit: [[0.7, 0, -0.4], 180], sati: [[-0.4, 0, 1.4], 180] },
+        moves: { mili: [[0.25, [1.2, 0, -0.2], 90], [0.5, [0.2, 0, -1.4], 180], [0.75, [-1.2, 0, 0.2], -20]] },
+        faces: { mili: [[0, 'determined'], [0.8, 'sad']] },
+        lines: [{ who: 'mili', text: 'Then speed! Zap!' }, { who: 'mili', text: 'Ow. It does not care about fast either.', gap: 0.45, face: 'worried' }],
+        camera: (d, b) => cam.orbit(mid(b), 3.8, 0.7, -40, 25, 42)(d), sfx: [{ file: 'zap', at: 0.3 }, { file: 'zap', at: 0.9, gain: 0.5 }] },
+      { name: 'Wrong key', visual: 'Close on Sati, the dim ring reflected in their eyes. Calm. Certain.',
+        blocking: { sati: [[-0.4, 0, 1.4], 180] },
+        faces: { sati: [[0, 'determined']] },
+        lines: [{ who: 'sati', text: 'Those are the wrong keys.' }, { who: 'sati', text: 'Every node checks the signature against the key that owns it. Ours will never match.', gap: 0.45 }],
+        camera: close('sati', 12, 30), sfx: [{ file: 'blip', at: 2.2, gain: 0.4 }],
+        notes: 'Protocol: a signature is checked against the pubkey named by the output. A mismatch is invalid, and every node rejects the spend.' },
+    ],
+  },
+  {
+    title: 'It Fits', env: 'open_gate', arc: { tension: 0.3, beat: 'resolution', note: 'The matching key turns the ring. Anyone can see that it did.' }, summary: 'A stranger’s key fits. The coin leaves with its owner.',
+    cue: { name: 'It Fits', seed: 6109, key: 'G', mode: 'major', tempo: 100, density: 0.6 },
+    shots: [
+      { name: 'Someone comes', visual: 'Golden light through the open arch. A citizen walks in from the city and stops at the orb. The trio step aside.', board: 'same_direction',
+        blocking: { sati: [[-1.4, 0, 0.8], 70], mili: [[-2, 0, 1.4], 60], bit: [[1.8, 0, 0.6], -40] },
+        faces: { sati: [[0, 'surprised']], mili: [[0, 'surprised']], bit: [[0, 'determined']] },
+        crowd: { folk2: [[4.2, 0, 2.4], -140, [[0.55, [0.3, 0, 0.2], 180]]] },
+        lines: [{ who: 'sati', text: 'There. Watch the ring.' }], firstLineAt: 1.4, min: 5,
+        camera: (d) => cam.move([2.4, 1.2, 3.6], [0.4, 1, 2.6], [0.2, 0.6, 0.4], [0.2, 0.7, -0.6], 38, 'arrive')(d) },
+      { name: 'Click', visual: 'The ring snaps into alignment and flares. Folk 2 stands with the orb. Mili’s eyes go wide.',
+        blocking: { sati: [[-1.4, 0, 0.8], 40], mili: [[-0.6, 0, 1.2], 20], bit: [[1.4, 0, 0.8], -20] },
+        faces: { mili: [[0, 'surprised'], [0.4, 'happy']], sati: [[0, 'happy']], bit: [[0.3, 'happy']] },
+        crowd: { folk2: [[0.3, 0, 0.2], 180] }, crowdFaces: [[0.2, 'happy']],
+        lines: [{ who: 'mili', text: 'It clicked! Their key fits.' }],
+        camera: (d) => cam.push([0.2, 1.1, 2.8], 3.4, 1.8, 0.1, 34)(d), sfx: [{ file: 'click', at: 0.6 }, { file: 'chime', at: 0.7, gain: 0.55 }, { file: 'sparkle', at: 1.1, gain: 0.4 }],
+        notes: 'Protocol: a valid signature proves the spender holds the matching private key, without revealing the key itself. Every node can check it.' },
+      { name: 'Anyone can check', visual: 'The owner walks back through the arch with the orb. Sati watches them go, then turns to the others.',
+        blocking: { sati: [[-0.4, 0, 0.6], 10], mili: [[-1.3, 0, 1], 20], bit: [[1.2, 0, 0.5], -15] },
+        moves: { sati: [[0.7, [-0.2, 0, 0.2], -10]] },
+        faces: { sati: [[0, 'determined'], [0.7, 'happy']] },
+        crowd: { folk2: [[0.3, 0, 0.2], 0, [[1, [0.3, 0, -6], 0]]] },
+        lines: [{ who: 'sati', text: 'Anyone can check the signature.' }, { who: 'sati', text: 'Only the owner can spend.', gap: 0.4, face: 'happy' }],
+        camera: ots('mili', 'sati') },
+      { name: 'Not ours', visual: 'The trio walk toward the open city, side by side, smaller against the arch. Mili grins up at Sati.',
+        blocking: { mili: [[-1, 0, 1], 0], sati: [[0.1, 0, 0.8], 0], bit: [[1.5, 0, 0.6], 0] },
+        moves: { mili: [[1, [-1, 0, -2.4], 0]], sati: [[1, [0.1, 0, -2.6], 0]], bit: [[1, [1.5, 0, -2.8], 0]] },
+        faces: { mili: [[0, 'happy']], sati: [[0, 'happy']], bit: [[0, 'happy']] }, crowd: 'plaza', crowdFaces: [[0, 'happy']],
+        lines: [{ who: 'mili', text: 'Good. I only wanted to look.', gap: 0.3 }, { who: 'bit', text: 'Next time, we look with our eyes.', face: 'happy' }], min: 6,
+        camera: (d) => cam.move([0.2, 0.7, 4.2], [0.2, 1.6, 6.4], [0.2, 0.5, 0], [0.2, 1.4, -8], 44, 'pull-away')(d), sfx: [{ file: 'sparkle', at: 1.2, gain: 0.35 }] },
+    ],
+  },
+];
+
+/** The reflection orb is the IK target and the portal: inside the protocol / outside, the real world. */
+const EP4: SceneSpec[] = [
+  {
+    title: 'The Orb', env: 'portal_inside', arc: { tension: 0.45, beat: 'inciting', note: 'They find a mirror that shows the other world.' },
+    summary: 'Inside the protocol, a single reflection orb hangs in a black chamber. It does not show their faces. It shows daylight.',
+    cue: { name: 'The Skin of the Glass', seed: 2016, key: 'D', mode: 'dorian', tempo: 72, density: 0.35 },
+    shots: [
+      { name: 'One sphere', visual: 'A dark chamber. One glass sphere hangs at eye height, ringed with a thin halo. The floor mirrors it. The trio come in small against the dark.', min: 6, board: 'the_protocol',
+        blocking: { mili: [[-1.6, 0, 1.4], 10], sati: [[-0.2, 0, 1.8], 5], bit: [[1.5, 0, 1.5], -8] },
+        moves: { mili: [[0.7, [-1.1, 0, 0.5], 8]], sati: [[0.75, [0.15, 0, 0.9], 0]], bit: [[0.8, [1.3, 0, 0.7], -6]] },
+        faces: { mili: [[0, 'surprised']], sati: [[0, 'determined']], bit: [[0, 'surprised']] },
+        camera: (d) => cam.move([2.4, 1.2, 5.2], [0.3, 1.5, 3.6], [0, 1.35, -2.2], [0, 1.35, -2.2], 40, 'approach')(d), sfx: [{ file: 'hum', at: 0.2, gain: 0.35 }, { file: 'sparkle', at: 1.4, gain: 0.4 }] },
+      { name: 'Not our faces', visual: 'Close on the orb. The glass holds a sunlit street, trees, people — not the three friends standing in front of it.',
+        blocking: { mili: [[-1.1, 0, 0.5], 8], sati: [[0.15, 0, 0.9], 0], bit: [[1.3, 0, 0.7], -6] },
+        lines: [{ who: 'mili', text: 'It looks like a mirror.', face: 'surprised' }, { who: 'mili', text: 'It is not showing us.', gap: 0.35, face: 'worried' }],
+        camera: (d) => cam.push([0, 1.35, -2.2], 3.2, 1.7, 0.05, 28)(d) },
+      { name: 'Two worlds', visual: 'Sati studies the skin of the glass, then the dark around them. Mili and Bit wait on either side of the orb.',
+        blocking: { mili: [[-1.1, 0, 0.5], 20], sati: [[0.15, 0, 0.9], 0], bit: [[1.3, 0, 0.7], -15] },
+        lines: [
+          { who: 'sati', text: 'This side is inside the protocol.', face: 'determined' },
+          { who: 'sati', text: 'The other side is outside. The real world.', gap: 0.4, face: 'determined' },
+        ],
+        camera: ots('bit', 'sati') },
+      { name: 'Almost', visual: 'Mili reaches for the orb. The arm folds at the shoulder and the elbow and stops on the glass. A hand on the other side seems to reach back.',
+        blocking: { mili: [[-0.85, 0, 0.15], 12], sati: [[0.5, 0, 0.9], -10], bit: [[1.3, 0, 0.7], -15] },
+        moves: { mili: [[0.45, [-0.55, 0, -0.35], 8]] },
+        faces: { mili: [[0, 'determined'], [0.6, 'surprised']], sati: [[0.5, 'surprised']] },
+        lines: [{ who: 'mili', text: 'I can almost touch them.' }, { who: 'bit', text: 'Then we go through.', gap: 0.45, face: 'determined', react: { mili: 'happy' } }],
+        camera: (d, b) => cam.move([-2.2, 0.7, 1.6], [-1.2, 0.85, 0.9], at(b, 'mili'), [0, 1.2, -2.2], 34, 'reach')(d), sfx: [{ file: 'chime', at: 1.1, gain: 0.45 }] },
+    ],
+  },
+  {
+    title: 'The Reach', env: 'portal_outside', arc: { tension: 0.7, beat: 'rising', note: 'Outside, a person reaches for the orb. The arm only bends at its joints.' },
+    summary: 'They step into daylight. The same orb now reflects the dark. A stranger reaches for it the way a hand solves toward a target — only along the joints it has.',
+    shots: [
+      { name: 'Daylight', visual: 'Hard sun on a stone street. The orb sits in the square and holds the black chamber in its skin. The trio squint, suddenly small in a big ordinary world.', min: 5, board: 'a_more_open_world',
+        blocking: { mili: [[-1.2, 0, 0.6], 15], sati: [[0.1, 0, 1], 0], bit: [[1.4, 0, 0.7], -10] },
+        faces: { mili: [[0, 'surprised']], sati: [[0, 'happy']], bit: [[0, 'surprised']] },
+        crowd: { folk1: [[-5.5, 0, -5], 70], folk3: [[4.8, 0, -4.2], -110], folk4: [[6, 0, -7], -80], folk5: [[-4, 0, -6.5], 40] },
+        lines: [{ who: 'mili', text: 'We are out.' }, { who: 'sati', text: 'Outside the protocol. This is their world.', gap: 0.35, face: 'determined' }],
+        camera: (d, b) => cam.crane(mid(b), 8, 0.8, 3.2, 48)(d), sfx: [{ file: 'whoosh', at: 0.15, gain: 0.4 }] },
+      { name: 'The target', visual: 'A citizen walks up and reaches for the orb. Shoulder, then elbow, then the hand. Nothing else on the body swings free. The hand stops just short of the glass.',
+        blocking: { sati: [[-1.3, 0, 0.8], 25], mili: [[-2.1, 0, 1.1], 20], bit: [[1.6, 0, 0.9], -20] },
+        crowd: { folk2: [[1.1, 0, 1.6], 170, [[0.55, [0.55, 0, 0.15], 185]]] },
+        crowdFaces: [[0.4, 'determined']],
+        lines: [{ who: 'sati', text: 'Watch the arm. It wants the orb.' }, { who: 'sati', text: 'It only bends where it has a joint.', gap: 0.4, face: 'determined' }],
+        camera: (d) => cam.move([3.2, 1.3, 2.4], [1.8, 1.15, 1.5], [0.4, 1.1, 0.2], [0, 1.3, -2.2], 32, 'ik-follow')(d) },
+      { name: 'The joints hold', visual: 'Bit reaches too, a straight grab. The big arm still folds at the shoulder and the elbow. The orb does not move to meet him.',
+        blocking: { bit: [[0.85, 0, 0.35], 8], sati: [[-1.2, 0, 0.9], 15], mili: [[-1.9, 0, 0.7], 12] },
+        moves: { bit: [[0.4, [0.45, 0, -0.45], 5]] },
+        faces: { bit: [[0, 'determined'], [0.65, 'worried']], mili: [[0.5, 'surprised']] },
+        lines: [{ who: 'bit', text: 'I can just grab it.' }, { who: 'sati', text: 'You can want the target. The arm still has to solve the path.', gap: 0.4, face: 'determined', react: { bit: 'worried' } }],
+        camera: (d, b) => cam.orbit(at(b, 'bit'), 2.8, 0.35, -30, 15, 36)(d), sfx: [{ file: 'thud', at: 1.5, gain: 0.35 }] },
+      { name: 'Wish and rules', visual: 'Wide: the stranger and Bit both reaching, the orb between them, the street busy behind. Sati stands still, reading it.',
+        blocking: { sati: [[-1.4, 0, 1.1], 10], mili: [[-2.2, 0, 0.8], 15], bit: [[0.45, 0, -0.45], 5] },
+        crowd: { folk2: [[0.7, 0, 0.2], 190], folk1: [[-5, 0, -5], 60], folk3: [[4.5, 0, -4], -100] },
+        lines: [
+          { who: 'sati', text: 'People out here name the goal.', face: 'happy' },
+          { who: 'sati', text: 'Inside, the protocol only moves along its rules. Like that arm.', gap: 0.35 },
+        ],
+        camera: (d) => cam.move([-3.5, 1.6, 4.2], [-2.2, 1.8, 5.4], [0, 1.2, -1], [0, 1.35, -2.2], 42, 'pull-away')(d) },
+    ],
+  },
+  {
+    title: 'Both Sides', env: 'portal_inside', arc: { tension: 0.3, beat: 'resolution', note: 'The portal stays open. Neither world skips the rules.' },
+    summary: 'Back inside, the orb still shows the street and the reaching hand. The glass is where a wish meets the rules.',
+    shots: [
+      { name: 'Still reaching', visual: 'The chamber again. In the orb, the sunlit hand is still there, still short of the glass. Mili reaches back, mirroring it.', board: 'new_perspectives',
+        blocking: { mili: [[-0.55, 0, -0.2], 8], sati: [[0.7, 0, 0.8], -15], bit: [[1.6, 0, 0.6], -20] },
+        faces: { mili: [[0, 'determined']], sati: [[0, 'happy']], bit: [[0, 'happy']] },
+        lines: [{ who: 'mili', text: 'They are still reaching.' }],
+        camera: (d) => cam.move([0.2, 0.9, 2.4], [-0.2, 1.15, 1.2], [0, 1.35, -2.2], [-0.3, 1.1, -0.4], 34, 'through-glass')(d), sfx: [{ file: 'hum', at: 0, gain: 0.3 }] },
+      { name: 'The portal', visual: 'Close on Sati, the orb a soft disc of daylight behind the shoulder.',
+        blocking: { sati: [[0.7, 0, 0.8], -15], mili: [[-0.55, 0, -0.2], 8], bit: [[1.6, 0, 0.6], -20] },
+        lines: [
+          { who: 'sati', text: 'The orb is the portal. It shows both worlds.', face: 'determined' },
+          { who: 'sati', text: 'It does not let either one skip the joints.', gap: 0.4, face: 'happy' },
+        ],
+        camera: close('sati', 22) },
+      { name: 'Where they meet', visual: 'The three stand with the reflection orb between them and the dark. Daylight turns slowly inside the glass.',
+        blocking: { mili: [[-1.15, 0, 0.45], 12], sati: [[0.15, 0, 0.85], 0], bit: [[1.45, 0, 0.55], -12] },
+        faces: { mili: [[0, 'happy']], sati: [[0, 'happy']], bit: [[0, 'happy']] },
+        lines: [
+          { who: 'bit', text: 'So we keep the rules.', face: 'determined' },
+          { who: 'mili', text: 'And they keep the wish.', gap: 0.3, face: 'happy' },
+          { who: 'sati', text: 'And the glass is where they meet.', gap: 0.35, face: 'happy' },
+        ], min: 7,
+        camera: (d) => cam.orbit([0, 1.1, -0.4], 4.2, 0.55, -24, 18, 40)(d), sfx: [{ file: 'sparkle', at: 2.2, gain: 0.4 }, { file: 'chime', at: 4.5, gain: 0.35 }] },
+    ],
+  },
+];
+
 // ------------------------------------------------------------------ build
+
+const ref = (t: Treatment): Treatment => t;
+export const STYLE_BOARD: Treatment[] = [
+  ref({ id: 'tx_cinematic', name: '3D cinematic', order: 1, reference: true, chosen: false, status: 'review', medium: 'cinematic',
+    adjectives: ['emotional', 'cinematic', 'modern'],
+    principles: ['Pixar-style volumes', 'Cinematic cameras', 'Rich materials', 'Emotional storytelling'],
+    palette: ['#f4efe4', '#ffd9a0', '#7eb6ff', '#1c2430'],
+    characters: { mili: 'Small, fast, rim-lit. Eyes carry the performance.', sati: 'Mid scale, soft key, thoughtful face.', bit: 'Large simple volume, broad highlights.' },
+    camera: 'Wide city frames, longer lenses on faces.', light: 'Warm key, cool fill, characters as practicals.', line: 'No drawn line. Form from light.', materials: 'Soft subsurface, polished marble, glass.', notes: '' }),
+  ref({ id: 'tx_cartoon', name: '2D cartoon', order: 2, reference: true, chosen: false, status: 'review', medium: 'cartoon',
+    adjectives: ['bold lines', 'flat colors', 'fun', 'expressive'],
+    principles: ['TV animation staging', 'Bold outlines', 'Flat local color', 'Clear poses'],
+    palette: ['#f7f3ea', '#f0b429', '#3aa0e8', '#2a4a7a'],
+    characters: { mili: 'Tiny, thick contour, squash on the run.', sati: 'Same outline family, calmer pose.', bit: 'One big shape, face does the acting.' },
+    camera: 'Flat staging, limited moves, readable silhouettes.', light: 'No realistic light. Color does the separation.', line: 'Even, confident ink.', materials: 'Flat fills. Backgrounds more rendered than the cast.', notes: '' }),
+  ref({ id: 'tx_storybook', name: 'Hand-drawn storybook', order: 3, reference: true, chosen: false, status: 'review', medium: 'storybook',
+    adjectives: ['sketchy lines', 'watercolor', 'warm', 'charming'],
+    principles: ['Sketchy construction', 'Watercolor washes', 'Warm paper', 'Storybook scale'],
+    palette: ['#f6f0e4', '#e7b07a', '#8fbf9f', '#6a5a48'],
+    characters: { mili: 'Loose pencil, the glow is a wash.', sati: 'Fewer strokes, clearer eyes.', bit: 'Big soft mass, detail only in the face.' },
+    camera: 'Held storybook frames.', light: 'Bleeding light, no hard shadows.', line: 'Pencil over pigment.', materials: 'Paper grain, blooms, granulation.', notes: '' }),
+  ref({ id: 'tx_retro', name: 'Graphic retro', order: 4, reference: true, chosen: false, status: 'review', medium: 'retro',
+    adjectives: ['bold shapes', 'texture', 'retro', 'playful'],
+    principles: ['Print texture', 'Limited retro palette', 'Poster composition', 'Playful scale'],
+    palette: ['#f4e04a', '#e23b2f', '#2f6fed', '#1a1a1a'],
+    characters: { mili: 'Graphic blob with a hard outline.', sati: 'Same family, slightly more face.', bit: 'A billboard shape. The pose is the design.' },
+    camera: 'Poster frames. Strong foreground shapes.', light: 'Flat, with a printed shadow.', line: 'Thick, slightly imperfect ink.', materials: 'Halftone and paper texture over flat color.', notes: '' }),
+  ref({ id: 'tx_anime', name: 'Anime', order: 5, reference: true, chosen: false, status: 'review', medium: 'anime',
+    adjectives: ['clean lines', 'dynamic', 'expressive', 'cinematic'],
+    principles: ['Clean digital line', 'Dynamic poses', 'Painted backgrounds', 'Expressive faces'],
+    palette: ['#f7f4ee', '#ffb15a', '#7eb6ff', '#243044'],
+    characters: { mili: 'Speed lines and a small, sharp face.', sati: 'Cleaner, stiller, the eyes do the thinking.', bit: 'Simplified volume, anime highlight on the cheek.' },
+    camera: 'Dynamic angles, speed in the frame.', light: 'Cel shading plus a painted sky.', line: 'Thin, consistent digital ink.', materials: 'Flat color, soft airbrush only in the background.', notes: '' }),
+  ref({ id: 'tx_iconic', name: 'Minimal iconic', order: 6, reference: true, chosen: false, status: 'review', medium: 'iconic',
+    adjectives: ['simple forms', 'strong silhouette', 'versatile'],
+    principles: ['One shape per character', 'Strong silhouette', 'Almost no texture', 'Works at any size'],
+    palette: ['#2489F5', '#65B5FF', '#D7EAFF', '#0B1936', '#FFFDF5', '#FFD12F', '#FF9564', '#F4F9FF'],
+    characters: { mili: 'Smallest. Lightning bolts when she moves. Squash and stretch.', sati: 'Medium sphere, confident brows, the story focus.', bit: 'Largest sphere, slow and heavy.' },
+    camera: 'Orthographic. Side-on, three-quarter, or a light isometric. Same blocking as the Pixar camera.', light: 'Flat bands only. Soft disc shadows. No HDRI.', line: 'Silhouette first. Outlines only where a shape needs them.', materials: 'Unlit or 3-tone toon. White characters, four to six colors per scene.', notes: 'Preview toggle: Flat. The world sheet is the board.', board: 'media/boards/treatment-iconic.jpg' }),
+  ref({ id: 'tx_stopmotion', name: 'Stop-motion', order: 7, reference: true, chosen: false, status: 'review', medium: 'stopmotion',
+    adjectives: ['tangible', 'textured', 'crafted', 'charming'],
+    principles: ['Practical materials', 'Visible craft', 'Tactile light', 'Charming imperfection'],
+    palette: ['#f3ecdf', '#d8c4a4', '#8a7560', '#3a332c'],
+    characters: { mili: 'Small felt or clay, fingerprint scale.', sati: 'Same material, quieter pose.', bit: 'A heavy handmade volume. Seams are welcome.' },
+    camera: 'Real-set lenses, shallow focus.', light: 'Practical lamps, soft contact shadows.', line: 'No line. Edges are material.', materials: 'Felt, clay, fabric, dust.', notes: '' }),
+  ref({ id: 'tx_clay', name: '3D clay', order: 8, reference: true, chosen: false, status: 'review', medium: 'clay',
+    adjectives: ['tactile', 'handcrafted', 'playful', 'expressive'],
+    principles: ['Plasticine volumes', 'Fingerprints', 'Playful squash', 'Studio light'],
+    palette: ['#f6f1e8', '#f0d2a0', '#c9845a', '#6e5344'],
+    characters: { mili: 'A pinched little lump, bright eyes.', sati: 'Smoother, still handmade.', bit: 'A big ball of clay. The weight reads.' },
+    camera: 'Close enough to see the craft.', light: 'Soft studio key, gentle bounce.', line: 'None.', materials: 'Plasticine, tool marks, slight subsurface.', notes: '' }),
+  ref({ id: 'tx_animatic', name: 'Line sketch', order: 9, reference: true, chosen: false, status: 'review', medium: 'animatic',
+    adjectives: ['rough lines', 'expressive', 'fast', 'story-driven'],
+    principles: ['Rough construction', 'Story first', 'Fast poses', 'Unfinished on purpose'],
+    palette: ['#f7f4ee', '#222222', '#9a9a9a', '#ffffff'],
+    characters: { mili: 'Gesture first, features last.', sati: 'Fewer lines, a clear eyeline.', bit: 'A heavy contour and a face.' },
+    camera: 'Storyboard frames. The drawing is the shot.', light: 'Hatched, not lit.', line: 'Rough pencil, overlapping strokes.', materials: 'Paper. Nothing finished.', notes: '' }),
+  ref({ id: 'tx_geometric', name: 'Geometric', order: 10, reference: true, chosen: false, status: 'review', medium: 'geometric',
+    adjectives: ['shapes', 'colors', 'stylized', 'modern'],
+    principles: ['Simple geometry', 'Bold color blocks', 'Modern layout', 'Stylized motion'],
+    palette: ['#ffffff', '#ff7a3c', '#3d7dff', '#f2c14e'],
+    characters: { mili: 'Small circle plus a motion wedge.', sati: 'Circle and a slight oval.', bit: 'The largest circle in the frame.' },
+    camera: 'Designed frames, like a poster in motion.', light: 'Flat. Color is the light.', line: 'Clean vector edges.', materials: 'Flat shapes, no texture.', notes: '' }),
+  ref({ id: 'tx_collage', name: 'Paper cutout', order: 11, reference: true, chosen: false, status: 'review', medium: 'collage',
+    adjectives: ['paper texture', 'layered', 'handmade', 'artistic'],
+    principles: ['Cut paper layers', 'Visible edges', 'Handmade texture', 'Collage backgrounds'],
+    palette: ['#f4efe6', '#e7d3b0', '#c47a5a', '#6e8b74'],
+    characters: { mili: 'A small cut shape, slightly off the layer below.', sati: 'Layered paper, a drawn face on top.', bit: 'One big cutout. The shadow is another sheet.' },
+    camera: 'Flat, with real paper depth.', light: 'A single raking light so layers cast shadows.', line: 'The cut edge is the line.', materials: 'Paper, card, torn fiber, glue.', notes: '' }),
+  ref({ id: 'tx_bw', name: 'Black & white + glow', order: 12, reference: true, chosen: false, status: 'review', medium: 'bw',
+    adjectives: ['high contrast', 'atmospheric', 'stylized'],
+    principles: ['Monochrome', 'Characters as light sources', 'High contrast', 'Atmospheric city'],
+    palette: ['#f2f2f2', '#9a9a9a', '#2a2a2a', '#050505'],
+    characters: { mili: 'A small lamp. The eyes are the hottest point.', sati: 'Quieter glow, more midtone.', bit: 'A large soft light. The body is the practical.' },
+    camera: 'Cinematic, low angles, reflections on wet ground.', light: 'The cast is the only light. Deep blacks around them.', line: 'None. Glow defines the edge.', materials: 'Matte blacks, bloom, wet reflections.', notes: '' }),
+];
 
 const EPISODES = [
   { id: 'ep01', number: 1, title: 'Mili, Sati & Bit', theme: 'Every one of us counts — small, smart or strong.', arc: { tension: 0.4, beat: 'setup' as Beat, note: '' }, synopsis: 'In a city of white marble and floating glass, three glowing friends — fast little Mili, clever Sati and mighty Bit — discover that every one of them counts. Then something calls from the dark below.', scenes: EP1,
     cue: { name: 'Light City', seed: 2009, key: 'C', mode: 'lydian', tempo: 96, density: 0.6 } as Partial<ScoreCue> & { seed: number; name: string } },
   { id: 'ep02', number: 2, title: 'Into the Dark', theme: 'Rules anyone can check make the dark less scary.', arc: { tension: 0.85, beat: 'climax' as Beat, note: '' }, synopsis: 'Following the signal down into a world of black monoliths, the trio help a new node find its peers, follow a transaction across the network, and watch a block being mined.', scenes: EP2 },
+  { id: 'ep03', number: 3, title: 'The Right Key', theme: 'Only the key that owns it can spend it.', arc: { tension: 0.35, beat: 'resolution' as Beat, note: '' }, synopsis: 'Back in the light city, Mili finds a glowing coin that is not theirs. Speed and strength cannot make it move. Sati shows that the signature ring only turns for the matching key — and that anyone can see when it does not.', scenes: EP3 },
+  { id: 'ep04', number: 4, title: 'The Reflection Orb', theme: 'A wish starts outside. The protocol only bends along its rules.', arc: { tension: 0.55, beat: 'rising' as Beat, note: 'The orb is the door between the real world and the protocol.' }, synopsis: 'Deep in the protocol the trio find a reflection orb that does not show their own faces. One side of the glass is inside Bitcoin. The other side is the real world, outside the protocol. People out there reach for the orb the way an arm reaches a target: the hand can want it, and the body can only fold at the joints it has. They step through, and they step back. The portal stays open. It does not let either world skip the rules.', scenes: EP4,
+    cue: { name: 'Two Sides', seed: 1618, key: 'A', mode: 'mixolydian', tempo: 84, density: 0.4 } as Partial<ScoreCue> & { seed: number; name: string } },
 ];
 
+const onlyIdx = process.argv.indexOf('--only');
+const ONLY = onlyIdx >= 0 ? process.argv[onlyIdx + 1] : undefined;
+
+/** Append one episode onto the project already on disk. Does not touch the other episodes. */
+async function writeEpisodes(only: string) {
+  const epSpec = EPISODES.find((e) => e.id === only);
+  if (!epSpec) throw new Error(`unknown episode ${only}`);
+  const { data } = loadProject();
+  if (!data.project.episodes.includes(epSpec.id)) data.project.episodes.push(epSpec.id);
+  for (const id of ['portal_inside', 'portal_outside'] as const) {
+    if (ENVIRONMENTS[id]) data.environments[id] = ENVIRONMENTS[id];
+  }
+  const boards = fs.existsSync(path.join(PROJECT_DIR, 'media/boards/the_protocol.png'));
+  console.log(`\n→ ${epSpec.id} ${epSpec.title} ${NO_TTS ? '(no TTS)' : '(TTS: + new, · cached)'}`);
+  const ep: Episode = SCHEMAS.episode.parse({ id: epSpec.id, number: epSpec.number, title: epSpec.title, synopsis: epSpec.synopsis, theme: epSpec.theme, arc: epSpec.arc, status: 'wip' });
+  let total = 0;
+  for (const [i, scSpec] of epSpec.scenes.entries()) {
+    const sc: Scene = SCHEMAS.scene.parse({ id: `${ep.id}_sc${String(i + 1).padStart(2, '0')}`, title: scSpec.title, summary: scSpec.summary, environmentId: scSpec.env, status: 'wip', arc: scSpec.arc });
+    for (const shSpec of scSpec.shots) {
+      const shot = await buildShot(boards ? shSpec : { ...shSpec, board: undefined });
+      shot.id = `sh${String(sc.shots.length + 1).padStart(2, '0')}`;
+      sc.shots.push(shot);
+    }
+    const scLen = sc.shots.reduce((s, x) => s + x.duration, 0);
+    total += scLen;
+    if (scSpec.cue) {
+      const base = SCHEMAS.cue.parse({ id: `cue_${sc.id}`, ...scSpec.cue });
+      const cue: ScoreCue = { ...base, bars: Math.max(2, Math.ceil(scLen / ((base.beatsPerBar * 60) / base.tempo))) };
+      data.cues[cue.id] = cue;
+      sc.tracks.score.push({ id: uid('scr'), start: 0, duration: scLen, cueId: cue.id, offset: 0, gain: 0.5 });
+    }
+    ep.scenes.push(sc.id);
+    data.scenes[sc.id] = { ...sc, episodeId: ep.id };
+  }
+  if (epSpec.cue) {
+    const base = SCHEMAS.cue.parse({ id: `cue_${ep.id}`, ...epSpec.cue });
+    const cue: ScoreCue = { ...base, bars: Math.max(2, Math.ceil(total / ((base.beatsPerBar * 60) / base.tempo))) };
+    data.cues[cue.id] = cue;
+    ep.tracks.score.push({ id: uid('scr'), start: 0, duration: total, cueId: cue.id, offset: 0, gain: 0.45 });
+  }
+  data.episodes[ep.id] = ep;
+  saveDoc({ kind: 'project', id: 'project' }, data.project);
+  saveDoc({ kind: 'episode', id: ep.id }, ep);
+  for (const id of ep.scenes) saveDoc({ kind: 'scene', id, episodeId: ep.id }, data.scenes[id]);
+  for (const id of Object.keys(data.cues).filter((c) => c.startsWith(`cue_${ep.id}`))) saveDoc({ kind: 'cue', id }, data.cues[id]);
+  for (const id of ['portal_inside', 'portal_outside']) saveDoc({ kind: 'environment', id }, data.environments[id]);
+  console.log(`\n  ${ep.scenes.length} scenes, ${ep.scenes.reduce((n, s) => n + data.scenes[s].shots.length, 0)} shots, ${total.toFixed(1)}s`);
+  console.log('\n✓ episode written');
+}
+
 async function main() {
+  if (ONLY) {
+    await writeEpisodes(ONLY);
+    return;
+  }
   console.log('→ generating characters, sets and SFX');
   genCharacters();
   genExtras();
@@ -558,7 +880,7 @@ async function main() {
   genSkies();
   genSfx();
   genStorySfx();
-  for (const dir of ['episodes', 'characters', 'environments', 'assets', 'score', 'credits', 'media/boards', 'media/audio/dialog', 'media/audio/score'])
+  for (const dir of ['episodes', 'characters', 'environments', 'assets', 'score', 'credits', 'treatments', 'media/boards', 'media/audio/dialog', 'media/audio/score'])
     fs.rmSync(path.join(PROJECT_DIR, dir), { recursive: true, force: true });
   // drop documentary-only placeholder meshes
   for (const f of ['node_box', 'network_sphere', 'gold_bar', 'coin', 'grid_floor']) fs.rmSync(path.join(PROJECT_DIR, `media/meshes/${f}.glb`), { force: true });
@@ -567,7 +889,7 @@ async function main() {
 
   const data: ProjectData = {
     project: SCHEMAS.project.parse({ title: 'Sati', season: { title: 'Season 1 — Into the Protocol', logline: 'Three glowing friends of very different sizes leave their bright marble city to answer a call from the dark — and discover the rules that let strangers agree on value.' }, fps: 24, resolution: [1920, 1080], episodes: EPISODES.map((e) => e.id), tts: { engine: 'piper', defaultVoice: 'en_US-lessac-medium' } }),
-    episodes: {}, scenes: {}, characters, environments, assets: { ...assets, ...SET_ASSETS }, cues: {}, credits: {},
+    episodes: {}, scenes: {}, characters, environments, assets: { ...assets, ...SET_ASSETS }, cues: {}, credits: {}, treatments: {},
   };
 
   const cueFor = (id: string, spec: Partial<ScoreCue> & { seed: number; name: string }, seconds: number) => {
@@ -636,11 +958,16 @@ async function main() {
     music: { cueId: outroCue.id, gain: 0.5 },
   });
 
+  for (const t of STYLE_BOARD) data.treatments[t.id] = SCHEMAS.treatment.parse(t);
+
   saveAll(data);
   console.log('\n✓ project written');
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+const isDirect = process.argv[1]?.includes('seed-story');
+if (isDirect) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

@@ -1,0 +1,374 @@
+{
+  "id": "portal_outside",
+  "name": "Outside the Protocol",
+  "description": "The real world, outside Bitcoin: a sunlit street of stone, trees and ordinary people. The same reflection orb sits in the square and shows the dark chamber on its skin.",
+  "tags": [],
+  "refs": [
+    "media/refs/light_environments.png"
+  ],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#d5e6f6",
+  "fog": {
+    "color": "#d5e4f2",
+    "near": 28,
+    "far": 120
+  },
+  "lighting": {
+    "ambient": 0.4,
+    "key": 1.9,
+    "keyColor": "#fff6e4",
+    "keyPosition": [
+      -4,
+      12,
+      6
+    ]
+  },
+  "hdri": "media/hdri/noon.hdr",
+  "hdriIntensity": 0.6,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 0.55,
+    "vignette": 0.28,
+    "grain": 0.03,
+    "exposure": 0.85
+  },
+  "preview": {
+    "position": [
+      -3,
+      1.7,
+      8
+    ],
+    "target": [
+      0,
+      1.35,
+      -2.2
+    ],
+    "fov": 48
+  },
+  "props": [
+    {
+      "assetId": "marble_floor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "glass_sphere",
+      "position": [
+        0,
+        1.35,
+        -2.2
+      ],
+      "rotationY": 0,
+      "scale": 1.35
+    },
+    {
+      "assetId": "floor_ring",
+      "position": [
+        0,
+        0,
+        -2.2
+      ],
+      "rotationY": 0,
+      "scale": 1.2
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -5.5,
+        0,
+        1
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -5.5,
+        0,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -5.5,
+        0,
+        -7
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -5.5,
+        0,
+        -11
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        -5.5,
+        0,
+        -15
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        5.5,
+        0,
+        1
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        5.5,
+        0,
+        -3
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        5.5,
+        0,
+        -7
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        5.5,
+        0,
+        -11
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "column",
+      "position": [
+        5.5,
+        0,
+        -15
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "tree",
+      "position": [
+        -7,
+        0,
+        -1
+      ],
+      "rotationY": 0,
+      "scale": 1.3
+    },
+    {
+      "assetId": "tree",
+      "position": [
+        7.2,
+        0,
+        -2
+      ],
+      "rotationY": 0,
+      "scale": 1.5
+    },
+    {
+      "assetId": "bench",
+      "position": [
+        -3.4,
+        0,
+        1.2
+      ],
+      "rotationY": 80,
+      "scale": 1
+    },
+    {
+      "assetId": "bench",
+      "position": [
+        3.6,
+        0,
+        0.8
+      ],
+      "rotationY": -70,
+      "scale": 1
+    },
+    {
+      "assetId": "lamp_post",
+      "position": [
+        -2.6,
+        0,
+        2
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "lamp_post",
+      "position": [
+        2.6,
+        0,
+        2
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "planter",
+      "position": [
+        -4.2,
+        0,
+        -6
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "planter",
+      "position": [
+        4.4,
+        0,
+        -6.2
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -14,
+        0,
+        -26
+      ],
+      "rotationY": 0,
+      "scale": 1.8
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        9,
+        0,
+        -30
+      ],
+      "rotationY": 0,
+      "scale": 2.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        22,
+        0,
+        -18
+      ],
+      "rotationY": 20,
+      "scale": 1.4
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -24,
+        0,
+        -14
+      ],
+      "rotationY": 10,
+      "scale": 1.6
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        0,
+        0,
+        -44
+      ],
+      "rotationY": 0,
+      "scale": 3
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        -34,
+        0,
+        -36
+      ],
+      "rotationY": 0,
+      "scale": 2.2
+    },
+    {
+      "assetId": "tower",
+      "position": [
+        32,
+        0,
+        -40
+      ],
+      "rotationY": 15,
+      "scale": 2.6
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        -20,
+        16,
+        -34
+      ],
+      "rotationY": 10,
+      "scale": 2.2
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        18,
+        22,
+        -40
+      ],
+      "rotationY": 60,
+      "scale": 3
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        -4,
+        28,
+        -55
+      ],
+      "rotationY": 120,
+      "scale": 4
+    },
+    {
+      "assetId": "cloud",
+      "position": [
+        26,
+        10,
+        -22
+      ],
+      "rotationY": 30,
+      "scale": 1.6
+    }
+  ],
+  "marks": []
+}

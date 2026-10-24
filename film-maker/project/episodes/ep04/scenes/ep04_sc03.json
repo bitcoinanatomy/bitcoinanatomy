@@ -1,0 +1,477 @@
+{
+  "id": "ep04_sc03",
+  "title": "Both Sides",
+  "status": "wip",
+  "summary": "Back inside, the orb still shows the street and the reaching hand. The glass is where a wish meets the rules.",
+  "environmentId": "portal_inside",
+  "arc": {
+    "tension": 0.3,
+    "beat": "resolution",
+    "note": "The portal stays open. Neither world skips the rules."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "Still reaching",
+      "duration": 3.5,
+      "status": "wip",
+      "description": "The chamber again. In the orb, the sunlit hand is still there, still short of the glass. Mili reaches back, mirroring it.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.55,
+            0,
+            -0.2
+          ],
+          "rotationY": 8
+        },
+        "sati": {
+          "position": [
+            0.7,
+            0,
+            0.8
+          ],
+          "rotationY": -15
+        },
+        "bit": {
+          "position": [
+            1.6,
+            0,
+            0.6
+          ],
+          "rotationY": -20
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.35,
+            "pose": "reach"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_id905j",
+            "start": 0,
+            "duration": 3.5,
+            "image": "media/boards/new_perspectives.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_dyatl4",
+            "start": 0,
+            "duration": 3.5,
+            "label": "through-glass",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.2,
+                  0.9,
+                  2.4
+                ],
+                "target": [
+                  0,
+                  1.35,
+                  -2.2
+                ],
+                "fov": 34
+              },
+              {
+                "t": 3.5,
+                "position": [
+                  -0.2,
+                  1.15,
+                  1.2
+                ],
+                "target": [
+                  -0.3,
+                  1.1,
+                  -0.4
+                ],
+                "fov": 34
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_pe1nm0",
+            "start": 0.6,
+            "duration": 1.545,
+            "characterId": "mili",
+            "text": "They are still reaching.",
+            "audio": "media/audio/dialog/eaf9aa1bac19.wav",
+            "audioHash": "eaf9aa1bac19",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_6ffz4n",
+            "start": 0,
+            "duration": 4,
+            "file": "media/audio/sfx/hum.wav",
+            "gain": 0.3
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "The portal",
+      "duration": 9.5,
+      "status": "todo",
+      "description": "Close on Sati, the orb a soft disc of daylight behind the shoulder.",
+      "notes": "",
+      "characters": [
+        "sati",
+        "mili",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            0.7,
+            0,
+            0.8
+          ],
+          "rotationY": -15
+        },
+        "mili": {
+          "position": [
+            -0.55,
+            0,
+            -0.2
+          ],
+          "rotationY": 8
+        },
+        "bit": {
+          "position": [
+            1.6,
+            0,
+            0.6
+          ],
+          "rotationY": -20
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0.6,
+            "expression": "determined"
+          },
+          {
+            "t": 4.762,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_8aj6un",
+            "start": 0,
+            "duration": 9.5,
+            "label": "close-up",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  1.0712627677494413,
+                  0.762784,
+                  3.8236925963601243
+                ],
+                "target": [
+                  0.7,
+                  0.58,
+                  0.8
+                ],
+                "fov": 28
+              },
+              {
+                "t": 9.5,
+                "position": [
+                  1.031484614062001,
+                  0.7432,
+                  3.499725532464396
+                ],
+                "target": [
+                  0.7,
+                  0.58,
+                  0.8
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_ops4e7",
+            "start": 0.6,
+            "duration": 2.633,
+            "characterId": "sati",
+            "text": "The orb is the portal. It shows both worlds.",
+            "audio": "media/audio/dialog/4bdacff06f11.wav",
+            "audioHash": "4bdacff06f11",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_yu8heb",
+            "start": 4.762,
+            "duration": 2.398,
+            "characterId": "sati",
+            "text": "It does not let either one skip the joints.",
+            "audio": "media/audio/dialog/306d0cd99396.wav",
+            "audioHash": "306d0cd99396",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Where they meet",
+      "duration": 9.5,
+      "status": "todo",
+      "description": "The three stand with the reflection orb between them and the dark. Daylight turns slowly inside the glass.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.15,
+            0,
+            0.45
+          ],
+          "rotationY": 12
+        },
+        "sati": {
+          "position": [
+            0.15,
+            0,
+            0.85
+          ],
+          "rotationY": 0
+        },
+        "bit": {
+          "position": [
+            1.45,
+            0,
+            0.55
+          ],
+          "rotationY": -12
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "happy"
+          },
+          {
+            "t": 3.37,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "happy"
+          },
+          {
+            "t": 5.653,
+            "expression": "happy"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "happy"
+          },
+          {
+            "t": 0.6,
+            "expression": "determined"
+          }
+        ]
+      },
+      "poses": {
+        "bit": [
+          {
+            "t": 0.45,
+            "pose": "think"
+          },
+          {
+            "t": 3.47,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_gi4e02",
+            "start": 0,
+            "duration": 9.5,
+            "label": "orbit",
+            "ease": "linear",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.7082939009183606,
+                  1.6500000000000001,
+                  3.436890922098924
+                ],
+                "target": [
+                  0,
+                  1.1,
+                  -0.4
+                ],
+                "fov": 40
+              },
+              {
+                "t": 4.75,
+                "position": [
+                  -0.21981101622036409,
+                  1.6500000000000001,
+                  3.79424404596921
+                ],
+                "target": [
+                  0,
+                  1.1,
+                  -0.4
+                ],
+                "fov": 40
+              },
+              {
+                "t": 9.5,
+                "position": [
+                  1.2978713763747791,
+                  1.6500000000000001,
+                  3.594437368439645
+                ],
+                "target": [
+                  0,
+                  1.1,
+                  -0.4
+                ],
+                "fov": 40
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_eux319",
+            "start": 0.6,
+            "duration": 1.356,
+            "characterId": "bit",
+            "text": "So we keep the rules.",
+            "audio": "media/audio/dialog/fa511beb09a0.wav",
+            "audioHash": "fa511beb09a0",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_5k0g96",
+            "start": 3.37,
+            "duration": 1.454,
+            "characterId": "mili",
+            "text": "And they keep the wish.",
+            "audio": "media/audio/dialog/421d5d8e522c.wav",
+            "audioHash": "421d5d8e522c",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_7rgj6r",
+            "start": 5.653,
+            "duration": 1.503,
+            "characterId": "sati",
+            "text": "And the glass is where they meet.",
+            "audio": "media/audio/dialog/f6f18a7632fc.wav",
+            "audioHash": "f6f18a7632fc",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_0vpu6i",
+            "start": 2.2,
+            "duration": 1.4,
+            "file": "media/audio/sfx/sparkle.wav",
+            "gain": 0.4
+          },
+          {
+            "id": "sfx_qdzgxf",
+            "start": 4.5,
+            "duration": 2.5,
+            "file": "media/audio/sfx/chime.wav",
+            "gain": 0.35
+          }
+        ],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": []
+  }
+}

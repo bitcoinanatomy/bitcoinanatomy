@@ -1,0 +1,797 @@
+{
+  "id": "ep03_sc03",
+  "title": "It Fits",
+  "status": "wip",
+  "summary": "A stranger’s key fits. The coin leaves with its owner.",
+  "environmentId": "open_gate",
+  "arc": {
+    "tension": 0.3,
+    "beat": "resolution",
+    "note": "The matching key turns the ring. Anyone can see that it did."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "Someone comes",
+      "duration": 5,
+      "status": "wip",
+      "description": "Golden light through the open arch. A citizen walks in from the city and stops at the orb. The trio step aside.",
+      "notes": "",
+      "characters": [
+        "sati",
+        "mili",
+        "bit",
+        "folk2"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -1.4,
+            0,
+            0.8
+          ],
+          "rotationY": 70
+        },
+        "mili": {
+          "position": [
+            -2,
+            0,
+            1.4
+          ],
+          "rotationY": 60
+        },
+        "bit": {
+          "position": [
+            1.8,
+            0,
+            0.6
+          ],
+          "rotationY": -40
+        },
+        "folk2": {
+          "position": [
+            4.2,
+            0,
+            2.4
+          ],
+          "rotationY": -140,
+          "moves": [
+            {
+              "t": 2.75,
+              "position": [
+                0.3,
+                0,
+                0.2
+              ],
+              "rotationY": 180
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          }
+        ],
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_nr3kys",
+            "start": 0,
+            "duration": 5,
+            "image": "media/boards/same_direction.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_zohg34",
+            "start": 0,
+            "duration": 5,
+            "label": "arrive",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  2.4,
+                  1.2,
+                  3.6
+                ],
+                "target": [
+                  0.2,
+                  0.6,
+                  0.4
+                ],
+                "fov": 38
+              },
+              {
+                "t": 5,
+                "position": [
+                  0.4,
+                  1,
+                  2.6
+                ],
+                "target": [
+                  0.2,
+                  0.7,
+                  -0.6
+                ],
+                "fov": 38
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_sxx5l5",
+            "start": 1.4,
+            "duration": 1.424,
+            "characterId": "sati",
+            "text": "There. Watch the ring.",
+            "audio": "media/audio/dialog/1f04d5986624.wav",
+            "audioHash": "1f04d5986624",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "Click",
+      "duration": 3.5,
+      "status": "todo",
+      "description": "The ring snaps into alignment and flares. Folk 2 stands with the orb. Mili’s eyes go wide.",
+      "notes": "Protocol: a valid signature proves the spender holds the matching private key, without revealing the key itself. Every node can check it.",
+      "characters": [
+        "sati",
+        "mili",
+        "bit",
+        "folk2"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -1.4,
+            0,
+            0.8
+          ],
+          "rotationY": 40
+        },
+        "mili": {
+          "position": [
+            -0.6,
+            0,
+            1.2
+          ],
+          "rotationY": 20
+        },
+        "bit": {
+          "position": [
+            1.4,
+            0,
+            0.8
+          ],
+          "rotationY": -20
+        },
+        "folk2": {
+          "position": [
+            0.3,
+            0,
+            0.2
+          ],
+          "rotationY": 180
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          },
+          {
+            "t": 1.4,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "bit": [
+          {
+            "t": 1.05,
+            "expression": "happy"
+          }
+        ],
+        "folk2": [
+          {
+            "t": 1,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_4mlgq1",
+            "start": 0,
+            "duration": 3.5,
+            "label": "push-in",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.2,
+                  1.2000000000000002,
+                  6.199999999999999
+                ],
+                "target": [
+                  0.2,
+                  1.1,
+                  2.8
+                ],
+                "fov": 34
+              },
+              {
+                "t": 3.5,
+                "position": [
+                  0.2,
+                  1.1600000000000001,
+                  4.6
+                ],
+                "target": [
+                  0.2,
+                  1.1,
+                  2.8
+                ],
+                "fov": 34
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_inld91",
+            "start": 0.6,
+            "duration": 2.032,
+            "characterId": "mili",
+            "text": "It clicked! Their key fits.",
+            "audio": "media/audio/dialog/1ee902ce7d7a.wav",
+            "audioHash": "1ee902ce7d7a",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_0kotjf",
+            "start": 0.6,
+            "duration": 0.08,
+            "file": "media/audio/sfx/click.wav",
+            "gain": 0.7
+          },
+          {
+            "id": "sfx_6tyuh4",
+            "start": 0.7,
+            "duration": 2.5,
+            "file": "media/audio/sfx/chime.wav",
+            "gain": 0.55
+          },
+          {
+            "id": "sfx_37js4m",
+            "start": 1.1,
+            "duration": 1.4,
+            "file": "media/audio/sfx/sparkle.wav",
+            "gain": 0.4
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Anyone can check",
+      "duration": 6.5,
+      "status": "todo",
+      "description": "The owner walks back through the arch with the orb. Sati watches them go, then turns to the others.",
+      "notes": "",
+      "characters": [
+        "sati",
+        "mili",
+        "bit",
+        "folk2"
+      ],
+      "assets": [],
+      "positions": {
+        "sati": {
+          "position": [
+            -0.4,
+            0,
+            0.6
+          ],
+          "rotationY": 10,
+          "moves": [
+            {
+              "t": 4.55,
+              "position": [
+                -0.2,
+                0,
+                0.2
+              ],
+              "rotationY": -10
+            }
+          ]
+        },
+        "mili": {
+          "position": [
+            -1.3,
+            0,
+            1
+          ],
+          "rotationY": 20
+        },
+        "bit": {
+          "position": [
+            1.2,
+            0,
+            0.5
+          ],
+          "rotationY": -15
+        },
+        "folk2": {
+          "position": [
+            0.3,
+            0,
+            0.2
+          ],
+          "rotationY": 0,
+          "moves": [
+            {
+              "t": 6.5,
+              "position": [
+                0.3,
+                0,
+                -6
+              ],
+              "rotationY": 0
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 3.223,
+            "expression": "happy"
+          },
+          {
+            "t": 4.55,
+            "expression": "happy"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_6hijsx",
+            "start": 0,
+            "duration": 6.5,
+            "label": "over-shoulder",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -1.8182326826841992,
+                  0.352,
+                  0.9606857964860264
+                ],
+                "target": [
+                  -0.4,
+                  0.58,
+                  0.6
+                ],
+                "fov": 32
+              },
+              {
+                "t": 6.5,
+                "position": [
+                  -1.7217341831499,
+                  0.352,
+                  0.9177975744707823
+                ],
+                "target": [
+                  -0.4,
+                  0.58,
+                  0.6
+                ],
+                "fov": 32
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_3hwih0",
+            "start": 0.6,
+            "duration": 1.785,
+            "characterId": "sati",
+            "text": "Anyone can check the signature.",
+            "audio": "media/audio/dialog/ed81d6c92eaf.wav",
+            "audioHash": "ed81d6c92eaf",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_w7l7eg",
+            "start": 3.223,
+            "duration": 1.647,
+            "characterId": "sati",
+            "text": "Only the owner can spend.",
+            "audio": "media/audio/dialog/13fe53bd1183.wav",
+            "audioHash": "13fe53bd1183",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "Not ours",
+      "duration": 7.5,
+      "status": "todo",
+      "description": "The trio walk toward the open city, side by side, smaller against the arch. Mili grins up at Sati.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit",
+        "folk1",
+        "folk2",
+        "folk3",
+        "folk4",
+        "folk5",
+        "folk6"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1,
+            0,
+            1
+          ],
+          "rotationY": 0,
+          "moves": [
+            {
+              "t": 7.5,
+              "position": [
+                -1,
+                0,
+                -2.4
+              ],
+              "rotationY": 0
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            0.1,
+            0,
+            0.8
+          ],
+          "rotationY": 0,
+          "moves": [
+            {
+              "t": 7.5,
+              "position": [
+                0.1,
+                0,
+                -2.6
+              ],
+              "rotationY": 0
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            1.5,
+            0,
+            0.6
+          ],
+          "rotationY": 0,
+          "moves": [
+            {
+              "t": 7.5,
+              "position": [
+                1.5,
+                0,
+                -2.8
+              ],
+              "rotationY": 0
+            }
+          ]
+        },
+        "folk1": {
+          "position": [
+            -7,
+            0,
+            -5
+          ],
+          "rotationY": 90,
+          "moves": [
+            {
+              "t": 7.5,
+              "position": [
+                7,
+                0,
+                -5
+              ]
+            }
+          ]
+        },
+        "folk2": {
+          "position": [
+            3.5,
+            0,
+            -3.6
+          ],
+          "rotationY": -40
+        },
+        "folk3": {
+          "position": [
+            4.2,
+            0,
+            -3.1
+          ],
+          "rotationY": -100
+        },
+        "folk4": {
+          "position": [
+            6.5,
+            0,
+            -7.5
+          ],
+          "rotationY": -90,
+          "moves": [
+            {
+              "t": 7.5,
+              "position": [
+                -6,
+                0,
+                -7.5
+              ]
+            }
+          ]
+        },
+        "folk5": {
+          "position": [
+            -4.2,
+            0,
+            -3.2
+          ],
+          "rotationY": 40
+        },
+        "folk6": {
+          "position": [
+            -3.5,
+            0,
+            -3.8
+          ],
+          "rotationY": -80
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "happy"
+          },
+          {
+            "t": 3.218,
+            "expression": "happy"
+          }
+        ],
+        "folk1": [
+          {
+            "t": 0.15,
+            "expression": "happy"
+          }
+        ],
+        "folk2": [
+          {
+            "t": 0.3,
+            "expression": "happy"
+          }
+        ],
+        "folk3": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ],
+        "folk4": [
+          {
+            "t": 0.15,
+            "expression": "happy"
+          }
+        ],
+        "folk5": [
+          {
+            "t": 0.3,
+            "expression": "happy"
+          }
+        ],
+        "folk6": [
+          {
+            "t": 0,
+            "expression": "happy"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.45,
+            "pose": "point"
+          },
+          {
+            "t": 3.268,
+            "pose": "idle"
+          }
+        ],
+        "bit": [
+          {
+            "t": 3.068,
+            "pose": "point"
+          },
+          {
+            "t": 6.943,
+            "pose": "idle"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_ooi7yf",
+            "start": 0,
+            "duration": 7.5,
+            "label": "pull-away",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0.2,
+                  0.7,
+                  4.2
+                ],
+                "target": [
+                  0.2,
+                  0.5,
+                  0
+                ],
+                "fov": 44
+              },
+              {
+                "t": 7.5,
+                "position": [
+                  0.2,
+                  1.6,
+                  6.4
+                ],
+                "target": [
+                  0.2,
+                  1.4,
+                  -8
+                ],
+                "fov": 44
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_l8trfv",
+            "start": 0.6,
+            "duration": 2.434,
+            "characterId": "mili",
+            "text": "Good. I only wanted to look.",
+            "audio": "media/audio/dialog/c8a8844007dd.wav",
+            "audioHash": "c8a8844007dd",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_r0od30",
+            "start": 3.218,
+            "duration": 2.356,
+            "characterId": "bit",
+            "text": "Next time, we look with our eyes.",
+            "audio": "media/audio/dialog/01658e1c31be.wav",
+            "audioHash": "01658e1c31be",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_femod3",
+            "start": 1.2,
+            "duration": 1.4,
+            "file": "media/audio/sfx/sparkle.wav",
+            "gain": 0.35
+          }
+        ],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": [
+      {
+        "id": "scr_eiyhcn",
+        "start": 0,
+        "duration": 22.5,
+        "cueId": "cue_ep03_sc03",
+        "offset": 0,
+        "gain": 0.5
+      }
+    ]
+  }
+}

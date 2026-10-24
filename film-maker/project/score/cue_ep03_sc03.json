@@ -1,0 +1,40 @@
+{
+  "id": "cue_ep03_sc03",
+  "name": "It Fits",
+  "seed": 6109,
+  "key": "G",
+  "mode": "major",
+  "tempo": 100,
+  "bars": 10,
+  "beatsPerBar": 4,
+  "density": 0.6,
+  "instruments": {
+    "pad": {
+      "on": true,
+      "enter": 0,
+      "gain": 0.6
+    },
+    "bass": {
+      "on": true,
+      "enter": 0.25,
+      "gain": 0.7
+    },
+    "arp": {
+      "on": true,
+      "enter": 0.4,
+      "gain": 0.35
+    },
+    "lead": {
+      "on": true,
+      "enter": 0.6,
+      "gain": 0.4
+    },
+    "perc": {
+      "on": false,
+      "enter": 0.5,
+      "gain": 0.4
+    }
+  },
+  "overrides": [],
+  "notes": ""
+}

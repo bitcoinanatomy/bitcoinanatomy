@@ -1,0 +1,598 @@
+{
+  "id": "ep04_sc01",
+  "title": "The Orb",
+  "status": "wip",
+  "summary": "Inside the protocol, a single reflection orb hangs in a black chamber. It does not show their faces. It shows daylight.",
+  "environmentId": "portal_inside",
+  "arc": {
+    "tension": 0.45,
+    "beat": "inciting",
+    "note": "They find a mirror that shows the other world."
+  },
+  "shots": [
+    {
+      "id": "sh01",
+      "name": "One sphere",
+      "duration": 6,
+      "status": "wip",
+      "description": "A dark chamber. One glass sphere hangs at eye height, ringed with a thin halo. The floor mirrors it. The trio come in small against the dark.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.6,
+            0,
+            1.4
+          ],
+          "rotationY": 10,
+          "moves": [
+            {
+              "t": 4.2,
+              "position": [
+                -1.1,
+                0,
+                0.5
+              ],
+              "rotationY": 8
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            -0.2,
+            0,
+            1.8
+          ],
+          "rotationY": 5,
+          "moves": [
+            {
+              "t": 4.5,
+              "position": [
+                0.15,
+                0,
+                0.9
+              ],
+              "rotationY": 0
+            }
+          ]
+        },
+        "bit": {
+          "position": [
+            1.5,
+            0,
+            1.5
+          ],
+          "rotationY": -8,
+          "moves": [
+            {
+              "t": 4.8,
+              "position": [
+                1.3,
+                0,
+                0.7
+              ],
+              "rotationY": -6
+            }
+          ]
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          }
+        ],
+        "sati": [
+          {
+            "t": 0,
+            "expression": "determined"
+          }
+        ],
+        "bit": [
+          {
+            "t": 0,
+            "expression": "surprised"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [
+          {
+            "id": "brd_gbgxh0",
+            "start": 0,
+            "duration": 6,
+            "image": "media/boards/the_protocol.png"
+          }
+        ],
+        "camera": [
+          {
+            "id": "cam_rxr7de",
+            "start": 0,
+            "duration": 6,
+            "label": "approach",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  2.4,
+                  1.2,
+                  5.2
+                ],
+                "target": [
+                  0,
+                  1.35,
+                  -2.2
+                ],
+                "fov": 40
+              },
+              {
+                "t": 6,
+                "position": [
+                  0.3,
+                  1.5,
+                  3.6
+                ],
+                "target": [
+                  0,
+                  1.35,
+                  -2.2
+                ],
+                "fov": 40
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [],
+        "sfx": [
+          {
+            "id": "sfx_u6ejly",
+            "start": 0.2,
+            "duration": 4,
+            "file": "media/audio/sfx/hum.wav",
+            "gain": 0.35
+          },
+          {
+            "id": "sfx_7q3f7r",
+            "start": 1.4,
+            "duration": 1.4,
+            "file": "media/audio/sfx/sparkle.wav",
+            "gain": 0.4
+          }
+        ],
+        "score": []
+      }
+    },
+    {
+      "id": "sh02",
+      "name": "Not our faces",
+      "duration": 6,
+      "status": "todo",
+      "description": "Close on the orb. The glass holds a sunlit street, trees, people — not the three friends standing in front of it.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.1,
+            0,
+            0.5
+          ],
+          "rotationY": 8
+        },
+        "sati": {
+          "position": [
+            0.15,
+            0,
+            0.9
+          ],
+          "rotationY": 0
+        },
+        "bit": {
+          "position": [
+            1.3,
+            0,
+            0.7
+          ],
+          "rotationY": -6
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0.6,
+            "expression": "surprised"
+          },
+          {
+            "t": 2.883,
+            "expression": "worried"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_el8jtw",
+            "start": 0,
+            "duration": 6,
+            "label": "push-in",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  0,
+                  1.4000000000000001,
+                  1
+                ],
+                "target": [
+                  0,
+                  1.35,
+                  -2.2
+                ],
+                "fov": 28
+              },
+              {
+                "t": 6,
+                "position": [
+                  0,
+                  1.3800000000000001,
+                  -0.5000000000000002
+                ],
+                "target": [
+                  0,
+                  1.35,
+                  -2.2
+                ],
+                "fov": 28
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_klfuv0",
+            "start": 0.6,
+            "duration": 1.451,
+            "characterId": "mili",
+            "text": "It looks like a mirror.",
+            "audio": "media/audio/dialog/46f53c82aeeb.wav",
+            "audioHash": "46f53c82aeeb",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_kw9cck",
+            "start": 2.883,
+            "duration": 1.532,
+            "characterId": "mili",
+            "text": "It is not showing us.",
+            "audio": "media/audio/dialog/c87edcdcb921.wav",
+            "audioHash": "c87edcdcb921",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh03",
+      "name": "Two worlds",
+      "duration": 8,
+      "status": "todo",
+      "description": "Sati studies the skin of the glass, then the dark around them. Mili and Bit wait on either side of the orb.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -1.1,
+            0,
+            0.5
+          ],
+          "rotationY": 20
+        },
+        "sati": {
+          "position": [
+            0.15,
+            0,
+            0.9
+          ],
+          "rotationY": 0
+        },
+        "bit": {
+          "position": [
+            1.3,
+            0,
+            0.7
+          ],
+          "rotationY": -15
+        }
+      },
+      "expressions": {
+        "sati": [
+          {
+            "t": 0.6,
+            "expression": "determined"
+          },
+          {
+            "t": 3.608,
+            "expression": "determined"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_9joktt",
+            "start": 0,
+            "duration": 8,
+            "label": "over-shoulder",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  2.9808569243097405,
+                  1.8,
+                  1.26028564143658
+                ],
+                "target": [
+                  0.15,
+                  0.58,
+                  0.9
+                ],
+                "fov": 32
+              },
+              {
+                "t": 8,
+                "position": [
+                  2.626180692574658,
+                  1.8,
+                  1.321968464347029
+                ],
+                "target": [
+                  0.15,
+                  0.58,
+                  0.9
+                ],
+                "fov": 32
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_67r9ui",
+            "start": 0.6,
+            "duration": 2.076,
+            "characterId": "sati",
+            "text": "This side is inside the protocol.",
+            "audio": "media/audio/dialog/16fba0638dad.wav",
+            "audioHash": "16fba0638dad",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_5febpc",
+            "start": 3.608,
+            "duration": 2.669,
+            "characterId": "sati",
+            "text": "The other side is outside. The real world.",
+            "audio": "media/audio/dialog/d7601d8234a0.wav",
+            "audioHash": "d7601d8234a0",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [],
+        "score": []
+      }
+    },
+    {
+      "id": "sh04",
+      "name": "Almost",
+      "duration": 6,
+      "status": "todo",
+      "description": "Mili reaches for the orb. The arm folds at the shoulder and the elbow and stops on the glass. A hand on the other side seems to reach back.",
+      "notes": "",
+      "characters": [
+        "mili",
+        "sati",
+        "bit"
+      ],
+      "assets": [],
+      "positions": {
+        "mili": {
+          "position": [
+            -0.85,
+            0,
+            0.15
+          ],
+          "rotationY": 12,
+          "moves": [
+            {
+              "t": 2.7,
+              "position": [
+                -0.55,
+                0,
+                -0.35
+              ],
+              "rotationY": 8
+            }
+          ]
+        },
+        "sati": {
+          "position": [
+            0.5,
+            0,
+            0.9
+          ],
+          "rotationY": -10
+        },
+        "bit": {
+          "position": [
+            1.3,
+            0,
+            0.7
+          ],
+          "rotationY": -15
+        }
+      },
+      "expressions": {
+        "mili": [
+          {
+            "t": 0,
+            "expression": "determined"
+          },
+          {
+            "t": 3.283,
+            "expression": "happy"
+          },
+          {
+            "t": 3.6,
+            "expression": "surprised"
+          }
+        ],
+        "sati": [
+          {
+            "t": 3,
+            "expression": "surprised"
+          }
+        ],
+        "bit": [
+          {
+            "t": 2.983,
+            "expression": "determined"
+          }
+        ]
+      },
+      "poses": {
+        "mili": [
+          {
+            "t": 0.9,
+            "pose": "reach"
+          }
+        ]
+      },
+      "tracks": {
+        "storyboard": [],
+        "camera": [
+          {
+            "id": "cam_wkz3nc",
+            "start": 0,
+            "duration": 6,
+            "label": "reach",
+            "ease": "smooth",
+            "keys": [
+              {
+                "t": 0,
+                "position": [
+                  -2.2,
+                  0.7,
+                  1.6
+                ],
+                "target": [
+                  -0.85,
+                  0.264,
+                  0.15
+                ],
+                "fov": 34
+              },
+              {
+                "t": 6,
+                "position": [
+                  -1.2,
+                  0.85,
+                  0.9
+                ],
+                "target": [
+                  0,
+                  1.2,
+                  -2.2
+                ],
+                "fov": 34
+              }
+            ]
+          }
+        ],
+        "subtitles": [],
+        "dialog": [
+          {
+            "id": "dlg_sxpgtp",
+            "start": 0.6,
+            "duration": 1.857,
+            "characterId": "mili",
+            "text": "I can almost touch them.",
+            "audio": "media/audio/dialog/55ee920576f4.wav",
+            "audioHash": "55ee920576f4",
+            "subtitle": true,
+            "gain": 1
+          },
+          {
+            "id": "dlg_a529dl",
+            "start": 2.983,
+            "duration": 1.196,
+            "characterId": "bit",
+            "text": "Then we go through.",
+            "audio": "media/audio/dialog/867f73c2cfb5.wav",
+            "audioHash": "867f73c2cfb5",
+            "subtitle": true,
+            "gain": 1
+          }
+        ],
+        "sfx": [
+          {
+            "id": "sfx_st41mt",
+            "start": 1.1,
+            "duration": 2.5,
+            "file": "media/audio/sfx/chime.wav",
+            "gain": 0.45
+          }
+        ],
+        "score": []
+      }
+    }
+  ],
+  "tracks": {
+    "storyboard": [],
+    "camera": [],
+    "subtitles": [],
+    "dialog": [],
+    "sfx": [],
+    "score": [
+      {
+        "id": "scr_6zr2m3",
+        "start": 0,
+        "duration": 26,
+        "cueId": "cue_ep04_sc01",
+        "offset": 0,
+        "gain": 0.5
+      }
+    ]
+  }
+}

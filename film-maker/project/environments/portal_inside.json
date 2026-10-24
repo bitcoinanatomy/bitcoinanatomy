@@ -1,0 +1,324 @@
+{
+  "id": "portal_inside",
+  "name": "Inside the Protocol",
+  "description": "A quiet black chamber inside the protocol. One mirror sphere hangs at eye height — the reflection orb, a portal. Its skin shows daylight that does not belong here.",
+  "tags": [],
+  "refs": [
+    "media/refs/dark_environments.png"
+  ],
+  "textures": {},
+  "scale": 1,
+  "color": "#888888",
+  "background": "#010308",
+  "fog": {
+    "color": "#05070c",
+    "near": 8,
+    "far": 36
+  },
+  "lighting": {
+    "ambient": 0.1,
+    "key": 0.7,
+    "keyColor": "#d5e4ff",
+    "keyPosition": [
+      2,
+      8,
+      4
+    ]
+  },
+  "hdri": "media/hdri/moon.hdr",
+  "hdriIntensity": 1.15,
+  "hdriBackground": true,
+  "hdriRotation": 0,
+  "post": {
+    "bloom": 1.15,
+    "vignette": 0.55,
+    "grain": 0.05,
+    "exposure": 1.05
+  },
+  "preview": {
+    "position": [
+      0.4,
+      1.5,
+      6.5
+    ],
+    "target": [
+      0,
+      1.35,
+      -2.2
+    ],
+    "fov": 42
+  },
+  "props": [
+    {
+      "assetId": "obsidian_floor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotationY": 0,
+      "scale": 1
+    },
+    {
+      "assetId": "glass_sphere",
+      "position": [
+        0,
+        1.35,
+        -2.2
+      ],
+      "rotationY": 0,
+      "scale": 1.35
+    },
+    {
+      "assetId": "floor_ring",
+      "position": [
+        0,
+        0,
+        -2.2
+      ],
+      "rotationY": 0,
+      "scale": 1.15
+    },
+    {
+      "assetId": "light_shaft",
+      "position": [
+        0,
+        0,
+        -2.2
+      ],
+      "rotationY": 0,
+      "scale": 0.55
+    },
+    {
+      "assetId": "halo_ring",
+      "position": [
+        0,
+        1.35,
+        -2.2
+      ],
+      "rotationY": 0,
+      "scale": 0.85
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        0.9713478610783949,
+        0,
+        4.227012006584275
+      ],
+      "rotationY": 0,
+      "scale": 0.55
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        5.6304658103872836,
+        0,
+        1.0477461043098604
+      ],
+      "rotationY": 0,
+      "scale": 0.55
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        6.0497281639030875,
+        0,
+        -4.577138856457018
+      ],
+      "rotationY": 0,
+      "scale": 0.55
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        1.9134218180349887,
+        0,
+        -8.411989773516027
+      ],
+      "rotationY": 0,
+      "scale": 0.55
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        -3.663730183505462,
+        0,
+        -7.569085689618954
+      ],
+      "rotationY": 0,
+      "scale": 0.55
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        -6.482018630390353,
+        0,
+        -2.6831505720501387
+      ],
+      "rotationY": 0,
+      "scale": 0.55
+    },
+    {
+      "assetId": "crystal",
+      "position": [
+        -4.419214839507937,
+        0,
+        2.5666067807480033
+      ],
+      "rotationY": 0,
+      "scale": 0.55
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -14.791940209353491,
+        0,
+        -4.078812817027691
+      ],
+      "rotationY": 48.42200676910579,
+      "scale": 1.4262206903658807
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        13.002584351591318,
+        0,
+        4.151014777335686
+      ],
+      "rotationY": 75.91686048544943,
+      "scale": 1.2304548469372092
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -14.765397425464988,
+        0,
+        5.120275778404766
+      ],
+      "rotationY": 24.849572558887303,
+      "scale": 1.8153074722923337
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -10.022749361318615,
+        0,
+        4.682299699249236
+      ],
+      "rotationY": 51.88848753925413,
+      "scale": 0.7784740262199192
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -16.869265275419234,
+        0,
+        6.4936446306926
+      ],
+      "rotationY": 56.079676542431116,
+      "scale": 1.676326316129416
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -1.214582683067728,
+        0,
+        -24.243753121678584
+      ],
+      "rotationY": 31.249268932733685,
+      "scale": 0.8051467496436089
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -14.638069997390637,
+        0,
+        -8.109132314512859
+      ],
+      "rotationY": 73.8258332409896,
+      "scale": 0.8005057094153016
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -5.666163680356741,
+        0,
+        2.01387151798417
+      ],
+      "rotationY": 47.349936354439706,
+      "scale": 1.7778353876899926
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -0.8393682802221336,
+        0,
+        -11.438523110519272
+      ],
+      "rotationY": 57.131335807498544,
+      "scale": 0.6631425591185689
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        13.301575225018405,
+        0,
+        -4.3102394078447
+      ],
+      "rotationY": 66.00653149886057,
+      "scale": 2.406971596581861
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -15.861545773340474,
+        0,
+        5.7940156996503624
+      ],
+      "rotationY": 75.81608855165541,
+      "scale": 1.376714661438018
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        4.764688167574932,
+        0,
+        4.526043227809284
+      ],
+      "rotationY": 33.22588655166328,
+      "scale": 3.240795742888004
+    },
+    {
+      "assetId": "monolith_cube",
+      "position": [
+        -14.873955179834752,
+        0,
+        11.392312981418618
+      ],
+      "rotationY": 82.69015953177586,
+      "scale": 1.4818521740380675
+    },
+    {
+      "assetId": "monolith",
+      "position": [
+        -11.493309260233078,
+        0,
+        -10.009169300016204
+      ],
+      "rotationY": 79.2638402315788,
+      "scale": 2.9046801059972496
+    },
+    {
+      "assetId": "motes",
+      "position": [
+        0,
+        0,
+        -2
+      ],
+      "rotationY": 0,
+      "scale": 0.8
+    }
+  ],
+  "marks": []
+}
