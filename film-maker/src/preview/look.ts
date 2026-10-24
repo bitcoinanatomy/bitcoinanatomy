@@ -1,8 +1,7 @@
 /**
  * Preview art direction. Cinematic keeps the Pixar-style PBR preview.
  * Shaded keeps that lighting and swaps the finish pass for a graded, textured image.
- * Flat restyles the same meshes as a vector illustration: toon bands, solid skies,
- * an orthographic frame that matches the shot camera, cream characters.
+ * Flat uses the same illustrated materials, white characters, and a disc shadow.
  */
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
@@ -40,28 +39,85 @@ export const FLAT = {
   pale: '#D7EAFF',
   navy: '#0B1936',
   deep: '#153B73',
-  white: '#FFFDF5',
+  white: '#FFFFFF',
   yellow: '#FFD12F',
   warm: '#FF9564',
   sky: '#F4F9FF',
 } as const;
 
-let gradient: THREE.DataTexture | undefined;
+/** World-space key direction shared by every illustrated material. */
+export const illustratedKey = { value: new THREE.Vector3(0.32, 0.86, 0.4).normalize() };
 
-/** Three hard bands so MeshToonMaterial does not smooth into a gradient. */
-export function toonGradient() {
-  if (gradient) return gradient;
-  const data = new Uint8Array([
-    0xb4, 0xc8, 0xe6, 255,
-    0xe4, 0xee, 0xf8, 255,
-    0xff, 0xff, 0xff, 255,
-  ]);
-  gradient = new THREE.DataTexture(data, 3, 1);
-  gradient.magFilter = THREE.NearestFilter;
-  gradient.minFilter = THREE.NearestFilter;
-  gradient.colorSpace = THREE.SRGBColorSpace;
-  gradient.needsUpdate = true;
-  return gradient;
+function ramp(stops: number[]) {
+  const tex = new THREE.DataTexture(new Uint8Array(stops), stops.length, 1);
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearFilter;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** Plateaus with soft steps. Characters stay near white. Sets keep form. Floors stay matte. */
+const SOFT_RAMP = ramp([232, 238, 244, 250, 253, 255, 255, 255]);
+const FORM_RAMP = ramp([150, 170, 196, 220, 236, 246, 252, 255]);
+const FLOOR_RAMP = ramp([214, 222, 232, 242, 248, 252, 255, 255]);
+
+const ILLUSTRATED_SNIPPET = `
+  vec3 n = normalize(normal);
+  vec3 vd = normalize(vViewPosition);
+  vec3 keyV = normalize(mat3(viewMatrix) * uKeyDir);
+  float fres = pow(1.0 - clamp(dot(n, vd), 0.0, 1.0), 2.4);
+  vec3 halfV = normalize(keyV + vd);
+  float spec = pow(clamp(dot(n, halfV), 0.0, 1.0), mix(28.0, 80.0, uGloss));
+  float luma = dot(outgoingLight, vec3(0.299, 0.587, 0.114));
+  #ifdef ILLUSTRATED_CHARACTER
+    outgoingLight = mix(vec3(0.84, 0.9, 0.99), vec3(1.0), smoothstep(0.32, 0.88, luma));
+    outgoingLight += fres * vec3(0.05, 0.07, 0.1);
+  #elif defined(ILLUSTRATED_FLOOR)
+    outgoingLight = mix(outgoingLight, vec3(0.9, 0.94, 0.99), 0.35);
+  #elif defined(ILLUSTRATED_GLASS)
+    outgoingLight = mix(outgoingLight * vec3(0.55, 0.75, 1.15), outgoingLight, smoothstep(0.12, 0.6, luma));
+    outgoingLight += uRim * fres;
+    outgoingLight += spec * vec3(1.05, 1.03, 0.98);
+    diffuseColor.a = mix(0.5, 0.92, fres);
+    outgoingLight += vec3(0.2, 0.45, 0.9) * (1.0 - fres) * 0.22;
+  #else
+    outgoingLight = mix(outgoingLight * vec3(0.72, 0.82, 1.05), outgoingLight, smoothstep(0.15, 0.62, luma));
+    outgoingLight += uRim * fres * 0.35;
+  #endif
+`;
+
+function illustratedToon(color: THREE.Color, side: THREE.Side, rampTex: THREE.DataTexture, kind: 'character' | 'floor' | 'glass' | 'set') {
+  const glass = kind === 'glass';
+  const mat = new THREE.MeshToonMaterial({
+    color,
+    gradientMap: rampTex,
+    side,
+    transparent: glass,
+    opacity: glass ? 0.78 : 1,
+    depthWrite: !glass,
+  });
+  mat.userData.illustrated = true;
+  const define = kind === 'character' ? 'ILLUSTRATED_CHARACTER' : kind === 'floor' ? 'ILLUSTRATED_FLOOR' : kind === 'glass' ? 'ILLUSTRATED_GLASS' : '';
+  if (define) mat.defines = { [define]: 1 };
+  mat.customProgramCacheKey = () => `illustrated-${kind}`;
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uKeyDir = illustratedKey;
+    shader.uniforms.uGloss = { value: glass ? 1 : 0 };
+    shader.uniforms.uRim = { value: new THREE.Color(glass ? '#eaf4ff' : '#f4f8ff') };
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+         uniform vec3 uKeyDir;
+         uniform float uGloss;
+         uniform vec3 uRim;`,
+      )
+      .replace('#include <opaque_fragment>', `${ILLUSTRATED_SNIPPET}\n#include <opaque_fragment>`);
+  };
+  return mat;
 }
 
 export function isDarkHex(hex?: string) {
@@ -72,57 +128,71 @@ export function isDarkHex(hex?: string) {
 
 const FACE = /eye|mouth|brow|shine/;
 
-/** Replace PBR materials with flat toon or basic fills. Characters become cream mascots. */
+const GLASS_NAME = /bubble|glass|sphere|orb/;
+const FLOOR_NAME = /floor|ground|sea|deck|plaza|dais/;
+
+/** Soft 3-tone toon, cool shadows, a rim, and a restrained specular. Characters read as white. */
 export function stylizeFlat(obj: THREE.Object3D, role: 'character' | 'set') {
-  const bands = toonGradient();
   obj.traverse((n) => {
     const mesh = n as THREE.Mesh;
     if (!mesh.isMesh) return;
     const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    const next = list.map((src) => flatMaterial(src as THREE.MeshStandardMaterial, mesh.name, role, bands));
-    mesh.material = Array.isArray(mesh.material) ? next : next[0];
-    mesh.castShadow = false;
-    mesh.receiveShadow = false;
+    const next = list.map((src) => illustratedMaterial(src as THREE.MeshStandardMaterial, mesh.name, role));
+    mesh.material = Array.isArray(mesh.material) ? next : next[0]!;
   });
 }
 
-function flatMaterial(src: THREE.MeshStandardMaterial, name: string, role: 'character' | 'set', bands: THREE.DataTexture) {
+function illustratedMaterial(src: THREE.MeshStandardMaterial, name: string, role: 'character' | 'set') {
+  if (src?.userData?.illustrated) return src;
   const face = FACE.test(name);
-  const color = new THREE.Color();
-  if (role === 'character' && face) color.set(src.color?.getHexString() ? `#${src.color.getHexString()}` : '#111111');
-  else if (role === 'character') color.set(FLAT.white);
-  else if (src.color) color.copy(src.color);
-  else color.set(FLAT.lightBlue);
-  if (src.transparent && src.opacity < 0.92) {
-    return new THREE.MeshBasicMaterial({
-      color: role === 'set' ? new THREE.Color(FLAT.lightBlue) : color,
-      transparent: true,
-      opacity: Math.min(0.45, src.opacity),
-      depthWrite: false,
-      side: src.side,
+  const side = src?.side ?? THREE.FrontSide;
+  if (face) {
+    const ink = new THREE.MeshBasicMaterial({
+      color: src?.color ? `#${src.color.getHexString()}` : '#141820',
+      side,
     });
+    ink.userData.illustrated = true;
+    return ink;
   }
-  if (face) return new THREE.MeshBasicMaterial({ color, side: src.side });
-  const toon = new THREE.MeshToonMaterial({ color, gradientMap: bands, side: src.side });
-  if (role === 'character') {
-    toon.emissive = new THREE.Color(FLAT.pale);
-    toon.emissiveIntensity = 0.08;
-  } else if (src.emissive && src.emissiveIntensity > 0.15) {
-    toon.emissive = new THREE.Color(FLAT.lightBlue);
-    toon.emissiveIntensity = 0.35;
+  if (src?.emissive && src.emissiveIntensity > 1.5 && src.emissive.getHex() !== 0) {
+    const glow = new THREE.MeshBasicMaterial({ color: src.emissive, toneMapped: false, side });
+    glow.userData.illustrated = true;
+    return glow;
   }
-  return toon;
+  const floor = role !== 'character' && FLOOR_NAME.test(name);
+  const glass = role !== 'character' && !floor && (GLASS_NAME.test(name) || (!!src?.transparent && (src.opacity ?? 1) < 0.92));
+  const color = new THREE.Color();
+  if (role === 'character') color.set(FLAT.white);
+  else if (glass) color.set('#3b8cff');
+  else if (floor) {
+    color.copy(src?.color ?? new THREE.Color('#d5e6fb'));
+    if (isDarkHex(`#${color.getHexString()}`)) color.lerp(new THREE.Color('#16325f'), 0.45);
+  }
+  else if (src?.color) color.copy(src.color);
+  else color.set(FLAT.lightBlue);
+  const kind = role === 'character' ? 'character' : floor ? 'floor' : glass ? 'glass' : 'set';
+  const rampTex = kind === 'character' ? SOFT_RAMP : kind === 'floor' ? FLOOR_RAMP : FORM_RAMP;
+  return illustratedToon(color, side, rampTex, kind);
 }
 
-export function contactShadow() {
+/** Soft oval on the ground. `radius` is half the character's width. Not parented to the body, so hops do not lift it. */
+export function contactShadow(radius = 0.42) {
   const mesh = new THREE.Mesh(
-    new THREE.CircleGeometry(0.42, 20),
-    new THREE.MeshBasicMaterial({ color: '#0B1936', transparent: true, opacity: 0.18, depthWrite: false }),
+    new THREE.CircleGeometry(1, 24),
+    new THREE.MeshBasicMaterial({ color: '#0B1936', transparent: true, opacity: 0.22, depthWrite: false }),
   );
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.y = 0.02;
+  mesh.scale.set(radius * 1.05, radius * 0.55, 1);
+  mesh.position.y = 0.012;
   mesh.name = 'contact';
+  mesh.renderOrder = 1;
   return mesh;
+}
+
+/** Keep the disc flat on the floor under a character, ignoring lift, lean, and squash. */
+export function plantShadow(shadow: THREE.Object3D, x: number, groundY: number, z: number) {
+  shadow.position.set(x, groundY + 0.012, z);
+  shadow.rotation.set(-Math.PI / 2, 0, 0);
 }
 
 /** Body points the speed-force arcs jump between. Local metres on Mili. */
