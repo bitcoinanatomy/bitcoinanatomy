@@ -11,10 +11,11 @@ import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { mediaUrl } from '../lib/api';
-import { applyFlatPalette, contactShadow, FLAT_DARK, FLAT_LIGHT, flatUniforms, GLOW_SLOTS, illustratedKey, isDarkHex, lightningTrail, paintedSky, plantShadow, stylizeFlat, type FlatPalette, type GlowSource, type Look } from './look';
+import { applyFlatPalette, contactShadow, FLAT_DARK, FLAT_LIGHT, flatUniforms, GLOW_SLOTS, illustratedKey, isDarkHex, isPainted, lightningTrail, paintedSky, plantShadow, stylizeFlat, type FlatPalette, type GlowSource, type Look } from './look';
 import type { Blocking, CameraKey, Environment, Expression, ExpressionKey, Pose, PoseKey, ProjectData, Shot, Vec3 } from '../model/schema';
 import { EXPRESSIONS } from '../model/schema';
 import { blockingFor, bodyPoseAt, expressionAt, poseAt } from '../model/timeline';
@@ -46,16 +47,17 @@ export interface SceneContent {
 }
 
 /** Shadows: everything opaque casts (characters, sets), floors and big skies only receive. Flat restyles after. */
-function shade(obj: THREE.Object3D | null, kind: string, illustrated = false, palette?: FlatPalette) {
+function shade(obj: THREE.Object3D | null, kind: string, look: Look = 'cinematic', palette?: FlatPalette) {
+  const illustrated = isPainted(look);
   if (!obj) return obj;
-  if (illustrated) stylizeFlat(obj, kind === 'character' ? 'character' : 'set', palette);
+  if (illustrated) stylizeFlat(obj, kind === 'character' ? 'character' : 'set', palette, look === 'toon');
   const noCast = /floor|cloud|motes|embers|light_shaft|floor_ring/.test(kind);
   obj.traverse((n) => {
     const m = n as THREE.Mesh;
     if (!m.isMesh) return;
     const mat = m.material as THREE.MeshStandardMaterial;
     if (!illustrated && mat.emissiveIntensity > 2.5) mat.emissiveIntensity = 2.5;
-    m.castShadow = !illustrated && !noCast && !mat.transparent;
+    m.castShadow = look !== 'flat' && !noCast && !mat.transparent;
     m.receiveShadow = !mat.transparent;
   });
   return obj;
@@ -385,6 +387,44 @@ const FinishShader = {
     }`,
 };
 
+/** Flat v2: inverted-hull outlines drawn over the render, coloured per material (`userData.outlineParameters`). */
+class OutlinePass extends RenderPass {
+  private effect: OutlineEffect;
+  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+    super(scene, camera);
+    this.effect = new OutlineEffect(renderer, { defaultThickness: 0.003, defaultColor: [0, 0, 0], defaultAlpha: 1 });
+    this.needsSwap = false;
+    this.clear = false;
+  }
+  private depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false });
+  render(renderer: THREE.WebGLRenderer, _write: THREE.WebGLRenderTarget, read: THREE.WebGLRenderTarget) {
+    renderer.setRenderTarget(this.renderToScreen ? null : read);
+    const hidden: THREE.Object3D[] = [];
+    this.scene.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      const mats = m ? (Array.isArray(m) ? m : [m]) : [];
+      // only materials that asked for a line get one
+      for (const mat of mats) mat.userData.outlineParameters ??= { visible: false };
+      if (o.visible && (o as THREE.Mesh).isMesh && !mats.some((x) => x.userData.outlineOccluder)) {
+        o.visible = false;
+        hidden.push(o);
+      }
+    });
+    // depth of the see-through bubbles, so lines behind them stay hidden
+    const { background, overrideMaterial } = this.scene;
+    const autoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    this.scene.background = null;
+    this.scene.overrideMaterial = this.depthOnly;
+    renderer.render(this.scene, this.camera);
+    this.scene.overrideMaterial = overrideMaterial;
+    this.scene.background = background;
+    renderer.autoClear = autoClear;
+    for (const o of hidden) o.visible = true;
+    this.effect.renderOutline(this.scene, this.camera);
+  }
+}
+
 export class SceneView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -398,6 +438,7 @@ export class SceneView {
   readonly controls: OrbitControls;
   private composer: EffectComposer;
   private renderPass: RenderPass;
+  private outlinePass: OutlinePass;
   private bloom: UnrealBloomPass;
   private finish: ShaderPass;
   private studio: THREE.Texture;
@@ -440,6 +481,9 @@ export class SceneView {
     this.composer = new EffectComposer(this.renderer);
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
+    this.outlinePass = new OutlinePass(this.renderer, this.scene, this.camera);
+    this.outlinePass.enabled = false;
+    this.composer.addPass(this.outlinePass);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.07, 0.25, 1.2);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
@@ -461,7 +505,7 @@ export class SceneView {
     this.animateActors(now);
     for (const a of this.animated) ANIMATED[a.kind]?.(a, now);
     this.finish.uniforms.time.value = now;
-    if (this.look === 'flat') this.paintFrame();
+    if (isPainted(this.look)) this.paintFrame();
     this.composer.render();
   }
 
@@ -506,9 +550,11 @@ export class SceneView {
     if (this.look === look) return;
     this.look = look;
     this.contentKey = '';
-    this.renderer.toneMapping = look === 'flat' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+    this.renderer.toneMapping = isPainted(look) ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+    // v1 has no cast shadows (disc only); v2 steps a real shadow map in the cel shader
     this.renderer.shadowMap.enabled = look !== 'flat';
-    this.sky.visible = look === 'flat';
+    this.sky.visible = isPainted(look);
+    this.outlinePass.enabled = look === 'toon';
     this.finish.uniforms.paper.value = 0;
     this.finish.uniforms.toe.value.set(0, 0, 0, 0);
   }
@@ -543,14 +589,14 @@ export class SceneView {
     for (const p of env?.props ?? []) {
       const a = data.assets[p.assetId];
       if (a) loads.push(this.addMesh(a.mesh, a.color, a.scale * p.scale, 'box').then((o) => {
-        shade(o, p.assetId, this.look === 'flat', this.palette);
+        shade(o, p.assetId, this.look, this.palette);
         place(o, p.position, p.rotationY, 1, p.assetId);
       }));
     }
     content.assets.forEach((id, i) => {
       const a = data.assets[id];
       if (a) loads.push(this.addMesh(a.mesh, a.color, a.scale, 'box').then((o) => {
-        shade(o, id, this.look === 'flat', this.palette);
+        shade(o, id, this.look, this.palette);
         place(o, [2 + i * 1.5, 0, 1], 0, 1, id);
       }));
     });
@@ -559,9 +605,9 @@ export class SceneView {
       if (!c) return;
       loads.push(this.addMesh(c.mesh, c.color, c.scale, 'capsule').then((o) => {
         if (!o) return;
-        shade(o, 'character', this.look === 'flat', this.palette);
+        shade(o, 'character', this.look, this.palette);
         let shadow: THREE.Object3D | undefined;
-        if (this.look === 'flat') {
+        if (isPainted(this.look)) {
           const box = new THREE.Box3().setFromObject(o);
           const radius = Math.max(0.18, box.getSize(new THREE.Vector3()).x * 0.46);
           shadow = contactShadow(radius);
@@ -578,7 +624,7 @@ export class SceneView {
       }));
     });
     this.ready = Promise.all(loads).then(() => {
-      if (this.look === 'flat') this.collectGlows();
+      if (isPainted(this.look)) this.collectGlows();
     });
     return this.ready;
   }
@@ -662,7 +708,7 @@ export class SceneView {
 
   private async applyEnvironment(env?: Environment) {
     const contentKey = this.contentKey;
-    if (this.look === 'flat') return this.applyFlatEnvironment(env, contentKey);
+    if (isPainted(this.look)) return this.applyFlatEnvironment(env, contentKey);
     const post = env?.post ?? { bloom: 0.6, vignette: 0.35, grain: 0.04, exposure: 1 };
     // UnrealBloom sums five mips, so env `bloom` 1 ≈ a gentle halo rather than full strength
     this.bloom.strength = post.bloom * 0.12;
@@ -724,6 +770,18 @@ export class SceneView {
     this.scene.fog = null;
     if (contentKey !== this.contentKey || this.disposed) return;
     illustratedKey.value.set(...(env?.lighting.keyPosition ?? [4, 8, 6])).normalize();
+    if (this.look !== 'toon') return;
+    // v2: a shadow-only key along the painted key direction; the cel shader steps its shadow map
+    const key = new THREE.DirectionalLight('#ffffff', 0);
+    key.position.copy(illustratedKey.value).multiplyScalar(30);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    Object.assign(key.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 80 });
+    key.shadow.bias = -0.0006;
+    key.shadow.normalBias = 0.07;
+    key.shadow.radius = 1;
+    key.target.position.set(0, 0, 0);
+    this.root.add(key, key.target);
   }
 
   private async addMesh(mesh: string | undefined, color: string, scale: number, fallback: 'box' | 'capsule') {
@@ -807,14 +865,14 @@ export function glbThumbnail(mesh: string | undefined, color: string, size: [num
         thumbRenderer ??= new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
         thumbRenderer.setSize(size[0], size[1]);
         thumbRenderer.outputColorSpace = THREE.SRGBColorSpace;
-        thumbRenderer.toneMapping = look === 'flat' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
-        thumbRenderer.toneMappingExposure = look === 'flat' ? 1.05 : 1.1;
+        thumbRenderer.toneMapping = isPainted(look) ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+        thumbRenderer.toneMappingExposure = isPainted(look) ? 1.05 : 1.1;
         const scene = new THREE.Scene();
         let obj: THREE.Object3D;
         const gltf = mesh ? await loadGltf(mediaUrl(mesh)!) : null;
         if (gltf) obj = gltf.scene.clone(true);
         else obj = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 6, 16), new THREE.MeshStandardMaterial({ color }));
-        if (look === 'flat') {
+        if (isPainted(look)) {
           stylizeFlat(obj, 'character');
           scene.add(new THREE.HemisphereLight('#c5ddff', '#1a3f78', 0.45));
           const keyLight = new THREE.DirectionalLight('#fff6ea', 1.25);
@@ -835,7 +893,7 @@ export function glbThumbnail(mesh: string | undefined, color: string, size: [num
         const cam = new THREE.PerspectiveCamera(35, size[0] / size[1], 0.01, 1000);
         cam.position.copy(c).add(new THREE.Vector3(0.9, 0.6, 1.4).normalize().multiplyScalar(r * 3));
         cam.lookAt(c);
-        if (look === 'flat') {
+        if (isPainted(look)) {
           applyFlatPalette(FLAT_DARK, false);
           flatUniforms.uGlowCount.value = 0;
         }
@@ -908,12 +966,12 @@ function renderCards() {
     poseFace(c.rig, expression ?? EXPRESSIONS[Math.floor((now + c.phase) / 2.2) % EXPRESSIONS.length], now);
     c.camera.aspect = w / h;
     c.camera.updateProjectionMatrix();
-    if (c.look === 'flat') {
+    if (isPainted(c.look)) {
       applyFlatPalette(FLAT_DARK, false);
       flatUniforms.uGlowCount.value = 0;
     }
-    r.toneMapping = c.look === 'flat' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = c.look === 'flat' ? 1.05 : 1.1;
+    r.toneMapping = isPainted(c.look) ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+    r.toneMappingExposure = isPainted(c.look) ? 1.05 : 1.1;
     r.setSize(w, h, false);
     r.render(c.scene, c.camera);
     const ctx = c.canvas.getContext('2d')!;
@@ -939,8 +997,8 @@ export function mountCharacterCard(canvas: HTMLCanvasElement, mesh: string | und
     const scene = new THREE.Scene();
     const obj = gltf ? gltf.scene.clone(true) : new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 6, 16).translate(0, 0.9, 0), new THREE.MeshStandardMaterial({ color }));
     let shadow: THREE.Object3D | undefined;
-    if (look === 'flat') {
-      stylizeFlat(obj, 'character');
+    if (isPainted(look)) {
+      stylizeFlat(obj, 'character', FLAT_DARK, look === 'toon');
       const box = new THREE.Box3().setFromObject(obj);
       shadow = contactShadow(Math.max(0.18, box.getSize(new THREE.Vector3()).x * 0.46));
       scene.add(shadow);

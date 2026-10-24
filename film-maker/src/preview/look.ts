@@ -1,19 +1,22 @@
 /**
  * Preview art direction. Cinematic keeps the Pixar-style PBR preview.
- * Flat uses illustrated materials, white characters, and a disc shadow.
+ * Flat v1 is the painted cel look (glow lighting, haze, disc shadows).
+ * Flat v2 (`toon`) adds cel cast shadows, per-material outlines, a lit-side rim, and a snapped highlight.
  */
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 
-export type Look = 'cinematic' | 'flat';
-export const LOOKS: Look[] = ['cinematic', 'flat'];
-export const LOOK_LABEL: Record<Look, string> = { cinematic: 'Pixar', flat: 'Flat' };
+export type Look = 'cinematic' | 'flat' | 'toon';
+export const LOOKS: Look[] = ['cinematic', 'flat', 'toon'];
+export const LOOK_LABEL: Record<Look, string> = { cinematic: 'Pixar', flat: 'Flat v1', toon: 'Flat v2' };
+/** Both flat versions share the painted pipeline. */
+export const isPainted = (look: Look) => look !== 'cinematic';
 export const LOOK_KEY = 'fm.look';
 const LOOK_EVENT = 'fm-look';
 
 export function readLook(): Look {
   const stored = localStorage.getItem(LOOK_KEY);
-  return stored === 'flat' ? stored : 'cinematic';
+  return stored === 'flat' || stored === 'toon' ? stored : 'cinematic';
 }
 
 /** Shared with the timeline monitor, the character lineup, and environment previews. */
@@ -163,6 +166,16 @@ const FLAT_FRAGMENT = `
   vec3 wn = normalize((vec4(n, 0.0) * viewMatrix).xyz);
   float facing = clamp(abs(dot(n, vd)), 0.0, 1.0);
   float key = dot(wn, uKeyDir) * 0.5 + 0.5;
+  float litSide = 1.0;
+  #ifdef FLAT_V2
+    // cel cast shadow: the shadow map is stepped with the light, so shadows land as hard shapes
+    #if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
+      DirectionalLightShadow dls = directionalLightShadows[ 0 ];
+      float sh = receiveShadow ? getShadow( directionalShadowMap[ 0 ], dls.shadowMapSize, dls.shadowIntensity, dls.shadowBias, dls.shadowRadius, vDirectionalShadowCoord[ 0 ] ) : 1.0;
+      key = mix(min(key, 0.3), key, smoothstep(0.45, 0.55, sh));
+    #endif
+    litSide = cel(key, 0.5);
+  #endif
   vec3 albedo = diffuseColor.rgb;
   vec3 c;
   #ifdef ILLUSTRATED_CHARACTER
@@ -171,6 +184,14 @@ const FLAT_FRAGMENT = `
     c = mix(vec3(0.72, 0.76, 0.94), vec3(0.93, 0.925, 0.91), lit) * albedo;
     vec3 bounce = flatGlow(vFlatWorld, wn, 0.8);
     float rim = cel(1.0 - facing, 0.72) * min(1.0, dot(bounce, vec3(0.4)));
+    #ifdef FLAT_V2
+      // rim only on the lit side, plus a thin key rim so silhouettes separate from dark sets
+      rim = max(rim, cel(1.0 - facing, 0.8) * 0.6) * litSide;
+      // snapped Blinn highlight: a small soft-edged sheen shape, not a gradient
+      vec3 keyV = normalize(mat3(viewMatrix) * uKeyDir);
+      float spec = cel(pow(clamp(dot(n, normalize(keyV + vd)), 0.0, 1.0), 48.0), 0.5);
+      c = mix(c, vec3(0.99, 0.985, 0.97), spec * 0.7);
+    #endif
     c = mix(c, vec3(0.92, 0.96, 1.0), rim * 0.8);
     c = min(c, vec3(0.93));
     c = flatHaze(c, 0.4);
@@ -226,14 +247,25 @@ function paintShader(mat: THREE.Material, fragment: string) {
   };
 }
 
-function illustratedPaint(color: THREE.Color, side: THREE.Side, kind: 'character' | 'floor' | 'glass' | 'set') {
+/** Outline thickness and colour by role (sets use the palette's ink); floors, bubbles, glows, and faces get none. */
+const NO_OUTLINE = { visible: false };
+function outlineFor(kind: 'character' | 'floor' | 'glass' | 'set', palette: FlatPalette) {
+  if (kind === 'character') return { thickness: 0.006, color: new THREE.Color('#3A4690').toArray(), alpha: 1 };
+  if (kind === 'set') return { thickness: 0.005, color: new THREE.Color(palette.ink).multiplyScalar(0.5).toArray(), alpha: 1 };
+  return NO_OUTLINE;
+}
+
+function illustratedPaint(color: THREE.Color, side: THREE.Side, kind: 'character' | 'floor' | 'glass' | 'set', palette: FlatPalette, v2 = false) {
   const glass = kind === 'glass';
   // toon only for its normal/view varyings: the fragment replaces all of three's lighting
   const mat = new THREE.MeshToonMaterial({ color, side, transparent: glass, depthWrite: !glass, fog: false });
   mat.userData.illustrated = true;
   const define = kind === 'character' ? 'ILLUSTRATED_CHARACTER' : kind === 'floor' ? 'ILLUSTRATED_FLOOR' : glass ? 'ILLUSTRATED_GLASS' : '';
-  if (define) mat.defines = { [define]: 1 };
-  mat.customProgramCacheKey = () => `painted-${kind}`;
+  mat.defines = { ...(define ? { [define]: 1 } : {}), ...(v2 ? { FLAT_V2: 1 } : {}) };
+  mat.customProgramCacheKey = () => `painted-${kind}-${v2}`;
+  mat.userData.outlineParameters = outlineFor(kind, palette);
+  // bubbles don't write depth, so the outline pass lays their depth down first
+  if (glass) mat.userData.outlineOccluder = true;
   paintShader(mat, FLAT_FRAGMENT);
   return mat;
 }
@@ -247,6 +279,7 @@ function glowMaterial(color: THREE.Color, side: THREE.Side, opacity = 1) {
     blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: !additive,
   });
   mat.userData.illustrated = true;
+  mat.userData.outlineParameters = NO_OUTLINE;
   if (additive) mat.defines = { GLOW_ADDITIVE: 1 };
   mat.customProgramCacheKey = () => `painted-glow-${additive}`;
   paintShader(mat, GLOW_FRAGMENT);
@@ -265,12 +298,12 @@ const GLASS_NAME = /bubble|glass|sphere|orb/;
 const FLOOR_NAME = /floor|ground|sea|deck|plaza|dais/;
 
 /** Painted look: soft gradients that shift blue in shadow, light from the glows, haze. Characters read as white clay. */
-export function stylizeFlat(obj: THREE.Object3D, role: 'character' | 'set', palette: FlatPalette = FLAT_DARK) {
+export function stylizeFlat(obj: THREE.Object3D, role: 'character' | 'set', palette: FlatPalette = FLAT_DARK, v2 = false) {
   obj.traverse((n) => {
     const mesh = n as THREE.Mesh;
     if (!mesh.isMesh) return;
     const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    const next = list.map((src) => illustratedMaterial(src as THREE.MeshStandardMaterial, mesh.name, role, palette));
+    const next = list.map((src) => illustratedMaterial(src as THREE.MeshStandardMaterial, mesh.name, role, palette, v2));
     mesh.material = Array.isArray(mesh.material) ? next : next[0]!;
     if (next.some((m) => m.userData.glow && (m as THREE.Material).blending === THREE.NormalBlending)) mesh.renderOrder = 2;
   });
@@ -282,13 +315,14 @@ export function stylizeFlat(obj: THREE.Object3D, role: 'character' | 'set', pale
  */
 export interface GlowSource { color: THREE.Color; strength: number }
 
-function illustratedMaterial(src: THREE.MeshStandardMaterial, name: string, role: 'character' | 'set', palette: FlatPalette) {
+function illustratedMaterial(src: THREE.MeshStandardMaterial, name: string, role: 'character' | 'set', palette: FlatPalette, v2: boolean) {
   if (src?.userData?.illustrated) return src;
   const face = FACE.test(name);
   const side = src?.side ?? THREE.FrontSide;
   if (face) {
     const ink = new THREE.MeshBasicMaterial({ color: src?.color ? `#${src.color.getHexString()}` : '#141820', side });
     ink.userData.illustrated = true;
+    ink.userData.outlineParameters = NO_OUTLINE;
     return ink;
   }
   const emissive = src?.emissive && src.emissive.getHex() !== 0 ? src.emissive.clone().multiplyScalar(Math.min(src.emissiveIntensity, 4)) : null;
@@ -315,7 +349,7 @@ function illustratedMaterial(src: THREE.MeshStandardMaterial, name: string, role
     if (isDarkHex(palette.skyTop)) color.lerp(new THREE.Color(palette.set), isDarkHex(`#${color.getHexString()}`) ? 0.85 : 0.75);
   } else color.set(FLAT.lightBlue);
   const kind = role === 'character' ? 'character' : floor ? 'floor' : glass ? 'glass' : 'set';
-  const mat = illustratedPaint(color, side, kind);
+  const mat = illustratedPaint(color, side, kind, palette, v2);
   if (glass) mat.userData.glow = { color: new THREE.Color(palette.glassRim).lerp(new THREE.Color(palette.glass), 0.4), strength: 0.5 } satisfies GlowSource;
   return mat;
 }
