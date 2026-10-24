@@ -107,12 +107,47 @@ export function useView(def: ViewMode): [ViewMode, (v: ViewMode) => void] {
   return [v, (nv) => setSp((p) => (p.set('view', nv), p), { replace: true })];
 }
 
+function ViewIcon({ mode }: { mode: ViewMode }) {
+  const common = { width: 11, height: 11, viewBox: '0 0 12 12', fill: 'none', stroke: 'currentColor', strokeWidth: 1.2, 'aria-hidden': true as const };
+  if (mode === 'grid') {
+    return (
+      <svg {...common}>
+        <rect x="1" y="1" width="4" height="4" />
+        <rect x="7" y="1" width="4" height="4" />
+        <rect x="1" y="7" width="4" height="4" />
+        <rect x="7" y="7" width="4" height="4" />
+      </svg>
+    );
+  }
+  if (mode === 'table') {
+    return (
+      <svg {...common}>
+        <path d="M1.5 2.5h9M1.5 6h9M1.5 9.5h9" />
+      </svg>
+    );
+  }
+  if (mode === 'timeline') {
+    return (
+      <svg {...common}>
+        <rect x="1" y="3.5" width="10" height="5" rx="0.6" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <rect x="1" y="1" width="4.2" height="10" />
+      <rect x="6.8" y="1" width="4.2" height="10" />
+    </svg>
+  );
+}
+
 export function ViewToggle({ value, onChange, modes }: { value: ViewMode; onChange: (v: ViewMode) => void; modes: ViewMode[] }) {
-  const label: Record<ViewMode, string> = { grid: '▦ Grid', table: '☰ Table', timeline: '▭ Timeline', details: '◧ Details' };
+  const label: Record<ViewMode, string> = { grid: 'Grid', table: 'Table', timeline: 'Timeline', details: 'Details' };
   return (
     <div className="seg">
       {modes.map((m) => (
         <button key={m} className={m === value ? 'on' : ''} onClick={() => onChange(m)}>
+          <ViewIcon mode={m} />
           {label[m]}
         </button>
       ))}

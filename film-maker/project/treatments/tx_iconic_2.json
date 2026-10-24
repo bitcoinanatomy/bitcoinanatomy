@@ -1,0 +1,36 @@
+{
+  "id": "tx_iconic_2",
+  "name": "Minimal iconic plan",
+  "status": "wip",
+  "order": 10,
+  "reference": false,
+  "chosen": true,
+  "medium": "iconic",
+  "adjectives": [
+    "simple forms",
+    "strong silhouette",
+    "versatile"
+  ],
+  "principles": [
+    "One shape per character",
+    "Strong silhouette",
+    "Almost no texture",
+    "Works at any size"
+  ],
+  "palette": [
+    "#ffffff",
+    "#ff8a3d",
+    "#2f6bff",
+    "#0c3d8c"
+  ],
+  "characters": {
+    "mili": "The smallest circle. Motion is a streak.",
+    "sati": "A slightly taller circle. Face is two dots.",
+    "bit": "One large circle. Nothing else."
+  },
+  "camera": "Graphic, lots of negative space.",
+  "light": "None. Flat color on a field.",
+  "line": "Optional thin contour, or none.",
+  "materials": "Flat vector fills.",
+  "notes": ""
+}

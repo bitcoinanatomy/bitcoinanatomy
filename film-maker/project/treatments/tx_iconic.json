@@ -1,0 +1,41 @@
+{
+  "id": "tx_iconic",
+  "name": "Minimal iconic",
+  "status": "review",
+  "order": 6,
+  "reference": true,
+  "chosen": false,
+  "medium": "iconic",
+  "adjectives": [
+    "simple forms",
+    "strong silhouette",
+    "versatile"
+  ],
+  "principles": [
+    "One shape per character",
+    "Strong silhouette",
+    "Almost no texture",
+    "Works at any size"
+  ],
+  "palette": [
+    "#2489F5",
+    "#65B5FF",
+    "#D7EAFF",
+    "#0B1936",
+    "#FFFDF5",
+    "#FFD12F",
+    "#FF9564",
+    "#F4F9FF"
+  ],
+  "characters": {
+    "mili": "Smallest. Lightning bolts when she moves. Squash and stretch.",
+    "sati": "Medium sphere, confident brows, the story focus.",
+    "bit": "Largest sphere, slow and heavy."
+  },
+  "camera": "Orthographic. Side-on, three-quarter, or a light isometric. Same blocking as the Pixar camera.",
+  "light": "Flat bands only. Soft disc shadows. No HDRI.",
+  "line": "Silhouette first. Outlines only where a shape needs them.",
+  "materials": "Unlit or 3-tone toon. White characters, four to six colors per scene.",
+  "notes": "Preview toggle: Flat. The world sheet is the board.",
+  "board": "media/boards/treatment-iconic.jpg"
+}

@@ -1,0 +1,37 @@
+{
+  "id": "tx_collage",
+  "name": "Paper cutout",
+  "status": "review",
+  "order": 11,
+  "reference": true,
+  "chosen": false,
+  "medium": "collage",
+  "adjectives": [
+    "paper texture",
+    "layered",
+    "handmade",
+    "artistic"
+  ],
+  "principles": [
+    "Cut paper layers",
+    "Visible edges",
+    "Handmade texture",
+    "Collage backgrounds"
+  ],
+  "palette": [
+    "#f4efe6",
+    "#e7d3b0",
+    "#c47a5a",
+    "#6e8b74"
+  ],
+  "characters": {
+    "mili": "A small cut shape, slightly off the layer below.",
+    "sati": "Layered paper, a drawn face on top.",
+    "bit": "One big cutout. The shadow is another sheet."
+  },
+  "camera": "Flat, with real paper depth.",
+  "light": "A single raking light so layers cast shadows.",
+  "line": "The cut edge is the line.",
+  "materials": "Paper, card, torn fiber, glue.",
+  "notes": ""
+}

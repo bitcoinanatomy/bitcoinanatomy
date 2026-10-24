@@ -1,0 +1,36 @@
+{
+  "id": "tx_cinematic",
+  "name": "3D cinematic",
+  "status": "review",
+  "order": 1,
+  "reference": true,
+  "chosen": false,
+  "medium": "cinematic",
+  "adjectives": [
+    "emotional",
+    "cinematic",
+    "modern"
+  ],
+  "principles": [
+    "Pixar-style volumes",
+    "Cinematic cameras",
+    "Rich materials",
+    "Emotional storytelling"
+  ],
+  "palette": [
+    "#f4efe4",
+    "#ffd9a0",
+    "#7eb6ff",
+    "#1c2430"
+  ],
+  "characters": {
+    "mili": "Small, fast, rim-lit. Eyes carry the performance.",
+    "sati": "Mid scale, soft key, thoughtful face.",
+    "bit": "Large simple volume, broad highlights."
+  },
+  "camera": "Wide city frames, longer lenses on faces.",
+  "light": "Warm key, cool fill, characters as practicals.",
+  "line": "No drawn line. Form from light.",
+  "materials": "Soft subsurface, polished marble, glass.",
+  "notes": ""
+}

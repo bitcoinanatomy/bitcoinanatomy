@@ -286,7 +286,7 @@ async function main() {
 
   const data: ProjectData = {
     project: SCHEMAS.project.parse({ title: 'The Anatomy of Bitcoin', fps: 24, resolution: [1920, 1080], episodes: EPISODES.map((e) => e.id) }),
-    episodes: {}, scenes: {}, characters, environments, assets, cues: {}, credits: {},
+    episodes: {}, scenes: {}, characters, environments, assets, cues: {}, credits: {}, treatments: {},
   };
 
   for (const epSpec of EPISODES) {

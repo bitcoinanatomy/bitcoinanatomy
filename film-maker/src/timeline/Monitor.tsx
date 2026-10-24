@@ -3,6 +3,7 @@ import { mediaUrl } from '../lib/api';
 import type { CameraClip, CameraKey, ProjectData, StoryboardClip, SubtitleClip } from '../model/schema';
 import { clipsAt, sampleCamera, shotAt, timecode, type ResolvedTimeline } from '../model/timeline';
 import { creditVars, CreditsView } from '../preview/CreditsView';
+import type { Look } from '../preview/look';
 import { SceneView } from '../preview/SceneView';
 
 export type MonitorMode = 'board' | '3d' | 'split';
@@ -22,8 +23,8 @@ export function cameraAt(tl: ResolvedTimeline, t: number): CameraKey {
   return sampleCamera(c.clip as CameraClip, t - c.start);
 }
 
-export function Viewport({ data, tl, time, pilot, handle }: {
-  data: ProjectData; tl: ResolvedTimeline; time: number; pilot: boolean; handle?: React.RefObject<ViewportHandle | null>;
+export function Viewport({ data, tl, time, pilot, look, handle }: {
+  data: ProjectData; tl: ResolvedTimeline; time: number; pilot: boolean; look: Look; handle?: React.RefObject<ViewportHandle | null>;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const view = useRef<SceneView | null>(null);
@@ -51,8 +52,9 @@ export function Viewport({ data, tl, time, pilot, handle }: {
     return out;
   }, [dialog]);
   useEffect(() => {
+    view.current?.setLook(look);
     view.current?.setContent(data, { envId, assets: assets ?? [], characters: characters ?? [], positions, expressions, poses, talk });
-  }, [data, envId, assets, characters, positions, expressions, poses, talk]);
+  }, [data, envId, assets, characters, positions, expressions, poses, talk, look]);
   const shotTime = span ? time - span.start : 0;
   useEffect(() => {
     view.current?.setShotTime(shotTime);
@@ -67,8 +69,8 @@ export function Viewport({ data, tl, time, pilot, handle }: {
   return <div className="gl" ref={el} />;
 }
 
-export function Monitor({ data, tl, time, mode, pilot, safe, handle }: {
-  data: ProjectData; tl: ResolvedTimeline; time: number; mode: MonitorMode; pilot: boolean; safe: boolean; handle: React.RefObject<ViewportHandle | null>;
+export function Monitor({ data, tl, time, mode, pilot, look = 'cinematic', safe, handle }: {
+  data: ProjectData; tl: ResolvedTimeline; time: number; mode: MonitorMode; pilot: boolean; look?: Look; safe: boolean; handle: React.RefObject<ViewportHandle | null>;
 }) {
   const span = shotAt(tl, time);
   const board = clipsAt(tl, 'storyboard', time).sort((a, b) => a.start - b.start).at(-1)?.clip as StoryboardClip | undefined;
@@ -128,9 +130,9 @@ export function Monitor({ data, tl, time, mode, pilot, safe, handle }: {
         )}
         {mode !== 'board' && (
           <div className="pane">
-            <Viewport data={data} tl={tl} time={time} pilot={pilot} handle={handle} />
+            <Viewport data={data} tl={tl} time={time} pilot={pilot} look={look} handle={handle} />
             {pilot && <div className="pilot-hint">PILOT — orbit/zoom/pan, then “Set key”</div>}
-            {overlay('3d preview')}
+            {overlay(look === 'flat' ? 'flat' : look === 'shaded' ? 'shaded' : '3d preview')}
           </div>
         )}
       </div>

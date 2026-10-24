@@ -1,0 +1,37 @@
+{
+  "id": "tx_retro",
+  "name": "Graphic retro",
+  "status": "review",
+  "order": 4,
+  "reference": true,
+  "chosen": false,
+  "medium": "retro",
+  "adjectives": [
+    "bold shapes",
+    "texture",
+    "retro",
+    "playful"
+  ],
+  "principles": [
+    "Print texture",
+    "Limited retro palette",
+    "Poster composition",
+    "Playful scale"
+  ],
+  "palette": [
+    "#f4e04a",
+    "#e23b2f",
+    "#2f6fed",
+    "#1a1a1a"
+  ],
+  "characters": {
+    "mili": "Graphic blob with a hard outline.",
+    "sati": "Same family, slightly more face.",
+    "bit": "A billboard shape. The pose is the design."
+  },
+  "camera": "Poster frames. Strong foreground shapes.",
+  "light": "Flat, with a printed shadow.",
+  "line": "Thick, slightly imperfect ink.",
+  "materials": "Halftone and paper texture over flat color.",
+  "notes": ""
+}

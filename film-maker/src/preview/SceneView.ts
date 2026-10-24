@@ -14,6 +14,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { mediaUrl } from '../lib/api';
+import { contactShadow, isDarkHex, lightningTrail, stylizeFlat, type Look } from './look';
+import { renderShaded, ShadedShader } from './shaded';
 import type { Blocking, CameraKey, Environment, Expression, ExpressionKey, Pose, PoseKey, ProjectData, Shot, Vec3 } from '../model/schema';
 import { EXPRESSIONS } from '../model/schema';
 import { blockingFor, bodyPoseAt, expressionAt, poseAt } from '../model/timeline';
@@ -60,20 +62,29 @@ function shade(obj: THREE.Object3D | null, kind: string) {
   return obj;
 }
 
-/** Face-rig targets per expression: eye scale, mouth scale (negative y = frown), brow lift (m) and inner-brow tilt (rad, + = worried). */
-interface FacePose { eye: [number, number]; mouth: [number, number]; browUp: number; browTilt: number }
+/** Face-rig targets per expression: eye scale, mouth-arc scale (negative y = frown), open-mouth / tongue / teeth visibility, brow lift (m) and inner-brow tilt (rad, + = worried). */
+interface FacePose { eye: [number, number]; mouth: [number, number]; open: number; tongue: number; teeth: number; browUp: number; browTilt: number }
+const off = { open: 0, tongue: 0, teeth: 0 };
 const FACES: Record<Expression, FacePose> = {
-  neutral: { eye: [1, 1], mouth: [1, 1], browUp: 0, browTilt: 0 },
-  happy: { eye: [1.05, 0.55], mouth: [1.25, 1.6], browUp: 0.012, browTilt: 0 },
-  surprised: { eye: [1.25, 1.3], mouth: [0.45, 1.7], browUp: 0.03, browTilt: 0.1 },
-  worried: { eye: [1.05, 1.1], mouth: [0.8, -0.7], browUp: 0.01, browTilt: 0.4 },
-  determined: { eye: [1, 0.72], mouth: [0.7, 0.35], browUp: -0.012, browTilt: -0.35 },
-  sad: { eye: [1, 0.85], mouth: [0.9, -0.8], browUp: -0.004, browTilt: 0.3 },
+  neutral: { eye: [1, 1], mouth: [1, 1], ...off, browUp: 0, browTilt: 0 },
+  happy: { eye: [1.05, 0.55], mouth: [1.25, 1.6], ...off, browUp: 0.012, browTilt: 0 },
+  grin: { eye: [1.08, 0.42], mouth: [1.5, 0.7], open: 0, tongue: 0, teeth: 1, browUp: 0.008, browTilt: 0 },
+  laugh: { eye: [1.12, 0.28], mouth: [0, 0], open: 1.2, tongue: 1, teeth: 0.9, browUp: 0.016, browTilt: 0 },
+  smirk: { eye: [1, 0.8], mouth: [0.62, 0.95], ...off, browUp: 0.004, browTilt: -0.28 },
+  tongue: { eye: [1.05, 0.7], mouth: [1.15, 1.15], open: 0.35, tongue: 1, teeth: 0, browUp: 0.01, browTilt: 0 },
+  ooh: { eye: [1.12, 1.15], mouth: [0, 0], open: 0.5, tongue: 0, teeth: 0, browUp: 0.02, browTilt: 0.05 },
+  surprised: { eye: [1.25, 1.3], mouth: [0, 0], open: 0.85, tongue: 0, teeth: 0, browUp: 0.03, browTilt: 0.1 },
+  shout: { eye: [1.3, 1.25], mouth: [0, 0], open: 1.4, tongue: 0.35, teeth: 0.55, browUp: 0.028, browTilt: -0.15 },
+  grimace: { eye: [1.05, 0.55], mouth: [1.4, 0.2], open: 0, tongue: 0, teeth: 1, browUp: -0.008, browTilt: -0.2 },
+  pout: { eye: [1.04, 1.05], mouth: [0.4, 0.5], ...off, browUp: 0.006, browTilt: 0.22 },
+  worried: { eye: [1.05, 1.1], mouth: [0.8, -0.7], ...off, browUp: 0.01, browTilt: 0.4 },
+  determined: { eye: [1, 0.72], mouth: [0.7, 0.35], ...off, browUp: -0.012, browTilt: -0.35 },
+  sad: { eye: [1, 0.85], mouth: [0.9, -0.8], ...off, browUp: -0.004, browTilt: 0.3 },
 };
 
 /** The posable face nodes of a character mesh, with their rest transforms. */
 interface FaceRig {
-  nodes: { node: THREE.Object3D; kind: 'eye' | 'brow' | 'mouth'; side: number; pos: THREE.Vector3; rotZ: number }[];
+  nodes: { node: THREE.Object3D; kind: 'eye' | 'brow' | 'mouth' | 'open' | 'tongue' | 'teeth'; side: number; pos: THREE.Vector3; rotZ: number }[];
   pose: FacePose;
   height: number;
   phase: number;
@@ -82,9 +93,9 @@ interface FaceRig {
 export function rigFace(obj: THREE.Object3D, phase = 0): FaceRig {
   const nodes: FaceRig['nodes'] = [];
   obj.traverse((n) => {
-    const m = /^(eye|shine|brow)_(l|r)$|^(mouth)$/.exec(n.name);
+    const m = /^(eye|shine|brow)_(l|r)$|^(mouth)(?:_(open|tongue|teeth))?$/.exec(n.name);
     if (!m) return;
-    const kind = (m[1] === 'shine' ? 'eye' : m[1] ?? m[3]) as 'eye' | 'brow' | 'mouth';
+    const kind = (m[1] === 'shine' ? 'eye' : m[4] ? m[4] : m[1] ?? 'mouth') as FaceRig['nodes'][number]['kind'];
     nodes.push({ node: n, kind, side: m[2] === 'l' ? -1 : 1, pos: n.position.clone(), rotZ: n.rotation.z });
   });
   const height = new THREE.Box3().setFromObject(obj).getSize(new THREE.Vector3()).y || 1;
@@ -98,16 +109,23 @@ export function poseFace(rig: FaceRig, expression: Expression, now: number, talk
   const f = rig.pose;
   f.eye = [f.eye[0] + (target.eye[0] - f.eye[0]) * k, f.eye[1] + (target.eye[1] - f.eye[1]) * k];
   f.mouth = [f.mouth[0] + (target.mouth[0] - f.mouth[0]) * k, f.mouth[1] + (target.mouth[1] - f.mouth[1]) * k];
+  f.open += (target.open - f.open) * k;
+  f.tongue += (target.tongue - f.tongue) * k;
+  f.teeth += (target.teeth - f.teeth) * k;
   f.browUp += (target.browUp - f.browUp) * k;
   f.browTilt += (target.browTilt - f.browTilt) * k;
   const blink = (now + rig.phase * 1.3) % 3.7 < 0.12 ? 0.1 : 1;
   const s = rig.height; // scale rig offsets with character size
   for (const n of rig.nodes) {
     if (n.kind === 'eye') n.node.scale.set(f.eye[0], f.eye[1] * blink, 1);
-    else if (n.kind === 'mouth') {
+    else if (n.kind === 'mouth' || n.kind === 'open' || n.kind === 'tongue' || n.kind === 'teeth') {
       // talking: the mouth narrows and opens on syllable-ish beats
       const flap = talking ? Math.abs(Math.sin((now + rig.phase) * 13)) * (0.6 + 0.4 * Math.sin((now + rig.phase) * 3.1)) : 0;
-      n.node.scale.set(f.mouth[0] * (1 - flap * 0.25), f.mouth[1] + flap * 1.6 * Math.sign(f.mouth[1] || 1), 1 + flap);
+      const show = (v: number) => (v < 0.04 ? 0 : v);
+      if (n.kind === 'mouth') n.node.scale.set(show(f.mouth[0]) * (1 - flap * 0.25), f.mouth[1] + flap * 1.6 * Math.sign(f.mouth[1] || 1), show(Math.abs(f.mouth[0])) ? 1 + flap : 0);
+      else if (n.kind === 'open') n.node.scale.setScalar(show(f.open) * (talking ? 1 + flap * 0.3 : 1));
+      else if (n.kind === 'tongue') n.node.scale.setScalar(show(f.tongue));
+      else n.node.scale.setScalar(show(f.teeth));
     }
     else {
       n.node.position.set(n.pos.x, n.pos.y + f.browUp * s, n.pos.z);
@@ -118,26 +136,32 @@ export function poseFace(rig: FaceRig, expression: Expression, now: number, talk
 
 // ---------------------------------------------------------------- body rig
 
-/** Limb targets in radians: arms [forward (−) / back (+), outward raise], legs forward/back, body lean and squash. */
-interface BodyPose { armL: [number, number]; armR: [number, number]; legL: number; legR: number; lean: number; squash: number }
+/** Limb targets in radians: arms [forward (−) / back (+), outward raise], elbow and knee flex, legs forward/back, body lean and squash. */
+interface BodyPose { armL: [number, number]; armR: [number, number]; elbowL: number; elbowR: number; legL: number; legR: number; kneeL: number; kneeR: number; lean: number; squash: number }
 const BODY: Record<Pose, BodyPose> = {
-  idle: { armL: [0, 0], armR: [0, 0], legL: 0, legR: 0, lean: 0, squash: 0 },
-  wave: { armL: [0.05, 0], armR: [-0.3, 2.5], legL: 0, legR: 0, lean: -0.03, squash: 0 },
-  point: { armL: [0.1, 0], armR: [-1.5, 0.15], legL: -0.15, legR: 0.1, lean: 0.06, squash: 0 },
-  cheer: { armL: [-0.4, 2.6], armR: [-0.4, 2.6], legL: 0, legR: 0, lean: -0.08, squash: -0.04 },
-  think: { armL: [-0.9, -0.55], armR: [-2.3, -0.45], legL: 0, legR: 0, lean: 0.04, squash: 0 },
-  shrug: { armL: [-0.5, 0.9], armR: [-0.5, 0.9], legL: 0, legR: 0, lean: -0.04, squash: 0.04 },
-  reach: { armL: [-1.4, 0.15], armR: [-1.4, 0.15], legL: -0.25, legR: 0.25, lean: 0.18, squash: 0 },
-  lift: { armL: [-2.95, 0.25], armR: [-2.95, 0.25], legL: -0.2, legR: 0.2, lean: -0.05, squash: 0.07 },
-  crouch: { armL: [-0.7, 0.25], armR: [-0.7, 0.25], legL: -0.4, legR: -0.4, lean: 0.28, squash: 0.16 },
-  arms_crossed: { armL: [-1.25, -0.95], armR: [-1.15, -1], legL: 0, legR: 0, lean: -0.02, squash: 0 },
+  idle: { armL: [0, 0], armR: [0, 0], elbowL: 0.22, elbowR: 0.22, legL: 0, legR: 0, kneeL: 0, kneeR: 0, lean: 0, squash: 0 },
+  wave: { armL: [0.05, 0], armR: [-0.3, 2.5], elbowL: 0.2, elbowR: 0.45, legL: 0, legR: 0, kneeL: 0, kneeR: 0, lean: -0.03, squash: 0 },
+  point: { armL: [0.1, 0], armR: [-1.5, 0.15], elbowL: 0.3, elbowR: 0.12, legL: -0.15, legR: 0.1, kneeL: 0.12, kneeR: 0.08, lean: 0.06, squash: 0 },
+  cheer: { armL: [-0.4, 2.6], armR: [-0.4, 2.6], elbowL: 0.4, elbowR: 0.4, legL: 0, legR: 0, kneeL: 0, kneeR: 0, lean: -0.08, squash: -0.04 },
+  think: { armL: [-0.9, -0.55], armR: [-2.3, -0.45], elbowL: 0.9, elbowR: 1.55, legL: 0, legR: 0, kneeL: 0, kneeR: 0, lean: 0.04, squash: 0 },
+  shrug: { armL: [-0.5, 0.9], armR: [-0.5, 0.9], elbowL: 0.55, elbowR: 0.55, legL: 0, legR: 0, kneeL: 0, kneeR: 0, lean: -0.04, squash: 0.04 },
+  reach: { armL: [-1.4, 0.15], armR: [-1.4, 0.15], elbowL: 0.35, elbowR: 0.35, legL: -0.25, legR: 0.25, kneeL: 0.2, kneeR: 0.15, lean: 0.18, squash: 0 },
+  lift: { armL: [-2.95, 0.25], armR: [-2.95, 0.25], elbowL: 0.18, elbowR: 0.18, legL: -0.2, legR: 0.2, kneeL: 0.25, kneeR: 0.25, lean: -0.05, squash: 0.07 },
+  crouch: { armL: [-0.7, 0.25], armR: [-0.7, 0.25], elbowL: 0.6, elbowR: 0.6, legL: -0.4, legR: -0.4, kneeL: 1.15, kneeR: 1.15, lean: 0.28, squash: 0.16 },
+  arms_crossed: { armL: [-1.25, -0.95], armR: [-1.15, -1], elbowL: 1.45, elbowR: 1.45, legL: 0, legR: 0, kneeL: 0, kneeR: 0, lean: -0.02, squash: 0 },
 };
 
 interface BodyRig {
   armL?: THREE.Object3D;
   armR?: THREE.Object3D;
+  foreL?: THREE.Object3D;
+  foreR?: THREE.Object3D;
   legL?: THREE.Object3D;
   legR?: THREE.Object3D;
+  shinL?: THREE.Object3D;
+  shinR?: THREE.Object3D;
+  footL?: THREE.Object3D;
+  footR?: THREE.Object3D;
   baseScale: number;
 }
 
@@ -146,8 +170,14 @@ export function rigBody(obj: THREE.Object3D): BodyRig {
   obj.traverse((n) => {
     if (n.name === 'arm_l') rig.armL = n;
     else if (n.name === 'arm_r') rig.armR = n;
+    else if (n.name === 'forearm_l') rig.foreL = n;
+    else if (n.name === 'forearm_r') rig.foreR = n;
     else if (n.name === 'leg_l') rig.legL = n;
     else if (n.name === 'leg_r') rig.legR = n;
+    else if (n.name === 'shin_l') rig.shinL = n;
+    else if (n.name === 'shin_r') rig.shinR = n;
+    else if (n.name === 'foot_l') rig.footL = n;
+    else if (n.name === 'foot_r') rig.footR = n;
   });
   obj.rotation.order = 'YXZ'; // yaw, then lean, then waddle
   return rig;
@@ -155,9 +185,36 @@ export function rigBody(obj: THREE.Object3D): BodyRig {
 
 const mixPose = (a: BodyPose, b: BodyPose, k: number): BodyPose => {
   const m = (x: number, y: number) => x + (y - x) * k;
-  return { armL: [m(a.armL[0], b.armL[0]), m(a.armL[1], b.armL[1])], armR: [m(a.armR[0], b.armR[0]), m(a.armR[1], b.armR[1])], legL: m(a.legL, b.legL), legR: m(a.legR, b.legR), lean: m(a.lean, b.lean), squash: m(a.squash, b.squash) };
+  return {
+    armL: [m(a.armL[0], b.armL[0]), m(a.armL[1], b.armL[1])], armR: [m(a.armR[0], b.armR[0]), m(a.armR[1], b.armR[1])],
+    elbowL: m(a.elbowL, b.elbowL), elbowR: m(a.elbowR, b.elbowR),
+    legL: m(a.legL, b.legL), legR: m(a.legR, b.legR), kneeL: m(a.kneeL, b.kneeL), kneeR: m(a.kneeR, b.kneeR),
+    lean: m(a.lean, b.lean), squash: m(a.squash, b.squash),
+  };
 };
 const ease = (k: number) => k * k * (3 - 2 * k);
+
+/** Character-detail loop: a walk, then each posed gesture, so elbows and knees stay in view. */
+const DEMO_POSES: { pose: Pose; walk: boolean }[] = [
+  { pose: 'idle', walk: false },
+  { pose: 'wave', walk: false },
+  { pose: 'cheer', walk: false },
+  { pose: 'think', walk: false },
+  { pose: 'arms_crossed', walk: false },
+  { pose: 'crouch', walk: false },
+  { pose: 'idle', walk: true },
+  { pose: 'point', walk: false },
+  { pose: 'reach', walk: false },
+  { pose: 'lift', walk: false },
+];
+function demoPose(now: number) {
+  const slot = 3.2;
+  const i = Math.floor(now / slot) % DEMO_POSES.length;
+  const cur = DEMO_POSES[i];
+  const prev = DEMO_POSES[(i + DEMO_POSES.length - 1) % DEMO_POSES.length];
+  const poseOf = (d: { pose: Pose; walk: boolean }) => (d.walk ? 'idle' : d.pose);
+  return { pose: poseOf(cur), prev: poseOf(prev), since: now % slot, walk: cur.walk ? 1 : 0 };
+}
 
 export interface BodyState {
   /** current pose, the one it's blending from, seconds since it changed */
@@ -208,6 +265,16 @@ export function poseBody(obj: THREE.Object3D, rig: BodyRig, h: number, phase: nu
   set(rig.armR, b.armR[0] - swing * armAmp - idleSway + talkX, b.armR[1] + waveZ + talkZ);
   set(rig.legL, b.legL - swing * legAmp, 0);
   set(rig.legR, b.legR + swing * legAmp, 0);
+  // rear half of the stride flexes the knee; the arm swinging back picks up a little elbow
+  set(rig.foreL, b.elbowL + Math.max(0, swing) * 0.35 * w, 0);
+  set(rig.foreR, b.elbowR + Math.max(0, -swing) * 0.35 * w, 0);
+  set(rig.shinL, b.kneeL + Math.max(0, -swing) * 0.7 * w, 0);
+  set(rig.shinR, b.kneeR + Math.max(0, swing) * 0.7 * w, 0);
+  // soles stay level and parallel: cancel the thigh and knee pitch so both feet point +Z
+  const plant = (foot: THREE.Object3D | undefined, thigh?: THREE.Object3D, shin?: THREE.Object3D) =>
+    foot && foot.rotation.set(-((thigh?.rotation.x ?? 0) + (shin?.rotation.x ?? 0)), 0, 0);
+  plant(rig.footL, rig.legL, rig.shinL);
+  plant(rig.footR, rig.legR, rig.shinR);
   // squash & stretch: crouch/lift squash down, each footfall compresses slightly
   const step = Math.abs(Math.cos(stride));
   const squash = b.squash + breathe * (1 - w) + w * (1 - step) * 0.05;
@@ -220,6 +287,7 @@ export function poseBody(obj: THREE.Object3D, rig: BodyRig, h: number, phase: nu
 
 interface Actor {
   obj: THREE.Object3D;
+  id: string;
   blocking: Blocking;
   expressions?: ExpressionKey[];
   poses?: PoseKey[];
@@ -304,10 +372,15 @@ export class SceneView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 500);
+  private ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.05, 500);
+  private look: Look = 'cinematic';
+  private lookTarget = new THREE.Vector3(0, 1, 0);
   readonly controls: OrbitControls;
   private composer: EffectComposer;
+  private renderPass: RenderPass;
   private bloom: UnrealBloomPass;
   private finish: ShaderPass;
+  private shaded: ShaderPass;
   private studio: THREE.Texture;
   private pmrem: THREE.PMREMGenerator;
   private envMaps = new Map<string, THREE.Texture>();
@@ -315,6 +388,8 @@ export class SceneView {
   private contentKey = '';
   private ro: ResizeObserver;
   private pilot = false;
+  /** Library character page: cycle poses and a walk so the limb skeleton reads. */
+  private skeletonDemo = false;
   private disposed = false;
   /** characters in the current shot: blocked, moving and emoting by shot time */
   private actors: Actor[] = [];
@@ -339,12 +414,16 @@ export class SceneView {
     this.scene.environmentIntensity = 0.5;
     this.scene.add(this.root);
     this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.renderPass = new RenderPass(this.scene, this.camera);
+    this.composer.addPass(this.renderPass);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.07, 0.25, 1.2);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     this.finish = new ShaderPass(FinishShader);
     this.composer.addPass(this.finish);
+    this.shaded = new ShaderPass(ShadedShader);
+    this.shaded.enabled = false;
+    this.composer.addPass(this.shaded);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enabled = false;
     this.controls.enableDamping = true;
@@ -360,6 +439,7 @@ export class SceneView {
     this.animateActors(now);
     for (const a of this.animated) ANIMATED[a.kind]?.(a, now);
     this.finish.uniforms.time.value = now;
+    if (this.look === 'shaded') (this.shaded.uniforms.uBlueOffset.value as THREE.Vector2).set(Math.random() * 8, Math.random() * 8);
     this.composer.render();
   }
 
@@ -373,6 +453,21 @@ export class SceneView {
     this.renderer.domElement.style.height = '100%';
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.syncOrtho();
+  }
+
+  /** Pixar, the shaded grade, or the flat iconic illustration look. Clears content so the next setContent restyles meshes. */
+  setLook(look: Look) {
+    if (this.look === look) return;
+    this.look = look;
+    this.contentKey = '';
+    this.finish.enabled = look !== 'shaded';
+    this.shaded.enabled = look === 'shaded';
+    this.renderPass.camera = look === 'flat' ? this.ortho : this.camera;
+    this.controls.object = look === 'flat' ? this.ortho : this.camera;
+    this.renderer.toneMapping = look === 'flat' ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+    this.renderer.shadowMap.enabled = look !== 'flat';
+    this.syncOrtho();
   }
 
   /** Resolves once every mesh of the current content has loaded. */
@@ -402,11 +497,19 @@ export class SceneView {
     };
     for (const p of env?.props ?? []) {
       const a = data.assets[p.assetId];
-      if (a) loads.push(this.addMesh(a.mesh, a.color, a.scale * p.scale, 'box').then((o) => place(shade(o, p.assetId), p.position, p.rotationY, 1, p.assetId)));
+      if (a) loads.push(this.addMesh(a.mesh, a.color, a.scale * p.scale, 'box').then((o) => {
+        shade(o, p.assetId);
+        if (o && this.look === 'flat') stylizeFlat(o, 'set');
+        place(o, p.position, p.rotationY, 1, p.assetId);
+      }));
     }
     content.assets.forEach((id, i) => {
       const a = data.assets[id];
-      if (a) loads.push(this.addMesh(a.mesh, a.color, a.scale, 'box').then((o) => place(shade(o, id), [2 + i * 1.5, 0, 1], 0, 1, id)));
+      if (a) loads.push(this.addMesh(a.mesh, a.color, a.scale, 'box').then((o) => {
+        shade(o, id);
+        if (o && this.look === 'flat') stylizeFlat(o, 'set');
+        place(o, [2 + i * 1.5, 0, 1], 0, 1, id);
+      }));
     });
     blockingFor({ characters: content.characters, positions: content.positions }, env).forEach((b, i) => {
       const c = data.characters[b.id];
@@ -414,8 +517,17 @@ export class SceneView {
       loads.push(this.addMesh(c.mesh, c.color, c.scale, 'capsule').then((o) => {
         if (!o) return;
         shade(o, 'character');
+        if (this.look === 'flat') {
+          stylizeFlat(o, 'character');
+          o.add(contactShadow());
+        }
+        if (b.id === 'mili') {
+          const baked = o.getObjectByName('lightning');
+          if (baked) baked.visible = false;
+          o.add(lightningTrail());
+        }
         place(o, b.position, b.rotationY);
-        this.actors.push({ obj: o, blocking: b, expressions: content.expressions?.[b.id], poses: content.poses?.[b.id], talk: content.talk?.[b.id] ?? [], face: rigFace(o, i * 1.7), body: rigBody(o) });
+        this.actors.push({ id: b.id, obj: o, blocking: b, expressions: content.expressions?.[b.id], poses: content.poses?.[b.id], talk: content.talk?.[b.id] ?? [], face: rigFace(o, i * 1.7), body: rigBody(o) });
       }));
     });
     this.ready = Promise.all(loads).then(() => undefined);
@@ -425,7 +537,11 @@ export class SceneView {
   /** Point the camera at everything in the scene (meshes only, lights ignored). */
   frame(dir: Vec3 = [0.55, 0.35, 1], fill = 1) {
     const box = new THREE.Box3();
-    this.root.traverse((o) => void ((o as THREE.Mesh).isMesh && box.expandByObject(o)));
+    this.root.traverse((o) => {
+      if (!(o as THREE.Mesh).isMesh) return;
+      for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p.name === 'trail') return;
+      box.expandByObject(o);
+    });
     if (box.isEmpty()) return;
     const c = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
@@ -435,8 +551,10 @@ export class SceneView {
     this.camera.near = dist / 100;
     this.camera.far = dist * 20 + 100;
     this.camera.updateProjectionMatrix();
+    this.lookTarget.copy(c);
     this.camera.lookAt(c);
     this.controls.target.copy(c);
+    this.syncOrtho();
   }
 
   /** Frame an environment from its establishing camera (or a default eye-level view of the stage). */
@@ -453,13 +571,18 @@ export class SceneView {
   }
 
   private animateActors(now: number) {
+    const demo = this.skeletonDemo ? demoPose(now) : null;
     for (const a of this.actors) {
       const p = poseAt(a.blocking, this.shotTime);
       const { height: h, phase } = a.face;
-      const bp = bodyPoseAt(a.poses, this.shotTime);
-      const talking = a.talk.some(([s, e]) => this.shotTime >= s && this.shotTime < e);
-      const walk = Math.min(1, p.speed / Math.max(0.25, h * 0.9));
-      const { lift } = poseBody(a.obj, a.body, h, phase, { ...bp, walk, travelled: p.travelled, talking, now });
+      const bp = demo ?? bodyPoseAt(a.poses, this.shotTime);
+      const talking = !demo && a.talk.some(([s, e]) => this.shotTime >= s && this.shotTime < e);
+      const walk = demo ? demo.walk : Math.min(1, p.speed / Math.max(0.25, h * 0.9));
+      const trail = a.obj.getObjectByName('trail');
+      const tick = trail?.userData.tick as ((now: number, running: boolean) => void) | undefined;
+      if (tick) tick(now, walk > 0.15);
+      const travelled = demo ? (demo.walk ? now * h * 0.9 : 0) : p.travelled;
+      const { lift } = poseBody(a.obj, a.body, h, phase, { ...bp, walk, travelled, talking, now });
       a.obj.position.set(p.position[0], p.position[1] + lift, p.position[2]);
       a.obj.rotation.y = THREE.MathUtils.degToRad(p.rotationY);
       poseFace(a.face, expressionAt(a.expressions, this.shotTime).expression, now, talking);
@@ -468,6 +591,7 @@ export class SceneView {
 
   private async applyEnvironment(env?: Environment) {
     const contentKey = this.contentKey;
+    if (this.look === 'flat') return this.applyFlatEnvironment(env, contentKey);
     const post = env?.post ?? { bloom: 0.6, vignette: 0.35, grain: 0.04, exposure: 1 };
     // UnrealBloom sums five mips, so env `bloom` 1 ≈ a gentle halo rather than full strength
     this.bloom.strength = post.bloom * 0.12;
@@ -509,6 +633,28 @@ export class SceneView {
     rim.position.set(-4, 2, -5);
     this.root.add(rim);
   }
+
+  /** Solid sky, hemisphere light, no HDRI, no bloom or grain. */
+  private async applyFlatEnvironment(env: Environment | undefined, contentKey: string) {
+    const dark = isDarkHex(env?.background);
+    const sky = dark ? '#0B1936' : '#F4F9FF';
+    const fog = dark ? '#0B1936' : '#D7EAFF';
+    this.bloom.strength = 0;
+    this.finish.uniforms.vignette.value = 0;
+    this.finish.uniforms.grain.value = 0;
+    this.renderer.toneMapping = THREE.NoToneMapping;
+    this.renderer.toneMappingExposure = 1;
+    this.renderer.shadowMap.enabled = false;
+    this.scene.environment = null;
+    this.scene.background = new THREE.Color(sky);
+    this.scene.fog = new THREE.Fog(fog, dark ? 18 : 28, dark ? 70 : 90);
+    if (contentKey !== this.contentKey || this.disposed) return;
+    this.root.add(new THREE.HemisphereLight(dark ? '#153B73' : '#F4F9FF', dark ? '#0B1936' : '#65B5FF', 1.15));
+    const key = new THREE.DirectionalLight('#ffffff', 0.55);
+    key.position.set(4, 8, 6);
+    key.castShadow = false;
+    this.root.add(key);
+  }
   private async addMesh(mesh: string | undefined, color: string, scale: number, fallback: 'box' | 'capsule') {
     const contentKey = this.contentKey;
     let obj: THREE.Object3D | null = null;
@@ -529,15 +675,40 @@ export class SceneView {
 
   setCamera(k: CameraKey, force = false) {
     if (this.pilot && !force) return;
+    this.lookTarget.set(...k.target);
     this.camera.position.set(...k.position);
     this.camera.fov = k.fov;
-    this.camera.updateProjectionMatrix();
-    this.camera.lookAt(...k.target);
-    this.controls.target.set(...k.target);
+    this.camera.lookAt(this.lookTarget);
+    this.controls.target.copy(this.lookTarget);
+    this.syncOrtho();
+    this.renderPass.camera = this.look === 'flat' ? this.ortho : this.camera;
+  }
+
+  /** Match the orthographic frame to the perspective camera at the look-at distance. */
+  private syncOrtho() {
+    const dist = Math.max(0.3, this.camera.position.distanceTo(this.lookTarget));
+    const h = 2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * dist;
+    const aspect = this.camera.aspect || 16 / 9;
+    this.ortho.left = (-h / 2) * aspect;
+    this.ortho.right = (h / 2) * aspect;
+    this.ortho.top = h / 2;
+    this.ortho.bottom = -h / 2;
+    this.ortho.near = this.camera.near;
+    this.ortho.far = this.camera.far;
+    this.ortho.position.copy(this.camera.position);
+    this.ortho.up.copy(this.camera.up);
+    this.ortho.lookAt(this.lookTarget);
+    this.ortho.updateProjectionMatrix();
+  }
+
+  /** Cycle body poses and a walk in place. Used by the character detail viewer. */
+  setSkeletonDemo(on: boolean) {
+    this.skeletonDemo = on;
   }
 
   setPilot(on: boolean) {
     this.pilot = on;
+    this.controls.object = this.look === 'flat' ? this.ortho : this.camera;
     this.controls.enabled = on;
   }
 
@@ -570,26 +741,34 @@ let thumbRenderer: THREE.WebGLRenderer | null = null;
 const thumbCache = new Map<string, Promise<string>>();
 
 /** Render a glb to a small PNG data URL (one shared WebGL context for all cards). */
-export function glbThumbnail(mesh: string | undefined, color: string, size: [number, number] = [320, 200]) {
-  const key = `${mesh}|${color}`;
+export function glbThumbnail(mesh: string | undefined, color: string, size: [number, number] = [320, 200], look: Look = 'cinematic') {
+  const key = `${look}|${mesh}|${color}`;
   if (!thumbCache.has(key)) {
     thumbCache.set(
       key,
       (async () => {
         thumbRenderer ??= new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
         thumbRenderer.setSize(size[0], size[1]);
-        thumbRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+        thumbRenderer.toneMapping = look === 'flat' ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
         const scene = new THREE.Scene();
-        scene.environment = studioEnv(thumbRenderer);
-        scene.environmentIntensity = 0.7;
-        scene.add(new THREE.AmbientLight('#ffffff', 0.8));
-        const d = new THREE.DirectionalLight('#ffffff', 2.5);
-        d.position.set(3, 5, 4);
-        scene.add(d);
         let obj: THREE.Object3D;
         const gltf = mesh ? await loadGltf(mediaUrl(mesh)!) : null;
         if (gltf) obj = gltf.scene.clone(true);
         else obj = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 6, 16), new THREE.MeshStandardMaterial({ color }));
+        if (look === 'flat') {
+          stylizeFlat(obj, 'set');
+          scene.add(new THREE.HemisphereLight('#F4F9FF', '#65B5FF', 1.15));
+          const keyLight = new THREE.DirectionalLight('#ffffff', 0.55);
+          keyLight.position.set(3, 5, 4);
+          scene.add(keyLight);
+        } else {
+          scene.environment = studioEnv(thumbRenderer);
+          scene.environmentIntensity = 0.7;
+          scene.add(new THREE.AmbientLight('#ffffff', 0.8));
+          const d = new THREE.DirectionalLight('#ffffff', 2.5);
+          d.position.set(3, 5, 4);
+          scene.add(d);
+        }
         scene.add(obj);
         const box = new THREE.Box3().setFromObject(obj);
         const c = box.getCenter(new THREE.Vector3());
@@ -597,7 +776,8 @@ export function glbThumbnail(mesh: string | undefined, color: string, size: [num
         const cam = new THREE.PerspectiveCamera(35, size[0] / size[1], 0.01, 1000);
         cam.position.copy(c).add(new THREE.Vector3(0.9, 0.6, 1.4).normalize().multiplyScalar(r * 3));
         cam.lookAt(c);
-        thumbRenderer.render(scene, cam);
+        if (look === 'shaded') renderShaded(thumbRenderer, scene, cam);
+        else thumbRenderer.render(scene, cam);
         return thumbRenderer.domElement.toDataURL('image/png');
       })(),
     );
@@ -610,7 +790,7 @@ let envThumbView: SceneView | null = null;
 let envThumbQueue: Promise<unknown> = Promise.resolve();
 
 /** Render a whole environment (background, fog, lights, props) to a JPEG data URL. */
-export function envThumbnail(data: ProjectData, envId: string, size: [number, number] = [320, 200]): Promise<string> {
+export function envThumbnail(data: ProjectData, envId: string, size: [number, number] = [320, 200], look: Look = 'cinematic'): Promise<string> {
   const job = envThumbQueue.then(async () => {
     if (!envThumbView) {
       const host = document.createElement('div');
@@ -620,6 +800,7 @@ export function envThumbnail(data: ProjectData, envId: string, size: [number, nu
       envThumbView.renderer.setAnimationLoop(null);
     }
     const v = envThumbView;
+    v.setLook(look);
     v.resize();
     await v.setContent(data, { envId, assets: [], characters: [] });
     v.frameEnvironment();
@@ -635,7 +816,7 @@ export function envThumbnail(data: ProjectData, envId: string, size: [number, nu
 /** What a card shows: a fixed expression and/or one kind of movement (default: sway while cycling expressions). */
 export type CardMotion = 'sway' | 'idle' | 'walk' | 'turn';
 export interface CardOptions { expression?: Expression; motion?: CardMotion; /** frame the head instead of the whole body */ face?: boolean }
-interface Card { canvas: HTMLCanvasElement; scene: THREE.Scene; camera: THREE.PerspectiveCamera; obj: THREE.Object3D; rig: FaceRig; body: BodyRig; phase: number; opts: CardOptions }
+interface Card { canvas: HTMLCanvasElement; scene: THREE.Scene; camera: THREE.PerspectiveCamera; obj: THREE.Object3D; rig: FaceRig; body: BodyRig; phase: number; opts: CardOptions; look: Look }
 const cards = new Set<Card>();
 const CARD_POSES: Pose[] = ['idle', 'wave', 'idle', 'cheer', 'idle', 'think', 'idle', 'shrug'];
 let cardRenderer: THREE.WebGLRenderer | null = null;
@@ -657,13 +838,17 @@ function renderCards() {
     const walking = motion === 'walk';
     const pose = motion === 'sway' ? CARD_POSES[Math.floor((now + c.phase) / 3) % CARD_POSES.length] : 'idle';
     const { lift } = poseBody(c.obj, c.body, ht, c.phase, { pose, prev: 'idle', since: ((now + c.phase) % 3), walk: walking ? 1 : 0, travelled: now * ht * 0.9, talking: false, now });
+    const tick = c.obj.getObjectByName('trail')?.userData.tick as ((now: number, running: boolean) => void) | undefined;
+    if (tick) tick(now, walking);
     c.obj.position.y = lift;
     c.obj.rotation.y = walking ? 0.9 : motion === 'turn' ? now * 0.8 + c.phase : motion === 'idle' ? 0.25 : Math.sin(now * 0.5 + c.phase) * 0.6;
     poseFace(c.rig, expression ?? EXPRESSIONS[Math.floor((now + c.phase) / 2.2) % EXPRESSIONS.length], now);
     c.camera.aspect = w / h;
     c.camera.updateProjectionMatrix();
+    r.toneMapping = c.look === 'flat' ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
     r.setSize(w, h, false);
-    r.render(c.scene, c.camera);
+    if (c.look === 'shaded') renderShaded(r, c.scene, c.camera);
+    else r.render(c.scene, c.camera);
     const ctx = c.canvas.getContext('2d')!;
     ctx.clearRect(0, 0, w, h);
     ctx.drawImage(r.domElement, 0, 0);
@@ -671,7 +856,7 @@ function renderCards() {
 }
 
 /** Draw a live, gently animated character into `canvas`; one shared WebGL context serves every card. Returns an unmount. */
-export function mountCharacterCard(canvas: HTMLCanvasElement, mesh: string | undefined, color: string, phase = 0, opts: CardOptions = {}) {
+export function mountCharacterCard(canvas: HTMLCanvasElement, mesh: string | undefined, color: string, phase = 0, opts: CardOptions = {}, look: Look = 'cinematic') {
   let card: Card | null = null;
   let live = true;
   void (async () => {
@@ -683,13 +868,26 @@ export function mountCharacterCard(canvas: HTMLCanvasElement, mesh: string | und
       cardRenderer.setAnimationLoop(() => cards.size && renderCards());
     }
     const scene = new THREE.Scene();
-    scene.environment = studioEnv(cardRenderer);
-    scene.environmentIntensity = 0.7;
-    scene.add(new THREE.AmbientLight('#ffffff', 0.8));
-    const d = new THREE.DirectionalLight('#ffffff', 2.5);
-    d.position.set(3, 5, 4);
-    scene.add(d);
     const obj = gltf ? gltf.scene.clone(true) : new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 6, 16).translate(0, 0.9, 0), new THREE.MeshStandardMaterial({ color }));
+    if (look === 'flat') {
+      stylizeFlat(obj, 'character');
+      scene.add(new THREE.HemisphereLight('#F4F9FF', '#65B5FF', 1.15));
+      const key = new THREE.DirectionalLight('#ffffff', 0.55);
+      key.position.set(3, 5, 4);
+      scene.add(key);
+    } else {
+      scene.environment = studioEnv(cardRenderer);
+      scene.environmentIntensity = 0.7;
+      scene.add(new THREE.AmbientLight('#ffffff', 0.8));
+      const d = new THREE.DirectionalLight('#ffffff', 2.5);
+      d.position.set(3, 5, 4);
+      scene.add(d);
+    }
+    if (mesh?.includes('mili.glb')) {
+      const baked = obj.getObjectByName('lightning');
+      if (baked) baked.visible = false;
+      obj.add(lightningTrail());
+    }
     scene.add(obj);
     const box = new THREE.Box3().setFromObject(obj);
     const ctr = box.getCenter(new THREE.Vector3());
@@ -706,7 +904,7 @@ export function mountCharacterCard(canvas: HTMLCanvasElement, mesh: string | und
       camera.position.set(ctr.x + dist * 0.25, ctr.y + size.y * 0.12, ctr.z + dist);
       camera.lookAt(ctr);
     }
-    card = { canvas, scene, camera, obj, rig: rigFace(obj, phase), body: rigBody(obj), phase, opts };
+    card = { canvas, scene, camera, obj, rig: rigFace(obj, phase), body: rigBody(obj), phase, opts, look };
     cards.add(card);
   })();
   return () => {

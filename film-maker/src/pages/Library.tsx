@@ -5,6 +5,7 @@ import { Field, Header, MediaSelect, NumInput, TextInput, Upload, useView, Vec3I
 import { mediaUrl } from '../lib/api';
 import { EXPRESSIONS } from '../model/schema';
 import type { Asset, Character, Environment, ProjectData } from '../model/schema';
+import { LOOK_LABEL, LOOKS, useLook } from '../preview/look';
 import { envThumbnail, glbThumbnail, mountCharacterCard, SceneView } from '../preview/SceneView';
 import type { CardOptions } from '../preview/SceneView';
 import { addLib, deleteLib, updateLib } from '../store/actions';
@@ -37,20 +38,22 @@ function usages(data: ProjectData, kind: Kind, id: string) {
 
 function MeshThumb({ mesh, color }: { mesh?: string; color: string }) {
   const [src, setSrc] = useState<string>();
+  const [look] = useLook();
   useEffect(() => {
     let live = true;
-    void glbThumbnail(mesh, color).then((s) => live && setSrc(s));
+    void glbThumbnail(mesh, color, [320, 200], look).then((s) => live && setSrc(s));
     return () => void (live = false);
-  }, [mesh, color]);
+  }, [mesh, color, look]);
   return <div className="thumb" style={{ background: `radial-gradient(circle at 50% 40%, ${color}22, #000)` }}>{src && <img src={src} alt="" style={{ objectFit: 'contain' }} />}</div>;
 }
 
 /** A live, animated character on a card (shared WebGL context, see mountCharacterCard). */
 function CharacterCard({ c, phase, opts }: { c: Character; phase: number; opts?: CardOptions }) {
   const el = useRef<HTMLCanvasElement>(null);
+  const [look] = useLook();
   const key = JSON.stringify(opts ?? {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => mountCharacterCard(el.current!, c.mesh, c.color, phase, opts), [c.mesh, c.color, phase, key]);
+  useEffect(() => mountCharacterCard(el.current!, c.mesh, c.color, phase, opts, look), [c.mesh, c.color, phase, key, look]);
   return (
     <div className="thumb" style={{ background: `radial-gradient(circle at 50% 40%, ${c.color}22, #000)` }}>
       <canvas ref={el} style={{ width: '100%', height: '100%', display: 'block' }} />
@@ -65,13 +68,25 @@ const RANK = (d: Doc) => {
 };
 export const sortLib = <T extends Doc>(items: T[]) => [...items].sort((a, b) => RANK(a) - RANK(b));
 
+function LookToggle() {
+  const [look, setLook] = useLook();
+  return (
+    <div className="seg" title="Preview art direction">
+      {LOOKS.map((k) => (
+        <button key={k} type="button" className={look === k ? 'on' : ''} onClick={() => setLook(k)}>{LOOK_LABEL[k]}</button>
+      ))}
+    </div>
+  );
+}
+
 function EnvThumb({ data, env }: { data: ProjectData; env: Environment }) {
   const [src, setSrc] = useState<string>();
+  const [look] = useLook();
   // re-render only when this environment or the assets it places change
-  const key = JSON.stringify([env, env.props.map((p) => data.assets[p.assetId])]);
+  const key = JSON.stringify([look, env, env.props.map((p) => data.assets[p.assetId])]);
   useEffect(() => {
     let live = true;
-    void envThumbnail(data, env.id).then((s) => live && setSrc(s));
+    void envThumbnail(data, env.id, [320, 200], look).then((s) => live && setSrc(s));
     return () => void (live = false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
@@ -84,6 +99,7 @@ function EnvThumb({ data, env }: { data: ProjectData; env: Environment }) {
 
 /** All characters side by side, live and orbitable. */
 function Lineup({ data }: { data: ProjectData }) {
+  const [look] = useLook();
   const el = useRef<HTMLDivElement>(null);
   const view = useRef<SceneView | null>(null);
   const framed = useRef('');
@@ -97,12 +113,14 @@ function Lineup({ data }: { data: ProjectData }) {
     const ids = sortLib(Object.values(data.characters)).map((c) => c.id);
     const n = ids.length;
     const positions = Object.fromEntries(ids.map((id, i) => [id, { position: [(i - (n - 1) / 2) * 2, 0, 0] as [number, number, number], rotationY: 0 }]));
+    view.current?.setLook(look);
     void view.current?.setContent(data, { assets: [], characters: ids, positions }).then(() => {
-      if (framed.current === ids.join()) return;
-      framed.current = ids.join();
+      const mark = `${look}:${ids.join()}`;
+      if (framed.current === mark) return;
+      framed.current = mark;
       view.current?.frame([0.25, 0.3, 1], 1.1);
     });
-  }, [data]);
+  }, [data, look]);
   return (
     <div className="viewer" style={{ aspectRatio: '21/8', marginBottom: 16 }}>
       <div className="gl" ref={el} />
@@ -122,6 +140,7 @@ export function LibraryPage({ kind }: { kind: Kind }) {
   return (
     <>
       <Header crumbs={[{ label: TITLE[kind] }]}>
+        <LookToggle />
         <ViewToggle value={view} onChange={setView} modes={['grid', 'table']} />
         <button className="btn primary" onClick={add}>＋ New</button>
       </Header>
@@ -217,6 +236,7 @@ function CharacterSheet({ c }: { c: Character }) {
 }
 
 function Preview({ data, kind, id }: { data: ProjectData; kind: Kind; id: string }) {
+  const [look] = useLook();
   const el = useRef<HTMLDivElement>(null);
   const view = useRef<SceneView | null>(null);
   const framed = useRef('');
@@ -224,12 +244,14 @@ function Preview({ data, kind, id }: { data: ProjectData; kind: Kind; id: string
     const v = new SceneView(el.current!);
     view.current = v;
     v.setPilot(true);
+    v.setSkeletonDemo(kind === 'characters');
     v.camera.position.set(4, 3, 6);
     v.controls.target.set(0, kind === 'environments' ? 1 : 0.5, 0);
     framed.current = '';
     return () => v.dispose();
   }, [kind]);
   useEffect(() => {
+    view.current?.setLook(look);
     void view.current
       ?.setContent(data, {
         envId: kind === 'environments' ? id : undefined,
@@ -241,9 +263,10 @@ function Preview({ data, kind, id }: { data: ProjectData; kind: Kind; id: string
         if (framed.current === id) return;
         framed.current = id;
         if (kind === 'environments') view.current?.frameEnvironment();
+        else if (kind === 'characters') view.current?.frame([0.35, 0.02, 1], 1.05);
         else view.current?.frame([0.5, 0.3, 1], 1);
       });
-  }, [data, kind, id]);
+  }, [data, kind, id, look]);
   return (
     <div className="viewer">
       <div className="gl" ref={el} />
@@ -264,6 +287,7 @@ export function LibraryDetail({ kind }: { kind: Kind }) {
   return (
     <>
       <Header crumbs={[{ label: TITLE[kind], to: `/${kind}` }, { label: doc.name }]}>
+        <LookToggle />
         <button className="btn danger" onClick={() => {
           if (!confirm(`Delete ${doc.name}?${uses.length ? ` It is used in ${uses.length} shots.` : ''}`)) return;
           deleteLib(kind, id);

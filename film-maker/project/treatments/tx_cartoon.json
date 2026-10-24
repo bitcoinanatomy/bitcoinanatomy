@@ -1,0 +1,37 @@
+{
+  "id": "tx_cartoon",
+  "name": "2D cartoon",
+  "status": "review",
+  "order": 2,
+  "reference": true,
+  "chosen": false,
+  "medium": "cartoon",
+  "adjectives": [
+    "bold lines",
+    "flat colors",
+    "fun",
+    "expressive"
+  ],
+  "principles": [
+    "TV animation staging",
+    "Bold outlines",
+    "Flat local color",
+    "Clear poses"
+  ],
+  "palette": [
+    "#f7f3ea",
+    "#f0b429",
+    "#3aa0e8",
+    "#2a4a7a"
+  ],
+  "characters": {
+    "mili": "Tiny, thick contour, squash on the run.",
+    "sati": "Same outline family, calmer pose.",
+    "bit": "One big shape, face does the acting."
+  },
+  "camera": "Flat staging, limited moves, readable silhouettes.",
+  "light": "No realistic light. Color does the separation.",
+  "line": "Even, confident ink.",
+  "materials": "Flat fills. Backgrounds more rendered than the cast.",
+  "notes": ""
+}

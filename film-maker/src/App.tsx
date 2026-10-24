@@ -11,6 +11,7 @@ import { LibraryDetail, LibraryPage } from './pages/Library';
 import { ScenePage } from './pages/ScenePage';
 import { CuePage, ScorePage } from './pages/ScorePage';
 import { ShotPage } from './pages/ShotPage';
+import { TreatmentsPage } from './pages/TreatmentsPage';
 import { useStore } from './store/store';
 
 export function App() {
@@ -43,6 +44,7 @@ export function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/episodes" element={<EpisodesPage />} />
           <Route path="/arcs" element={<ArcsPage />} />
+          <Route path="/treatments" element={<TreatmentsPage />} />
           <Route path="/credits" element={<CreditsListPage />} />
           <Route path="/credits/:id" element={<CreditsEditPage />} />
           <Route path="/ep/:epId" element={<EpisodePage />} />
@@ -81,6 +83,7 @@ function Sidebar() {
         <NavLink to="/" end><span className="ico">◉</span>Dashboard</NavLink>
         <div className="nav-label">Story</div>
         <NavLink to="/arcs"><span className="ico">∿</span>Story arcs</NavLink>
+        <NavLink to="/treatments"><span className="ico">▣</span>Treatments</NavLink>
         <NavLink to="/episodes" end><span className="ico">▤</span>Episodes</NavLink>
         {data.project.episodes.map((id) => {
           const ep = data.episodes[id];

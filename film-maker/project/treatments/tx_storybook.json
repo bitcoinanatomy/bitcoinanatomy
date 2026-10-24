@@ -1,0 +1,37 @@
+{
+  "id": "tx_storybook",
+  "name": "Hand-drawn storybook",
+  "status": "review",
+  "order": 3,
+  "reference": true,
+  "chosen": false,
+  "medium": "storybook",
+  "adjectives": [
+    "sketchy lines",
+    "watercolor",
+    "warm",
+    "charming"
+  ],
+  "principles": [
+    "Sketchy construction",
+    "Watercolor washes",
+    "Warm paper",
+    "Storybook scale"
+  ],
+  "palette": [
+    "#f6f0e4",
+    "#e7b07a",
+    "#8fbf9f",
+    "#6a5a48"
+  ],
+  "characters": {
+    "mili": "Loose pencil, the glow is a wash.",
+    "sati": "Fewer strokes, clearer eyes.",
+    "bit": "Big soft mass, detail only in the face."
+  },
+  "camera": "Held storybook frames.",
+  "light": "Bleeding light, no hard shadows.",
+  "line": "Pencil over pigment.",
+  "materials": "Paper grain, blooms, granulation.",
+  "notes": ""
+}

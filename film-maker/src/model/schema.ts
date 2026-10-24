@@ -106,7 +106,7 @@ const emptyTracks = () => Tracks.parse({});
 // ---------------------------------------------------------------- structure
 
 /** A character's facial expression (drives eyes, brows and mouth in the preview). */
-export const EXPRESSIONS = ['neutral', 'happy', 'surprised', 'worried', 'determined', 'sad'] as const;
+export const EXPRESSIONS = ['neutral', 'happy', 'grin', 'laugh', 'smirk', 'tongue', 'ooh', 'surprised', 'shout', 'grimace', 'pout', 'worried', 'determined', 'sad'] as const;
 export const Expression = z.enum(EXPRESSIONS);
 export type Expression = z.infer<typeof Expression>;
 export const ExpressionKey = z.object({ t: z.number().min(0), expression: Expression });
@@ -353,6 +353,41 @@ export const Credits = z.object({
 });
 export type Credits = z.infer<typeof Credits>;
 
+// ---------------------------------------------------------------- treatments
+
+/** A visual treatment: either a locked style-board reference, or a working plan forked from one. */
+export const TREATMENTS_MEDIA = ['cinematic', 'cartoon', 'storybook', 'retro', 'anime', 'iconic', 'stopmotion', 'clay', 'animatic', 'geometric', 'collage', 'bw', 'custom'] as const;
+export const TreatmentMedium = z.enum(TREATMENTS_MEDIA);
+export type TreatmentMedium = z.infer<typeof TreatmentMedium>;
+
+export const Treatment = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: Status.default('todo'),
+  /** sort on the board */
+  order: z.number().int().default(0),
+  /** locked option from the style board; planning forks a copy */
+  reference: z.boolean().default(false),
+  /** the look the film is heading toward (one at a time) */
+  chosen: z.boolean().default(false),
+  medium: TreatmentMedium.default('custom'),
+  /** short adjectives under the title */
+  adjectives: z.array(z.string()).default([]),
+  /** what the look is built from */
+  principles: z.array(z.string()).default([]),
+  palette: z.array(z.string()).default([]),
+  /** notes per character id */
+  characters: z.record(z.string(), z.string()).default({}),
+  camera: z.string().default(''),
+  light: z.string().default(''),
+  line: z.string().default(''),
+  materials: z.string().default(''),
+  notes: z.string().default(''),
+  /** reference sheet, relative to project/ */
+  board: z.string().optional(),
+});
+export type Treatment = z.infer<typeof Treatment>;
+
 // ---------------------------------------------------------------- bundle
 
 /** Everything the app holds in memory. Scenes are keyed by id and know their episode. */
@@ -365,9 +400,10 @@ export interface ProjectData {
   assets: Record<string, Asset>;
   cues: Record<string, ScoreCue>;
   credits: Record<string, Credits>;
+  treatments: Record<string, Treatment>;
 }
 
-export type DocKind = 'project' | 'episode' | 'scene' | 'character' | 'environment' | 'asset' | 'cue' | 'credits';
+export type DocKind = 'project' | 'episode' | 'scene' | 'character' | 'environment' | 'asset' | 'cue' | 'credits' | 'treatment';
 
 export const SCHEMAS = {
   project: Project,
@@ -378,4 +414,5 @@ export const SCHEMAS = {
   asset: Asset,
   cue: ScoreCue,
   credits: Credits,
+  treatment: Treatment,
 } as const;

@@ -16,6 +16,7 @@ const LIB_DIRS: Record<string, string> = {
   asset: 'assets',
   cue: 'score',
   credits: 'credits',
+  treatment: 'treatments',
 };
 
 export interface DocRef {
@@ -65,7 +66,7 @@ export function loadProject(): { data: ProjectData; issues: LoadIssue[] } {
   };
 
   const project = parse('project', docPath({ kind: 'project', id: 'project' })) ?? SCHEMAS.project.parse({ title: 'Untitled' });
-  const data: ProjectData = { project, episodes: {}, scenes: {}, characters: {}, environments: {}, assets: {}, cues: {}, credits: {} };
+  const data: ProjectData = { project, episodes: {}, scenes: {}, characters: {}, environments: {}, assets: {}, cues: {}, credits: {}, treatments: {} };
 
   const epRoot = path.join(PROJECT_DIR, 'episodes');
   const epIds = fs.existsSync(epRoot) ? fs.readdirSync(epRoot).filter((d) => fs.existsSync(path.join(epRoot, d, 'episode.json'))) : [];
@@ -79,7 +80,7 @@ export function loadProject(): { data: ProjectData; issues: LoadIssue[] } {
       if (sc) data.scenes[sc.id] = { ...sc, episodeId: ep.id };
     }
   }
-  const lib = <K extends 'character' | 'environment' | 'asset' | 'cue' | 'credits'>(kind: K, target: Record<string, unknown>) => {
+  const lib = <K extends 'character' | 'environment' | 'asset' | 'cue' | 'credits' | 'treatment'>(kind: K, target: Record<string, unknown>) => {
     const dir = path.join(PROJECT_DIR, LIB_DIRS[kind]);
     for (const f of listJson(dir)) {
       const doc = parse(kind, path.join(dir, f)) as { id: string } | undefined;
@@ -91,6 +92,7 @@ export function loadProject(): { data: ProjectData; issues: LoadIssue[] } {
   lib('asset', data.assets);
   lib('cue', data.cues);
   lib('credits', data.credits);
+  lib('treatment', data.treatments);
   return { data, issues };
 }
 
@@ -127,4 +129,5 @@ export function saveAll(data: ProjectData) {
   for (const a of Object.values(data.assets)) saveDoc({ kind: 'asset', id: a.id }, a);
   for (const c of Object.values(data.cues)) saveDoc({ kind: 'cue', id: c.id }, c);
   for (const c of Object.values(data.credits ?? {})) saveDoc({ kind: 'credits', id: c.id }, c);
+  for (const t of Object.values(data.treatments ?? {})) saveDoc({ kind: 'treatment', id: t.id }, t);
 }

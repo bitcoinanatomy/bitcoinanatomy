@@ -15,6 +15,7 @@ import { addClip, generateDialog, newDialog, removeClip, reparentClip, updateCli
 import { useData, useStore } from '../store/store';
 import { NoteRoll, Waveform } from './ClipViz';
 import { Inspector, TRACK_LABEL } from './Inspector';
+import { LOOK_LABEL, LOOKS, useLook } from '../preview/look';
 import { cameraAt, Monitor, type MonitorMode, type ViewportHandle } from './Monitor';
 
 const ROW_H: Record<TrackKind, number> = { storyboard: 54, camera: 36, subtitles: 34, dialog: 50, sfx: 42, score: 52 };
@@ -50,6 +51,7 @@ export function TimelineEditor({ scope }: { scope: Scope }) {
   const [locked, setLocked] = useState<Set<TrackKind>>(new Set());
   const [snap, setSnap] = useState(true);
   const [pilot, setPilot] = useState(false);
+  const [look, setLook] = useLook();
   const [safe, setSafe] = useState(false);
   const [loop, setLoop] = useState(false);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -367,6 +369,11 @@ export function TimelineEditor({ scope }: { scope: Scope }) {
           ))}
         </div>
         <button className={`btn sm ${pilot ? 'on' : ''}`} disabled={mode === 'board'} onClick={() => setPilot(!pilot)} title="Free camera in the 3D view">✥ Pilot</button>
+        <div className="seg" title="Preview art direction">
+          {LOOKS.map((k) => (
+            <button key={k} className={look === k ? 'on' : ''} disabled={mode === 'board'} onClick={() => setLook(k)}>{LOOK_LABEL[k]}</button>
+          ))}
+        </div>
         <button className={`btn sm ${safe ? 'on' : ''}`} onClick={() => setSafe(!safe)}>Safe area</button>
         <span className="sep" />
         <button className={`btn sm ${snap ? 'on' : ''}`} onClick={() => setSnap(!snap)}>Snap</button>
@@ -380,7 +387,7 @@ export function TimelineEditor({ scope }: { scope: Scope }) {
       </div>
 
       <div className="upper">
-        <Monitor data={data} tl={tl} time={time} mode={mode} pilot={pilot} safe={safe} handle={viewport} />
+        <Monitor data={data} tl={tl} time={time} mode={mode} pilot={pilot} look={look} safe={safe} handle={viewport} />
         <Inspector data={data} tl={tl} sel={selClip} shot={curShot} time={time} viewport={viewport} onDeselect={() => setSel(null)} />
       </div>
       <div className="splitter" onPointerDown={startSplit} />

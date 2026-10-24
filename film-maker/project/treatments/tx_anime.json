@@ -1,0 +1,37 @@
+{
+  "id": "tx_anime",
+  "name": "Anime",
+  "status": "review",
+  "order": 5,
+  "reference": true,
+  "chosen": false,
+  "medium": "anime",
+  "adjectives": [
+    "clean lines",
+    "dynamic",
+    "expressive",
+    "cinematic"
+  ],
+  "principles": [
+    "Clean digital line",
+    "Dynamic poses",
+    "Painted backgrounds",
+    "Expressive faces"
+  ],
+  "palette": [
+    "#f7f4ee",
+    "#ffb15a",
+    "#7eb6ff",
+    "#243044"
+  ],
+  "characters": {
+    "mili": "Speed lines and a small, sharp face.",
+    "sati": "Cleaner, stiller, the eyes do the thinking.",
+    "bit": "Simplified volume, anime highlight on the cheek."
+  },
+  "camera": "Dynamic angles, speed in the frame.",
+  "light": "Cel shading plus a painted sky.",
+  "line": "Thin, consistent digital ink.",
+  "materials": "Flat color, soft airbrush only in the background.",
+  "notes": ""
+}

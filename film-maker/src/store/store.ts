@@ -22,6 +22,7 @@ export function docsOf(d: ProjectData): Map<string, DocEntry> {
   for (const a of Object.values(d.assets)) m.set(`asset:${a.id}`, { ref: { kind: 'asset', id: a.id }, doc: a });
   for (const c of Object.values(d.cues)) m.set(`cue:${c.id}`, { ref: { kind: 'cue', id: c.id }, doc: c });
   for (const c of Object.values(d.credits ?? {})) m.set(`credits:${c.id}`, { ref: { kind: 'credits', id: c.id }, doc: c });
+  for (const t of Object.values(d.treatments ?? {})) m.set(`treatment:${t.id}`, { ref: { kind: 'treatment', id: t.id }, doc: t });
   return m;
 }
 

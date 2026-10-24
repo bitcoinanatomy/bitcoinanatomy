@@ -1,0 +1,37 @@
+{
+  "id": "tx_animatic",
+  "name": "Line sketch",
+  "status": "review",
+  "order": 9,
+  "reference": true,
+  "chosen": false,
+  "medium": "animatic",
+  "adjectives": [
+    "rough lines",
+    "expressive",
+    "fast",
+    "story-driven"
+  ],
+  "principles": [
+    "Rough construction",
+    "Story first",
+    "Fast poses",
+    "Unfinished on purpose"
+  ],
+  "palette": [
+    "#f7f4ee",
+    "#222222",
+    "#9a9a9a",
+    "#ffffff"
+  ],
+  "characters": {
+    "mili": "Gesture first, features last.",
+    "sati": "Fewer lines, a clear eyeline.",
+    "bit": "A heavy contour and a face."
+  },
+  "camera": "Storyboard frames. The drawing is the shot.",
+  "light": "Hatched, not lit.",
+  "line": "Rough pencil, overlapping strokes.",
+  "materials": "Paper. Nothing finished.",
+  "notes": ""
+}

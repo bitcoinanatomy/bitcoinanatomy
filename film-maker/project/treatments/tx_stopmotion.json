@@ -1,0 +1,37 @@
+{
+  "id": "tx_stopmotion",
+  "name": "Stop-motion",
+  "status": "review",
+  "order": 7,
+  "reference": true,
+  "chosen": false,
+  "medium": "stopmotion",
+  "adjectives": [
+    "tangible",
+    "textured",
+    "crafted",
+    "charming"
+  ],
+  "principles": [
+    "Practical materials",
+    "Visible craft",
+    "Tactile light",
+    "Charming imperfection"
+  ],
+  "palette": [
+    "#f3ecdf",
+    "#d8c4a4",
+    "#8a7560",
+    "#3a332c"
+  ],
+  "characters": {
+    "mili": "Small felt or clay, fingerprint scale.",
+    "sati": "Same material, quieter pose.",
+    "bit": "A heavy handmade volume. Seams are welcome."
+  },
+  "camera": "Real-set lenses, shallow focus.",
+  "light": "Practical lamps, soft contact shadows.",
+  "line": "No line. Edges are material.",
+  "materials": "Felt, clay, fabric, dust.",
+  "notes": ""
+}

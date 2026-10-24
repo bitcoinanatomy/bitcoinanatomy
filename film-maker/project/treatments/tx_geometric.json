@@ -1,0 +1,37 @@
+{
+  "id": "tx_geometric",
+  "name": "Geometric",
+  "status": "review",
+  "order": 10,
+  "reference": true,
+  "chosen": false,
+  "medium": "geometric",
+  "adjectives": [
+    "shapes",
+    "colors",
+    "stylized",
+    "modern"
+  ],
+  "principles": [
+    "Simple geometry",
+    "Bold color blocks",
+    "Modern layout",
+    "Stylized motion"
+  ],
+  "palette": [
+    "#ffffff",
+    "#ff7a3c",
+    "#3d7dff",
+    "#f2c14e"
+  ],
+  "characters": {
+    "mili": "Small circle plus a motion wedge.",
+    "sati": "Circle and a slight oval.",
+    "bit": "The largest circle in the frame."
+  },
+  "camera": "Designed frames, like a poster in motion.",
+  "light": "Flat. Color is the light.",
+  "line": "Clean vector edges.",
+  "materials": "Flat shapes, no texture.",
+  "notes": ""
+}

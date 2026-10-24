@@ -1,0 +1,36 @@
+{
+  "id": "tx_bw",
+  "name": "Black & white + glow",
+  "status": "review",
+  "order": 12,
+  "reference": true,
+  "chosen": false,
+  "medium": "bw",
+  "adjectives": [
+    "high contrast",
+    "atmospheric",
+    "stylized"
+  ],
+  "principles": [
+    "Monochrome",
+    "Characters as light sources",
+    "High contrast",
+    "Atmospheric city"
+  ],
+  "palette": [
+    "#f2f2f2",
+    "#9a9a9a",
+    "#2a2a2a",
+    "#050505"
+  ],
+  "characters": {
+    "mili": "A small lamp. The eyes are the hottest point.",
+    "sati": "Quieter glow, more midtone.",
+    "bit": "A large soft light. The body is the practical."
+  },
+  "camera": "Cinematic, low angles, reflections on wet ground.",
+  "light": "The cast is the only light. Deep blacks around them.",
+  "line": "None. Glow defines the edge.",
+  "materials": "Matte blacks, bloom, wet reflections.",
+  "notes": ""
+}

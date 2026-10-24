@@ -1,0 +1,37 @@
+{
+  "id": "tx_clay",
+  "name": "3D clay",
+  "status": "review",
+  "order": 8,
+  "reference": true,
+  "chosen": false,
+  "medium": "clay",
+  "adjectives": [
+    "tactile",
+    "handcrafted",
+    "playful",
+    "expressive"
+  ],
+  "principles": [
+    "Plasticine volumes",
+    "Fingerprints",
+    "Playful squash",
+    "Studio light"
+  ],
+  "palette": [
+    "#f6f1e8",
+    "#f0d2a0",
+    "#c9845a",
+    "#6e5344"
+  ],
+  "characters": {
+    "mili": "A pinched little lump, bright eyes.",
+    "sati": "Smoother, still handmade.",
+    "bit": "A big ball of clay. The weight reads."
+  },
+  "camera": "Close enough to see the craft.",
+  "light": "Soft studio key, gentle bounce.",
+  "line": "None.",
+  "materials": "Plasticine, tool marks, slight subsurface.",
+  "notes": ""
+}
