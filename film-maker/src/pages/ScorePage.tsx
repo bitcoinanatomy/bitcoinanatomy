@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { loadCue, transport } from '../audio/player';
 import { encodeWav } from '../audio/wav';
@@ -58,9 +58,13 @@ export function CuePage() {
   const data = useData();
   const navigate = useNavigate();
   const cue = data.cues[id];
-  const [playing, setPlaying] = useState<{ stop: () => void; position: () => number } | null>(null);
+  const [playing, setPlaying] = useState<{ stop: () => void; seek: (t: number) => void; position: () => number } | null>(null);
   const [pos, setPos] = useState(0);
   const raf = useRef(0);
+  const scrubbing = useRef(false);
+  const lastSeekAt = useRef(0);
+  const pendingSeek = useRef<number | null>(null);
+  const playGen = useRef(0);
   const comp = useMemo(() => (cue ? compose(cue) : null), [cue]);
   const playingRef = useRef(playing);
   playingRef.current = playing;
@@ -76,26 +80,86 @@ export function CuePage() {
     ...sc.shots.flatMap((sh) => sh.tracks.score.filter((s) => s.cueId === id).map(() => ({ to: `/ep/${sc.episodeId}/sc/${sc.id}/sh/${sh.id}?view=timeline`, label: `shot ${sh.name}` }))),
   ]).concat(Object.values(data.episodes).filter((e) => e.tracks.score.some((s) => s.cueId === id)).map((e) => ({ to: `/ep/${e.id}?view=timeline`, label: `episode ${e.title}` })));
 
-  const play = async () => {
+  const playFrom = async (start: number) => {
+    const token = ++playGen.current;
+    playingRef.current?.stop();
+    cancelAnimationFrame(raf.current);
+    transport.stop();
+    const buf = await loadCue(cue);
+    if (!buf || token !== playGen.current) return;
+    const h = transport.audition(buf, start, () => {
+      if (token !== playGen.current) return;
+      cancelAnimationFrame(raf.current);
+      setPlaying(null);
+    });
+    if (token !== playGen.current) {
+      h.stop();
+      return;
+    }
+    if (pendingSeek.current != null) {
+      h.seek(pendingSeek.current);
+      pendingSeek.current = null;
+    }
+    setPlaying(h);
+    const tick = () => {
+      if (!scrubbing.current) setPos(h.position());
+      raf.current = requestAnimationFrame(tick);
+    };
+    tick();
+  };
+
+  const play = () => {
     if (playing) {
+      playGen.current++;
       playing.stop();
       cancelAnimationFrame(raf.current);
       setPlaying(null);
       return;
     }
-    transport.stop();
-    const buf = await loadCue(cue);
-    if (!buf) return;
-    const h = transport.audition(buf, 0, () => {
-      cancelAnimationFrame(raf.current);
-      setPlaying(null);
-    });
-    setPlaying(h);
-    const tick = () => {
-      setPos(h.position());
-      raf.current = requestAnimationFrame(tick);
-    };
-    tick();
+    const start = pos >= dur - 0.05 ? 0 : pos;
+    void playFrom(start);
+  };
+
+  const timeAt = (e: PointerEvent, el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    return Math.min(dur, Math.max(0, ((e.clientX - r.left) / r.width) * dur));
+  };
+
+  const onScrubDown = (e: PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    scrubbing.current = true;
+    const t = timeAt(e, e.currentTarget);
+    setPos(t);
+    if (playingRef.current) playingRef.current.seek(t);
+    else {
+      pendingSeek.current = t;
+      void playFrom(t);
+    }
+  };
+
+  const onScrubMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!scrubbing.current) return;
+    const t = timeAt(e, e.currentTarget);
+    setPos(t);
+    const now = performance.now();
+    if (now - lastSeekAt.current < 40) {
+      pendingSeek.current = t;
+      return;
+    }
+    lastSeekAt.current = now;
+    if (playingRef.current) {
+      playingRef.current.seek(t);
+      pendingSeek.current = null;
+    } else pendingSeek.current = t;
+  };
+
+  const onScrubUp = () => {
+    scrubbing.current = false;
+    if (pendingSeek.current != null && playingRef.current) {
+      playingRef.current.seek(pendingSeek.current);
+      setPos(pendingSeek.current);
+      pendingSeek.current = null;
+    }
   };
 
   const wav = async () => {
@@ -121,9 +185,9 @@ export function CuePage() {
           <button className="btn" onClick={() => void wav()}>⇩ WAV</button>
         </div>
 
-        <div className="roll-wrap">
+        <div className="roll-wrap scrub" onPointerDown={onScrubDown} onPointerMove={onScrubMove} onPointerUp={onScrubUp} onPointerCancel={onScrubUp}>
           <NoteRoll cue={cue} offset={0} duration={dur} width={1200} />
-          {playing && <div className="ph" style={{ left: `${(pos / dur) * 100}%` }} />}
+          <div className="ph" style={{ left: `${(Math.min(pos, dur) / dur) * 100}%` }} />
         </div>
         <div className="legend">
           {INSTRUMENTS.map((i) => <span key={i}><i style={{ background: INST_COLOR[i] }} />{i}</span>)}

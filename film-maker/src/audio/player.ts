@@ -219,17 +219,47 @@ class Transport {
     if (playing && this.tl && this.data) void this.play(this.tl, this.data, Math.max(0, t), { loop: this.loop });
   }
 
-  /** Play a single buffer (score preview, waveform audition). Returns a stop function. */
+  /** Play a single buffer (score preview, waveform audition). `seek` restarts from a new offset. */
   audition(buf: AudioBuffer, offset = 0, onEnd?: () => void) {
     const ac = audioCtx();
     void ac.resume();
-    const src = ac.createBufferSource();
-    src.buffer = buf;
-    src.connect(ac.destination);
-    src.onended = () => onEnd?.();
-    src.start(ac.currentTime + 0.02, offset);
-    const startedAt = ac.currentTime + 0.02 - offset;
-    return { stop: () => src.stop(), position: () => ac.currentTime - startedAt };
+    let src: AudioBufferSourceNode | null = null;
+    let startedAt = 0;
+    let generation = 0;
+    const arm = (off: number) => {
+      const mine = ++generation;
+      const node = ac.createBufferSource();
+      node.buffer = buf;
+      node.connect(ac.destination);
+      node.onended = () => {
+        if (mine === generation) onEnd?.();
+      };
+      const when = ac.currentTime + 0.02;
+      const clamped = Math.min(Math.max(0, off), Math.max(0, buf.duration - 0.02));
+      node.start(when, clamped);
+      src = node;
+      startedAt = when - clamped;
+    };
+    arm(offset);
+    return {
+      stop: () => {
+        generation++;
+        try {
+          src?.stop();
+        } catch {
+          /* already stopped */
+        }
+      },
+      seek: (off: number) => {
+        try {
+          src?.stop();
+        } catch {
+          /* already stopped */
+        }
+        arm(off);
+      },
+      position: () => ac.currentTime - startedAt,
+    };
   }
 }
 
