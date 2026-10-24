@@ -11,6 +11,7 @@ import { LibraryDetail, LibraryPage } from './pages/Library';
 import { ScenePage } from './pages/ScenePage';
 import { CuePage, ScorePage } from './pages/ScorePage';
 import { ShotPage } from './pages/ShotPage';
+import { ShotsPage } from './pages/ShotsPage';
 import { TreatmentsPage } from './pages/TreatmentsPage';
 import { useStore } from './store/store';
 
@@ -55,6 +56,7 @@ export function App() {
           <Route path="/environments" element={<LibraryPage kind="environments" />} />
           <Route path="/environments/:id" element={<LibraryDetail kind="environments" />} />
           <Route path="/assets" element={<LibraryPage kind="assets" />} />
+          <Route path="/shots" element={<ShotsPage />} />
           <Route path="/assets/:id" element={<LibraryDetail kind="assets" />} />
           <Route path="/score" element={<ScorePage />} />
           <Route path="/score/:id" element={<CuePage />} />
@@ -107,6 +109,7 @@ function Sidebar() {
         <NavLink to="/characters"><span className="ico">☺</span>Characters</NavLink>
         <NavLink to="/environments"><span className="ico">◭</span>Environments</NavLink>
         <NavLink to="/assets"><span className="ico">◆</span>Assets</NavLink>
+        <NavLink to="/shots"><span className="ico">▷</span>Shots</NavLink>
         <NavLink to="/score"><span className="ico">♫</span>Score</NavLink>
         <div className="nav-label">Output</div>
         <NavLink to="/export"><span className="ico">⇪</span>Blender export</NavLink>
