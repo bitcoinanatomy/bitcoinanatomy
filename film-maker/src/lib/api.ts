@@ -16,7 +16,7 @@ async function call<T>(method: string, url: string, body?: unknown): Promise<T> 
 }
 
 export const api = {
-  project: () => call<{ data: ProjectData; issues: LoadIssue[]; tts: { piper: boolean; voices: string[] } }>('GET', '/api/project'),
+  project: () => call<{ data: ProjectData; issues: LoadIssue[]; tts: { piper: boolean; mlx: boolean; voices: string[] } }>('GET', '/api/project'),
   save: (ref: DocRef, doc: unknown) => call<{ doc: unknown }>('PUT', '/api/doc', { ref, doc }),
   remove: (ref: DocRef) => call<{ ok: true }>('DELETE', '/api/doc', { ref }),
   tts: (req: TtsRequest) => call<TtsResult>('POST', '/api/tts', req),

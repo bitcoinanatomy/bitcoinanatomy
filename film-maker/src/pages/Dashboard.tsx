@@ -112,7 +112,7 @@ export function Dashboard() {
             <div className="card pad">
               <h3>Pipeline</h3>
               <div className="list">
-                <div>Dialog TTS <span className="grow" /><span className="pill">{tts.piper ? `Piper · ${tts.voices.length} voices` : 'macOS say (fallback)'}</span></div>
+                <div>Dialog TTS <span className="grow" /><span className="pill">{tts.mlx ? `Kokoro · ${tts.voices.length} voices` : tts.piper ? `Piper · ${tts.voices.length} voices` : 'macOS say (fallback)'}</span></div>
                 <div>Score <span className="grow" /><span className="pill">deterministic · seed → MIDI/WAV</span></div>
                 <div>Meshes <span className="grow" /><span className="pill">glTF 2.0 (.glb) PBR</span></div>
                 <div>Export <span className="grow" /><Link className="btn sm" to="/export">Blender bundle →</Link></div>

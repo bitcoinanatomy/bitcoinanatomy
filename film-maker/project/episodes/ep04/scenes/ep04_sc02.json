@@ -162,22 +162,22 @@
           {
             "id": "dlg_ddvxw8",
             "start": 0.6,
-            "duration": 0.992,
+            "duration": 1.334,
             "characterId": "mili",
             "text": "We are out.",
-            "audio": "media/audio/dialog/5b51ea15ea22.wav",
-            "audioHash": "5b51ea15ea22",
+            "audio": "media/audio/dialog/1b635d575385.wav",
+            "audioHash": "1b635d575385",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_23mstw",
             "start": 2.214,
-            "duration": 2.454,
+            "duration": 3.264,
             "characterId": "sati",
             "text": "Outside the protocol. This is their world.",
-            "audio": "media/audio/dialog/946c83e43c15.wav",
-            "audioHash": "946c83e43c15",
+            "audio": "media/audio/dialog/fc5e9e00ce58.wav",
+            "audioHash": "fc5e9e00ce58",
             "subtitle": true,
             "gain": 1
           }
@@ -327,22 +327,22 @@
           {
             "id": "dlg_nw41vz",
             "start": 0.6,
-            "duration": 2.01,
+            "duration": 2.561,
             "characterId": "sati",
             "text": "Watch the arm. It wants the orb.",
-            "audio": "media/audio/dialog/3b47f88bd067.wav",
-            "audioHash": "3b47f88bd067",
+            "audio": "media/audio/dialog/6477b835f7d1.wav",
+            "audioHash": "6477b835f7d1",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_eptf6u",
             "start": 3.992,
-            "duration": 1.881,
+            "duration": 2.611,
             "characterId": "sati",
             "text": "It only bends where it has a joint.",
-            "audio": "media/audio/dialog/3d81fbb9a501.wav",
-            "audioHash": "3d81fbb9a501",
+            "audio": "media/audio/dialog/b7c638c345fe.wav",
+            "audioHash": "b7c638c345fe",
             "subtitle": true,
             "gain": 1
           }
@@ -503,22 +503,22 @@
           {
             "id": "dlg_v6462l",
             "start": 0.6,
-            "duration": 1.176,
+            "duration": 2.266,
             "characterId": "bit",
             "text": "I can just grab it.",
-            "audio": "media/audio/dialog/28908277c7d5.wav",
-            "audioHash": "28908277c7d5",
+            "audio": "media/audio/dialog/e31960914fb2.wav",
+            "audioHash": "e31960914fb2",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_yiv82a",
             "start": 3.47,
-            "duration": 3.422,
+            "duration": 3.965,
             "characterId": "sati",
             "text": "You can want the target. The arm still has to solve the path.",
-            "audio": "media/audio/dialog/849c8402b65a.wav",
-            "audioHash": "849c8402b65a",
+            "audio": "media/audio/dialog/fadc376f0bd5.wav",
+            "audioHash": "fadc376f0bd5",
             "subtitle": true,
             "gain": 1
           }
@@ -655,22 +655,22 @@
           {
             "id": "dlg_zfq8n5",
             "start": 0.6,
-            "duration": 1.615,
+            "duration": 2.287,
             "characterId": "sati",
             "text": "People out here name the goal.",
-            "audio": "media/audio/dialog/9e64d0842879.wav",
-            "audioHash": "9e64d0842879",
+            "audio": "media/audio/dialog/f9d6fbb953fc.wav",
+            "audioHash": "f9d6fbb953fc",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_y7u7yx",
             "start": 3.558,
-            "duration": 3.975,
+            "duration": 4.809,
             "characterId": "sati",
             "text": "Inside, the protocol only moves along its rules. Like that arm.",
-            "audio": "media/audio/dialog/a1b78874a79d.wav",
-            "audioHash": "a1b78874a79d",
+            "audio": "media/audio/dialog/72eb6b9554ad.wav",
+            "audioHash": "72eb6b9554ad",
             "subtitle": true,
             "gain": 1
           }

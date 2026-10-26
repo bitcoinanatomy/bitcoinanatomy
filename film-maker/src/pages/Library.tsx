@@ -324,7 +324,7 @@ export function LibraryDetail({ kind }: { kind: Kind }) {
             {kind === 'characters' && (
               <>
                 <Field label="Role"><TextInput value={(doc as Character).role} onChange={(v) => up((d) => void ((d as Character).role = v), 'role')} /></Field>
-                <Field label={`Voice (${tts.piper ? 'Piper voices installed' : 'Piper not installed — macOS say fallback'})`}>
+                <Field label={`Voice (${tts.mlx ? 'Kokoro' : tts.piper ? 'Piper voices installed' : 'Piper not installed — macOS say fallback'})`}>
                   <select className="select" value={(doc as Character).voice ?? ''} onChange={(e) => up((d) => void ((d as Character).voice = e.target.value || undefined))}>
                     <option value="">project default</option>
                     {tts.voices.map((v) => <option key={v} value={v}>{v}</option>)}

@@ -108,11 +108,11 @@
           {
             "id": "dlg_u24oux",
             "start": 0.6,
-            "duration": 1.595,
+            "duration": 1.98,
             "characterId": "mili",
             "text": "What if nobody comes?",
-            "audio": "media/audio/dialog/57b63a51f567.wav",
-            "audioHash": "57b63a51f567",
+            "audio": "media/audio/dialog/e73d1967281f.wav",
+            "audioHash": "e73d1967281f",
             "subtitle": true,
             "gain": 1
           }
@@ -254,22 +254,22 @@
           {
             "id": "dlg_3dt5am",
             "start": 0.6,
-            "duration": 0.621,
+            "duration": 1.588,
             "characterId": "bit",
             "text": "Let me.",
-            "audio": "media/audio/dialog/466732d0ba00.wav",
-            "audioHash": "466732d0ba00",
+            "audio": "media/audio/dialog/eadc9d214838.wav",
+            "audioHash": "eadc9d214838",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_1xws1i",
             "start": 2.388,
-            "duration": 2.345,
+            "duration": 3.338,
             "characterId": "bit",
             "text": "Huh. It does not care how strong I am.",
-            "audio": "media/audio/dialog/33e201d08bc2.wav",
-            "audioHash": "33e201d08bc2",
+            "audio": "media/audio/dialog/d02715444120.wav",
+            "audioHash": "d02715444120",
             "subtitle": true,
             "gain": 1
           }
@@ -437,22 +437,22 @@
           {
             "id": "dlg_0riwt6",
             "start": 0.6,
-            "duration": 1.543,
+            "duration": 1.757,
             "characterId": "mili",
             "text": "Then speed! Zap!",
-            "audio": "media/audio/dialog/bda74385bd27.wav",
-            "audioHash": "bda74385bd27",
+            "audio": "media/audio/dialog/0a38aab855f0.wav",
+            "audioHash": "0a38aab855f0",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_t11qhl",
             "start": 2.314,
-            "duration": 2.874,
+            "duration": 2.68,
             "characterId": "mili",
             "text": "Ow. It does not care about fast either.",
-            "audio": "media/audio/dialog/b2c8a92fe9a6.wav",
-            "audioHash": "b2c8a92fe9a6",
+            "audio": "media/audio/dialog/511c9efa400c.wav",
+            "audioHash": "511c9efa400c",
             "subtitle": true,
             "gain": 1
           }
@@ -551,22 +551,22 @@
           {
             "id": "dlg_khbhxv",
             "start": 0.6,
-            "duration": 1.494,
+            "duration": 2.16,
             "characterId": "sati",
             "text": "Those are the wrong keys.",
-            "audio": "media/audio/dialog/1af83a6f0e78.wav",
-            "audioHash": "1af83a6f0e78",
+            "audio": "media/audio/dialog/3c7102c42f68.wav",
+            "audioHash": "3c7102c42f68",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_eu2924",
             "start": 3.273,
-            "duration": 4.309,
+            "duration": 5.586,
             "characterId": "sati",
             "text": "Every node checks the signature against the key that owns it. Ours will never match.",
-            "audio": "media/audio/dialog/637b8ecc1835.wav",
-            "audioHash": "637b8ecc1835",
+            "audio": "media/audio/dialog/a612d4c54e34.wav",
+            "audioHash": "a612d4c54e34",
             "subtitle": true,
             "gain": 1
           }

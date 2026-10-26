@@ -178,22 +178,22 @@
           {
             "id": "dlg_097w9g",
             "start": 0.6,
-            "duration": 1.633,
+            "duration": 1.811,
             "characterId": "mili",
             "text": "Ooh. A shiny one.",
-            "audio": "media/audio/dialog/818716b96d14.wav",
-            "audioHash": "818716b96d14",
+            "audio": "media/audio/dialog/f6ff3bd6a2ea.wav",
+            "audioHash": "f6ff3bd6a2ea",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_68ozon",
             "start": 2.549,
-            "duration": 3.773,
+            "duration": 4.46,
             "characterId": "sati",
             "text": "That's a transaction. Someone's sending value across the network.",
-            "audio": "media/audio/dialog/d71d8a563e5c.wav",
-            "audioHash": "d71d8a563e5c",
+            "audio": "media/audio/dialog/f4c0d636def1.wav",
+            "audioHash": "f4c0d636def1",
             "subtitle": true,
             "gain": 1
           }
@@ -275,22 +275,22 @@
           {
             "id": "dlg_j677nl",
             "start": 0.6,
-            "duration": 1.689,
+            "duration": 2.562,
             "characterId": "sati",
             "text": "Its signature matches the key.",
-            "audio": "media/audio/dialog/e2835b9f2947.wav",
-            "audioHash": "e2835b9f2947",
+            "audio": "media/audio/dialog/aee391ae4412.wav",
+            "audioHash": "aee391ae4412",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_qefayr",
             "start": 3.323,
-            "duration": 0.835,
+            "duration": 1.516,
             "characterId": "sati",
             "text": "It's valid.",
-            "audio": "media/audio/dialog/d15528d65166.wav",
-            "audioHash": "d15528d65166",
+            "audio": "media/audio/dialog/c40b8d332ebc.wav",
+            "audioHash": "c40b8d332ebc",
             "subtitle": true,
             "gain": 1
           }
@@ -430,11 +430,11 @@
           {
             "id": "dlg_3ilwxf",
             "start": 0.6,
-            "duration": 2.378,
+            "duration": 2.506,
             "characterId": "mili",
             "text": "Passing it on! Peer to peer to peer!",
-            "audio": "media/audio/dialog/5fb4358a93c7.wav",
-            "audioHash": "5fb4358a93c7",
+            "audio": "media/audio/dialog/a4b77c6cc9ed.wav",
+            "audioHash": "a4b77c6cc9ed",
             "subtitle": true,
             "gain": 1
           }
@@ -658,22 +658,22 @@
           {
             "id": "dlg_r4boxe",
             "start": 0.6,
-            "duration": 1.206,
+            "duration": 2.138,
             "characterId": "bit",
             "text": "So many bubbles.",
-            "audio": "media/audio/dialog/57b3d6fdfcda.wav",
-            "audioHash": "57b3d6fdfcda",
+            "audio": "media/audio/dialog/ed5b8755e422.wav",
+            "audioHash": "ed5b8755e422",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_11brdg",
             "start": 2.565,
-            "duration": 3.049,
+            "duration": 3.757,
             "characterId": "sati",
             "text": "They're all waiting for the next block. Let's follow ours.",
-            "audio": "media/audio/dialog/8c3aabe5b131.wav",
-            "audioHash": "8c3aabe5b131",
+            "audio": "media/audio/dialog/38566c81ce10.wav",
+            "audioHash": "38566c81ce10",
             "subtitle": true,
             "gain": 1
           }

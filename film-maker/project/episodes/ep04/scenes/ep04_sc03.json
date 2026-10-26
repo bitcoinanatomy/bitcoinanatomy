@@ -130,11 +130,11 @@
           {
             "id": "dlg_pe1nm0",
             "start": 0.6,
-            "duration": 1.545,
+            "duration": 1.832,
             "characterId": "mili",
             "text": "They are still reaching.",
-            "audio": "media/audio/dialog/eaf9aa1bac19.wav",
-            "audioHash": "eaf9aa1bac19",
+            "audio": "media/audio/dialog/33d4d8446ad5.wav",
+            "audioHash": "33d4d8446ad5",
             "subtitle": true,
             "gain": 1
           }
@@ -248,22 +248,22 @@
           {
             "id": "dlg_ops4e7",
             "start": 0.6,
-            "duration": 2.633,
+            "duration": 3.412,
             "characterId": "sati",
             "text": "The orb is the portal. It shows both worlds.",
-            "audio": "media/audio/dialog/4bdacff06f11.wav",
-            "audioHash": "4bdacff06f11",
+            "audio": "media/audio/dialog/d354c8d9d9ee.wav",
+            "audioHash": "d354c8d9d9ee",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_yu8heb",
             "start": 4.762,
-            "duration": 2.398,
+            "duration": 2.941,
             "characterId": "sati",
             "text": "It does not let either one skip the joints.",
-            "audio": "media/audio/dialog/306d0cd99396.wav",
-            "audioHash": "306d0cd99396",
+            "audio": "media/audio/dialog/2ca74bf31b0f.wav",
+            "audioHash": "2ca74bf31b0f",
             "subtitle": true,
             "gain": 1
           }
@@ -415,33 +415,33 @@
           {
             "id": "dlg_eux319",
             "start": 0.6,
-            "duration": 1.356,
+            "duration": 2.337,
             "characterId": "bit",
             "text": "So we keep the rules.",
-            "audio": "media/audio/dialog/fa511beb09a0.wav",
-            "audioHash": "fa511beb09a0",
+            "audio": "media/audio/dialog/e56fbc96cd00.wav",
+            "audioHash": "e56fbc96cd00",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_5k0g96",
             "start": 3.37,
-            "duration": 1.454,
+            "duration": 1.829,
             "characterId": "mili",
             "text": "And they keep the wish.",
-            "audio": "media/audio/dialog/421d5d8e522c.wav",
-            "audioHash": "421d5d8e522c",
+            "audio": "media/audio/dialog/f3bacc722cb7.wav",
+            "audioHash": "f3bacc722cb7",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_7rgj6r",
             "start": 5.653,
-            "duration": 1.503,
+            "duration": 2.308,
             "characterId": "sati",
             "text": "And the glass is where they meet.",
-            "audio": "media/audio/dialog/f6f18a7632fc.wav",
-            "audioHash": "f6f18a7632fc",
+            "audio": "media/audio/dialog/2155fd6b4a23.wav",
+            "audioHash": "2155fd6b4a23",
             "subtitle": true,
             "gain": 1
           }

@@ -199,11 +199,11 @@
           {
             "id": "dlg_znmnuz",
             "start": 1.2,
-            "duration": 2.424,
+            "duration": 2.383,
             "characterId": "mili",
             "text": "Ooh. Somebody left a shiny one.",
-            "audio": "media/audio/dialog/6f5ca639a5b8.wav",
-            "audioHash": "6f5ca639a5b8",
+            "audio": "media/audio/dialog/90c7085cd2dd.wav",
+            "audioHash": "90c7085cd2dd",
             "subtitle": true,
             "gain": 1
           }
@@ -330,22 +330,22 @@
           {
             "id": "dlg_xb6cth",
             "start": 0.6,
-            "duration": 1.981,
+            "duration": 2.587,
             "characterId": "sati",
             "text": "Leave it. That coin isn't ours.",
-            "audio": "media/audio/dialog/3b86ffb75172.wav",
-            "audioHash": "3b86ffb75172",
+            "audio": "media/audio/dialog/cd3c48442316.wav",
+            "audioHash": "cd3c48442316",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_nqnubv",
             "start": 3.608,
-            "duration": 3.258,
+            "duration": 3.857,
             "characterId": "sati",
             "text": "It belongs to a key. Not to whoever stands closest.",
-            "audio": "media/audio/dialog/b05365469d8d.wav",
-            "audioHash": "b05365469d8d",
+            "audio": "media/audio/dialog/220f48531f53.wav",
+            "audioHash": "220f48531f53",
             "subtitle": true,
             "gain": 1
           }
@@ -438,11 +438,11 @@
           {
             "id": "dlg_ugktzb",
             "start": 0.6,
-            "duration": 1.26,
+            "duration": 1.593,
             "characterId": "mili",
             "text": "But it's right there.",
-            "audio": "media/audio/dialog/b3e5ca89fa79.wav",
-            "audioHash": "b3e5ca89fa79",
+            "audio": "media/audio/dialog/43784b8c57ec.wav",
+            "audioHash": "43784b8c57ec",
             "subtitle": true,
             "gain": 1
           }
@@ -634,11 +634,11 @@
           {
             "id": "dlg_vqlktx",
             "start": 0.6,
-            "duration": 2.051,
+            "duration": 3.08,
             "characterId": "bit",
             "text": "Then we wait. The owner will come.",
-            "audio": "media/audio/dialog/b9d92e1bca8a.wav",
-            "audioHash": "b9d92e1bca8a",
+            "audio": "media/audio/dialog/11afb083c92e.wav",
+            "audioHash": "11afb083c92e",
             "subtitle": true,
             "gain": 1
           }

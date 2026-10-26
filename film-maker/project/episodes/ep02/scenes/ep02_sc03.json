@@ -257,22 +257,22 @@
           {
             "id": "dlg_q286ks",
             "start": 0.6,
-            "duration": 1.631,
+            "duration": 2.411,
             "characterId": "sati",
             "text": "This is where blocks are made.",
-            "audio": "media/audio/dialog/de3285502b19.wav",
-            "audioHash": "de3285502b19",
+            "audio": "media/audio/dialog/93399351ad28.wav",
+            "audioHash": "93399351ad28",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_qmih5t",
             "start": 3.708,
-            "duration": 3.868,
+            "duration": 4.637,
             "characterId": "sati",
             "text": "Miners try number after number, until the hash comes out just right.",
-            "audio": "media/audio/dialog/3fa0e07cbe45.wav",
-            "audioHash": "3fa0e07cbe45",
+            "audio": "media/audio/dialog/c01bc2c8e7b0.wav",
+            "audioHash": "c01bc2c8e7b0",
             "subtitle": true,
             "gain": 1
           }
@@ -397,11 +397,11 @@
           {
             "id": "dlg_xlqczr",
             "start": 0.6,
-            "duration": 0.555,
+            "duration": 1.414,
             "characterId": "bit",
             "text": "Heavy!",
-            "audio": "media/audio/dialog/f3a98b9a3123.wav",
-            "audioHash": "f3a98b9a3123",
+            "audio": "media/audio/dialog/f308b8de598e.wav",
+            "audioHash": "f308b8de598e",
             "subtitle": true,
             "gain": 1
           }
@@ -702,11 +702,11 @@
           {
             "id": "dlg_4edew3",
             "start": 0.6,
-            "duration": 3.217,
+            "duration": 2.707,
             "characterId": "mili",
             "text": "One, two, three, four, five, a million!",
-            "audio": "media/audio/dialog/41a1a3c6ef81.wav",
-            "audioHash": "41a1a3c6ef81",
+            "audio": "media/audio/dialog/072b36082730.wav",
+            "audioHash": "072b36082730",
             "subtitle": true,
             "gain": 1
           }
@@ -847,22 +847,22 @@
           {
             "id": "dlg_0hro9r",
             "start": 0.6,
-            "duration": 1.666,
+            "duration": 2.537,
             "characterId": "sati",
             "text": "We need more zeros in front...",
-            "audio": "media/audio/dialog/cf314d732a48.wav",
-            "audioHash": "cf314d732a48",
+            "audio": "media/audio/dialog/0465675ad5e1.wav",
+            "audioHash": "0465675ad5e1",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_ck7niq",
             "start": 3.808,
-            "duration": 1.457,
+            "duration": 1.934,
             "characterId": "sati",
             "text": "There! That's the one!",
-            "audio": "media/audio/dialog/495d95a79ec7.wav",
-            "audioHash": "495d95a79ec7",
+            "audio": "media/audio/dialog/1c338462e92e.wav",
+            "audioHash": "1c338462e92e",
             "subtitle": true,
             "gain": 1
           }
@@ -1121,22 +1121,22 @@
           {
             "id": "dlg_7thhfk",
             "start": 0.6,
-            "duration": 1.97,
+            "duration": 2.458,
             "characterId": "mili",
             "text": "Our transaction is in the block!",
-            "audio": "media/audio/dialog/a374903ff9a5.wav",
-            "audioHash": "a374903ff9a5",
+            "audio": "media/audio/dialog/dccf2b3df0fa.wav",
+            "audioHash": "dccf2b3df0fa",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_inomnd",
             "start": 3.218,
-            "duration": 1.221,
+            "duration": 2.133,
             "characterId": "bit",
             "text": "Sealed. For good.",
-            "audio": "media/audio/dialog/133052393761.wav",
-            "audioHash": "133052393761",
+            "audio": "media/audio/dialog/2ccf685da2d3.wav",
+            "audioHash": "2ccf685da2d3",
             "subtitle": true,
             "gain": 1
           }
@@ -1438,22 +1438,22 @@
           {
             "id": "dlg_vuurc9",
             "start": 0.6,
-            "duration": 2.705,
+            "duration": 3.081,
             "characterId": "sati",
             "text": "Light or dark, we all follow the same rules.",
-            "audio": "media/audio/dialog/6d18cca38ce0.wav",
-            "audioHash": "6d18cca38ce0",
+            "audio": "media/audio/dialog/6814109c4082.wav",
+            "audioHash": "6814109c4082",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_oc9yra",
             "start": 4.862,
-            "duration": 1.13,
+            "duration": 1.579,
             "characterId": "mili",
             "text": "Same direction!",
-            "audio": "media/audio/dialog/61b9e65dad4e.wav",
-            "audioHash": "61b9e65dad4e",
+            "audio": "media/audio/dialog/a24ba27c1773.wav",
+            "audioHash": "a24ba27c1773",
             "subtitle": true,
             "gain": 1
           }

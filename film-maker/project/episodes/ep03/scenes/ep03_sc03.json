@@ -142,11 +142,11 @@
           {
             "id": "dlg_sxx5l5",
             "start": 1.4,
-            "duration": 1.424,
+            "duration": 1.987,
             "characterId": "sati",
             "text": "There. Watch the ring.",
-            "audio": "media/audio/dialog/1f04d5986624.wav",
-            "audioHash": "1f04d5986624",
+            "audio": "media/audio/dialog/17447cd69809.wav",
+            "audioHash": "17447cd69809",
             "subtitle": true,
             "gain": 1
           }
@@ -279,11 +279,11 @@
           {
             "id": "dlg_inld91",
             "start": 0.6,
-            "duration": 2.032,
+            "duration": 1.982,
             "characterId": "mili",
             "text": "It clicked! Their key fits.",
-            "audio": "media/audio/dialog/1ee902ce7d7a.wav",
-            "audioHash": "1ee902ce7d7a",
+            "audio": "media/audio/dialog/4515f81f72d1.wav",
+            "audioHash": "4515f81f72d1",
             "subtitle": true,
             "gain": 1
           }
@@ -446,22 +446,22 @@
           {
             "id": "dlg_3hwih0",
             "start": 0.6,
-            "duration": 1.785,
+            "duration": 2.588,
             "characterId": "sati",
             "text": "Anyone can check the signature.",
-            "audio": "media/audio/dialog/ed81d6c92eaf.wav",
-            "audioHash": "ed81d6c92eaf",
+            "audio": "media/audio/dialog/925f7041c20e.wav",
+            "audioHash": "925f7041c20e",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_w7l7eg",
             "start": 3.223,
-            "duration": 1.647,
+            "duration": 2.386,
             "characterId": "sati",
             "text": "Only the owner can spend.",
-            "audio": "media/audio/dialog/13fe53bd1183.wav",
-            "audioHash": "13fe53bd1183",
+            "audio": "media/audio/dialog/ce45eee36494.wav",
+            "audioHash": "ce45eee36494",
             "subtitle": true,
             "gain": 1
           }
@@ -744,22 +744,22 @@
           {
             "id": "dlg_l8trfv",
             "start": 0.6,
-            "duration": 2.434,
+            "duration": 2.21,
             "characterId": "mili",
             "text": "Good. I only wanted to look.",
-            "audio": "media/audio/dialog/c8a8844007dd.wav",
-            "audioHash": "c8a8844007dd",
+            "audio": "media/audio/dialog/f6e0ddd9ec1c.wav",
+            "audioHash": "f6e0ddd9ec1c",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_r0od30",
             "start": 3.218,
-            "duration": 2.356,
+            "duration": 2.935,
             "characterId": "bit",
             "text": "Next time, we look with our eyes.",
-            "audio": "media/audio/dialog/01658e1c31be.wav",
-            "audioHash": "01658e1c31be",
+            "audio": "media/audio/dialog/8b970d13dc9a.wav",
+            "audioHash": "8b970d13dc9a",
             "subtitle": true,
             "gain": 1
           }

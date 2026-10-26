@@ -268,22 +268,22 @@
           {
             "id": "dlg_klfuv0",
             "start": 0.6,
-            "duration": 1.451,
+            "duration": 1.854,
             "characterId": "mili",
             "text": "It looks like a mirror.",
-            "audio": "media/audio/dialog/46f53c82aeeb.wav",
-            "audioHash": "46f53c82aeeb",
+            "audio": "media/audio/dialog/f3fb5c9f2bf3.wav",
+            "audioHash": "f3fb5c9f2bf3",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_kw9cck",
             "start": 2.883,
-            "duration": 1.532,
+            "duration": 1.831,
             "characterId": "mili",
             "text": "It is not showing us.",
-            "audio": "media/audio/dialog/c87edcdcb921.wav",
-            "audioHash": "c87edcdcb921",
+            "audio": "media/audio/dialog/ed8bd04d8476.wav",
+            "audioHash": "ed8bd04d8476",
             "subtitle": true,
             "gain": 1
           }
@@ -389,22 +389,22 @@
           {
             "id": "dlg_67r9ui",
             "start": 0.6,
-            "duration": 2.076,
+            "duration": 2.913,
             "characterId": "sati",
             "text": "This side is inside the protocol.",
-            "audio": "media/audio/dialog/16fba0638dad.wav",
-            "audioHash": "16fba0638dad",
+            "audio": "media/audio/dialog/ba6fe6e6fd59.wav",
+            "audioHash": "ba6fe6e6fd59",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_5febpc",
             "start": 3.608,
-            "duration": 2.669,
+            "duration": 3.34,
             "characterId": "sati",
             "text": "The other side is outside. The real world.",
-            "audio": "media/audio/dialog/d7601d8234a0.wav",
-            "audioHash": "d7601d8234a0",
+            "audio": "media/audio/dialog/2da882c0f994.wav",
+            "audioHash": "2da882c0f994",
             "subtitle": true,
             "gain": 1
           }
@@ -545,22 +545,22 @@
           {
             "id": "dlg_sxpgtp",
             "start": 0.6,
-            "duration": 1.857,
+            "duration": 2.032,
             "characterId": "mili",
             "text": "I can almost touch them.",
-            "audio": "media/audio/dialog/55ee920576f4.wav",
-            "audioHash": "55ee920576f4",
+            "audio": "media/audio/dialog/8695c271a7f6.wav",
+            "audioHash": "8695c271a7f6",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_a529dl",
             "start": 2.983,
-            "duration": 1.196,
+            "duration": 2.26,
             "characterId": "bit",
             "text": "Then we go through.",
-            "audio": "media/audio/dialog/867f73c2cfb5.wav",
-            "audioHash": "867f73c2cfb5",
+            "audio": "media/audio/dialog/6bfdf1d36b84.wav",
+            "audioHash": "6bfdf1d36b84",
             "subtitle": true,
             "gain": 1
           }

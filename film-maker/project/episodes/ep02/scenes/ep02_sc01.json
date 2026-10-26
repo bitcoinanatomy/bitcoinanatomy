@@ -163,22 +163,22 @@
           {
             "id": "dlg_m719sc",
             "start": 1.5,
-            "duration": 1.733,
+            "duration": 1.985,
             "characterId": "mili",
             "text": "It's so dark down here.",
-            "audio": "media/audio/dialog/1e4bbd91509d.wav",
-            "audioHash": "1e4bbd91509d",
+            "audio": "media/audio/dialog/2a0aef56a129.wav",
+            "audioHash": "2a0aef56a129",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_k5w465",
             "start": 3.783,
-            "duration": 0.983,
+            "duration": 1.817,
             "characterId": "bit",
             "text": "Stay close.",
-            "audio": "media/audio/dialog/b9f21ec47712.wav",
-            "audioHash": "b9f21ec47712",
+            "audio": "media/audio/dialog/36d4c82209d3.wav",
+            "audioHash": "36d4c82209d3",
             "subtitle": true,
             "gain": 1
           }
@@ -317,11 +317,11 @@
           {
             "id": "dlg_2j1a7y",
             "start": 0.6,
-            "duration": 1.76,
+            "duration": 2.537,
             "characterId": "sati",
             "text": "It's a node. A brand new one.",
-            "audio": "media/audio/dialog/751a4e2a3e7e.wav",
-            "audioHash": "751a4e2a3e7e",
+            "audio": "media/audio/dialog/0bcde0b697ac.wav",
+            "audioHash": "0bcde0b697ac",
             "subtitle": true,
             "gain": 1
           }
@@ -414,11 +414,11 @@
           {
             "id": "dlg_kzkxlm",
             "start": 0.6,
-            "duration": 2.743,
+            "duration": 3.134,
             "characterId": "sati",
             "text": "It's calling for peers, but no one's answering.",
-            "audio": "media/audio/dialog/a62641b0b9b9.wav",
-            "audioHash": "a62641b0b9b9",
+            "audio": "media/audio/dialog/f6a75b31d157.wav",
+            "audioHash": "f6a75b31d157",
             "subtitle": true,
             "gain": 1
           }
@@ -536,11 +536,11 @@
           {
             "id": "dlg_w40vzo",
             "start": 0.6,
-            "duration": 1.96,
+            "duration": 2.357,
             "characterId": "mili",
             "text": "I'll take its hello to the others!",
-            "audio": "media/audio/dialog/f0584dc1c554.wav",
-            "audioHash": "f0584dc1c554",
+            "audio": "media/audio/dialog/7f736255ec68.wav",
+            "audioHash": "7f736255ec68",
             "subtitle": true,
             "gain": 1
           }
@@ -660,11 +660,11 @@
           {
             "id": "dlg_xj5gug",
             "start": 0.6,
-            "duration": 2.548,
+            "duration": 3.335,
             "characterId": "sati",
             "text": "Tell them its version. Then wait for their answer.",
-            "audio": "media/audio/dialog/fcb3a33d79f2.wav",
-            "audioHash": "fcb3a33d79f2",
+            "audio": "media/audio/dialog/4c035473cb5e.wav",
+            "audioHash": "4c035473cb5e",
             "subtitle": true,
             "gain": 1
           }
@@ -914,22 +914,22 @@
           {
             "id": "dlg_scnle9",
             "start": 0.6,
-            "duration": 3.078,
+            "duration": 3.108,
             "characterId": "mili",
             "text": "They answered! Version, verack, handshake done!",
-            "audio": "media/audio/dialog/90d8070bb368.wav",
-            "audioHash": "90d8070bb368",
+            "audio": "media/audio/dialog/e03f8d405d87.wav",
+            "audioHash": "e03f8d405d87",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_ubouog",
             "start": 3.218,
-            "duration": 1.616,
+            "duration": 2.465,
             "characterId": "bit",
             "text": "Look. They're all lighting up.",
-            "audio": "media/audio/dialog/6349e0324acf.wav",
-            "audioHash": "6349e0324acf",
+            "audio": "media/audio/dialog/5ac7e0e47d3e.wav",
+            "audioHash": "5ac7e0e47d3e",
             "subtitle": true,
             "gain": 1
           }

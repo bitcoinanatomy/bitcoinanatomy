@@ -9,7 +9,7 @@ import path from 'node:path';
 import type { Plugin } from 'vite';
 import { deleteDoc, loadProject, mediaPath, PROJECT_DIR, saveDoc, type DocRef } from './projectFs';
 import { exportEpisode } from './exporter';
-import { listPiperVoices, piperAvailable, synthesize } from './tts';
+import { KOKORO_VOICES, listPiperVoices, mlxAvailable, piperAvailable, synthesize } from './tts';
 
 const body = (req: IncomingMessage) =>
   new Promise<Buffer>((resolve, reject) => {
@@ -50,7 +50,8 @@ export function filmMakerApi(): Plugin {
           const route = `${req.method} ${url.pathname}`;
           if (route === 'GET /api/project') {
             const { data, issues } = loadProject();
-            return send(res, 200, { data, issues, tts: { piper: piperAvailable(), voices: listPiperVoices() } });
+            const mlx = data.project.tts.engine === 'mlx' && mlxAvailable();
+            return send(res, 200, { data, issues, tts: { piper: piperAvailable(), mlx, voices: mlx ? KOKORO_VOICES : listPiperVoices() } });
           }
           if (route === 'PUT /api/doc') {
             const { ref, doc } = JSON.parse((await body(req)).toString()) as { ref: DocRef; doc: unknown };

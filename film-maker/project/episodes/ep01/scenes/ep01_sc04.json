@@ -196,22 +196,22 @@
           {
             "id": "dlg_wvxdya",
             "start": 0.6,
-            "duration": 2.713,
+            "duration": 2.604,
             "characterId": "mili",
             "text": "Hey. Why am I always the smallest?",
-            "audio": "media/audio/dialog/9b08a7dd33bd.wav",
-            "audioHash": "9b08a7dd33bd",
+            "audio": "media/audio/dialog/0f223e227d58.wav",
+            "audioHash": "0f223e227d58",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_gqt2pg",
             "start": 3.552,
-            "duration": 2.862,
+            "duration": 3.885,
             "characterId": "sati",
             "text": "Because you're a Mili. A thousand of you make one Sati.",
-            "audio": "media/audio/dialog/3318fa6276b5.wav",
-            "audioHash": "3318fa6276b5",
+            "audio": "media/audio/dialog/a55fbb69f97a.wav",
+            "audioHash": "a55fbb69f97a",
             "subtitle": true,
             "gain": 1
           }
@@ -223,7 +223,7 @@
     {
       "id": "sh02",
       "name": "A hundred million",
-      "duration": 6,
+      "duration": 6.5,
       "status": "todo",
       "description": "Mili turns to Bit. Bit beams down.",
       "notes": "",
@@ -320,22 +320,22 @@
           {
             "id": "dlg_1unssp",
             "start": 0.6,
-            "duration": 1.989,
+            "duration": 2.382,
             "characterId": "mili",
             "text": "And how many Satis make a Bit?",
-            "audio": "media/audio/dialog/00bc00260d6d.wav",
-            "audioHash": "00bc00260d6d",
+            "audio": "media/audio/dialog/5e0f2bc78248.wav",
+            "audioHash": "5e0f2bc78248",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_oy6pil",
             "start": 3.552,
-            "duration": 1.22,
+            "duration": 2.213,
             "characterId": "bit",
             "text": "A hundred million.",
-            "audio": "media/audio/dialog/729962e3d230.wav",
-            "audioHash": "729962e3d230",
+            "audio": "media/audio/dialog/096a41b04058.wav",
+            "audioHash": "096a41b04058",
             "subtitle": true,
             "gain": 1
           }
@@ -440,11 +440,11 @@
           {
             "id": "dlg_4c10v5",
             "start": 1.2,
-            "duration": 0.529,
+            "duration": 1.006,
             "characterId": "mili",
             "text": "Whoa.",
-            "audio": "media/audio/dialog/87bc8d622d17.wav",
-            "audioHash": "87bc8d622d17",
+            "audio": "media/audio/dialog/b696cfa7dd4d.wav",
+            "audioHash": "b696cfa7dd4d",
             "subtitle": true,
             "gain": 1
           }
@@ -650,11 +650,11 @@
           {
             "id": "dlg_l4qbm6",
             "start": 0.6,
-            "duration": 2.344,
+            "duration": 2.935,
             "characterId": "sati",
             "text": "Big or small, every one of us counts.",
-            "audio": "media/audio/dialog/9b649f34b5d0.wav",
-            "audioHash": "9b649f34b5d0",
+            "audio": "media/audio/dialog/b546395b7ebd.wav",
+            "audioHash": "b546395b7ebd",
             "subtitle": true,
             "gain": 1
           }

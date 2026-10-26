@@ -148,11 +148,11 @@
           {
             "id": "dlg_2hiuxh",
             "start": 0.6,
-            "duration": 3.983,
+            "duration": 4.908,
             "characterId": "sati",
             "text": "Look. They only light up in order. Every block follows the one before it.",
-            "audio": "media/audio/dialog/ff937123690e.wav",
-            "audioHash": "ff937123690e",
+            "audio": "media/audio/dialog/c84d2331a879.wav",
+            "audioHash": "c84d2331a879",
             "subtitle": true,
             "gain": 1
           }
@@ -476,22 +476,22 @@
           {
             "id": "dlg_m9qhyr",
             "start": 0.6,
-            "duration": 1.785,
+            "duration": 2.229,
             "characterId": "mili",
             "text": "So we just... follow the chain?",
-            "audio": "media/audio/dialog/2f98f6b5ee45.wav",
-            "audioHash": "2f98f6b5ee45",
+            "audio": "media/audio/dialog/3da39365002e.wav",
+            "audioHash": "3da39365002e",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_5rthqg",
             "start": 3.218,
-            "duration": 3.045,
+            "duration": 3.108,
             "characterId": "sati",
             "text": "Exactly. One block at a time. This way!",
-            "audio": "media/audio/dialog/65acb94693da.wav",
-            "audioHash": "65acb94693da",
+            "audio": "media/audio/dialog/a6f41f9611e8.wav",
+            "audioHash": "a6f41f9611e8",
             "subtitle": true,
             "gain": 1
           }

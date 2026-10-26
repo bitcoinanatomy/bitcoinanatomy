@@ -29,7 +29,7 @@ export function docsOf(d: ProjectData): Map<string, DocEntry> {
 interface State {
   data: ProjectData | null;
   issues: LoadIssue[];
-  tts: { piper: boolean; voices: string[] };
+  tts: { piper: boolean; mlx: boolean; voices: string[] };
   saving: 'idle' | 'pending' | 'saving' | 'error';
   error?: string;
   past: { data: ProjectData; label: string }[];
@@ -94,7 +94,7 @@ const scheduleSave = () => {
 export const useStore = create<State>((set, get) => ({
   data: null,
   issues: [],
-  tts: { piper: false, voices: [] },
+  tts: { piper: false, mlx: false, voices: [] },
   saving: 'idle',
   past: [],
   future: [],

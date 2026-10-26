@@ -161,11 +161,11 @@
           {
             "id": "dlg_7y52hp",
             "start": 0.6,
-            "duration": 2.437,
+            "duration": 2.411,
             "characterId": "mili",
             "text": "Hnnnngh! Dead end!",
-            "audio": "media/audio/dialog/44b8e3d4ae35.wav",
-            "audioHash": "44b8e3d4ae35",
+            "audio": "media/audio/dialog/ac585624e163.wav",
+            "audioHash": "ac585624e163",
             "subtitle": true,
             "gain": 1
           }
@@ -284,11 +284,11 @@
           {
             "id": "dlg_acyyzf",
             "start": 0.6,
-            "duration": 1.322,
+            "duration": 2.038,
             "characterId": "sati",
             "text": "It's too heavy for us.",
-            "audio": "media/audio/dialog/f53058412a2e.wav",
-            "audioHash": "f53058412a2e",
+            "audio": "media/audio/dialog/e5ea63e389ef.wav",
+            "audioHash": "e5ea63e389ef",
             "subtitle": true,
             "gain": 1
           }
@@ -448,11 +448,11 @@
           {
             "id": "dlg_mg088e",
             "start": 1.4,
-            "duration": 1.64,
+            "duration": 2.588,
             "characterId": "bit",
             "text": "Leave the heavy stuff to me.",
-            "audio": "media/audio/dialog/ad2ac9f646c2.wav",
-            "audioHash": "ad2ac9f646c2",
+            "audio": "media/audio/dialog/f72d9abb8148.wav",
+            "audioHash": "f72d9abb8148",
             "subtitle": true,
             "gain": 1
           }
@@ -712,11 +712,11 @@
           {
             "id": "dlg_fweqvv",
             "start": 0.6,
-            "duration": 1.571,
+            "duration": 1.505,
             "characterId": "mili",
             "text": "Bit! Show off.",
-            "audio": "media/audio/dialog/0b272af23bd9.wav",
-            "audioHash": "0b272af23bd9",
+            "audio": "media/audio/dialog/27f8bd97a947.wav",
+            "audioHash": "27f8bd97a947",
             "subtitle": true,
             "gain": 1
           }
@@ -817,11 +817,11 @@
           {
             "id": "dlg_hw31fq",
             "start": 0.6,
-            "duration": 1.408,
+            "duration": 2.361,
             "characterId": "bit",
             "text": "Just being supportive.",
-            "audio": "media/audio/dialog/f538cd6f3da4.wav",
-            "audioHash": "f538cd6f3da4",
+            "audio": "media/audio/dialog/97b60d04d0dc.wav",
+            "audioHash": "97b60d04d0dc",
             "subtitle": true,
             "gain": 1
           }

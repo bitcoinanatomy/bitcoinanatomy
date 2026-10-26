@@ -181,11 +181,11 @@
           {
             "id": "dlg_p48659",
             "start": 1.8,
-            "duration": 1.031,
+            "duration": 1.431,
             "characterId": "mili",
             "text": "What was that?",
-            "audio": "media/audio/dialog/2f848c66ce9d.wav",
-            "audioHash": "2f848c66ce9d",
+            "audio": "media/audio/dialog/ac1c846c1bcf.wav",
+            "audioHash": "ac1c846c1bcf",
             "subtitle": true,
             "gain": 1
           }
@@ -444,22 +444,22 @@
           {
             "id": "dlg_byxd6j",
             "start": 0.6,
-            "duration": 1.986,
+            "duration": 2.636,
             "characterId": "sati",
             "text": "Something's calling. From down there.",
-            "audio": "media/audio/dialog/f3ec158d4d86.wav",
-            "audioHash": "f3ec158d4d86",
+            "audio": "media/audio/dialog/456287eedd7c.wav",
+            "audioHash": "456287eedd7c",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_fmgjbp",
             "start": 3.423,
-            "duration": 1.485,
+            "duration": 2.438,
             "characterId": "bit",
             "text": "Then we go together.",
-            "audio": "media/audio/dialog/84d6f8b1f742.wav",
-            "audioHash": "84d6f8b1f742",
+            "audio": "media/audio/dialog/ff83556fa08c.wav",
+            "audioHash": "ff83556fa08c",
             "subtitle": true,
             "gain": 1
           }

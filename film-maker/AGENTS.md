@@ -62,7 +62,7 @@ npm run fm -- set ep01_sc02 sh01 status '"done"'
 npm run fm -- cue cue_ep01 seed 7
 npm run fm -- auto-poses           # body poses for shots that have none
 npm run gen:envs                   # skies (.hdr), set-dressing meshes, environments/
-npm run tts [-- ep01] [--force]    # Piper TTS for missing/stale lines (falls back to macOS `say`)
+npm run tts [-- ep01] [--force]    # Kokoro (MLX) for missing/stale lines; Piper, then macOS `say`
 npm run export -- ep01             # Blender bundle → export/ep01/
 npm test                           # unit tests (score determinism, timeline math, export)
 ```
