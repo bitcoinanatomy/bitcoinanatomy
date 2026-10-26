@@ -27,6 +27,18 @@ export const Arc = z.object({
 export type Arc = z.infer<typeof Arc>;
 export type Status = z.infer<typeof Status>;
 
+/** How a shot is framed, so a scene's coverage can be reviewed before the cameras are built. */
+export const SHOT_SIZES = ['EWS', 'WS', 'MWS', 'MS', 'MCU', 'CU', 'ECU', 'INS', 'OTS', 'POV', '2S'] as const;
+export const SHOT_ANGLES = ['eye', 'low', 'high', 'birds_eye', 'worms_eye', 'dutch'] as const;
+export const COVERAGE_ROLES = ['master', 'action', 'coverage', 'single', 'reverse', 'insert', 'pov'] as const;
+export const Coverage = z.object({
+  size: z.enum(SHOT_SIZES),
+  angle: z.enum(SHOT_ANGLES),
+  /** master holds geography; action is the event; coverage is the two-shot; single/reverse are the cut-ins */
+  role: z.enum(COVERAGE_ROLES),
+});
+export type Coverage = z.infer<typeof Coverage>;
+
 // ---------------------------------------------------------------- clips
 
 const ClipBase = {
@@ -132,6 +144,8 @@ export const Shot = z.object({
   status: Status.default('todo'),
   /** what we see (the "visual" column of the script) */
   description: z.string().default(''),
+  /** size, angle, and role in the scene's coverage (master, action, single, reverse, …) */
+  coverage: Coverage.optional(),
   /** technical / research notes */
   notes: z.string().default(''),
   environmentId: z.string().optional(),
@@ -190,7 +204,7 @@ export const Project = z.object({
   season: z.object({ title: z.string().default(''), logline: z.string().default('') }).default({ title: '', logline: '' }),
   tts: z
     .object({
-      engine: z.enum(['piper', 'say']).default('piper'),
+      engine: z.enum(['mlx', 'piper', 'say']).default('piper'),
       defaultVoice: z.string().default('en_US-lessac-medium'),
     })
     .default({ engine: 'piper', defaultVoice: 'en_US-lessac-medium' }),
@@ -223,7 +237,7 @@ const LibraryBase = {
 
 export const Character = z.object({
   ...LibraryBase,
-  /** piper voice id, or a macOS `say` voice name when engine = say */
+  /** Kokoro voice (af_heart), Piper id, or a macOS `say` voice name */
   voice: z.string().optional(),
   /** voice character: pitch in semitones, speed multiplier (applied after TTS) */
   voiceTune: z.object({ pitch: z.number().min(-12).max(12).default(0), speed: z.number().min(0.5).max(2).default(1) }).default({ pitch: 0, speed: 1 }),

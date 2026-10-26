@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Field, MediaSelect, NumInput, StatusSelect, TextInput, Upload, Vec3Input } from '../components/ui';
 import { api, mediaUrl } from '../lib/api';
-import type { CameraClip, DialogClip, ProjectData, ScoreClip, SfxClip, StoryboardClip, SubtitleClip, TrackKind } from '../model/schema';
+import { COVERAGE_ROLES, SHOT_ANGLES, SHOT_SIZES, type CameraClip, type Coverage, type DialogClip, type ProjectData, type ScoreClip, type SfxClip, type StoryboardClip, type SubtitleClip, type TrackKind } from '../model/schema';
 import { ownerKey, sampleCamera, type ResolvedClip, type ResolvedTimeline, type ShotSpan } from '../model/timeline';
 import { removeClip, updateClip, updateShot } from '../store/actions';
 import { useStore } from '../store/store';
@@ -18,6 +18,38 @@ function ownerLabel(data: ProjectData, rc: ResolvedClip) {
   const sc = data.scenes[o.sceneId];
   if (o.kind === 'scene') return `scene “${sc?.title}”`;
   return `shot “${sc?.shots.find((s) => s.id === o.shotId)?.name}” in ${sc?.title}`;
+}
+
+export function CoverageFields({ coverage, onChange }: { coverage: Coverage | undefined; onChange: (coverage: Coverage | undefined) => void }) {
+  const set = (key: keyof Coverage, value: string) => {
+    if (!value) {
+      onChange(undefined);
+      return;
+    }
+    onChange({ size: 'MS', angle: 'eye', role: 'coverage', ...coverage, [key]: value } as Coverage);
+  };
+  return (
+    <div className="fields">
+      <Field label="Size">
+        <select className="select" value={coverage?.size ?? ''} onChange={(e) => set('size', e.target.value)}>
+          <option value="">—</option>
+          {SHOT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </Field>
+      <Field label="Angle">
+        <select className="select" value={coverage?.angle ?? ''} onChange={(e) => set('angle', e.target.value)}>
+          <option value="">—</option>
+          {SHOT_ANGLES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+        </select>
+      </Field>
+      <Field label="Coverage">
+        <select className="select" value={coverage?.role ?? ''} onChange={(e) => set('role', e.target.value)}>
+          <option value="">—</option>
+          {COVERAGE_ROLES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </Field>
+    </div>
+  );
 }
 
 export function Inspector({ data, tl, sel, shot, time, viewport, onDeselect }: {
@@ -64,6 +96,7 @@ function ShotInspector({ data, span }: { data: ProjectData; span: ShotSpan; tl: 
             ))}
           </div>
         </Field>
+        <CoverageFields coverage={sh.coverage} onChange={(coverage) => up((s) => void (s.coverage = coverage), 'coverage')} />
         <Field label="Visual / description"><TextInput multiline rows={4} value={sh.description} onChange={(v) => up((s) => void (s.description = v), 'desc')} /></Field>
         <Field label="Notes"><TextInput multiline rows={4} value={sh.notes} onChange={(v) => up((s) => void (s.notes = v), 'notes')} /></Field>
       </div>
@@ -156,7 +189,7 @@ function DialogFields({ data, clip, up }: { data: ProjectData; clip: DialogClip;
       </Field>
       <div className="row">
         <button className="btn sm primary" onClick={() => void regen()}>{clip.audio ? '↻ Regenerate audio' : '♪ Generate audio'}</button>
-        <span className="muted" style={{ fontSize: 11.5 }}>{tts.piper ? 'Piper' : 'macOS say (run npm run setup:tts for Piper)'} · voice {ch?.voice ?? 'default'}</span>
+        <span className="muted" style={{ fontSize: 11.5 }}>{tts.mlx ? 'Kokoro' : tts.piper ? 'Piper' : 'macOS say (run npm run setup:tts)'} · voice {ch?.voice ?? 'default'}</span>
       </div>
       {clip.audio ? <audio controls src={mediaUrl(clip.audio)} style={{ width: '100%', height: 32 }} /> : <div className="muted">No audio yet — timing is estimated.</div>}
       <div className="fields">

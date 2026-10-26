@@ -5,6 +5,7 @@ import { api, mediaUrl } from '../lib/api';
 import { resolveTimeline, uid, type Owner, type Scope } from '../model/timeline';
 import { addClip, deleteShot, duplicateShot, newDialog, removeClip, updateClip, updateShot } from '../store/actions';
 import { useData, useStore } from '../store/store';
+import { CoverageFields } from '../timeline/Inspector';
 import { Monitor, type ViewportHandle } from '../timeline/Monitor';
 import { TimelineEditor } from '../timeline/TimelineEditor';
 
@@ -163,6 +164,7 @@ function ShotDetails({ scope }: { scope: Extract<Scope, { kind: 'shot' }> }) {
               ))}
             </div>
           </Field>
+          <CoverageFields coverage={shot.coverage} onChange={(coverage) => up((s) => void (s.coverage = coverage), 'coverage')} />
           <Field label="Visual / description"><TextInput multiline rows={5} value={shot.description} onChange={(v) => up((s) => void (s.description = v), 'desc')} /></Field>
           <Field label="Notes / research"><TextInput multiline rows={6} value={shot.notes} onChange={(v) => up((s) => void (s.notes = v), 'notes')} /></Field>
           <div className="section col">

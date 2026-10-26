@@ -13,9 +13,14 @@
     {
       "id": "sh01",
       "name": "Dawn over the city",
-      "duration": 6,
+      "duration": 7.5,
       "status": "wip",
       "description": "Wide establishing shot. Sun rising between marble towers; glass spheres drift in the air. Citizens stroll the plaza; three small glows among them.",
+      "coverage": {
+        "size": "EWS",
+        "angle": "high",
+        "role": "master"
+      },
       "notes": "",
       "characters": [
         "mili",
@@ -142,7 +147,7 @@
           {
             "id": "brd_u82hrl",
             "start": 0,
-            "duration": 6,
+            "duration": 7.5,
             "image": "media/boards/hero_banner.png"
           }
         ],
@@ -150,7 +155,7 @@
           {
             "id": "cam_i9uquh",
             "start": 0,
-            "duration": 6,
+            "duration": 7.5,
             "label": "crane",
             "ease": "smooth",
             "keys": [
@@ -158,29 +163,29 @@
                 "t": 0,
                 "position": [
                   0.16666666666666666,
-                  0.6,
-                  9.033333333333333
+                  0.8,
+                  10.033333333333333
                 ],
                 "target": [
                   0.16666666666666666,
                   0.6,
                   0.033333333333333326
                 ],
-                "fov": 50
+                "fov": 55
               },
               {
-                "t": 6,
+                "t": 7.5,
                 "position": [
                   0.16666666666666666,
-                  4.5,
-                  7.683333333333333
+                  5.2,
+                  8.533333333333333
                 ],
                 "target": [
                   0.16666666666666666,
                   0.6,
                   0.033333333333333326
                 ],
-                "fov": 50
+                "fov": 55
               }
             ]
           }
@@ -205,6 +210,11 @@
       "duration": 5,
       "status": "wip",
       "description": "Mili streaks across frame trailing lightning, scattering passers-by, and skids to a stop.",
+      "coverage": {
+        "size": "WS",
+        "angle": "eye",
+        "role": "action"
+      },
       "notes": "",
       "characters": [
         "mili",
@@ -435,11 +445,11 @@
           {
             "id": "dlg_tzi9zl",
             "start": 0.8,
-            "duration": 2.29,
+            "duration": 2.382,
             "characterId": "mili",
             "text": "Wheee! Out of the way, out of the way!",
-            "audio": "media/audio/dialog/47a0ec609bef.wav",
-            "audioHash": "47a0ec609bef",
+            "audio": "media/audio/dialog/7bdc4c22fb2e.wav",
+            "audioHash": "7bdc4c22fb2e",
             "subtitle": true,
             "gain": 1
           }
@@ -469,6 +479,11 @@
       "duration": 6.5,
       "status": "todo",
       "description": "Mili bounces off a floating glass sphere — BONK — and spins to a stop, dizzy but delighted.",
+      "coverage": {
+        "size": "MCU",
+        "angle": "eye",
+        "role": "action"
+      },
       "notes": "",
       "characters": [
         "mili"
@@ -574,22 +589,22 @@
           {
             "id": "dlg_p0m1z5",
             "start": 1.1,
-            "duration": 0.496,
+            "duration": 0.91,
             "characterId": "mili",
             "text": "Ow.",
-            "audio": "media/audio/dialog/d60c835556c1.wav",
-            "audioHash": "d60c835556c1",
+            "audio": "media/audio/dialog/5453774cac59.wav",
+            "audioHash": "5453774cac59",
             "subtitle": true,
             "gain": 1
           },
           {
             "id": "dlg_tdqe6e",
             "start": 2.47,
-            "duration": 2.501,
+            "duration": 2.379,
             "characterId": "mili",
             "text": "Did you see that? I was SO fast!",
-            "audio": "media/audio/dialog/c289000c53cd.wav",
-            "audioHash": "c289000c53cd",
+            "audio": "media/audio/dialog/9245bbf816d7.wav",
+            "audioHash": "9245bbf816d7",
             "subtitle": true,
             "gain": 1
           }
@@ -616,9 +631,14 @@
     {
       "id": "sh04",
       "name": "Sati arrives",
-      "duration": 3.5,
+      "duration": 5,
       "status": "todo",
       "description": "Sati walks in calmly, arms behind back, one eyebrow raised. Mili spins round.",
+      "coverage": {
+        "size": "2S",
+        "angle": "eye",
+        "role": "coverage"
+      },
       "notes": "",
       "characters": [
         "mili",
@@ -637,7 +657,7 @@
           "rotationY": -20,
           "moves": [
             {
-              "t": 1.925,
+              "t": 2.75,
               "position": [
                 -1.8,
                 0,
@@ -656,7 +676,7 @@
           "rotationY": -100,
           "moves": [
             {
-              "t": 2.625,
+              "t": 3.75,
               "position": [
                 -0.3,
                 0,
@@ -692,7 +712,7 @@
         ],
         "mili": [
           {
-            "t": 1.925,
+            "t": 2.75,
             "expression": "surprised"
           }
         ]
@@ -703,51 +723,51 @@
           {
             "id": "cam_8dm87t",
             "start": 0,
-            "duration": 3.5,
+            "duration": 5,
             "label": "orbit",
             "ease": "linear",
             "keys": [
               {
                 "t": 0,
                 "position": [
-                  -0.9137606738915693,
-                  0.7,
-                  3.286300913130284
+                  -1.184,
+                  0.75,
+                  3.86
                 ],
                 "target": [
                   -0.6,
                   0.4,
                   -0.3
                 ],
-                "fov": 40
+                "fov": 42
               },
               {
-                "t": 1.75,
+                "t": 2.5,
                 "position": [
-                  -0.1301057080078143,
-                  0.7,
-                  3.2692015009457176
+                  0.488,
+                  0.75,
+                  3.848
                 ],
                 "target": [
                   -0.6,
                   0.4,
                   -0.3
                 ],
-                "fov": 40
+                "fov": 42
               },
               {
-                "t": 3.5,
+                "t": 5,
                 "position": [
-                  0.6312725159724074,
-                  0.7,
-                  3.0828934348292707
+                  0.972,
+                  0.75,
+                  3.593
                 ],
                 "target": [
                   -0.6,
                   0.4,
                   -0.3
                 ],
-                "fov": 40
+                "fov": 42
               }
             ]
           }
@@ -764,6 +784,11 @@
       "duration": 4.5,
       "status": "todo",
       "description": "Close on Sati: deadpan, then the corner of a smile.",
+      "coverage": {
+        "size": "CU",
+        "angle": "low",
+        "role": "single"
+      },
       "notes": "",
       "characters": [
         "mili",
@@ -813,30 +838,30 @@
               {
                 "t": 0,
                 "position": [
-                  -2.047343255699827,
-                  0.762784,
-                  2.295464787721985
+                  -2.05,
+                  0.22,
+                  2.3
                 ],
                 "target": [
                   -0.3,
-                  0.58,
+                  0.5,
                   -0.2
                 ],
-                "fov": 28
+                "fov": 24
               },
               {
                 "t": 4.5,
                 "position": [
-                  -1.8601279068748453,
-                  0.7432,
-                  2.0280935604660577
+                  -1.86,
+                  0.18,
+                  2.03
                 ],
                 "target": [
                   -0.3,
-                  0.58,
+                  0.5,
                   -0.2
                 ],
-                "fov": 28
+                "fov": 24
               }
             ]
           }
@@ -846,11 +871,11 @@
           {
             "id": "dlg_56770m",
             "start": 0.6,
-            "duration": 2.298,
+            "duration": 2.633,
             "characterId": "sati",
             "text": "We saw, Mili. The whole city saw.",
-            "audio": "media/audio/dialog/fd97625830c1.wav",
-            "audioHash": "fd97625830c1",
+            "audio": "media/audio/dialog/7989d2351f1e.wav",
+            "audioHash": "7989d2351f1e",
             "subtitle": true,
             "gain": 1
           }
@@ -862,9 +887,14 @@
     {
       "id": "sh06",
       "name": "Hehe",
-      "duration": 2.5,
+      "duration": 3,
       "status": "todo",
-      "description": "Close on Mili, sheepish grin.",
+      "description": "Close on Mili, sheepish grin. The reverse of Sati: hold the button after the line.",
+      "coverage": {
+        "size": "CU",
+        "angle": "eye",
+        "role": "reverse"
+      },
       "notes": "",
       "characters": [
         "mili",
@@ -907,37 +937,37 @@
           {
             "id": "cam_05m4wc",
             "start": 0,
-            "duration": 2.5,
+            "duration": 3,
             "label": "close-up",
             "ease": "smooth",
             "keys": [
               {
                 "t": 0,
                 "position": [
-                  -1.509049005355505,
-                  0.3645312,
-                  0.750065086327015
+                  -1.51,
+                  0.42,
+                  0.75
                 ],
                 "target": [
                   -1.8,
                   0.264,
                   -0.9
                 ],
-                "fov": 28
+                "fov": 26
               },
               {
-                "t": 2.5,
+                "t": 3,
                 "position": [
-                  -1.5402223262102723,
-                  0.35376,
-                  0.5732723985062632
+                  -1.54,
+                  0.4,
+                  0.57
                 ],
                 "target": [
                   -1.8,
                   0.264,
                   -0.9
                 ],
-                "fov": 28
+                "fov": 26
               }
             ]
           }
@@ -947,11 +977,11 @@
           {
             "id": "dlg_ahx12r",
             "start": 0.6,
-            "duration": 0.741,
+            "duration": 1.086,
             "characterId": "mili",
             "text": "Hehe.",
-            "audio": "media/audio/dialog/29849fd6fc77.wav",
-            "audioHash": "29849fd6fc77",
+            "audio": "media/audio/dialog/1cf94fb220d1.wav",
+            "audioHash": "1cf94fb220d1",
             "subtitle": true,
             "gain": 1
           }

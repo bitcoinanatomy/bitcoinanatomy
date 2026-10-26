@@ -15,7 +15,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Asset, Beat, Character, DialogClip, Environment, Episode, Expression, ExpressionKey, MoveKey, ProjectData, Scene, ScoreCue, SfxClip, StoryboardClip, Treatment, Vec3 } from '../src/model/schema';
+import type { Asset, Beat, Character, Coverage, DialogClip, Environment, Episode, Expression, ExpressionKey, MoveKey, ProjectData, Scene, ScoreCue, SfxClip, StoryboardClip, Treatment, Vec3 } from '../src/model/schema';
 import { SCHEMAS, Shot as ShotSchema } from '../src/model/schema';
 import { estimateSpeech, uid } from '../src/model/timeline';
 import { PROJECT_DIR, loadProject, saveAll, saveDoc } from '../server/projectFs';
@@ -79,19 +79,19 @@ const characters: Record<string, Character> = Object.fromEntries(
     {
       id: 'sati', name: 'Sati', role: 'The hero', color: '#6f93a8', mesh: 'media/meshes/sati.glb',
       description: 'Intelligent, resourceful, leads the way. Calm under pressure, figures out how things work.',
-      voice: 'en_US-lessac-medium', voiceTune: { pitch: 2, speed: 1 },
+      voice: 'am_adam', voiceTune: { pitch: 2, speed: 1 },
       refs: ['media/refs/sati_card.png', 'media/refs/sati_turnaround.png', 'media/refs/sati_expressions.png'], tags: ['hero', 'trio'],
     },
     {
       id: 'mili', name: 'Mili', role: 'Speed', color: '#c26a6a', mesh: 'media/meshes/mili.glb', scale: 0.8,
       description: 'The smallest. Curious, playful, impossibly fast — leaves a lightning trail. A thousand Milis make one Sati.',
-      voice: 'en_US-amy-medium', voiceTune: { pitch: 5, speed: 1.15 },
+      voice: 'af_sky', voiceTune: { pitch: 5, speed: 1.15 },
       refs: ['media/refs/mili_card.png', 'media/refs/mili_turnaround.png', 'media/refs/mili_expressions.png'], tags: ['sidekick', 'trio'],
     },
     {
       id: 'bit', name: 'Bit', role: 'The muscle', color: '#7fa883', mesh: 'media/meshes/bit.glb', scale: 1.5,
       description: 'The largest. Strong, loyal, supportive. A hundred million Satis make one Bit.',
-      voice: 'en_US-joe-medium', voiceTune: { pitch: -3, speed: 0.9 },
+      voice: 'am_michael', voiceTune: { pitch: -3, speed: 0.9 },
       refs: ['media/refs/bit_card.png', 'media/refs/bit_turnaround.png', 'media/refs/bit_expressions.png'], tags: ['sidekick', 'trio'],
     },
     // generic background folk (no voice): crowds in the plaza, peers in the dark, miners in the hall
@@ -149,10 +149,10 @@ const rad = (d: number) => (d * Math.PI) / 180;
 const add = (a: Vec3, b: Vec3, k = 1): Vec3 => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
 
 /** Close-up on one character's face, from `side` degrees off their facing, with a slow push-in. */
-const close = (who: Who, side = 18, fov = 28) => (d: number, b: Blocking) => {
+const close = (who: Who, side = 18, fov = 28, eye: 'level' | 'low' = 'level') => (d: number, b: Blocking) => {
   const head = at(b, who);
   const a = rad((b[who]?.[1] ?? 0) + side);
-  const dir: Vec3 = [Math.sin(a), 0.06, Math.cos(a)];
+  const dir: Vec3 = [Math.sin(a), eye === 'low' ? -0.14 : 0.04, Math.cos(a)];
   const dist = HEAD_R[who] * 8.5;
   return cam.move(add(head, dir, dist * 1.12), add(head, dir, dist), head, head, fov, 'close-up')(d);
 };
@@ -245,6 +245,8 @@ interface ShotSpec {
   camera: (d: number, b: Blocking) => import('../src/model/schema').CameraClip;
   sfx?: { file: string; at: number | 'end'; gain?: number }[];
   notes?: string;
+  /** size, angle, and how this shot cuts with the others in the scene */
+  coverage?: Coverage;
   status?: 'todo' | 'wip' | 'review' | 'done';
   /** optional finer point on the story arc */
   tension?: number;
@@ -307,6 +309,7 @@ async function buildShot(spec: ShotSpec) {
     duration,
     status: spec.status ?? (spec.board ? 'wip' : 'todo'),
     description: spec.visual,
+    coverage: spec.coverage,
     notes: spec.notes ?? '',
     environmentId: spec.env,
     tension: spec.tension,
@@ -325,29 +328,35 @@ const EP1: SceneSpec[] = [
   {
     title: 'Explore', env: 'light_city', arc: { tension: 0.25, beat: 'setup', note: 'Meet Mili — speed and curiosity — in a bright, safe world.' }, summary: 'Dawn over the light city. Mili arrives at full speed — and stops less gracefully.',
     shots: [
-      { name: 'Dawn over the city', visual: 'Wide establishing shot. Sun rising between marble towers; glass spheres drift in the air. Citizens stroll the plaza; three small glows among them.', min: 6, board: 'hero_banner',
+      { name: 'Dawn over the city', visual: 'Wide establishing shot. Sun rising between marble towers; glass spheres drift in the air. Citizens stroll the plaza; three small glows among them.', min: 7.5, board: 'hero_banner',
+        coverage: { size: 'EWS', angle: 'high', role: 'master' },
         crowd: 'plaza', faces: { sati: [[0, 'happy']], bit: [[0, 'happy']] },
-        camera: (d, b) => cam.crane(mid(b), 9, 0.6, 4.5, 50)(d), sfx: [{ file: 'sparkle', at: 1.2, gain: 0.5 }] },
+        camera: (d, b) => cam.crane(mid(b), 10, 0.8, 5.2, 55)(d), sfx: [{ file: 'sparkle', at: 1.2, gain: 0.5 }] },
       { name: 'Mili zooms in', visual: 'Mili streaks across frame trailing lightning, scattering passers-by, and skids to a stop.', board: 'explore',
+        coverage: { size: 'WS', angle: 'eye', role: 'action' },
         blocking: { mili: [[-5, 0, 1.6], 90] }, moves: { mili: [[0.35, [-1.5, 0, 2.2], 60], [0.6, [-0.4, 0, 0.8], 25]] },
         faces: { mili: [[0, 'happy']] }, crowd: 'plaza', crowdFaces: [[0.15, 'surprised'], [0.7, 'happy']],
         lines: [{ who: 'mili', text: 'Wheee! Out of the way, out of the way!' }], firstLineAt: 0.8,
         camera: (d) => cam.move([-3, 0.5, 3.4], [1.2, 0.45, 2.2], [-2.6, 0.3, 1.8], [-0.4, 0.26, 0.8], 38, 'whip-follow')(d), sfx: [{ file: 'zap', at: 0.1 }, { file: 'whoosh', at: 0.6, gain: 0.5 }] },
       { name: 'Bonk', visual: 'Mili bounces off a floating glass sphere — BONK — and spins to a stop, dizzy but delighted.', blocking: { mili: [[-1.4, 0, -0.5], -20] },
+        coverage: { size: 'MCU', angle: 'eye', role: 'action' },
         moves: { mili: [[0.12, [-1.8, 0, -0.9], 160], [0.3, [-1.8, 0, -0.9], -20]] },
         lines: [{ who: 'mili', text: 'Ow.', face: 'worried' }, { who: 'mili', text: 'Did you see that? I was SO fast!', gap: 0.5, face: 'happy' }], firstLineAt: 1.1,
         faces: { mili: [[0.08, 'surprised']] },
         camera: (d, b) => cam.push(at({ mili: [[-1.8, 0, -0.9]] }, 'mili'), 2.4, 1.4, 0.15, 35)(d), sfx: [{ file: 'chime', at: 0.3, gain: 0.6 }, { file: 'thud', at: 0.35, gain: 0.4 }] },
-      { name: 'Sati arrives', visual: 'Sati walks in calmly, arms behind back, one eyebrow raised. Mili spins round.', min: 3.5,
+      { name: 'Sati arrives', visual: 'Sati walks in calmly, arms behind back, one eyebrow raised. Mili spins round.', min: 5,
+        coverage: { size: '2S', angle: 'eye', role: 'coverage' },
         blocking: { mili: [[-1.8, 0, -0.9], -20], sati: [[1.6, 0, 1.4], -100] }, moves: { sati: [[0.75, [-0.3, 0, -0.2], -60]], mili: [[0.55, [-1.8, 0, -0.9], 30]] },
         faces: { sati: [[0, 'determined']], mili: [[0.55, 'surprised']] }, crowd: { folk2: [[3.5, 0, -3.6], -40], folk3: [[4.2, 0, -3.1], -100] },
-        camera: (d) => cam.orbit([-0.6, 0.4, -0.3], 3.6, 0.3, -5, 20, 40)(d) },
+        camera: (d) => cam.orbit([-0.6, 0.4, -0.3], 4.2, 0.35, -8, 22, 42)(d) },
       { name: 'The whole city saw', visual: 'Close on Sati: deadpan, then the corner of a smile.', blocking: { mili: [[-1.8, 0, -0.9], 30], sati: [[-0.3, 0, -0.2], -60] },
+        coverage: { size: 'CU', angle: 'low', role: 'single' },
         lines: [{ who: 'sati', text: 'We saw, Mili. The whole city saw.', face: 'determined' }], faces: { sati: [[0.85, 'happy']] },
-        camera: close('sati', 25) },
-      { name: 'Hehe', visual: 'Close on Mili, sheepish grin.', blocking: { mili: [[-1.8, 0, -0.9], 30], sati: [[-0.3, 0, -0.2], -60] },
-        lines: [{ who: 'mili', text: 'Hehe.', face: 'happy' }], faces: { mili: [[0, 'worried']] }, min: 2,
-        camera: close('mili', -20) },
+        camera: close('sati', 25, 24, 'low') },
+      { name: 'Hehe', visual: 'Close on Mili, sheepish grin. The reverse of Sati: hold the button after the line.', blocking: { mili: [[-1.8, 0, -0.9], 30], sati: [[-0.3, 0, -0.2], -60] },
+        coverage: { size: 'CU', angle: 'eye', role: 'reverse' },
+        lines: [{ who: 'mili', text: 'Hehe.', face: 'happy' }], faces: { mili: [[0, 'worried']] }, min: 3,
+        camera: close('mili', -20, 26) },
     ],
   },
   {
@@ -888,7 +897,7 @@ async function main() {
   const boards = cropSheet();
 
   const data: ProjectData = {
-    project: SCHEMAS.project.parse({ title: 'Sati', season: { title: 'Season 1 — Into the Protocol', logline: 'Three glowing friends of very different sizes leave their bright marble city to answer a call from the dark — and discover the rules that let strangers agree on value.' }, fps: 24, resolution: [1920, 1080], episodes: EPISODES.map((e) => e.id), tts: { engine: 'piper', defaultVoice: 'en_US-lessac-medium' } }),
+    project: SCHEMAS.project.parse({ title: 'Sati', season: { title: 'Season 1 — Into the Protocol', logline: 'Three glowing friends of very different sizes leave their bright marble city to answer a call from the dark — and discover the rules that let strangers agree on value.' }, fps: 24, resolution: [1920, 1080], episodes: EPISODES.map((e) => e.id), tts: { engine: 'mlx', defaultVoice: 'am_adam' } }),
     episodes: {}, scenes: {}, characters, environments, assets: { ...assets, ...SET_ASSETS }, cues: {}, credits: {}, treatments: {},
   };
 
