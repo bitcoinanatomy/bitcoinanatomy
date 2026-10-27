@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PlotOverview } from '../components/PlotOverview';
 import { Header, TextInput } from '../components/ui';
 import { arcFor, BEAT_COLOR, BEAT_LABEL, BEATS, referenceArc, smoothPath, type ArcData } from '../model/arc';
 import type { Beat, ProjectData } from '../model/schema';
@@ -192,7 +193,9 @@ export function ArcsPage() {
           </div>
         </div>
 
-        <div className="card pad">
+        <PlotOverview data={data} editable />
+
+        <div className="card pad" style={{ marginTop: 16 }}>
           <h3 className="row">Season arc <span className="grow" /><span className="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>{eps.length} episodes · {fmtDuration(season.duration)}</span></h3>
           <ArcChart data={data} arc={season} height={220} reference={reference} showEpisodes editable />
           <div className="legend">

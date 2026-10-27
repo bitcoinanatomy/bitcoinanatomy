@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { episodeDuration, fmtDuration } from './model/timeline';
+import { ArchiveDetailPage, ArchiveListPage } from './pages/ArchivePage';
 import { ArcsPage } from './pages/ArcsPage';
 import { CreditsEditPage, CreditsListPage } from './pages/CreditsPage';
 import { Dashboard } from './pages/Dashboard';
@@ -13,6 +14,7 @@ import { CuePage, ScorePage } from './pages/ScorePage';
 import { ShotPage } from './pages/ShotPage';
 import { ShotsPage } from './pages/ShotsPage';
 import { TreatmentsPage } from './pages/TreatmentsPage';
+import { WorldMapPage } from './pages/WorldMapPage';
 import { useStore } from './store/store';
 
 export function App() {
@@ -45,6 +47,9 @@ export function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/episodes" element={<EpisodesPage />} />
           <Route path="/arcs" element={<ArcsPage />} />
+          <Route path="/world" element={<WorldMapPage />} />
+          <Route path="/archive" element={<ArchiveListPage />} />
+          <Route path="/archive/:id" element={<ArchiveDetailPage />} />
           <Route path="/treatments" element={<TreatmentsPage />} />
           <Route path="/credits" element={<CreditsListPage />} />
           <Route path="/credits/:id" element={<CreditsEditPage />} />
@@ -85,6 +90,7 @@ function Sidebar() {
         <NavLink to="/" end><span className="ico">◉</span>Dashboard</NavLink>
         <div className="nav-label">Story</div>
         <NavLink to="/arcs"><span className="ico">∿</span>Story arcs</NavLink>
+        <NavLink to="/world"><span className="ico">◎</span>World map</NavLink>
         <NavLink to="/treatments"><span className="ico">▣</span>Treatments</NavLink>
         <NavLink to="/episodes" end><span className="ico">▤</span>Episodes</NavLink>
         {data.project.episodes.map((id) => {
@@ -97,6 +103,7 @@ function Sidebar() {
             </NavLink>
           );
         })}
+        <NavLink to="/archive"><span className="ico">⌸</span>Archive</NavLink>
         <div className="nav-label">Credits</div>
         <NavLink to="/credits" end><span className="ico">◫</span>All credits</NavLink>
         {(['intro', 'outro'] as const).map((k) => (
