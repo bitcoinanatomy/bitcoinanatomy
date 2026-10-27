@@ -26,7 +26,7 @@ const box = (w: number, h: number, d: number, x = 0, y = 0, z = 0, ry = 0) => pl
 
 // ---------------------------------------------------------------- characters
 
-interface Build {
+export interface Build {
   headR: number;
   headY: number;
   eye: number; // eye radius as a fraction of the head
@@ -38,22 +38,34 @@ interface Build {
   brows?: 'determined' | 'soft';
   smile?: number; // smile width as a fraction of the head
   extra?: GlbPart[];
+  /** head shape: coins are spheres; the node crew have machine heads with a flat face (box, cylinder) */
+  head?: 'sphere' | 'box' | 'cylinder';
 }
 
 /**
  * Face parts are separate nodes, each pivoting about its own centre, so the preview can
  * pose expressions: eye_l/eye_r (+ shine_l/shine_r sharing the eye pivot), brow_l/brow_r, mouth.
  */
+const flat = (b: Build) => (b.head ?? 'sphere') !== 'sphere';
+
+function headGeometry(b: Build) {
+  const R = b.headR;
+  if (b.head === 'box') return placed(new THREE.BoxGeometry(R * 1.9, R * 2, R * 2), 0, b.headY, 0);
+  if (b.head === 'cylinder') return placed(new THREE.CylinderGeometry(R, R, R * 1.5, 40), 0, b.headY, 0);
+  return sphere(b.headR, 0, b.headY, 0, 48, 32);
+}
+
 function face(b: Build) {
   const { headR: R, headY: Y } = b;
   const parts: GlbPart[] = [];
   for (const side of [-1, 1]) {
     const s = side < 0 ? 'l' : 'r';
     const dir = new THREE.Vector3(side * b.eyeSpread, 0.08, 1).normalize();
-    const p = dir.clone().multiplyScalar(R * 0.97);
+    // flat-faced heads: project the eyes onto the face plane just in front of z = R
+    const p = dir.clone().multiplyScalar(flat(b) ? (R * 1.01) / dir.z : R * 0.97);
     const er = R * b.eye;
     const g = new THREE.SphereGeometry(er, 20, 14).scale(0.82, 1.08, 0.45);
-    g.lookAt(dir);
+    g.lookAt(flat(b) ? new THREE.Vector3(0, 0, 1) : dir);
     const at: [number, number, number] = [p.x, Y + p.y, p.z];
     parts.push({ name: `eye_${s}`, geometry: g, material: EYE, translation: at });
     parts.push({ name: `shine_${s}`, geometry: sphere(er * 0.28, side * er * 0.25, er * 0.4, er * 0.35, 10, 8), material: SHINE, translation: at });
@@ -68,7 +80,7 @@ function face(b: Build) {
     g.rotateZ(Math.PI + Math.PI * 0.1);
     // pivot on the arc itself, so flipping Y turns the smile into a frown in place
     g.translate(0, sw * 0.65, 0);
-    const at: [number, number, number] = [0, Y - R * 0.18 + sw * 0.6 - sw * 0.65, R * 0.93];
+    const at: [number, number, number] = [0, Y - R * 0.18 + sw * 0.6 - sw * 0.65, flat(b) ? R * 1.01 : R * 0.93];
     parts.push({ name: 'mouth', geometry: g, material: LINE, translation: at });
     // Extra shapes from the mouth sheet. The preview scales these to 0 unless the expression needs them.
     const hole = new THREE.SphereGeometry(sw * 0.7, 18, 12).scale(1.2, 0.95, 0.32);
@@ -82,7 +94,7 @@ function face(b: Build) {
 }
 
 /** A pair of limbs: pivot at [±x, y, z], hanging `len` metres, splayed outward by `splay` rad, with an optional round end (hand/foot). */
-interface Limb { at: [number, number, number]; r: number; len: number; splay?: number; end?: number }
+export interface Limb { at: [number, number, number]; r: number; len: number; splay?: number; end?: number }
 
 /** Tapered bone hanging from its origin (y = 0) down to y = -len. Thicker at the top. */
 function taperedBone(rTop: number, rBot: number, len: number) {
@@ -126,10 +138,10 @@ function limbs(kind: 'arm' | 'leg', l: Limb, mat: GlbMaterial): GlbPart[] {
   });
 }
 
-function character(name: string, b: Build, skinMat = SKIN) {
+export function character(name: string, b: Build, skinMat = SKIN) {
   const neckR = b.headR * 0.28;
   const neck = capsule(neckR, b.headR * 0.42, 0, b.headY - b.headR * 0.78);
-  const skin = merge([sphere(b.headR, 0, b.headY, 0, 48, 32), neck, ...b.body]);
+  const skin = merge([headGeometry(b), neck, ...b.body]);
   write(`media/meshes/${name}.glb`, writeGlb(name, [{ name: 'body', geometry: skin, material: skinMat }, ...limbs('arm', b.arms, skinMat), ...limbs('leg', b.legs, skinMat), ...face(b), ...(b.extra ?? [])]));
 }
 
@@ -139,19 +151,19 @@ const FOLK: GlbMaterial = { name: 'folk_skin', color: [0.86, 0.86, 0.88], roughn
 export function genExtras() {
   // tall and thin
   character('folk_tall', {
-    headR: 0.2, headY: 1.12, eye: 0.13, eyeSpread: 0.32, smile: 0.2, brows: 'soft',
+    headR: 0.27, headY: 1.19, eye: 0.13, eyeSpread: 0.32, smile: 0.2, brows: 'soft',
     body: [capsule(0.11, 0.55, 0, 0.62)],
     arms: { at: [0.12, 0.86, 0], r: 0.035, len: 0.44, splay: 0.16, end: 0.045 }, legs: { at: [0.07, 0.38, 0], r: 0.045, len: 0.38 },
   }, FOLK);
   // round and stout
   character('folk_round', {
-    headR: 0.24, headY: 0.82, eye: 0.14, eyeSpread: 0.34, smile: 0.26, brows: 'soft',
+    headR: 0.31, headY: 0.89, eye: 0.14, eyeSpread: 0.34, smile: 0.26, brows: 'soft',
     body: [new THREE.SphereGeometry(0.3, 32, 20).scale(1, 0.95, 0.9).translate(0, 0.4, 0)],
     arms: { at: [0.26, 0.55, 0], r: 0.06, len: 0.27, splay: 0.45 }, legs: { at: [0.12, 0.19, 0], r: 0.07, len: 0.19 },
   }, FOLK);
   // a little one
   character('folk_small', {
-    headR: 0.17, headY: 0.42, eye: 0.17, eyeSpread: 0.36, smile: 0.28, brows: 'soft',
+    headR: 0.23, headY: 0.48, eye: 0.17, eyeSpread: 0.36, smile: 0.28, brows: 'soft',
     body: [capsule(0.08, 0.12, 0, 0.2)],
     arms: { at: [0.075, 0.28, 0], r: 0.028, len: 0.14, splay: 0.55 }, legs: { at: [0.045, 0.11, 0], r: 0.035, len: 0.11 },
   }, FOLK);
@@ -176,7 +188,7 @@ export function genCharacters() {
     }
   }
   character('mili', {
-    headR: 0.22, headY: 0.33, eye: 0.19, eyeSpread: 0.36, smile: 0.32, brows: 'soft',
+    headR: 0.29, headY: 0.4, eye: 0.19, eyeSpread: 0.36, smile: 0.32, brows: 'soft',
     body: [capsule(0.075, 0.08, 0, 0.15)],
     arms: { at: [0.09, 0.08, 0], r: 0.026, len: 0.07, splay: 0.35, end: 0.032 }, legs: { at: [0.04, 0.1, 0], r: 0.032, len: 0.1, end: 0.036 },
     extra: [{ name: 'lightning', geometry: merge(trail), material: { name: 'lightning', color: [1, 0.78, 0.45], emissive: [1, 0.7, 0.35], emissiveStrength: 4, opacity: 0.85 } }],
@@ -184,7 +196,7 @@ export function genCharacters() {
 
   // Sati — the hero (~0.9m), steady eyes, determined brows
   character('sati', {
-    headR: 0.32, headY: 0.5, eye: 0.15, eyeSpread: 0.34, brows: 'determined', smile: 0.18,
+    headR: 0.43, headY: 0.61, eye: 0.15, eyeSpread: 0.34, brows: 'determined', smile: 0.18,
     body: [capsule(0.12, 0.14, 0, 0.27)],
     arms: { at: [0.15, 0.16, 0], r: 0.04, len: 0.12, splay: 0.22, end: 0.048 }, legs: { at: [0.06, 0.16, 0], r: 0.05, len: 0.16, end: 0.055 },
   });
@@ -193,10 +205,23 @@ export function genCharacters() {
   // Head is 1.5× the previous radius; the bottom of the head stays put so it still sits on the neck.
   const torso = new THREE.SphereGeometry(0.42, 40, 28).scale(1.15, 1.05, 0.9).translate(0, 0.66, 0);
   character('bit', {
-    headR: 0.9, headY: 1.8, eye: 0.12, eyeSpread: 0.3, smile: 0.3, brows: 'soft',
+    headR: 1.15, headY: 2.05, eye: 0.12, eyeSpread: 0.3, smile: 0.3, brows: 'soft',
     body: [torso, sphere(0.2, -0.5, 0.86), sphere(0.2, 0.5, 0.86)],
     arms: { at: [0.56, 0.86, 0], r: 0.17, len: 0.66, splay: 0.16, end: 0.17 }, legs: { at: [0.2, 0.34, 0], r: 0.14, len: 0.34, end: 0.15 },
   });
+
+  // Gild — the stranger (~1.5m), tall and thin, gold glow, long arms for flourishes, a ring of
+  // floating coins round the head. Narrow eyes and a wide smile: charming, a little too much.
+  const coins = Array.from({ length: 7 }, (_, i) => {
+    const a = (i / 7) * Math.PI * 2;
+    return placed(new THREE.CylinderGeometry(0.045, 0.045, 0.01, 20), Math.cos(a) * 0.34, 1.62 + Math.sin(a * 2) * 0.03, Math.sin(a) * 0.34, Math.PI / 2, a, 0);
+  });
+  character('gild', {
+    headR: 0.21, headY: 1.3, eye: 0.13, eyeSpread: 0.3, smile: 0.36, brows: 'determined',
+    body: [capsule(0.1, 0.62, 0, 0.74), new THREE.ConeGeometry(0.24, 0.5, 24).translate(0, 0.5, 0)],
+    arms: { at: [0.12, 1.02, 0], r: 0.03, len: 0.56, splay: 0.12, end: 0.04 }, legs: { at: [0.06, 0.4, 0], r: 0.04, len: 0.4, end: 0.05 },
+    extra: [{ name: 'halo', geometry: merge(coins), material: { name: 'gild_coins', color: [1, 0.8, 0.35], metallic: 1, roughness: 0.2, emissive: [1, 0.7, 0.25], emissiveStrength: 1.5 } }],
+  }, { name: 'gild_skin', color: [1, 0.86, 0.5], roughness: 0.3, metallic: 0.4, emissive: [1, 0.74, 0.3], emissiveStrength: 0.6 });
 }
 
 // ---------------------------------------------------------------- sets & props
