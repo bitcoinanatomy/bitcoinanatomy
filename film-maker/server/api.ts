@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 import type { Plugin } from 'vite';
-import { deleteDoc, loadProject, mediaPath, PROJECT_DIR, saveDoc, type DocRef } from './projectFs';
+import { ARCHIVE_DIR, deleteDoc, listArchives, loadArchive, loadProject, mediaPath, PROJECT_DIR, saveDoc, type DocRef } from './projectFs';
 import { exportEpisode } from './exporter';
 import { KOKORO_VOICES, listPiperVoices, mlxAvailable, piperAvailable, synthesize } from './tts';
 
@@ -32,7 +32,7 @@ export function filmMakerApi(): Plugin {
       let pending = new Set<string>();
       let timer: NodeJS.Timeout | undefined;
       const onFs = (file: string) => {
-        if (!file.startsWith(PROJECT_DIR) || !file.endsWith('.json')) return;
+        if (!file.startsWith(PROJECT_DIR) || file.startsWith(ARCHIVE_DIR) || !file.endsWith('.json')) return;
         pending.add(path.relative(PROJECT_DIR, file));
         clearTimeout(timer);
         timer = setTimeout(() => {
@@ -52,6 +52,11 @@ export function filmMakerApi(): Plugin {
             const { data, issues } = loadProject();
             const mlx = data.project.tts.engine === 'mlx' && mlxAvailable();
             return send(res, 200, { data, issues, tts: { piper: piperAvailable(), mlx, voices: mlx ? KOKORO_VOICES : listPiperVoices() } });
+          }
+          if (route === 'GET /api/archive') return send(res, 200, { archives: listArchives() });
+          if (req.method === 'GET' && url.pathname.startsWith('/api/archive/')) {
+            const { meta, data } = loadArchive(decodeURIComponent(url.pathname.slice('/api/archive/'.length)));
+            return send(res, 200, { meta, data });
           }
           if (route === 'PUT /api/doc') {
             const { ref, doc } = JSON.parse((await body(req)).toString()) as { ref: DocRef; doc: unknown };

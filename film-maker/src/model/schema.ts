@@ -183,6 +183,8 @@ export const Episode = z.object({
   title: z.string(),
   status: Status.default('todo'),
   synopsis: z.string().default(''),
+  /** one sentence: the episode's story, for the plot overview */
+  logline: z.string().default(''),
   /** what the episode is about underneath the plot */
   theme: z.string().default(''),
   /** the episode's role in the season arc */
@@ -201,7 +203,10 @@ export const Project = z.object({
   resolution: z.tuple([z.number().int(), z.number().int()]).default([1920, 1080]),
   /** ordered episode ids */
   episodes: z.array(z.string()).default([]),
-  season: z.object({ title: z.string().default(''), logline: z.string().default('') }).default({ title: '', logline: '' }),
+  /** logline: one or two sentences; plot: the season's story in a short paragraph (plot overview) */
+  season: z
+    .object({ title: z.string().default(''), logline: z.string().default(''), plot: z.string().default('') })
+    .default({ title: '', logline: '', plot: '' }),
   tts: z
     .object({
       engine: z.enum(['mlx', 'piper', 'say']).default('piper'),
@@ -235,6 +240,10 @@ const LibraryBase = {
   color: z.string().default('#8aa4ff'),
 };
 
+/** The two worlds of the story and the space between: inside a node (its city of light), its core (timechain + portal), the network void between nodes, and the human world. */
+export const WORLDS = ['node', 'core', 'void', 'human'] as const;
+export type World = (typeof WORLDS)[number];
+
 export const Character = z.object({
   ...LibraryBase,
   /** Kokoro voice (af_heart), Piper id, or a macOS `say` voice name */
@@ -242,6 +251,12 @@ export const Character = z.object({
   /** voice character: pitch in semitones, speed multiplier (applied after TTS) */
   voiceTune: z.object({ pitch: z.number().min(-12).max(12).default(0), speed: z.number().min(0.5).max(2).default(1) }).default({ pitch: 0, speed: 1 }),
   role: z.string().default(''),
+  /** which world they belong to, for the World map: inside a node, the core, the network void, or the human world */
+  world: z.enum(WORLDS).optional(),
+  /** environment id where they usually are (placement on the World map) */
+  home: z.string().optional(),
+  /** story relationships drawn on the World map: { to: characterId, label } */
+  relations: z.array(z.object({ to: z.string(), label: z.string() })).default([]),
 });
 export type Character = z.infer<typeof Character>;
 
@@ -261,6 +276,8 @@ export type Placement = z.infer<typeof Placement>;
 
 export const Environment = z.object({
   ...LibraryBase,
+  /** which world this place is in (World map) */
+  world: z.enum(WORLDS).optional(),
   background: z.string().default('#05060a'),
   fog: z.object({ color: z.string(), near: z.number(), far: z.number() }).optional(),
   lighting: z

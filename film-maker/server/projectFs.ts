@@ -26,21 +26,21 @@ export interface DocRef {
   episodeId?: string;
 }
 
-export function docPath(ref: DocRef): string {
+export function docPath(ref: DocRef, root = PROJECT_DIR): string {
   const safe = (s: string) => {
     if (!/^[\w-]+$/.test(s)) throw new Error(`invalid id "${s}"`);
     return s;
   };
   switch (ref.kind) {
     case 'project':
-      return path.join(PROJECT_DIR, 'project.json');
+      return path.join(root, 'project.json');
     case 'episode':
-      return path.join(PROJECT_DIR, 'episodes', safe(ref.id), 'episode.json');
+      return path.join(root, 'episodes', safe(ref.id), 'episode.json');
     case 'scene':
       if (!ref.episodeId) throw new Error('scene requires episodeId');
-      return path.join(PROJECT_DIR, 'episodes', safe(ref.episodeId), 'scenes', `${safe(ref.id)}.json`);
+      return path.join(root, 'episodes', safe(ref.episodeId), 'scenes', `${safe(ref.id)}.json`);
     default:
-      return path.join(PROJECT_DIR, LIB_DIRS[ref.kind], `${safe(ref.id)}.json`);
+      return path.join(root, LIB_DIRS[ref.kind], `${safe(ref.id)}.json`);
   }
 }
 
@@ -53,8 +53,8 @@ export interface LoadIssue {
   message: string;
 }
 
-/** Load the whole project. Invalid files are reported, not thrown. */
-export function loadProject(): { data: ProjectData; issues: LoadIssue[] } {
+/** Load the whole project (or an archived copy of one). Invalid files are reported, not thrown. */
+export function loadProject(root = PROJECT_DIR): { data: ProjectData; issues: LoadIssue[] } {
   const issues: LoadIssue[] = [];
   const parse = <K extends DocKind>(kind: K, file: string) => {
     try {
@@ -65,10 +65,10 @@ export function loadProject(): { data: ProjectData; issues: LoadIssue[] } {
     }
   };
 
-  const project = parse('project', docPath({ kind: 'project', id: 'project' })) ?? SCHEMAS.project.parse({ title: 'Untitled' });
+  const project = parse('project', docPath({ kind: 'project', id: 'project' }, root)) ?? SCHEMAS.project.parse({ title: 'Untitled' });
   const data: ProjectData = { project, episodes: {}, scenes: {}, characters: {}, environments: {}, assets: {}, cues: {}, credits: {}, treatments: {} };
 
-  const epRoot = path.join(PROJECT_DIR, 'episodes');
+  const epRoot = path.join(root, 'episodes');
   const epIds = fs.existsSync(epRoot) ? fs.readdirSync(epRoot).filter((d) => fs.existsSync(path.join(epRoot, d, 'episode.json'))) : [];
   for (const epId of epIds) {
     const ep = parse('episode', path.join(epRoot, epId, 'episode.json'));
@@ -81,7 +81,7 @@ export function loadProject(): { data: ProjectData; issues: LoadIssue[] } {
     }
   }
   const lib = <K extends 'character' | 'environment' | 'asset' | 'cue' | 'credits' | 'treatment'>(kind: K, target: Record<string, unknown>) => {
-    const dir = path.join(PROJECT_DIR, LIB_DIRS[kind]);
+    const dir = path.join(root, LIB_DIRS[kind]);
     for (const f of listJson(dir)) {
       const doc = parse(kind, path.join(dir, f)) as { id: string } | undefined;
       if (doc) target[doc.id] = doc;
@@ -94,6 +94,38 @@ export function loadProject(): { data: ProjectData; issues: LoadIssue[] } {
   lib('credits', data.credits);
   lib('treatment', data.treatments);
   return { data, issues };
+}
+
+// ------------------------------------------------------------------ archive
+
+/** Read-only snapshots of earlier versions of the film: project/archive/<id>/ (same layout as project/, plus meta.json). */
+export const ARCHIVE_DIR = path.join(PROJECT_DIR, 'archive');
+
+export interface ArchiveMeta {
+  id: string;
+  title: string;
+  archivedAt: string;
+  note: string;
+}
+
+export function listArchives(): ArchiveMeta[] {
+  if (!fs.existsSync(ARCHIVE_DIR)) return [];
+  return fs
+    .readdirSync(ARCHIVE_DIR)
+    .filter((d) => fs.existsSync(path.join(ARCHIVE_DIR, d, 'project.json')))
+    .map((id) => {
+      const metaFile = path.join(ARCHIVE_DIR, id, 'meta.json');
+      const meta = fs.existsSync(metaFile) ? readJson(metaFile) : {};
+      return { id, title: meta.title ?? id, archivedAt: meta.archivedAt ?? '', note: meta.note ?? '' };
+    })
+    .sort((a, b) => b.archivedAt.localeCompare(a.archivedAt));
+}
+
+export function loadArchive(id: string) {
+  if (!/^[\w-]+$/.test(id)) throw new Error(`invalid archive id "${id}"`);
+  const dir = path.join(ARCHIVE_DIR, id);
+  if (!fs.existsSync(path.join(dir, 'project.json'))) throw new Error(`no archive "${id}"`);
+  return { meta: listArchives().find((a) => a.id === id)!, ...loadProject(dir) };
 }
 
 /** Validate and write one document. Returns the normalized document. */
