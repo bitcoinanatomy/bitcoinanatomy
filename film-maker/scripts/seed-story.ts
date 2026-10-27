@@ -1,30 +1,39 @@
 /**
- * Seeds the project with the "Mili · Sati · Bit" story: three Pixar-style episodes.
- *   Ep 1 introduces the trio in the light city; Ep 2 takes them into the dark to
- *   explore the protocol — nodes, a transaction's journey, and mining. Ep 3
- *   brings them home to learn that only the matching key can spend a coin.
- *   Ep 4 finds the reflection orb: a portal. Inside it is the protocol. Outside
- *   it is the real world. A reach only lands if the joints — the rules — allow it,
- *   the way a skinned arm solves toward a target.
+ * Seeds the project with Season 1 v3, "Unspent": eight ~11-minute episodes set inside Bitcoin
+ * and in the human world around it. Ep1 is fully boarded; Ep2–8 are scene outlines (one
+ * placeholder shot per scene) until each is built.
  *
- *   npm run seed                 (overwrites project/ episodes, libraries, score, boards, dialog cache)
+ *   The miner Ana (keyholder + node runner) finds a block in her garage. Inside her node — a city
+ *   of light with the timechain at its core — a silent giant, the Coinbase, breaks into new coins.
+ *   Two of them, Sati and Bit, have a hundred blocks to wait before they can be spent, while the
+ *   Rewriter builds a hidden chain that could erase the block they were born in.
+ *
+ *   Series bible: docs/season-1-bible.md. Earlier drafts: project/archive/ (v1, v2).
+ *
+ *   npm run seed                 (rewrites episodes, characters, environments, assets, score, credits, dialog cache)
  *   npm run seed -- --no-tts     (estimated timings, no audio)
+ *   npm run seed -- --only ep02  (rebuild one episode on top of what's on disk)
  *
- * Storyboards and character refs are cropped from project/media/refs/character_sheet.png.
+ * Kept across a full seed: treatments/, media/boards uploads, project/archive/.
+ *
+ * Craft conventions (see AGENTS.md): no narrator, shop talk only (one line of real explanation
+ * per scene at most); no real colour — brightness is value; every music cue shares the season
+ * motif seed (MOTIF); wordless reaction shots and L-cuts for rhythm.
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Asset, Beat, Character, Coverage, DialogClip, Environment, Episode, Expression, ExpressionKey, MoveKey, ProjectData, Scene, ScoreCue, SfxClip, StoryboardClip, Treatment, Vec3 } from '../src/model/schema';
-import { SCHEMAS, Shot as ShotSchema } from '../src/model/schema';
+import type { Asset, Beat, CameraClip, Character, Coverage, DialogClip, Environment, Episode, Expression, ExpressionKey, Instrument, MoveKey, Pose, ProjectData, Scene, ScoreCue, SfxClip, StoryboardClip, Treatment, Vec3 } from '../src/model/schema';
+import { INSTRUMENTS, SCHEMAS, Shot as ShotSchema } from '../src/model/schema';
 import { estimateSpeech, uid } from '../src/model/timeline';
 import { PROJECT_DIR, loadProject, saveAll, saveDoc } from '../server/projectFs';
 import { synthesize } from '../server/tts';
-import { genCharacters, genExtras, genSets, genStorySfx } from './gen-story-assets';
+import { genCharacters, genExtras, genStorySfx } from './gen-story-assets';
 import { genSfx } from './gen-assets';
 import { cam } from './lib/camera';
 import { autoPoses } from './lib/poses';
-import { ENVIRONMENTS, genSetDressing, genSkies, SET_ASSETS } from './gen-environments';
+import { genV3World, V3_ASSETS, V3_ENVIRONMENTS } from './gen-v3-world';
+import { mulberry32 } from '../src/score/compose';
 
 const NO_TTS = process.argv.includes('--no-tts');
 const SHEET = path.join(PROJECT_DIR, 'media/refs/character_sheet.png');
@@ -74,91 +83,114 @@ function cropSheet() {
 
 // ------------------------------------------------------------------ library
 
+type Rel = { to: string; label: string };
+const C = (c: Partial<Character> & { id: string; name: string; relations?: Rel[] }) => c;
 const characters: Record<string, Character> = Object.fromEntries(
   [
-    {
-      id: 'sati', name: 'Sati', role: 'The hero', color: '#6f93a8', mesh: 'media/meshes/sati.glb',
-      description: 'Intelligent, resourceful, leads the way. Calm under pressure, figures out how things work.',
-      voice: 'am_adam', voiceTune: { pitch: 2, speed: 1 },
-      refs: ['media/refs/sati_card.png', 'media/refs/sati_turnaround.png', 'media/refs/sati_expressions.png'], tags: ['hero', 'trio'],
-    },
-    {
-      id: 'mili', name: 'Mili', role: 'Speed', color: '#c26a6a', mesh: 'media/meshes/mili.glb', scale: 0.8,
-      description: 'The smallest. Curious, playful, impossibly fast — leaves a lightning trail. A thousand Milis make one Sati.',
-      voice: 'af_sky', voiceTune: { pitch: 5, speed: 1.15 },
-      refs: ['media/refs/mili_card.png', 'media/refs/mili_turnaround.png', 'media/refs/mili_expressions.png'], tags: ['sidekick', 'trio'],
-    },
-    {
-      id: 'bit', name: 'Bit', role: 'The muscle', color: '#7fa883', mesh: 'media/meshes/bit.glb', scale: 1.5,
-      description: 'The largest. Strong, loyal, supportive. A hundred million Satis make one Bit.',
-      voice: 'am_michael', voiceTune: { pitch: -3, speed: 0.9 },
-      refs: ['media/refs/bit_card.png', 'media/refs/bit_turnaround.png', 'media/refs/bit_expressions.png'], tags: ['sidekick', 'trio'],
-    },
-    // generic background folk (no voice): crowds in the plaza, peers in the dark, miners in the hall
-    ...(['tall', 'round', 'small', 'tall', 'round', 'small'] as const).map((shape, i) => ({
-      id: `folk${i + 1}`, name: `Folk ${i + 1}`, role: 'Background', color: ['#9aa6b8', '#b8a99a', '#a9b89a', '#b89ab0', '#9ab8b5', '#b8b49a'][i],
+    // coins (UTXOs): they exist on every node; their identity lasts only while they're unspent
+    C({ id: 'sati', name: 'Sati', role: 'The coin who wants to be spent', world: 'node', home: 'utxo_district', color: '#d8d8d8', mesh: 'media/meshes/sati.glb',
+      description: 'A small coinbase output, a few thousand sats: the smallest coin the chain will carry. Curious, restless, wants to matter, which for a coin means to be spent, and to lose herself.',
+      voice: 'af_heart', voiceTune: { pitch: 2, speed: 1 }, tags: ['coin', 'lead'],
+      refs: ['media/refs/sati_card.png', 'media/refs/sati_turnaround.png', 'media/refs/sati_expressions.png'],
+      relations: [{ to: 'bit', label: 'born together' }, { to: 'pip', label: 'friends' }] }),
+    C({ id: 'bit', name: 'Bit', role: 'The big coin', world: 'node', home: 'utxo_district', color: '#ffffff', mesh: 'media/meshes/bit.glb', scale: 1.5,
+      description: 'A one-bitcoin output from the same coinbase: huge, the brightest coin in the district. Patient, dry, protective of Sati. Secretly wants more speed than the chain can give (season two).',
+      voice: 'am_michael', voiceTune: { pitch: -3, speed: 0.9 }, tags: ['coin', 'lead'],
+      refs: ['media/refs/bit_card.png', 'media/refs/bit_turnaround.png', 'media/refs/bit_expressions.png'],
+      relations: [{ to: 'mili', label: 'season 2' }] }),
+    C({ id: 'pip', name: 'Pip', role: 'The waiting coin', world: 'node', home: 'mempool_hall', color: '#f0f0f0', mesh: 'media/meshes/pip.glb',
+      description: 'A tiny, funny coin stuck in a low-fee transaction. Sati’s first friend. Confirmed at last in the newest block — the one the Rewriter orphans (Ep7).',
+      voice: 'af_sky', voiceTune: { pitch: 6, speed: 1.15 }, tags: ['coin'] }),
+    C({ id: 'mili', name: 'Mili', role: 'The Lightning millisat (season 2)', world: 'void', home: 'network_void', color: '#ffffff', mesh: 'media/meshes/mili.glb', scale: 0.8,
+      description: 'A single millisat living in Lightning. Too small to ever exist on chain alone. A spark in the last shot of the season.',
+      voice: 'af_sky', voiceTune: { pitch: 5, speed: 1.15 }, tags: ['coin', 's2'],
+      refs: ['media/refs/mili_card.png', 'media/refs/mili_turnaround.png', 'media/refs/mili_expressions.png'] }),
+    C({ id: 'coinbase', name: 'Coinbase', role: 'The silent giant', world: 'core', home: 'node_core', color: '#ffffff', mesh: 'media/meshes/coinbase.glb',
+      description: 'Born from a valid block, from nothing: the only parentless thing in the season. Never speaks. Looks around once, tenderly, and breaks into its outputs.',
+      tags: ['coin', 'cosmic'], relations: [{ to: 'sati', label: 'breaks into' }, { to: 'bit', label: 'breaks into' }] }),
+    // the crew of the miner's node (they go dark with it)
+    C({ id: 'node', name: 'The Node', role: 'The node itself', world: 'core', home: 'node_core', color: '#ffffff', mesh: 'media/meshes/node_avatar.glb',
+      description: 'The giant sphere, given a face at its core. Calm and vast; answers any question in one short line.',
+      voice: 'bf_emma', voiceTune: { pitch: -2, speed: 0.9 }, tags: ['crew'], relations: [{ to: 'validator', label: 'crew' }, { to: 'hasher', label: 'crew' }] }),
+    C({ id: 'validator', name: 'Validator', role: 'The guard', world: 'node', home: 'node_city', color: '#eeeeee', mesh: 'media/meshes/validator.glb',
+      description: 'Stern, tall, checks every signature and every rule. The node’s immune system. Turns the Counterfeiter away.',
+      voice: 'am_fenrir', voiceTune: { pitch: -1, speed: 0.95 }, tags: ['crew'] }),
+    C({ id: 'gossip', name: 'Gossip', role: 'The messenger', world: 'node', home: 'node_city', color: '#ffffff', mesh: 'media/meshes/gossip.glb',
+      description: 'Small, fast, never stops talking. Runs blocks and transactions out to every other node.',
+      voice: 'af_nicole', voiceTune: { pitch: 4, speed: 1.2 }, tags: ['crew'] }),
+    C({ id: 'hasher', name: 'Hasher', role: 'The foreman', world: 'core', home: 'node_core', color: '#e8e8e8', mesh: 'media/meshes/hasher.glb',
+      description: 'Stocky foreman of the miner’s search. Shuffles the cubes for the nonce, counts blocks, first to see the Rewriter’s dark chain.',
+      voice: 'bm_daniel', voiceTune: { pitch: -2, speed: 1 }, tags: ['crew'], relations: [{ to: 'ana', label: 'mines for' }, { to: 'rewriter', label: 'sees him coming' }] }),
+    C({ id: 'mempool_host', name: 'Mempool Host', role: 'The waiting-room host', world: 'node', home: 'mempool_hall', color: '#eeeeee', mesh: 'media/meshes/mempool_host.glb',
+      description: 'Round, warm, runs the waiting room where transactions bid for the next block. Calls everyone “love”.',
+      voice: 'bf_isabella', voiceTune: { pitch: 1, speed: 1.05 }, tags: ['crew'], relations: [{ to: 'pip', label: 'keeps waiting' }] }),
+    C({ id: 'script_clerk', name: 'Script Clerk', role: 'The reader of locks', world: 'node', home: 'node_city', color: '#e6e6e6', mesh: 'media/meshes/script_clerk.glb',
+      description: 'Thin, precise, round spectacles. Reads the lock on every coin, and what it would take to open it.',
+      voice: 'am_echo', voiceTune: { pitch: 1, speed: 0.95 }, tags: ['crew'], relations: [{ to: 'sati', label: 'reads her lock' }] }),
+    // antagonists
+    C({ id: 'rewriter', name: 'The Rewriter', role: 'The villain', world: 'void', home: 'dark_chain', color: '#111111', mesh: 'media/meshes/rewriter.glb',
+      description: 'A rival miner building a secret, longer chain in the dark. If he releases it first, the block Sati and Bit were born in is orphaned and they never existed. Outside, a big mining operation that tries to buy Ana.',
+      voice: 'bm_george', voiceTune: { pitch: -5, speed: 0.85 }, tags: ['villain'],
+      relations: [{ to: 'sati', label: 'threatens her birth block' }, { to: 'ana', label: 'tries to buy' }, { to: 'counterfeiter', label: 'seen with' }] }),
+    C({ id: 'counterfeiter', name: 'The Counterfeiter', role: 'The forger', world: 'node', home: 'mempool_hall', color: '#ffffff', mesh: 'media/meshes/counterfeiter.glb',
+      description: 'Over-bright and glossy, offers coins from nothing. Every node turns him away.',
+      voice: 'am_adam', voiceTune: { pitch: 3, speed: 1.05 }, tags: ['villain'], relations: [{ to: 'validator', label: 'rejected by' }] }),
+    C({ id: 'thief', name: 'The Thief', role: 'The phisher', world: 'human', home: 'town_night', color: '#222222', mesh: 'media/meshes/thief.glb',
+      description: 'Works in both worlds: phishes Ana for her seed words outside; his inside agent tries to move Sati and Bit without her signature.',
+      voice: 'am_echo', voiceTune: { pitch: -2, speed: 1 }, tags: ['villain'], relations: [{ to: 'ana', label: 'phishes' }] }),
+    // the human world
+    C({ id: 'ana', name: 'Ana', role: 'The miner (keyholder, node runner)', world: 'human', home: 'garage', color: '#333333', mesh: 'media/meshes/ana.glb',
+      description: 'Young woman who mines in a garage at the edge of a small river town, on surplus power from the dam. Holds the key Sati and Bit are locked to, and runs the node they live in. Never sees them.',
+      voice: 'af_bella', voiceTune: { pitch: 0, speed: 1 }, tags: ['human'],
+      relations: [{ to: 'node', label: 'runs' }, { to: 'sati', label: 'holds the key' }, { to: 'bit', label: 'holds the key' }] }),
+    // background coins / townsfolk (no voice)
+    ...(['tall', 'round', 'small', 'tall', 'round', 'small'] as const).map((shape, i) => C({
+      id: `folk${i + 1}`, name: `Folk ${i + 1}`, role: 'Background', color: '#dddddd',
       mesh: `media/meshes/folk_${shape}.glb`, scale: [1, 1, 1, 0.92, 1.08, 0.9][i],
-      description: `A ${shape} citizen of the light city. Fills the background; never speaks.`, tags: ['extra'],
+      description: `A ${shape} coin: other outputs, strangers in a transaction, waiting coins. Never speaks.`, tags: ['extra'],
     })),
+    // the nonce cubes: the miner's search, shuffling
+    ...Array.from({ length: 12 }, (_, i) => C({ id: `cube${i + 1}`, name: `Cube ${i + 1}`, role: 'Nonce cube', color: '#ffffff', mesh: 'media/meshes/nonce_cube.glb', world: 'core', description: 'One cube of the Hasher’s search grid.', tags: ['extra', 'cube'] })),
   ].map((c) => [c.id, SCHEMAS.character.parse(c)]),
 );
 
-const A = (id: string, name: string, kind: Asset['kind'], description: string, color = '#e8e6e1', extra: Partial<Asset> = {}) =>
-  [id, SCHEMAS.asset.parse({ id, name, kind, description, color, mesh: `media/meshes/${id}.glb`, ...extra })] as const;
-
-const assets: Record<string, Asset> = Object.fromEntries([
-  A('marble_floor', 'Marble Floor', 'set', 'Polished white marble tiles (procedural texture).', '#eeeeee', { textures: { baseColor: 'media/textures/marble.png' }, tags: ['light'] }),
-  A('marble_block', 'Marble Block', 'prop', 'A 1m white marble cube — scale it for stepping stones or the giant gate block.', '#eeeeee', { tags: ['light'] }),
-  A('marble_steps', 'Marble Steps', 'set', 'Four broad steps.', '#eeeeee', { tags: ['light'] }),
-  A('arch', 'Arch', 'set', 'Marble archway, 3.2m to the springline.', '#eeeeee', { tags: ['light'] }),
-  A('tower', 'Tower', 'set', 'Tall stepped marble tower for the skyline.', '#eeeeee', { tags: ['light'] }),
-  A('tree', 'Tree', 'prop', 'Rounded stylised tree.', '#6c8f5e', { tags: ['light'] }),
-  A('glass_sphere', 'Glass Sphere', 'fx', 'Floating transparent sphere (alpha-blended glass).', '#dfe7ff', { tags: ['light', 'dark'] }),
-  A('obsidian_floor', 'Obsidian Floor', 'set', 'Glossy black reflective ground.', '#111111', { tags: ['dark'] }),
-  A('monolith', 'Monolith', 'set', 'Black glossy pillar, 5m.', '#151515', { tags: ['dark'] }),
-  A('monolith_cube', 'Monolith Cube', 'set', 'Black glossy 2m cube.', '#151515', { tags: ['dark'] }),
-  A('light_shaft', 'Light Shaft', 'fx', 'Volumetric-looking beam of light (alpha, emissive).', '#ffffff', { tags: ['dark'] }),
-  A('hex_beacon', 'Hex Beacon', 'prop', 'Glowing hexagonal frame — a new node calling for peers.', '#cfe0ff', { tags: ['dark', 'protocol'] }),
-  A('tx_orb', 'Transaction Orb', 'prop', 'A glowing transaction with its signature ring.', '#ffd58c', { tags: ['protocol'] }),
-  A('hash_block', 'Hash Block', 'prop', 'Dark block with glowing edges — a mining attempt.', '#9fb6ff', { tags: ['dark', 'protocol'] }),
-  A('mempool_bubble', 'Mempool Bubble', 'fx', 'Glass bubble holding a waiting transaction.', '#dfe7ff', { tags: ['protocol'] }),
-]);
-
-// environments, skies and set dressing live in gen-environments.ts (npm run gen:envs)
-const environments: Record<string, Environment> = ENVIRONMENTS;
+const assets: Record<string, Asset> = V3_ASSETS;
+const environments: Record<string, Environment> = V3_ENVIRONMENTS;
 
 // ------------------------------------------------------------------ blocking helpers
 
-type Who = 'sati' | 'mili' | 'bit';
+type Who = 'sati' | 'bit' | 'pip' | 'mili' | 'coinbase' | 'node' | 'validator' | 'gossip' | 'hasher' | 'mempool_host' | 'script_clerk' | 'rewriter' | 'counterfeiter' | 'thief' | 'ana';
 type Blocking = Partial<Record<Who, [Vec3, number?]>>;
-const TRIO: Blocking = { mili: [[-1.1, 0, 0.35], 15], sati: [[0, 0, 0]], bit: [[1.6, 0, -0.25], -12] };
 // head-centre heights and head radii (after character scale), for framing
-const HEAD = { mili: 0.264, sati: 0.5, bit: 2.7 };
-const HEAD_R = { mili: 0.176, sati: 0.32, bit: 1.35 };
-const at = (b: Blocking, who: keyof typeof HEAD): Vec3 => {
+const HEAD: Record<Who, number> = { sati: 0.61, bit: 3.075, pip: 0.29, mili: 0.32, coinbase: 7.5, node: 2.4, validator: 1.5, gossip: 0.56, hasher: 1.02, mempool_host: 0.98, script_clerk: 1.18, rewriter: 2.05, counterfeiter: 1.3, thief: 1.62, ana: 1.62 };
+const HEAD_R: Record<Who, number> = { sati: 0.43, bit: 1.725, pip: 0.18, mili: 0.232, coinbase: 2.2, node: 0.8, validator: 0.22, gossip: 0.2, hasher: 0.27, mempool_host: 0.28, script_clerk: 0.2, rewriter: 0.3, counterfeiter: 0.21, thief: 0.11, ana: 0.11 };
+const at = (b: Blocking, who: Who): Vec3 => {
   const pos = b[who]?.[0] ?? [0, 0, 0];
-  return [pos[0], HEAD[who], pos[2]];
+  return [pos[0], pos[1] + HEAD[who], pos[2]];
 };
 const mid = (b: Blocking): Vec3 => {
-  const ps = Object.keys(b).map((k) => at(b, k as keyof typeof HEAD));
+  const ps = Object.keys(b).map((k) => at(b, k as Who));
   const n = ps.length || 1;
   return [ps.reduce((s, q) => s + q[0], 0) / n, 0.6, ps.reduce((s, q) => s + q[2], 0) / n];
 };
 
 const rad = (d: number) => (d * Math.PI) / 180;
 const add = (a: Vec3, b: Vec3, k = 1): Vec3 => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
+const facing = (from: Vec3, to: Vec3) => Math.round((Math.atan2(to[0] - from[0], to[2] - from[2]) * 180) / Math.PI);
+
+type Cam = (d: number, b: Blocking) => CameraClip;
 
 /** Close-up on one character's face, from `side` degrees off their facing, with a slow push-in. */
-const close = (who: Who, side = 18, fov = 28, eye: 'level' | 'low' = 'level') => (d: number, b: Blocking) => {
+const close = (who: Who, side = 18, fov = 28, eye: 'level' | 'low' | 'high' = 'level'): Cam => (d, b) => {
   const head = at(b, who);
   const a = rad((b[who]?.[1] ?? 0) + side);
-  const dir: Vec3 = [Math.sin(a), eye === 'low' ? -0.14 : 0.04, Math.cos(a)];
+  const dir: Vec3 = [Math.sin(a), eye === 'low' ? -0.14 : eye === 'high' ? 0.3 : 0.04, Math.cos(a)];
   const dist = HEAD_R[who] * 8.5;
   return cam.move(add(head, dir, dist * 1.12), add(head, dir, dist), head, head, fov, 'close-up')(d);
 };
 
 /** Over `from`'s shoulder onto `to`'s face. */
-const ots = (from: Who, to: Who, fov = 32) => (d: number, b: Blocking) => {
+const ots = (from: Who, to: Who, fov = 32): Cam => (d, b) => {
   const f = at(b, from);
   const t = at(b, to);
   const dx = f[0] - t[0];
@@ -171,54 +203,80 @@ const ots = (from: Who, to: Who, fov = 32) => (d: number, b: Blocking) => {
   return cam.move(pos, add(pos, back, -r * 0.6), t, t, fov, 'over-shoulder')(d);
 };
 
+/** Two-shot: both heads in frame, from the camera side (+Z) of the line between them, easing in. */
+const two = (a: Who, c: Who, extra = 0.8, fov = 36): Cam => (d, b) => {
+  const A = at(b, a);
+  const C = at(b, c);
+  const m: Vec3 = [(A[0] + C[0]) / 2, (A[1] + C[1]) / 2, (A[2] + C[2]) / 2];
+  const dx = C[0] - A[0];
+  const dz = C[2] - A[2];
+  const sep = Math.hypot(dx, dz) || 1;
+  let n: Vec3 = [-dz / sep, 0, dx / sep];
+  // shoot from the side they're facing (their average facing); +Z when they face each other square on
+  const f = [a, c].reduce<[number, number]>((acc, w) => { const r = rad(b[w]?.[1] ?? 0); return [acc[0] + Math.sin(r), acc[1] + Math.cos(r)]; }, [0, 0]);
+  const toward = Math.hypot(f[0], f[1]) > 0.3 ? n[0] * f[0] + n[2] * f[1] : n[2];
+  if (toward < 0) n = [-n[0], 0, -n[2]];
+  // very different sizes (Sati beside Bit): swing round toward the small one so they're in front, the big one behind
+  const [small, big] = HEAD_R[a] <= HEAD_R[c] ? [A, C] : [C, A];
+  if (Math.max(HEAD_R[a], HEAD_R[c]) / Math.min(HEAD_R[a], HEAD_R[c]) > 1.8) {
+    const ux = (small[0] - big[0]) / sep;
+    const uz = (small[2] - big[2]) / sep;
+    const nx = n[0] + ux * 0.75;
+    const nz = n[2] + uz * 0.75;
+    const l = Math.hypot(nx, nz) || 1;
+    n = [nx / l, 0, nz / l];
+  }
+  const r = sep * 1.5 + Math.abs(A[1] - C[1]) * 1.6 + extra * 1.4 + Math.max(HEAD_R[a], HEAD_R[c]) * 4.5;
+  const pos = add(add(m, n, r), [0, 0.12, 0]);
+  return cam.move(add(pos, n, r * 0.08), pos, m, m, fov, 'two-shot')(d);
+};
+
+/** Wide on the group (or a point), slow drift in. */
+const wide = (dist = 6, h = 1.6, fov = 42, dx = 0, look?: Vec3): Cam => (d, b) => {
+  const m = look ?? mid(b);
+  return cam.move([m[0] + dx, h, m[2] + dist], [m[0] + dx * 0.9, h * 0.96, m[2] + dist * 0.93], m, m, fov, 'wide')(d);
+};
+
+/** Unit vector from a character toward where they face, turned `side` degrees. */
+const front = (b: Blocking, who: Who, side = 0): Vec3 => {
+  const a = rad((b[who]?.[1] ?? 0) + side);
+  return [Math.sin(a), 0, Math.cos(a)];
+};
+
+/** Low angle up at one character, from in front of them: they read big. */
+const low = (who: Who, dist?: number, fov = 42, side = 15): Cam => (d, b) => {
+  const head = at(b, who);
+  const dir = front(b, who, side);
+  const r = Math.max(dist ?? HEAD_R[who] * 7, HEAD_R[who] * 5);
+  const y = Math.max(0.08, head[1] * 0.15);
+  const p = (k: number): Vec3 => [head[0] + dir[0] * r * k, y, head[2] + dir[2] * r * k];
+  return cam.move(p(1), p(0.88), head, head, fov, 'low-angle')(d);
+};
+
+/** High angle down on one character, from in front of them: they read small. */
+const high = (who: Who, dist = 2.6, h = 2.6, fov = 40, side = 10): Cam => (d, b) => {
+  const head = at(b, who);
+  const dir = front(b, who, side);
+  const p = (k: number): Vec3 => [head[0] + dir[0] * dist * k, head[1] + h * k, head[2] + dir[2] * dist * k];
+  return cam.move(p(1), p(1.1), head, head, fov, 'high-angle')(d);
+};
+
 // ------------------------------------------------------------------ background folk
 
 /** An extra's mark: position, facing, and optional walk keys as [fraction of shot, position, rotationY?]. */
 type Extra = [Vec3, number, Move[]?];
 type Move = [number, Vec3, number?];
 type Crowd = Record<string, Extra>;
-const facing = (from: Vec3, to: Vec3) => (Math.atan2(to[0] - from[0], to[2] - from[2]) * 180) / Math.PI;
 
-const CROWD: Record<string, Crowd> = {
-  // light city: people strolling across the back of the plaza, a few chatting in pairs
-  plaza: {
-    folk1: [[-7, 0, -5], 90, [[1, [7, 0, -5]]]],
-    folk2: [[3.5, 0, -3.6], -40],
-    folk3: [[4.2, 0, -3.1], -100],
-    folk4: [[6.5, 0, -7.5], -90, [[1, [-6, 0, -7.5]]]],
-    folk5: [[-4.2, 0, -3.2], 40],
-    folk6: [[-3.5, 0, -3.8], -80],
-  },
-  // the city edge: a few onlookers, still
-  edge: {
-    folk2: [[-4, 0, 1.5], 160],
-    folk3: [[-3.4, 0, 1.9], 170],
-    folk4: [[4.5, 0, 1], 200],
-  },
-  // the dark: newly connected peers gathered around the beacon at (0, 0, -4)
-  peers: Object.fromEntries(([[-4, 0, -6.5], [4.5, 0, -6], [-6, 0, -2.5], [6, 0, -3], [-2, 0, -8.5], [2.6, 0, -9]] as Vec3[]).map((p, i) => [`folk${i + 1}`, [p, facing(p, [0, 0, -4])] as Extra])),
-  // the mempool: other travellers drifting between bubbles
-  travellers: {
-    folk1: [[-5, 0, -4], 70, [[1, [-1.5, 0, -6]]]],
-    folk3: [[4, 0, -3], -120],
-    folk5: [[5, 0, -7], -100, [[1, [2, 0, -8.5]]]],
-  },
-  // the mining hall: miners pacing between the rows of hash blocks
-  miners: {
-    folk1: [[-5.5, 0, -4.5], 90, [[0.5, [5.5, 0, -4.5], 90], [1, [-5.5, 0, -4.5], -90]]],
-    folk2: [[5, 0, -7.5], -90, [[0.6, [-4, 0, -7.5], -90], [1, [-1, 0, -7.5], 90]]],
-    folk4: [[-3, 0, -1.6], 160],
-    folk5: [[3.2, 0, -1.8], 200],
-    folk6: [[0, 0, -9.5], 0, [[1, [2, 0, -9.5], 90]]],
-  },
-};
+/** reusable crowds (none yet in v3; scenes build their own) */
+const CROWD: Record<string, Crowd> = {};
 
 // ------------------------------------------------------------------ shots
 
 interface Line {
   who: Who;
   text: string;
-  /** pause before this line (default 0.35s) */
+  /** pause before this line (default 0.25s; negative overlaps — an interruption) */
   gap?: number;
   /** the speaker's expression from the start of this line */
   face?: Expression;
@@ -229,20 +287,28 @@ interface ShotSpec {
   name: string;
   visual: string;
   lines?: Line[];
+  /** shortest the shot may be (default 2s; reaction and insert shots set their own) */
   min?: number;
+  /** when the first line starts (default 0.3s, pushed later if the previous shot's line is still running) */
   firstLineAt?: number;
+  /** air after the last line before the cut (default 0.35s) */
+  tail?: number;
+  /** L-cut: cut this many seconds after the last line STARTS; the line plays on under the next shot */
+  cut?: number;
   env?: string;
   board?: string;
   blocking?: Blocking;
   /** walks during the shot: [fraction of shot, position, rotationY?] from the blocking mark */
   moves?: Partial<Record<Who, Move[]>>;
   /** expression changes at fractions of the shot (lines can also set `face` / `react`) */
-  faces?: Partial<Record<Who, [number, Expression][]>>;
+  faces?: Record<string, [number, Expression][]>;
+  /** body poses at fractions of the shot; replaces the automatic poses for that character */
+  poses?: Record<string, [number, Pose][]>;
   /** background folk: a CROWD preset name or explicit marks */
   crowd?: keyof typeof CROWD | Crowd;
   /** expression changes for the whole crowd at fractions of the shot */
   crowdFaces?: [number, Expression][];
-  camera: (d: number, b: Blocking) => import('../src/model/schema').CameraClip;
+  camera: Cam;
   sfx?: { file: string; at: number | 'end'; gain?: number }[];
   notes?: string;
   /** size, angle, and how this shot cuts with the others in the scene */
@@ -251,42 +317,61 @@ interface ShotSpec {
   /** optional finer point on the story arc */
   tension?: number;
 }
+
+type CueSpec = Partial<ScoreCue> & { name: string };
+/** Music under a run of shots in a scene: from shot `from` (+`at` seconds) to the start of shot `to` (+`tail`). */
+interface Music {
+  cue: CueSpec;
+  from?: number;
+  to?: number;
+  at?: number;
+  tail?: number;
+  gain?: number;
+}
 interface SceneSpec {
   title: string;
+  /** one line, for the plot overview */
   summary: string;
   env: string;
   shots: ShotSpec[];
-  cue?: Partial<ScoreCue> & { seed: number; name: string };
+  music?: Music[];
   arc: { tension: number; beat?: Beat; note: string };
 }
 
-const SFX_LEN: Record<string, number> = { zap: 0.7, thud: 0.9, chime: 2.5, sparkle: 1.4, stone_grind: 2, pulse: 2.4, whoosh: 1.6, impact: 1.8, blip: 0.25, ping: 1.4, click: 0.08, hum: 4 };
+const SFX_LEN: Record<string, number> = { zap: 0.7, thud: 0.9, chime: 2.5, sparkle: 1.4, stone_grind: 2, pulse: 2.4, whoosh: 1.6, impact: 1.8, blip: 0.25, ping: 1.4, click: 0.08, hum: 4, coin_drop: 1 };
 
-async function buildShot(spec: ShotSpec) {
+const r3 = (n: number) => Math.round(n * 1000) / 1000;
+
+/** Builds one shot. `carry` is how far the previous shot's last line runs into this one (L-cuts). */
+async function buildShot(spec: ShotSpec, carry = 0) {
   const dialog: DialogClip[] = [];
-  let t = spec.firstLineAt ?? 0.6;
+  let t = Math.max(spec.firstLineAt ?? 0.3, carry > 0 ? carry + 0.12 : 0);
+  let lastStart = 0;
   for (const [i, l] of (spec.lines ?? []).entries()) {
-    if (i > 0) t += l.gap ?? 0.35;
+    if (i > 0) t = Math.max(0, t + (l.gap ?? 0.25));
     const ch = characters[l.who];
-    let duration = estimateSpeech(l.text) / (ch.voiceTune.speed || 1);
+    const text = l.text.replace(/[‘’]/g, "'");
+    let duration = estimateSpeech(text) / (ch.voiceTune.speed || 1);
     let audio: string | undefined;
     let audioHash: string | undefined;
     if (!NO_TTS) {
-      const r = await synthesize({ text: l.text, voice: ch.voice, tune: ch.voiceTune });
+      const r = await synthesize({ text, voice: ch.voice, tune: ch.voiceTune, engine: 'mlx' });
       ({ duration, audio, audioHash } = r);
       process.stdout.write(r.cached ? '·' : '+');
     }
-    dialog.push({ id: uid('dlg'), start: Math.round(t * 1000) / 1000, duration: Math.round(duration * 1000) / 1000, characterId: l.who, text: l.text, audio, audioHash, subtitle: true, gain: 1 });
+    lastStart = t;
+    dialog.push({ id: uid('dlg'), start: r3(t), duration: r3(duration), characterId: l.who, text, audio, audioHash, subtitle: true, gain: 1 });
     t += duration;
   }
-  const duration = Math.ceil(Math.max(spec.min ?? 3.5, t + 0.8) * 2) / 2;
-  const blocking = spec.blocking ?? TRIO;
+  const spoken = dialog.length > 0;
+  const end = spoken ? (spec.cut !== undefined ? lastStart + spec.cut : t + (spec.tail ?? 0.35)) : 0;
+  const duration = Math.ceil(Math.max(spec.min ?? 2, end) * 4) / 4;
+  const blocking = spec.blocking ?? {};
   const storyboard: StoryboardClip[] = spec.board ? [{ id: uid('brd'), start: 0, duration, image: `media/boards/${spec.board}.png` }] : [];
   const sfx: SfxClip[] = (spec.sfx ?? []).map((s) => {
     const len = SFX_LEN[s.file] ?? 1;
-    return { id: uid('sfx'), start: s.at === 'end' ? Math.max(0, duration - len * 0.7) : s.at, duration: len, file: `media/audio/sfx/${s.file}.wav`, gain: s.gain ?? 0.7 };
+    return { id: uid('sfx'), start: r3(s.at === 'end' ? Math.max(0, duration - len * 0.7) : Math.min(s.at, duration - 0.05)), duration: len, file: `media/audio/sfx/${s.file}.wav`, gain: s.gain ?? 0.7 };
   });
-  const r3 = (n: number) => Math.round(n * 1000) / 1000;
   const toMoves = (ms?: Move[]): MoveKey[] | undefined => ms?.length ? ms.map(([f, position, rotationY]) => ({ t: r3(f * duration), position, rotationY })) : undefined;
   const crowd: Crowd = typeof spec.crowd === 'string' ? CROWD[spec.crowd] : (spec.crowd ?? {});
   const positions: Record<string, { position: Vec3; rotationY: number; moves?: MoveKey[] }> = {};
@@ -294,7 +379,7 @@ async function buildShot(spec: ShotSpec) {
   for (const [k, [position, rotationY, ms]] of Object.entries(crowd)) positions[k] = { position, rotationY, moves: toMoves(ms) };
   // expressions: shot fractions, then line-driven changes (speaker `face`, listeners `react`)
   const expressions: Record<string, ExpressionKey[]> = {};
-  const face = (k: string, t: number, expression: Expression) => (expressions[k] ??= []).push({ t: r3(t), expression });
+  const face = (k: string, t: number, expression: Expression) => (expressions[k] ??= []).push({ t: r3(Math.max(0, t)), expression });
   for (const [k, list] of Object.entries(spec.faces ?? {})) for (const [f, e] of list!) face(k, f * duration, e);
   (spec.lines ?? []).forEach((l, i) => {
     if (l.face) face(l.who, dialog[i].start, l.face);
@@ -318,425 +403,488 @@ async function buildShot(spec: ShotSpec) {
     expressions: Object.keys(expressions).length ? expressions : undefined,
     tracks: { storyboard, camera: [spec.camera(duration, blocking)], subtitles: [], dialog, sfx, score: [] },
   });
-  shot.poses = autoPoses(shot);
-  return shot;
+  const poses = autoPoses(shot) ?? {};
+  for (const [k, list] of Object.entries(spec.poses ?? {})) if (who.includes(k)) poses[k] = list.map(([f, pose]) => ({ t: r3(f * duration), pose }));
+  shot.poses = Object.keys(poses).length ? poses : undefined;
+  const last = dialog.at(-1);
+  return { shot, spill: last ? Math.max(0, last.start + last.duration - duration) : 0 };
 }
+
+// ------------------------------------------------------------------ music
+
+/** The season motif: every cue uses this seed, so the same tune (progression + melody) returns in new keys, modes and tempos. */
+const MOTIF = 1729;
+/** instrument → [enters at fraction of the cue, gain]; instruments left out are off */
+type Band = Partial<Record<Instrument, [number, number]>>;
+const theme = (name: string, key: ScoreCue['key'], mode: ScoreCue['mode'], tempo: number, density: number, band: Band, extra: Partial<ScoreCue> = {}): CueSpec => ({
+  name, seed: MOTIF, key, mode, tempo, density,
+  instruments: Object.fromEntries(INSTRUMENTS.map((i) => [i, band[i] ? { on: true, enter: band[i]![0], gain: band[i]![1] } : { on: false, enter: 0, gain: 0.5 }])) as ScoreCue['instruments'],
+  ...extra,
+});
 
 // ------------------------------------------------------------------ story
 
+/** a mark facing a point */
+const look = (pos: Vec3, at: Vec3): [Vec3, number] => [pos, facing(pos, at)];
+
+// ---- the nonce search: twelve cubes inside the candidate block (the glass cube at 0, 0, -3.2)
+const BLOCK_C: Vec3 = [0, 0, -3.2];
+const GRID: Vec3[] = Array.from({ length: 12 }, (_, i) => [-1.05 + (i % 4) * 0.7, 0.15 + Math.floor(i / 4) * 0.8, -3.2]);
+/** cubes scattered through the block, shuffling `steps` times; `solve` snaps them into the grid at the end */
+const nonceSearch = (seed: number, steps = 3, solve = false): Crowd => {
+  const r = mulberry32(seed);
+  const rand = (): Vec3 => [(r() - 0.5) * 2.4, 0.1 + r() * 2.1, -3.2 + (r() - 0.5) * 2];
+  return Object.fromEntries(GRID.map((g, i) => {
+    const start = rand();
+    const moves: Move[] = Array.from({ length: steps }, (_, k) => [((k + 1) / (steps + (solve ? 1 : 0))) * (solve ? 0.7 : 1), rand(), Math.round(r() * 90)] as Move);
+    if (solve) moves.push([0.85, g, 0]);
+    return [`cube${i + 1}`, [start, Math.round(r() * 90), moves] as Extra];
+  }));
+};
+const solved: Crowd = Object.fromEntries(GRID.map((g, i) => [`cube${i + 1}`, [g, 0] as Extra]));
+
+const CORE_CREW: Blocking = {
+  hasher: [[3.55, 0, 2.41], -150],
+  validator: look([-2.4, 0, 1.4], [0, 3, -6.5]),
+  script_clerk: look([-3.4, 0, 2.2], [0, 3, -6.5]),
+  mempool_host: look([1.6, 0, 3.4], [0, 3, -6.5]),
+};
+const DISTRICT: Blocking = { sati: [[-0.5, 0, 1.6], 40], bit: [[1.6, 0, 0.3], -40] };
+const NEWBORN: Crowd = { folk1: [[-3.5, 0, -1], 30], folk2: [[3.8, 0, -2.2], -40], folk3: [[-2.2, 0, -3.5], 10], folk4: [[2.4, 0, -4.4], -10] };
+const CITY: Blocking = { sati: [[-0.6, 0, 1], 180], bit: [[-3.4, 0, 1.4], 160] };
+/** the naming conversation: the Clerk stands on the camera side; the coins turn to him */
+const CLERK_AT: Vec3 = [-1.4, 0, 3.6];
+const NAMING: Blocking = { sati: look([-0.6, 0, 1.2], CLERK_AT), bit: look([-3.6, 0, 1.2], CLERK_AT), script_clerk: look(CLERK_AT, [-1.6, 0.5, 1.2]) };
+
+// Episode 1 — Coinbase (setup)
 const EP1: SceneSpec[] = [
   {
-    title: 'Explore', env: 'light_city', arc: { tension: 0.25, beat: 'setup', note: 'Meet Mili — speed and curiosity — in a bright, safe world.' }, summary: 'Dawn over the light city. Mili arrives at full speed — and stops less gracefully.',
+    title: 'Powers of Ten', env: 'town_night', arc: { tension: 0.25, beat: 'setup', note: 'One unbroken move from her world into theirs.' },
+    summary: 'Wordless: a dark town, one glowing garage, a sleeping miner, a blinking LED — and through it, into a node’s city of light.',
+    music: [{ cue: theme('Overture', 'C', 'lydian', 80, 0.35, { pad: [0, 0.5], arp: [0.25, 0.3], lead: [0.6, 0.4] }), gain: 0.45, tail: 0.5 }],
     shots: [
-      { name: 'Dawn over the city', visual: 'Wide establishing shot. Sun rising between marble towers; glass spheres drift in the air. Citizens stroll the plaza; three small glows among them.', min: 7.5, board: 'hero_banner',
-        coverage: { size: 'EWS', angle: 'high', role: 'master' },
-        crowd: 'plaza', faces: { sati: [[0, 'happy']], bit: [[0, 'happy']] },
-        camera: (d, b) => cam.crane(mid(b), 10, 0.8, 5.2, 55)(d), sfx: [{ file: 'sparkle', at: 1.2, gain: 0.5 }] },
-      { name: 'Mili zooms in', visual: 'Mili streaks across frame trailing lightning, scattering passers-by, and skids to a stop.', board: 'explore',
-        coverage: { size: 'WS', angle: 'eye', role: 'action' },
-        blocking: { mili: [[-5, 0, 1.6], 90] }, moves: { mili: [[0.35, [-1.5, 0, 2.2], 60], [0.6, [-0.4, 0, 0.8], 25]] },
-        faces: { mili: [[0, 'happy']] }, crowd: 'plaza', crowdFaces: [[0.15, 'surprised'], [0.7, 'happy']],
-        lines: [{ who: 'mili', text: 'Wheee! Out of the way, out of the way!' }], firstLineAt: 0.8,
-        camera: (d) => cam.move([-3, 0.5, 3.4], [1.2, 0.45, 2.2], [-2.6, 0.3, 1.8], [-0.4, 0.26, 0.8], 38, 'whip-follow')(d), sfx: [{ file: 'zap', at: 0.1 }, { file: 'whoosh', at: 0.6, gain: 0.5 }] },
-      { name: 'Bonk', visual: 'Mili bounces off a floating glass sphere — BONK — and spins to a stop, dizzy but delighted.', blocking: { mili: [[-1.4, 0, -0.5], -20] },
-        coverage: { size: 'MCU', angle: 'eye', role: 'action' },
-        moves: { mili: [[0.12, [-1.8, 0, -0.9], 160], [0.3, [-1.8, 0, -0.9], -20]] },
-        lines: [{ who: 'mili', text: 'Ow.', face: 'worried' }, { who: 'mili', text: 'Did you see that? I was SO fast!', gap: 0.5, face: 'happy' }], firstLineAt: 1.1,
-        faces: { mili: [[0.08, 'surprised']] },
-        camera: (d, b) => cam.push(at({ mili: [[-1.8, 0, -0.9]] }, 'mili'), 2.4, 1.4, 0.15, 35)(d), sfx: [{ file: 'chime', at: 0.3, gain: 0.6 }, { file: 'thud', at: 0.35, gain: 0.4 }] },
-      { name: 'Sati arrives', visual: 'Sati walks in calmly, arms behind back, one eyebrow raised. Mili spins round.', min: 5,
-        coverage: { size: '2S', angle: 'eye', role: 'coverage' },
-        blocking: { mili: [[-1.8, 0, -0.9], -20], sati: [[1.6, 0, 1.4], -100] }, moves: { sati: [[0.75, [-0.3, 0, -0.2], -60]], mili: [[0.55, [-1.8, 0, -0.9], 30]] },
-        faces: { sati: [[0, 'determined']], mili: [[0.55, 'surprised']] }, crowd: { folk2: [[3.5, 0, -3.6], -40], folk3: [[4.2, 0, -3.1], -100] },
-        camera: (d) => cam.orbit([-0.6, 0.4, -0.3], 4.2, 0.35, -8, 22, 42)(d) },
-      { name: 'The whole city saw', visual: 'Close on Sati: deadpan, then the corner of a smile.', blocking: { mili: [[-1.8, 0, -0.9], 30], sati: [[-0.3, 0, -0.2], -60] },
-        coverage: { size: 'CU', angle: 'low', role: 'single' },
-        lines: [{ who: 'sati', text: 'We saw, Mili. The whole city saw.', face: 'determined' }], faces: { sati: [[0.85, 'happy']] },
-        camera: close('sati', 25, 24, 'low') },
-      { name: 'Hehe', visual: 'Close on Mili, sheepish grin. The reverse of Sati: hold the button after the line.', blocking: { mili: [[-1.8, 0, -0.9], 30], sati: [[-0.3, 0, -0.2], -60] },
-        coverage: { size: 'CU', angle: 'eye', role: 'reverse' },
-        lines: [{ who: 'mili', text: 'Hehe.', face: 'happy' }], faces: { mili: [[0, 'worried']] }, min: 3,
-        camera: close('mili', -20, 26) },
+      { name: 'A dark town', visual: 'Night. A small river town with every light out: dark houses, dark cars, dead streetlamps. Only one cluster of white light, at the edge of town: a garage.',
+        coverage: { size: 'EWS', angle: 'high', role: 'master' }, min: 9,
+        camera: (d) => cam.move([-30, 22, 40], [-8, 7, 16], [8, 1, -6], [8, 1, -6], 40, 'crane down')(d) },
+      { name: 'The garage', visual: 'White light leaks from the seams of a garage door. A low hum.',
+        coverage: { size: 'MWS', angle: 'eye', role: 'insert' }, min: 4.5,
+        camera: (d) => cam.move([10.5, 1.4, 8], [7.8, 1.4, 2.2], [6.6, 1.4, -2.2], undefined, 40, 'push-in')(d), sfx: [{ file: 'hum', at: 0, gain: 0.4 }] },
+      { name: 'Asleep at the desk', visual: 'Inside: rigs with bright fans, everything else black. Ana asleep in her chair, her phone face-up on the desk, lighting her from below.', env: 'garage',
+        coverage: { size: 'MS', angle: 'eye', role: 'master' }, blocking: { ana: [[0.4, 0, -0.2], 0] }, poses: { ana: [[0, 'crouch']] }, min: 5,
+        camera: (d) => cam.move([1.6, 1.3, 2.4], [1.2, 1.2, 1.6], [0.4, 0.9, -0.2], undefined, 40, 'push-in')(d), sfx: [{ file: 'hum', at: 0, gain: 0.5 }] },
+      { name: 'The blinking light', visual: 'On a shelf, a small dark box with one white LED. It blinks. We go into it.', env: 'garage',
+        coverage: { size: 'ECU', angle: 'eye', role: 'insert' }, min: 4,
+        camera: (d) => cam.dollyZoom([2.82, 1.31, -1.05], 1.6, 0.22, 22, 60, 0.02)(d), sfx: [{ file: 'blip', at: 1, gain: 0.5 }, { file: 'blip', at: 2.4, gain: 0.5 }] },
+      { name: 'Through the light', visual: 'The light opens into black space strung with points of light. Ahead, a vast translucent sphere: the node. We fall toward its skin.', env: 'network_void',
+        coverage: { size: 'EWS', angle: 'eye', role: 'pov' }, min: 5.5,
+        camera: (d) => cam.move([0, 1.5, 26], [0, 0.4, -3.5], [0, 0, -14], [0, 0, -14], 50, 'fall in')(d), sfx: [{ file: 'whoosh', at: 3.6, gain: 0.6 }] },
+      { name: 'City of light', visual: 'Through the membrane: a whole city of white glass towers banded with data, filaments of light arching overhead. Far away at its centre, a great sphere glows.', env: 'node_city', board: 'hero_banner',
+        coverage: { size: 'EWS', angle: 'high', role: 'master' }, min: 7.5, tension: 0.3,
+        camera: (d) => cam.move([0, 30, 34], [2, 4, 9], [0, 4, -18], [0, 6, -30], 56, 'crane down')(d), sfx: [{ file: 'sparkle', at: 1.5, gain: 0.4 }] },
+      { name: 'To the core', visual: 'We race between the towers toward the central sphere, the core. Inside it, a helix of discs turns: the timechain.', env: 'node_city',
+        coverage: { size: 'WS', angle: 'eye', role: 'pov' }, min: 5,
+        camera: (d) => cam.move([0, 4, 6], [0, 8, -24], [0, 8, -40], undefined, 50, 'fly-in')(d), sfx: [{ file: 'whoosh', at: 0.5, gain: 0.4 }] },
     ],
   },
   {
-    title: 'Discover', env: 'light_plaza', arc: { tension: 0.35, beat: 'rising', note: 'Sati leads with brains, not speed: follow the chain, one block at a time.' }, summary: 'Sati works out the stepping-block puzzle: each block only lights after the one before it.',
+    title: 'The Nonce', env: 'node_core', arc: { tension: 0.45, beat: 'inciting', note: 'Work, then click: a block.' },
+    summary: 'Inside the core, the Hasher shuffles a grid of cubes faster and faster until — click — they lock: a valid block. The Gossip runs it out to the world.',
+    music: [
+      { cue: theme('The Search', 'A', 'minor', 112, 0.75, { pad: [0, 0.4], bass: [0, 0.6], arp: [0, 0.35], perc: [0.2, 0.45] }), from: 0, to: 6, gain: 0.45 },
+      { cue: theme('Block', 'C', 'major', 96, 0.6, { pad: [0, 0.55], bass: [0, 0.55], arp: [0, 0.35], lead: [0.2, 0.5] }), from: 7, tail: 0.6, gain: 0.5 },
+    ],
     shots: [
-      { name: 'The stepping blocks', visual: 'A row of marble blocks leads up the steps. Sati studies them, head tilted; the first block glows faintly.', board: 'discover',
-        blocking: { sati: [[-2.4, 0, -0.4], 35], mili: [[-3.4, 0, 0.2], 40] }, moves: { mili: [[0.5, [-3, 0, -0.2], 60]] },
-        faces: { sati: [[0, 'determined']], mili: [[0, 'surprised']] }, crowd: { folk5: [[-5, 0, -6], 20], folk6: [[-4.4, 0, -6.4], -40] },
-        lines: [{ who: 'sati', text: 'Look. They only light up in order. Every block follows the one before it.' }],
-        camera: (d, b) => cam.move([-4.6, 1.1, 2.4], [-3.2, 0.9, 1.8], at(b, 'sati'), [0, 0.3, -2.6], 36, 'over-shoulder')(d), sfx: [{ file: 'blip', at: 2.2 }, { file: 'blip', at: 2.8 }] },
-      { name: 'Penny drops', visual: 'Close on Mili: the idea lands. Eyes go wide, then a huge grin.', blocking: { sati: [[-2.4, 0, -0.4], 35], mili: [[-3, 0, -0.2], 60] }, min: 2.5,
-        faces: { mili: [[0, 'surprised'], [0.5, 'happy']] }, camera: close('mili', -10) },
-      { name: 'Follow the chain', visual: 'Mili hops onto the first block, then the next — each lights as they land. Sati follows, a step behind.',
-        blocking: { sati: [[-2.4, 0, -0.4], 35], mili: [[-2.6, 0, -0.6], 40] },
-        moves: {
-          mili: [[0.12, [-1.5, 0.5, -1.5], 30], [0.3, [-0.3, 0.5, -2.6], 35], [0.48, [1, 0.5, -3.8], 30], [0.66, [2.4, 0.5, -5], 20]],
-          sati: [[0.3, [-1.5, 0.5, -1.5], 35], [0.55, [-0.3, 0.5, -2.6], 35], [0.8, [1, 0.5, -3.8], 30]],
-        },
-        faces: { mili: [[0, 'happy']], sati: [[0, 'determined']] },
-        lines: [{ who: 'mili', text: 'So we just... follow the chain?' }, { who: 'sati', text: 'Exactly. One block at a time. This way!', face: 'happy' }],
-        camera: (d) => cam.orbit([0, 0.4, -2.6], 5, 1.4, 50, 15, 42)(d), sfx: [{ file: 'blip', at: 0.4 }, { file: 'blip', at: 1.1 }, { file: 'blip', at: 1.8 }] },
+      { name: 'The search', visual: 'Close: dim cubes drift and shuffle inside a glass block, never settling.', notes: 'Ref: explorer block.js (glass cube, header bar).',
+        coverage: { size: 'INS', angle: 'eye', role: 'insert' }, crowd: nonceSearch(1, 3), min: 3.5,
+        camera: (d) => cam.move([1.8, 1.4, 0.6], [1.4, 1.3, 0.1], [0, 1.1, -3.2], undefined, 38, 'drift')(d), sfx: [0.4, 1.2, 2, 2.8].map((t) => ({ file: 'blip', at: t, gain: 0.35 })) },
+      { name: 'Counting', visual: 'The Hasher at his console, eyes on the grid, muttering as each try fails.',
+        coverage: { size: 'MCU', angle: 'eye', role: 'single' }, blocking: CORE_CREW, faces: { hasher: [[0, 'determined']] },
+        lines: [{ who: 'hasher', text: 'No.' }, { who: 'hasher', text: 'No.', gap: 0.5 }, { who: 'hasher', text: 'Nope.', gap: 0.45 }],
+        camera: close('hasher', 25, 30) },
+      { name: 'Faster', visual: 'The cubes shuffle faster.', coverage: { size: 'INS', angle: 'high', role: 'insert' }, crowd: nonceSearch(2, 4), min: 1.75,
+        camera: (d) => cam.still([0, 3.4, -0.6], [0, 1, -3.2], 40)(d), sfx: [0.2, 0.6, 1, 1.4].map((t) => ({ file: 'blip', at: t, gain: 0.4 })) },
+      { name: 'Faster still', visual: 'Faster still — a blur of cubes.', coverage: { size: 'INS', angle: 'low', role: 'insert' }, crowd: nonceSearch(3, 5), min: 1.5,
+        camera: cam.handheld([-1.4, 0.4, -0.8], [0, 1.2, -3.2], 36, 0.04, 2), sfx: [0.1, 0.4, 0.7, 1, 1.3].map((t) => ({ file: 'blip', at: t, gain: 0.45 })) },
+      { name: 'Come on', visual: 'The Hasher leans in.', coverage: { size: 'CU', angle: 'eye', role: 'single' }, blocking: CORE_CREW, faces: { hasher: [[0, 'grimace']] },
+        lines: [{ who: 'hasher', text: 'Come on. Come on…' }], tension: 0.5,
+        camera: close('hasher', 5, 26) },
+      { name: 'Click', visual: 'Every cube snaps into a perfect lattice. Click. The header bar of the block flares white. Then silence.',
+        coverage: { size: 'MS', angle: 'eye', role: 'action' }, crowd: nonceSearch(4, 2, true), min: 3.25, tension: 0.6,
+        camera: (d) => cam.still([0, 1.3, 2.2], [0, 1.2, -3.2], 38)(d), sfx: [{ file: 'click', at: 2.25, gain: 0.9 }] },
+      { name: 'Got one', visual: 'The Hasher, frozen. Then, a whisper.', coverage: { size: 'CU', angle: 'eye', role: 'single' }, blocking: CORE_CREW, faces: { hasher: [[0, 'surprised'], [0.6, 'grin']] },
+        lines: [{ who: 'hasher', text: '…Got one.' }], firstLineAt: 0.9, tail: 0.7,
+        camera: close('hasher', 15, 28) },
+      { name: 'Sealed', visual: 'The block glows. Camera rises with its light, up the core, to the top of the timechain helix where a new disc lights up.', notes: 'Ref: explorer blockchain.js helix.',
+        coverage: { size: 'WS', angle: 'low', role: 'master' }, crowd: solved, min: 5,
+        camera: (d) => cam.move([0.6, 0.6, 3.4], [0.6, 6, 4.5], [0, 1.6, -3.2], [0, 11, -9], 46, 'tilt up')(d), sfx: [{ file: 'chime', at: 0.4 }] },
+      { name: 'Coming through', visual: 'The Gossip, small and fast, zips in, scoops up the news and zips out toward the city.',
+        coverage: { size: 'WS', angle: 'eye', role: 'action' }, blocking: { ...CORE_CREW, gossip: [[-5, 0, 3], 100] }, moves: { gossip: [[0.35, [-0.8, 0, 0.4], 160], [1, [-9, 0, 7], -60]] },
+        poses: { gossip: [[0.3, 'reach'], [0.5, 'cheer']] }, faces: { gossip: [[0, 'grin']] },
+        lines: [{ who: 'gossip', text: 'New block! Coming through!' }], firstLineAt: 0.6,
+        camera: (d) => cam.still([1.5, 0.8, 4.5], [-1.5, 0.5, 1], 46)(d), sfx: [{ file: 'zap', at: 0.2 }, { file: 'whoosh', at: 1.6, gain: 0.5 }] },
+      { name: 'The wave', visual: 'From high above the city: a ring of light rolls outward from the core, tower by tower.', env: 'node_city',
+        coverage: { size: 'EWS', angle: 'birds_eye', role: 'master' }, min: 4.5,
+        camera: (d) => cam.move([0, 46, 6], [0, 52, 10], [0, 0, -28], undefined, 54, 'rise')(d), sfx: [{ file: 'sparkle', at: 0.5 }] },
     ],
   },
   {
-    title: 'Together', env: 'sealed_gate', arc: { tension: 0.6, beat: 'crisis', note: 'A wall none of them can move alone. Enter Bit.' }, summary: 'A giant block seals the archway. Enter Bit.',
+    title: 'The Giant', env: 'node_core', arc: { tension: 0.65, beat: 'rising', note: 'Something born from nothing. It never speaks.' },
+    summary: 'From the new block rises the Coinbase, a silent giant with no parents; it looks around once, tenderly, and breaks into a snowfall of new coins.',
+    music: [{ cue: theme('Coinbase', 'C', 'lydian', 60, 0.25, { pad: [0, 0.6], arp: [0.3, 0.3], lead: [0.55, 0.5] }), from: 0, tail: 1.5, gain: 0.5 }],
     shots: [
-      { name: 'Dead end', visual: 'The arch is sealed by a marble block three times their height. Mili pushes with all their might; nothing.', board: 'together',
-        blocking: { mili: [[-0.3, 0, -2.3], 180], sati: [[0.8, 0, -1.2], 160] }, moves: { mili: [[0.2, [-0.3, 0, -2.42], 180], [0.35, [-0.3, 0, -2.3], 180], [0.5, [-0.3, 0, -2.42], 180], [0.7, [-0.4, 0, -1.6], 30]] },
-        faces: { mili: [[0, 'determined']], sati: [[0, 'worried']] },
-        lines: [{ who: 'mili', text: 'Hnnnngh! Dead end!', face: 'sad' }],
-        camera: (d) => cam.still([2.6, 0.8, 2.2], [0, 1.1, -3], 45)(d), sfx: [{ file: 'stone_grind', at: 0.6, gain: 0.35 }] },
-      { name: 'Too heavy', visual: 'Close on Sati looking up at the block, thinking hard — and coming up empty.', blocking: { mili: [[-0.4, 0, -1.6], 30], sati: [[0.8, 0, -1.2], 160] },
-        lines: [{ who: 'sati', text: "It's too heavy for us.", face: 'worried' }], faces: { sati: [[0, 'determined']] }, min: 2.5,
-        camera: close('sati', 30) },
-      { name: 'Enter Bit', visual: 'A big shadow. Bit strides in, cracks knuckles, and lifts the block overhead in one smooth move.', env: 'open_gate',
-        blocking: { bit: [[4.5, 0, 0.4], -90], sati: [[-0.5, 0, 0.4], 150], mili: [[-1.4, 0, 0.6], 160] },
-        moves: { bit: [[0.3, [1.4, 0, -1.3], -15]], sati: [[0.25, [-0.5, 0, 0.4], 100]], mili: [[0.25, [-1.4, 0, 0.6], 95]] },
-        faces: { bit: [[0, 'determined']], sati: [[0.25, 'surprised']], mili: [[0.25, 'surprised']] },
-        lines: [{ who: 'bit', text: 'Leave the heavy stuff to me.', face: 'happy' }], firstLineAt: 1.4, min: 6,
-        camera: (d) => cam.move([-0.6, 0.35, 3.4], [-0.3, 0.3, 2.6], [1.2, 1.4, -1.3], [1.2, 1.9, -1.3], 50, 'low-angle hero')(d), sfx: [{ file: 'thud', at: 0.3 }, { file: 'stone_grind', at: 0.9 }] },
-      { name: 'Jaws drop', visual: 'Close on Mili, mouth open, staring up — then delight.', blocking: { bit: [[1.4, 0, -1.3], -15], mili: [[-1.4, 0, 0.6], 95] }, min: 2.5,
-        faces: { mili: [[0, 'surprised'], [0.6, 'happy']] }, camera: close('mili', -25) },
-      { name: 'Show off', visual: 'Mili and Sati grin up at Bit, still holding the block like it weighs nothing.', env: 'open_gate',
-        blocking: { bit: [[1.4, 0, -1.3], -30], sati: [[-0.5, 0, 0.4], 60], mili: [[-1.4, 0, 0.6], 55] }, moves: { mili: [[0.4, [-0.6, 0, 0.1], 55]] },
-        faces: { mili: [[0, 'happy']], sati: [[0, 'happy']] },
-        lines: [{ who: 'mili', text: 'Bit! Show off.' }],
-        camera: (d, b) => cam.orbit(mid(b), 4.5, 0.6, -20, 5, 40)(d) },
-      { name: 'Supportive', visual: 'Close on Bit: a modest, enormous smile.', blocking: { bit: [[1.4, 0, -1.3], -30], mili: [[-0.6, 0, 0.1], 55] },
-        lines: [{ who: 'bit', text: 'Just being supportive.', face: 'happy' }],
-        camera: close('bit', -20) },
+      { name: 'Rising', visual: 'Low, from the floor: light pours up out of the new block and takes a shape — a giant, three times Bit’s size, rising through the floor of the core.',
+        coverage: { size: 'WS', angle: 'worms_eye', role: 'master' }, blocking: { coinbase: [[0, -9, -6.5], 0] }, crowd: solved, moves: { coinbase: [[0.85, [0, 0, -6.5], 0]] }, min: 7.5, tension: 0.6,
+        camera: (d) => cam.move([0.4, 0.25, 5], [0.2, 0.25, 4.4], [0, 2, -5], [0, 6.5, -6.5], 62, 'tilt up')(d), sfx: [{ file: 'pulse', at: 0.3 }, { file: 'hum', at: 1, gain: 0.5 }] },
+      { name: 'The crew looks up', visual: 'The crew stop work and look up: Validator, Script Clerk, Mempool Host, Hasher.',
+        coverage: { size: 'WS', angle: 'high', role: 'coverage' }, blocking: { ...CORE_CREW, coinbase: [[0, 0, -6.5], 0] }, faces: { validator: [[0, 'ooh']], script_clerk: [[0, 'ooh']], mempool_host: [[0, 'surprised']], hasher: [[0, 'happy']] },
+        lines: [{ who: 'validator', text: 'A coinbase.' }, { who: 'script_clerk', text: 'From nothing. Every time.', gap: 0.6 }], firstLineAt: 0.8,
+        camera: (d) => cam.move([-0.5, 4, 8], [-0.3, 3.6, 7.2], [-0.8, 0.8, 2], undefined, 46, 'high wide')(d) },
+      { name: 'It looks around', visual: 'Close on the Coinbase’s face, vast and calm. It looks around the core, once, slowly. Almost tender.',
+        coverage: { size: 'CU', angle: 'low', role: 'single' }, blocking: { coinbase: [[0, 0, -6.5], 0] }, moves: { coinbase: [[0.35, [0, 0, -6.5], -25], [0.7, [0, 0, -6.5], 20], [1, [0, 0, -6.5], 0]] },
+        faces: { coinbase: [[0, 'neutral'], [0.75, 'happy']] }, min: 5.5,
+        camera: close('coinbase', 0, 30, 'low') },
+      { name: 'Cracks', visual: 'It looks down at its hands. Fine cracks of light run across them, up its arms.',
+        coverage: { size: 'MS', angle: 'eye', role: 'insert' }, blocking: { coinbase: [[0, 0, -6.5], 0] }, poses: { coinbase: [[0, 'reach'], [0.6, 'think']] }, faces: { coinbase: [[0, 'ooh']] }, min: 4,
+        camera: (d) => cam.move([2.5, 4.8, 2], [2.2, 4.8, 1.2], [0, 4.6, -5.8], undefined, 40, 'push-in')(d), sfx: [{ file: 'stone_grind', at: 1, gain: 0.3 }] },
+      { name: 'It breaks', visual: 'It breaks. A soundless burst of light: one huge piece, one small, and a scatter of others, flung up and out. Where the giant stood, nothing.',
+        coverage: { size: 'WS', angle: 'low', role: 'action' }, blocking: { coinbase: [[0, 0, -6.5], 0] }, moves: { coinbase: [[0.45, [0, 0, -6.5], 0], [0.5, [0, 40, -6.5], 0]] }, poses: { coinbase: [[0, 'cheer']] }, min: 3.5, tension: 0.75,
+        camera: (d) => cam.still([0, 1, 9], [0, 5, -6.5], 58)(d), sfx: [{ file: 'impact', at: 1.4 }, { file: 'sparkle', at: 1.5 }] },
+      { name: 'Snowfall', visual: 'The pieces drift down like slow snow over a field of resting coins, each settling with a soft glow. Two of them land side by side: one small, one enormous.', env: 'utxo_district',
+        coverage: { size: 'EWS', angle: 'eye', role: 'master' }, blocking: { sati: [[-0.5, 8, 1.6], 40], bit: [[1.4, 9, 0.4], -120] }, crowd: Object.fromEntries(Object.entries(NEWBORN).map(([k, [p, rr]], i) => [k, [[p[0], 7 + i, p[2]], rr, [[0.75 + i * 0.05, p, rr]]] as Extra])),
+        moves: { sati: [[0.85, DISTRICT.sati![0], 40]], bit: [[0.8, DISTRICT.bit![0], -120]] }, poses: { sati: [[0, 'crouch']], bit: [[0, 'crouch']] }, min: 8,
+        camera: (d) => cam.move([3, 2.6, 9], [2.4, 1.4, 7], [0.4, 3.5, 0], [0.4, 0.6, 0.8], 46, 'tilt down')(d), sfx: [{ file: 'sparkle', at: 2, gain: 0.4 }, { file: 'chime', at: 6.2, gain: 0.3 }] },
     ],
   },
   {
-    title: 'Names', env: 'light_plaza', arc: { tension: 0.3, beat: 'resolution', note: 'Theme stated: big or small, every one counts.' }, summary: 'Walking through the gate, the trio compare sizes — and units.',
+    title: 'Who Are We', env: 'utxo_district', arc: { tension: 0.4, beat: 'setup', note: 'Two newborn coins, no idea who they are. They have each other.' },
+    summary: 'Sati and Bit wake among the resting coins with no idea who they are; the other new coins walk off, and the two find the same glowing lock on their chests.',
+    music: [{ cue: theme('Wake', 'G', 'lydian', 72, 0.3, { pad: [0, 0.5], arp: [0, 0.3], lead: [0.5, 0.4] }), from: 2, tail: 1, gain: 0.4 }],
     shots: [
-      { name: 'Why so small?', visual: 'Walking side by side. Mili jogs to keep up, looking up at the others. Folk pass the other way.',
-        blocking: { mili: [[-1, 0, 1.4], 180], sati: [[0, 0, 1.2], 180], bit: [[1.5, 0, 1], 180] },
-        moves: { mili: [[1, [-1, 0, -1], 170]], sati: [[1, [0, 0, -1.2], 180]], bit: [[1, [1.5, 0, -1.4], 185]] },
-        crowd: { folk1: [[-3, 0, -6], 0, [[1, [-3, 0, -1]]]], folk4: [[3.5, 0, -7], 0, [[1, [3.5, 0, -2]]]] },
-        lines: [{ who: 'mili', text: 'Hey. Why am I always the smallest?', face: 'sad' }, { who: 'sati', text: "Because you're a Mili. A thousand of you make one Sati.", face: 'happy', react: { mili: 'surprised' } }],
-        camera: (d) => cam.move([0.6, 1, -4.2], [0.6, 1, -5.4], [0, 0.6, 1.2], [0, 0.6, -1.2], 38, 'walk-and-talk (leading)')(d) },
-      { name: 'A hundred million', visual: 'Mili turns to Bit. Bit beams down.', blocking: { mili: [[-0.5, 0, 0.6], 60], bit: [[0.9, 0, 0.2], -40] },
-        faces: { bit: [[0, 'happy']] },
-        lines: [{ who: 'mili', text: 'And how many Satis make a Bit?' }, { who: 'bit', text: 'A hundred million.', face: 'happy' }],
-        camera: ots('mili', 'bit') },
-      { name: 'Whoa', visual: 'Close on Mili doing the maths on tiny fingers, eyes going wide.', blocking: { mili: [[-0.5, 0, 0.6], 60], bit: [[0.9, 0, 0.2], -40] },
-        faces: { mili: [[0, 'determined']] },
-        lines: [{ who: 'mili', text: 'Whoa.', gap: 0.7, face: 'surprised' }], firstLineAt: 1.2, min: 3,
-        camera: close('mili', -15) },
-      { name: 'Every one counts', visual: 'Sati walks over and puts an arm around Mili. Behind them, the light city opens up — wide and bright.', board: 'a_more_open_world',
-        moves: { sati: [[0.4, [-0.6, 0, 0.3], -20]] }, faces: { sati: [[0, 'happy']], mili: [[0.4, 'happy']], bit: [[0, 'happy']] }, crowd: 'plaza',
-        lines: [{ who: 'sati', text: 'Big or small, every one of us counts.' }],
-        camera: (d, b) => cam.pull(mid(b), 3.4, 8, 45)(d), sfx: [{ file: 'sparkle', at: 0.5, gain: 0.4 }] },
+      { name: 'Eyes open', visual: 'Extreme close: a small light on the ground. Two eyes open.', coverage: { size: 'ECU', angle: 'eye', role: 'single' },
+        blocking: DISTRICT, poses: { sati: [[0, 'crouch'], [0.7, 'idle']] }, faces: { sati: [[0, 'neutral'], [0.4, 'surprised']] }, min: 3.25,
+        camera: close('sati', 0, 22) },
+      { name: 'A giant', visual: 'Her point of view, from very low: something enormous sitting up, staring at its own huge hands.', coverage: { size: 'MS', angle: 'worms_eye', role: 'pov' },
+        blocking: DISTRICT, poses: { bit: [[0, 'crouch'], [0.4, 'reach']] }, faces: { bit: [[0, 'ooh']] }, min: 3.25,
+        camera: (d) => cam.move([-0.15, 0.25, 1.2], [-0.05, 0.25, 1.1], [1.6, 1.9, 0.3], undefined, 52, 'pov')(d) },
+      { name: 'Hello', visual: 'They look at each other.', coverage: { size: '2S', angle: 'eye', role: 'coverage' }, blocking: DISTRICT, faces: { sati: [[0, 'worried']], bit: [[0, 'neutral']] },
+        lines: [{ who: 'sati', text: '…Hello?' }, { who: 'bit', text: 'Hello.', gap: 0.6 }, { who: 'sati', text: 'Who are you?', gap: 0.9 }, { who: 'bit', text: 'I was going to ask you.', gap: 0.5, face: 'smirk' }],
+        camera: two('sati', 'bit', 1, 38) },
+      { name: 'Very bright', visual: 'Bit stands, all the way up. He blazes. Sati shields her eyes.', coverage: { size: 'MS', angle: 'low', role: 'single' },
+        blocking: DISTRICT, poses: { bit: [[0, 'crouch'], [0.2, 'idle']], sati: [[0.35, 'think']] }, faces: { bit: [[0.6, 'surprised']] },
+        lines: [{ who: 'sati', text: "You're very bright." }, { who: 'bit', text: 'Am I?', gap: 0.5 }, { who: 'bit', text: 'Huh.', gap: 0.9, face: 'ooh' }], firstLineAt: 1.4, tail: 0.6,
+        camera: ots('sati', 'bit', 44) },
+      { name: 'I can move', visual: 'Sati hops on the spot, then again, higher — delighted. Bit tries one careful step and the ground hums under him.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: DISTRICT, poses: { sati: [[0, 'cheer'], [0.5, 'idle']], bit: [[0.3, 'reach'], [0.6, 'idle']] }, faces: { sati: [[0, 'laugh']], bit: [[0, 'neutral'], [0.5, 'smirk']] },
+        moves: { sati: [[0.12, [-0.5, 0.25, 1.6], 40], [0.2, [-0.5, 0, 1.6], 40], [0.3, [-0.4, 0.35, 1.5], 50], [0.38, [-0.4, 0, 1.5], 50]] },
+        lines: [{ who: 'sati', text: 'I can move!' }, { who: 'bit', text: 'So can I.', gap: 0.6 }, { who: 'bit', text: 'Slowly.', gap: 0.5 }], firstLineAt: 0.5, tail: 0.5,
+        camera: two('sati', 'bit', 1.4, 40), sfx: [{ file: 'thud', at: 2.6, gain: 0.3 }] },
+      { name: 'Before', visual: 'Sati, suddenly serious.', coverage: { size: 'CU', angle: 'eye', role: 'single' },
+        blocking: DISTRICT, faces: { sati: [[0, 'worried']] },
+        lines: [{ who: 'sati', text: 'Do you remember anything? From before?' }],
+        camera: close('sati', 15, 28) },
+      { name: 'Light, then you', visual: 'Bit thinks about it, properly.', coverage: { size: 'CU', angle: 'low', role: 'reverse' },
+        blocking: DISTRICT, poses: { bit: [[0, 'think']] }, faces: { bit: [[0, 'ooh'], [0.6, 'happy']] },
+        lines: [{ who: 'bit', text: 'Light.' }, { who: 'bit', text: 'Then you.', gap: 0.9 }, { who: 'sati', text: "That's it?", gap: 0.5 }, { who: 'bit', text: "That's a lot, for a first memory.", gap: 0.5 }], firstLineAt: 0.8, tail: 0.6,
+        camera: close('bit', -15, 30, 'low') },
+      { name: 'Too loud', visual: 'Bit leans down and tries to whisper. It comes out like distant thunder.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: DISTRICT, poses: { bit: [[0, 'crouch']] }, faces: { bit: [[0, 'worried'], [0.7, 'surprised']], sati: [[0.3, 'grin'], [0.85, 'laugh']] },
+        lines: [{ who: 'bit', text: 'Is this too loud?' }, { who: 'sati', text: 'A bit.', gap: 0.4 }, { who: 'bit', text: '…Was that a joke?', gap: 0.9 }, { who: 'sati', text: "I don't know. Maybe.", gap: 0.4, face: 'laugh', react: { bit: 'laugh' } }], tail: 0.8,
+        camera: two('bit', 'sati', 1.2, 38) },
+      { name: 'Everyone goes', visual: 'Around them the other new coins get up and walk away in every direction, purposeful, as if they’d always known where to go.', coverage: { size: 'WS', angle: 'high', role: 'master' },
+        blocking: DISTRICT, crowd: Object.fromEntries(Object.entries(NEWBORN).map(([k, [p]]) => [k, [p, facing([0, 0, 0], p), [[1, [p[0] * 4, 0, p[2] * 3 - 4]]]] as Extra])),
+        faces: { sati: [[0, 'surprised']] },
+        lines: [{ who: 'sati', text: 'Where is everyone going?' }, { who: 'bit', text: 'Somewhere, I suppose.', gap: 0.5 }], firstLineAt: 1.2, min: 5,
+        camera: (d, b) => cam.move([0.4, 5, 8], [0.4, 5.6, 9], mid(b), mid(b), 46, 'high wide')(d) },
+      { name: 'The mark', visual: 'Sati looks down: on her chest, a small glowing sign, like a lock.', coverage: { size: 'INS', angle: 'high', role: 'insert' },
+        blocking: DISTRICT, faces: { sati: [[0, 'ooh']] },
+        lines: [{ who: 'sati', text: "What's this?" }], firstLineAt: 0.9,
+        camera: close('sati', 10, 26, 'high') },
+      { name: 'Same as mine', visual: 'Bit taps his own chest. The same sign.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: DISTRICT, poses: { bit: [[0.1, 'point']] }, faces: { sati: [[0.4, 'surprised']] },
+        lines: [{ who: 'bit', text: 'Same as mine.' }, { who: 'sati', text: "So we're… the same?", gap: 0.6 }, { who: 'bit', text: 'We came from the same… thing.', gap: 0.7, face: 'worried' }], tail: 0.6,
+        camera: two('bit', 'sati', 0.8, 36) },
+      { name: 'Looking up', visual: 'Both look up, past the towers, at the core glowing at the centre of everything.', coverage: { size: 'WS', angle: 'low', role: 'master' },
+        blocking: { sati: look([-0.5, 0, 1.6], [0, 6, -30]), bit: look([1.4, 0, 0.4], [0, 6, -30]) }, faces: { sati: [[0, 'determined']] },
+        lines: [{ who: 'sati', text: "Let's find out." }], firstLineAt: 1.4, tail: 1,
+        camera: (d) => cam.move([1, 0.25, 4.6], [0.8, 0.25, 4], [0.5, 1.6, 0], [0.5, 2.6, -2], 50, 'low')(d) },
     ],
   },
   {
-    title: 'The Protocol', env: 'city_edge', arc: { tension: 0.75, beat: 'inciting', note: 'The call to adventure — the season’s inciting incident.' }, summary: 'At the rim of the city, a pulse from the dark world below. Cliffhanger.',
+    title: 'Ask the Node', env: 'node_city', arc: { tension: 0.5, beat: 'rising', note: 'Locked to the miner; a hundred blocks to wait. Sati hears the word “spent” for the first time.' },
+    summary: 'In the city of light the crew tell them what they are: coinbase coins, locked to a miner on the other side, unable to move for a hundred blocks — and Sati wants to know what “spent” means.',
+    music: [{ cue: theme('Node City', 'C', 'lydian', 92, 0.5, { pad: [0, 0.45], bass: [0.1, 0.5], arp: [0, 0.3], perc: [0.3, 0.3] }), from: 0, to: 5, gain: 0.35 }],
     shots: [
-      { name: 'A pulse', visual: 'A deep pulse rolls through the plaza. The glass spheres tremble. Everyone freezes — the onlookers too.', board: 'the_protocol',
-        blocking: { mili: [[-1, 0, 1.2], 160], sati: [[0, 0, 1], 180], bit: [[1.5, 0, 0.8], 200] },
-        faces: { mili: [[0.05, 'surprised']], sati: [[0.05, 'surprised']], bit: [[0.05, 'surprised']] }, crowd: 'edge', crowdFaces: [[0.08, 'surprised'], [0.6, 'worried']],
-        lines: [{ who: 'mili', text: 'What was that?', face: 'worried' }], firstLineAt: 1.8, min: 5,
-        camera: (d) => cam.still([0, 1, 4.6], [0, 0.7, 0], 40)(d), sfx: [{ file: 'pulse', at: 0 }] },
-      { name: 'Sati listens', visual: 'Close on Sati, very still, listening. Fear gives way to resolve.', blocking: { sati: [[0, 0, 1], 180] }, min: 3,
-        faces: { sati: [[0, 'worried'], [0.55, 'determined']] }, camera: close('sati', 0, 26) },
-      { name: 'Something is calling', visual: 'Reverse: the trio walk to the edge, silhouetted, looking down. Far below, a hex beacon pulses in the dark.',
-        blocking: { mili: [[-1, 0, -0.4], 180], sati: [[0, 0, -0.6], 180], bit: [[1.5, 0, -0.7], 180] },
-        moves: { mili: [[0.35, [-1, 0, -1.8], 180]], sati: [[0.3, [0, 0, -2], 180]], bit: [[0.4, [1.5, 0, -2.1], 180]] },
-        faces: { sati: [[0, 'determined']], mili: [[0, 'worried']], bit: [[0, 'determined']] },
-        lines: [{ who: 'sati', text: "Something's calling. From down there." }, { who: 'bit', text: 'Then we go together.', gap: 0.6, react: { mili: 'happy' } }], min: 6,
-        camera: (d) => cam.move([0, 1.6, 2.8], [0, 2.4, 1.4], [0, -2, -20], [0, -7, -24], 42, 'over-the-edge')(d), sfx: [{ file: 'chime', at: 0.8, gain: 0.4 }, { file: 'pulse', at: 3, gain: 0.5 }] },
+      { name: 'City of light', visual: 'Tracking alongside: Sati and Bit walk into the city. Towers banded with data, filaments overhead, crew rushing past with glowing slabs.',
+        coverage: { size: 'WS', angle: 'eye', role: 'master' }, blocking: { sati: [[-0.6, 0, 7], 180], bit: [[-3.4, 0, 7.6], 180] }, moves: { sati: [[1, CITY.sati![0], 180]], bit: [[1, CITY.bit![0], 170]] }, min: 6,
+        camera: (d) => cam.track([0, 0.6, 7], [0, 0.6, 1], 5, 0.8, 40)(d) },
+      { name: 'Coinbase babies', visual: 'The Mempool Host bustles across their path, slab under one arm — and stops dead.', coverage: { size: 'MS', angle: 'eye', role: 'single' },
+        blocking: { ...CITY, mempool_host: look([-0.3, 0, -2.6], [0.2, 0, 1]) }, poses: { mempool_host: [[0.1, 'point'], [0.5, 'idle']] }, faces: { mempool_host: [[0, 'happy'], [0.4, 'surprised'], [0.75, 'grin']] },
+        lines: [{ who: 'mempool_host', text: "Waiting room's that way, loves—" }, { who: 'mempool_host', text: "Oh. You're new. Brand new.", gap: 0.5 }, { who: 'mempool_host', text: 'Coinbase babies!', gap: 0.5 }],
+        camera: close('mempool_host', 15, 32) },
+      { name: 'Locked to the miner', visual: 'The Script Clerk leans in, peering at the signs on their chests through round spectacles.', coverage: { size: 'OTS', angle: 'eye', role: 'single' },
+        blocking: { ...CITY, script_clerk: look([-0.2, 0, -1.6], [-0.4, 0.4, 1]) }, faces: { script_clerk: [[0, 'neutral']], sati: [[0.5, 'surprised']] },
+        lines: [{ who: 'script_clerk', text: 'Locked to the miner. Both of you.' }, { who: 'sati', text: 'The who?', gap: 0.4 }, { who: 'script_clerk', text: 'The one on the other side.', gap: 0.5, face: 'smirk' }],
+        camera: ots('sati', 'script_clerk', 34) },
+      { name: 'A hundred blocks', visual: 'Sati, eager. The Clerk, precise.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: { ...CITY, script_clerk: look([-0.2, 0, -1.6], [-0.4, 0.4, 1]) }, faces: { sati: [[0, 'happy']], bit: [[0.6, 'surprised']] },
+        lines: [{ who: 'sati', text: 'Can we go somewhere?' }, { who: 'script_clerk', text: 'Not yet. Coinbase coins wait a hundred blocks.' }, { who: 'bit', text: 'A hundred?', gap: 0.3 }, { who: 'script_clerk', text: 'Then you can be spent.', gap: 0.5 }],
+        camera: two('sati', 'script_clerk', 1, 36) },
+      { name: 'Spent?', visual: 'Close on Sati. The word lands. It frightens her a little, and thrills her more.', coverage: { size: 'CU', angle: 'eye', role: 'single' },
+        blocking: CITY, faces: { sati: [[0, 'ooh'], [0.8, 'happy']] },
+        lines: [{ who: 'sati', text: 'Spent?' }, { who: 'sati', text: "What happens when you're spent?", gap: 0.7 }, { who: 'script_clerk', text: 'You go somewhere.', gap: 0.5 }, { who: 'sati', text: '…Somewhere.', gap: 0.8, face: 'happy' }], tail: 0.8, tension: 0.55,
+        camera: close('sati', -10, 26) },
+      { name: 'The Node', visual: 'At the heart of the core, a floating eye of light with two orbit rings: the Node. Sati and Bit, tiny at its feet.', env: 'node_core',
+        coverage: { size: 'WS', angle: 'worms_eye', role: 'master' }, blocking: { node: [[0, 2.6, -6.5], 0], sati: [[-0.6, 0, -0.6], 180], bit: [[1, 0, -1], 190] }, crowd: solved,
+        faces: { node: [[0, 'neutral']] },
+        lines: [{ who: 'sati', text: 'Excuse me. Who are we?' }, { who: 'node', text: 'You are new. You are valid.', gap: 0.8 }, { who: 'node', text: 'And you are unspent.', gap: 0.6 }], firstLineAt: 1.4,
+        camera: (d) => cam.move([0.4, 0.3, 3], [0.3, 0.3, 2.4], [0, 3.6, -5], [0, 5, -6.5], 58, 'low')(d), sfx: [{ file: 'hum', at: 0, gain: 0.35 }] },
+      { name: 'Everything', visual: 'Bit, looking up at it. The Node’s answer, gentle.', env: 'node_core', coverage: { size: 'OTS', angle: 'low', role: 'reverse' },
+        blocking: { node: [[0, 2.6, -6.5], 0], sati: [[-0.6, 0, -0.6], 180], bit: [[1, 0, -1], 190] }, faces: { bit: [[0, 'worried']], node: [[0.4, 'happy']] },
+        lines: [{ who: 'bit', text: 'Is that good?' }, { who: 'node', text: 'For now, it is everything.', gap: 0.8 }], tail: 1.2,
+        camera: (d) => cam.move([0.6, 5.4, -4.8], [0.5, 5.4, -4.4], [1, 2.4, -1], undefined, 40, 'from above')(d) },
+    ],
+  },
+  {
+    title: 'Names', env: 'node_city', arc: { tension: 0.45, beat: 'rising', note: 'Coins don’t get names. They take them anyway.' },
+    summary: 'The Clerk reads their values — three thousand two hundred sats, and one whole bitcoin — and the two coins name each other: Sati and Bit.',
+    music: [{ cue: theme('Names', 'F', 'lydian', 88, 0.4, { pad: [0, 0.45], arp: [0, 0.3], lead: [0.5, 0.45] }), from: 1, tail: 1, gain: 0.38 }],
+    shots: [
+      { name: 'Reading values', visual: 'The Script Clerk adjusts his spectacles and reads the numbers glowing on their locks.', coverage: { size: 'MCU', angle: 'eye', role: 'single' },
+        blocking: NAMING, poses: { script_clerk: [[0.05, 'think'], [0.5, 'point']] }, faces: { script_clerk: [[0, 'neutral']] },
+        lines: [{ who: 'script_clerk', text: 'This one. Three thousand two hundred sats.' }, { who: 'script_clerk', text: 'And you…', gap: 0.6 }, { who: 'script_clerk', text: 'One whole bitcoin.', gap: 0.6, face: 'ooh' }], tail: 0.4,
+        camera: close('script_clerk', -20, 30) },
+      { name: 'A whistle', visual: 'Behind him, the Mempool Host’s eyebrows go all the way up.', coverage: { size: 'MS', angle: 'eye', role: 'insert' },
+        blocking: { ...NAMING, mempool_host: look([0.9, 0, 4.2], [-2, 1.5, 1.2]) }, faces: { mempool_host: [[0, 'ooh']] }, min: 1.5,
+        camera: close('mempool_host', -10, 34) },
+      { name: 'Sats?', visual: 'Sati looks down at her small glow.', coverage: { size: 'OTS', angle: 'eye', role: 'coverage' },
+        blocking: NAMING, faces: { sati: [[0, 'ooh'], [0.7, 'happy']] },
+        lines: [{ who: 'sati', text: 'Sats?' }, { who: 'script_clerk', text: 'The smallest amount there is.', gap: 0.4 }, { who: 'sati', text: "I'm made of the smallest thing there is.", gap: 0.8 }, { who: 'bit', text: 'Three thousand two hundred of them.', gap: 0.5 }], tail: 0.4,
+        camera: two('script_clerk', 'sati', 1.2, 38) },
+      { name: 'Sati', visual: 'Close on her, trying the word on like a coat.', coverage: { size: 'CU', angle: 'eye', role: 'single' },
+        blocking: NAMING, faces: { sati: [[0, 'ooh'], [0.45, 'grin']] },
+        lines: [{ who: 'sati', text: 'Sats.' }, { who: 'sati', text: 'Sati.', gap: 0.9 }, { who: 'sati', text: "I'm Sati.", gap: 0.7 }], firstLineAt: 0.5, tail: 0.3,
+        camera: close('sati', -10, 26) },
+      { name: 'No names', visual: 'The Clerk, prim. Sati, unbothered.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: NAMING, faces: { script_clerk: [[0, 'pout']], sati: [[0.5, 'grin']] },
+        lines: [{ who: 'script_clerk', text: "You're a coin. Coins don't get names." }, { who: 'sati', text: 'I just got one.', gap: 0.5 }],
+        camera: two('sati', 'script_clerk', 1, 36) },
+      { name: 'Then what am I?', visual: 'Bit, enormous and suddenly shy.', coverage: { size: 'MS', angle: 'low', role: 'single' },
+        blocking: NAMING, faces: { bit: [[0, 'worried']] },
+        lines: [{ who: 'bit', text: 'Then what am I?' }], firstLineAt: 0.5,
+        camera: low('bit', undefined, 42) },
+      { name: 'Bit', visual: 'Sati looks him up and down, all the way up, and decides.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: NAMING, faces: { sati: [[0, 'smirk']], bit: [[0.6, 'ooh'], [0.85, 'happy']] }, poses: { sati: [[0.2, 'point']] },
+        lines: [{ who: 'sati', text: "You're a whole bitcoin." }, { who: 'sati', text: "You're Bit.", gap: 0.6 }, { who: 'bit', text: 'Bit.', gap: 0.9 }, { who: 'bit', text: 'I like it.', gap: 0.8 }], tail: 0.5,
+        camera: two('sati', 'bit', 1.6, 40) },
+      { name: 'Whatever next', visual: 'The Mempool Host, bustling off, to nobody in particular.', coverage: { size: 'MS', angle: 'eye', role: 'insert' },
+        blocking: { ...NAMING, mempool_host: look([0.9, 0, 4.2], [6, 0, 8]) }, moves: { mempool_host: [[1, [3.4, 0, 6.4], 40]] }, faces: { mempool_host: [[0, 'grin']] },
+        lines: [{ who: 'mempool_host', text: 'Coinbase babies, naming themselves. Whatever next.' }], tail: 0.6,
+        camera: (d) => cam.still([-0.6, 1.2, 1.6], [1.6, 0.9, 5], 40)(d) },
+    ],
+  },
+  {
+    title: 'The Rounds', env: 'node_city', arc: { tension: 0.45, beat: 'rising', note: 'A day in the node: everyone has a job except them.' },
+    summary: 'Waiting for block two, Sati and Bit tag along on the crew’s rounds — the Validator’s gate, the waiting room they’re not allowed in, the Hasher’s needle.',
+    music: [{ cue: theme('Rounds', 'C', 'mixolydian', 104, 0.55, { pad: [0, 0.4], bass: [0, 0.55], arp: [0, 0.3], lead: [0.4, 0.4], perc: [0.2, 0.35] }), gain: 0.35, tail: 0.5 }],
+    shots: [
+      { name: 'The gate', visual: 'At the Validator’s gate a stranger coin steps through; a bar of light scans it top to bottom. Pass. The next. Pass. Sati and Bit watch from behind a pillar.',
+        coverage: { size: 'WS', angle: 'eye', role: 'master' }, blocking: { validator: look([2.2, 0, -7.2], [0, 1, -8]), sati: [[-3.2, 0, -5.6], 140], bit: [[-4.6, 0, -6.4], 120] },
+        crowd: { folk3: [[0, 0, -5], 180, [[0.5, [0, 0, -8], 180], [1, [0, 0, -11], 180]]] }, poses: { validator: [[0.2, 'point'], [0.6, 'arms_crossed']] }, faces: { sati: [[0, 'ooh']] }, min: 5.5,
+        camera: (d) => cam.move([-6.5, 1, -1.5], [-6, 1.1, -2.2], [0, 1.4, -8], undefined, 40, 'wide')(d), sfx: [{ file: 'blip', at: 2.4, gain: 0.5 }, { file: 'ping', at: 2.8, gain: 0.3 }] },
+      { name: 'Every one', visual: 'The Validator notices them. Stern; not unkind.', coverage: { size: 'MCU', angle: 'low', role: 'single' },
+        blocking: { validator: look([2.2, 0, -7.2], [-3.2, 0.6, -5.6]) }, faces: { validator: [[0, 'determined']] },
+        lines: [{ who: 'validator', text: 'Every coin. Every rule. Every time.' }, { who: 'validator', text: 'Move along.', gap: 0.6 }], tail: 0.5,
+        camera: low('validator', 2.2, 40) },
+      { name: 'Did you hear?', visual: 'The Gossip screeches to a halt in front of them, antennae buzzing, talking faster than anyone should.', coverage: { size: 'MS', angle: 'eye', role: 'single' },
+        blocking: { sati: [[-0.6, 0, 1], 180], bit: [[2, 0, 0.9], 190], gossip: [[-4, 0, -1.5], 90] }, moves: { gossip: [[0.12, [0.6, 0, -0.6], 10], [0.85, [0.6, 0, -0.6], 10], [1, [6, 0, -3], 100]] },
+        poses: { gossip: [[0.15, 'wave'], [0.4, 'point'], [0.7, 'shrug']] }, faces: { gossip: [[0.12, 'grin']], sati: [[0.2, 'surprised']] },
+        lines: [{ who: 'gossip', text: 'Did you hear? A node up north lost power for an hour!' }, { who: 'gossip', text: 'Came back fine. Everyone fine. Gotta go!', gap: 0.2 }], firstLineAt: 0.6, tail: 0.6,
+        camera: (d) => cam.still([0.2, 0.7, 3.4], [0.4, 0.5, -0.4], 42)(d), sfx: [{ file: 'zap', at: 0.2, gain: 0.5 }, { file: 'whoosh', at: 'end', gain: 0.4 }] },
+      { name: 'Keeps nothing', visual: 'The Hasher, ambling past with a slab, answers before Sati can ask.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: { sati: [[-0.6, 0, 1], 120], hasher: look([0.8, 0, -0.2], [-0.6, 0.4, 1]) }, faces: { hasher: [[0, 'smirk']], sati: [[0, 'ooh']] },
+        lines: [{ who: 'sati', text: 'Who was that?' }, { who: 'hasher', text: 'Gossip. Knows everything.', gap: 0.4 }, { who: 'hasher', text: 'Keeps nothing.', gap: 0.5 }], tail: 0.5,
+        camera: two('sati', 'hasher', 1, 38) },
+      { name: 'Not for you', visual: 'At the edge of a great spiral of waiting slabs, the Mempool Host shoos them off with her slab.', env: 'mempool_hall', coverage: { size: 'WS', angle: 'high', role: 'master' },
+        blocking: { mempool_host: look([0, 0, 3.2], [0, 0, 6]), sati: [[-0.8, 0, 6.2], 180], bit: [[0.9, 0, 6.6], 190] }, poses: { mempool_host: [[0.2, 'wave']] }, faces: { mempool_host: [[0, 'grin']], sati: [[0.6, 'pout']] },
+        lines: [{ who: 'mempool_host', text: 'Not for you yet, loves. You’re not going anywhere.' }], firstLineAt: 1.2, tail: 0.6,
+        camera: (d) => cam.move([0, 7, 13], [0, 6.4, 11.8], [0, 0.6, 2], undefined, 46, 'high')(d) },
+      { name: 'Two', visual: 'In the core the cubes click again. The Hasher ticks his counter: 2.', env: 'node_core', coverage: { size: 'MS', angle: 'eye', role: 'insert' },
+        blocking: { ...CORE_CREW, sati: [[1.6, 0, 3.6], -110], bit: [[-0.8, 0, 4.4], -150] }, crowd: nonceSearch(7, 1, true), faces: { hasher: [[0.7, 'happy']] },
+        lines: [{ who: 'hasher', text: 'Two.' }], firstLineAt: 2.3, tail: 0.6,
+        camera: (d) => cam.still([2.8, 1.5, 6.8], [1.2, 0.9, 0], 44)(d), sfx: [{ file: 'click', at: 1.9, gain: 0.8 }] },
+      { name: 'A needle', visual: 'Bit, enormous, crouched beside the stocky Hasher at his console.', env: 'node_core', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: { hasher: [[3.55, 0, 2.41], -60], bit: look([1.9, 0, 3.4], [3.55, 1, 2.41]) }, poses: { bit: [[0, 'crouch']] }, faces: { hasher: [[0, 'smirk']], bit: [[0, 'neutral']] },
+        lines: [{ who: 'bit', text: 'What do you do, exactly?' }, { who: 'hasher', text: 'Look for a needle. All day.', gap: 0.5 }, { who: 'bit', text: "What's the needle?", gap: 0.5 }, { who: 'hasher', text: 'A number. One lucky number.', gap: 0.5 }, { who: 'bit', text: 'Ah.', gap: 0.7, face: 'ooh' }], tail: 0.6,
+        camera: two('bit', 'hasher', 0.8, 40) },
+    ],
+  },
+  {
+    title: 'The Giant’s Face', env: 'utxo_district', arc: { tension: 0.5, beat: 'midpoint', note: 'Sati’s want is born: the giant didn’t vanish — it went somewhere, into them.' },
+    summary: 'At the quiet edge of the district Sati can’t stop thinking about the giant’s face — and realises it didn’t disappear: it turned into them.',
+    music: [{ cue: theme('The Face', 'G', 'lydian', 66, 0.25, { pad: [0, 0.55], arp: [0.2, 0.3], lead: [0.45, 0.45] }), from: 1, tail: 1.5, gain: 0.4 }],
+    shots: [
+      { name: 'The edge', visual: 'The quiet edge of the district. Sati and Bit sit on the bright ground; the city hums behind them.', coverage: { size: 'WS', angle: 'eye', role: 'master' },
+        blocking: { sati: look([-0.4, 0, 1.2], [0, 4, -30]), bit: look([1.1, 0, 0.8], [0, 4, -30]) }, poses: { sati: [[0, 'crouch']], bit: [[0, 'crouch']] }, min: 4.5,
+        camera: (d) => cam.move([-1.5, 0.8, 5.6], [-1.3, 0.75, 5], [0.4, 0.7, 0.8], undefined, 40, 'wide')(d) },
+      { name: 'Its face', visual: 'Close on Sati, remembering.', coverage: { size: 'CU', angle: 'eye', role: 'single' },
+        blocking: { sati: look([-0.4, 0, 1.2], [1.1, 1.5, 0.8]) }, faces: { sati: [[0, 'ooh']] },
+        lines: [{ who: 'sati', text: 'Did you see its face?' }], firstLineAt: 0.6,
+        camera: close('sati', 20, 28) },
+      { name: 'It looked at us', visual: 'Bit, quietly.', coverage: { size: 'CU', angle: 'low', role: 'reverse' },
+        blocking: { bit: look([1.1, 0, 0.8], [-0.4, 0.5, 1.2]) }, faces: { bit: [[0, 'happy']] },
+        lines: [{ who: 'bit', text: 'It looked at us.' }, { who: 'sati', text: 'Like it knew us.', gap: 0.6 }, { who: 'bit', text: 'Like it was glad.', gap: 0.7 }],
+        camera: close('bit', -20, 30, 'low') },
+      { name: 'Then it was gone', visual: 'Sati looks down at her small glow. Then up, as it lands.', coverage: { size: 'CU', angle: 'eye', role: 'single' },
+        blocking: { sati: look([-0.4, 0, 1.2], [1.1, 1.5, 0.8]) }, faces: { sati: [[0, 'sad'], [0.55, 'surprised'], [0.85, 'happy']] },
+        lines: [{ who: 'sati', text: 'And then it was gone.' }, { who: 'sati', text: "No. It didn't go.", gap: 1.1 }, { who: 'sati', text: 'It turned into us.', gap: 0.6 }], tail: 0.8, tension: 0.55,
+        camera: close('sati', 5, 26) },
+      { name: 'Somewhere', visual: 'Two-shot. Bit lets that sink in.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: { sati: look([-0.4, 0, 1.2], [1.1, 1.5, 0.8]), bit: look([1.1, 0, 0.8], [-0.4, 0.5, 1.2]) }, poses: { sati: [[0, 'crouch']], bit: [[0, 'crouch']] }, faces: { bit: [[0.3, 'ooh'], [0.75, 'happy']], sati: [[0.75, 'grin']] },
+        lines: [{ who: 'bit', text: '…Then it went somewhere.' }], firstLineAt: 1.2, tail: 1.6,
+        camera: two('sati', 'bit', 1, 36) },
+    ],
+  },
+  {
+    title: 'Night Talk', env: 'utxo_district', arc: { tension: 0.5, beat: 'midpoint', note: 'They tell each other what they like, fear and want: Bit wants speed and dreads being spent; Sati dreads staying.' },
+    summary: 'Lying under the data streams, they trade likes and fears: Bit wants to be fast just once and dreads being spent; Sati dreads staying the same forever.',
+    music: [{ cue: theme('Night Talk', 'D', 'lydian', 62, 0.2, { pad: [0, 0.5], arp: [0.15, 0.25], lead: [0.6, 0.4] }), from: 0, tail: 2, gain: 0.35 }],
+    shots: [
+      { name: 'Lying down', visual: 'From above: two lights lying on their backs on the bright ground, one tiny, one enormous, filaments of data streaming over them.', coverage: { size: 'WS', angle: 'birds_eye', role: 'master' },
+        blocking: { sati: [[-1.4, 0, 1.2], 0], bit: [[1.6, 0, 0.6], 0] }, poses: { sati: [[0, 'crouch']], bit: [[0, 'crouch']] }, min: 5,
+        camera: (d) => cam.move([0.7, 9, 1.5], [0.7, 8, 1.2], [0.7, 0, 0.8], undefined, 40, 'top down')(d) },
+      { name: 'What do you like?', visual: 'Close, both faces in the frame, looking up.', coverage: { size: '2S', angle: 'low', role: 'coverage' },
+        blocking: { sati: [[-1.4, 0, 1.2], 50], bit: [[1.6, 0, 0.6], -50] }, poses: { sati: [[0, 'crouch']], bit: [[0, 'crouch']] }, faces: { sati: [[0, 'happy']], bit: [[0, 'neutral']] },
+        lines: [{ who: 'sati', text: 'What do you like? So far.' }, { who: 'bit', text: 'The hum.', gap: 0.9 }, { who: 'bit', text: 'Things staying where they are.', gap: 0.6 }, { who: 'sati', text: 'I like the streams.', gap: 0.7 }, { who: 'sati', text: "They're always going somewhere.", gap: 0.5 }], tail: 0.6,
+        camera: two('sati', 'bit', 1.6, 42) },
+      { name: 'Fast', visual: 'Bit turns his huge head toward her.', coverage: { size: 'CU', angle: 'eye', role: 'single' },
+        blocking: { bit: [[1.6, 0, 0.6], -40] }, poses: { bit: [[0, 'crouch']] }, faces: { bit: [[0, 'smirk'], [0.6, 'ooh']] },
+        lines: [{ who: 'bit', text: 'You keep saying that. Somewhere.' }, { who: 'sati', text: "Don't you want to go somewhere?", gap: 0.5 }, { who: 'bit', text: "I'd like to be fast.", gap: 1 }, { who: 'bit', text: 'Just once.', gap: 0.5 }], tail: 0.4,
+        camera: close('bit', -20, 30) },
+      { name: 'You? Fast?', visual: 'Sati props herself up on an elbow, grinning.', coverage: { size: 'CU', angle: 'eye', role: 'reverse' },
+        blocking: { sati: [[-1.4, 0, 1.2], 50] }, poses: { sati: [[0, 'crouch']] }, faces: { sati: [[0, 'laugh']] },
+        lines: [{ who: 'sati', text: 'You? Fast?' }, { who: 'bit', text: "Everything's slow when you're big.", gap: 0.6 }], tail: 0.6,
+        camera: close('sati', 20, 28) },
+      { name: 'Scared', visual: 'A quiet beat. The streams overhead. Then Sati, softer.', coverage: { size: 'CU', angle: 'eye', role: 'single' },
+        blocking: { sati: [[-1.4, 0, 1.2], 50] }, poses: { sati: [[0, 'crouch']] }, faces: { sati: [[0, 'neutral'], [0.4, 'worried']] },
+        lines: [{ who: 'sati', text: 'What are you scared of?' }], firstLineAt: 1.4, tail: 0.6,
+        camera: close('sati', 30, 30) },
+      { name: 'Being spent', visual: 'Bit, not looking at her.', coverage: { size: 'CU', angle: 'low', role: 'reverse' },
+        blocking: { bit: [[1.6, 0, 0.6], -10] }, poses: { bit: [[0, 'crouch']] }, faces: { bit: [[0, 'sad']] },
+        lines: [{ who: 'bit', text: 'Being spent.' }, { who: 'bit', text: 'Not knowing where the rest of me ends up.', gap: 1.1 }], firstLineAt: 1, tail: 1, tension: 0.55,
+        camera: close('bit', -30, 30, 'low') },
+      { name: 'Staying', visual: 'Sati, after a while.', coverage: { size: 'CU', angle: 'eye', role: 'single' },
+        blocking: { sati: [[-1.4, 0, 1.2], 50] }, poses: { sati: [[0, 'crouch']] }, faces: { sati: [[0, 'sad']] },
+        lines: [{ who: 'bit', text: 'What about you?' }, { who: 'sati', text: 'Staying.', gap: 1 }, { who: 'sati', text: 'Being the same coin forever, in the same place, and nobody ever needing me.', gap: 0.8 }], tail: 0.9,
+        camera: close('sati', 10, 26) },
+      { name: 'Two good blocks', visual: 'Two-shot. Bit, simply. Sati laughs; so does he, and the ground hums.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: { sati: [[-1.4, 0, 1.2], 50], bit: [[1.6, 0, 0.6], -50] }, poses: { sati: [[0, 'crouch']], bit: [[0, 'crouch']] }, faces: { bit: [[0, 'happy']], sati: [[0.3, 'surprised'], [0.7, 'laugh']] },
+        lines: [{ who: 'bit', text: 'I need you.' }, { who: 'sati', text: "You've known me for two blocks.", gap: 0.8 }, { who: 'bit', text: 'Two very good blocks.', gap: 0.5, react: { sati: 'laugh' } }], firstLineAt: 0.6, tail: 1.4,
+        camera: two('sati', 'bit', 1.8, 40), sfx: [{ file: 'hum', at: 'end', gain: 0.3 }] },
+    ],
+  },
+  {
+    title: 'One of a Hundred', env: 'node_core', arc: { tension: 0.6, beat: 'inciting', note: 'Block one of a hundred — and something dark is building blocks out there.' },
+    summary: 'Every node takes the block; far off, something builds blocks without any light; in the dark garage Ana wakes to “block found”, and Sati and Bit settle in to wait.',
+    music: [
+      { cue: theme('Out There', 'D', 'phrygian', 64, 0.35, { pad: [0, 0.55], bass: [0, 0.6], arp: [0.4, 0.25] }), from: 2, to: 4, gain: 0.45 },
+      { cue: theme('Home Light', 'C', 'major', 84, 0.45, { pad: [0, 0.55], arp: [0, 0.35], lead: [0.25, 0.5] }), from: 4, tail: 2.5, gain: 0.5 },
+    ],
+    shots: [
+      { name: 'One down', visual: 'Block three. The Hasher ticks his counter: 3. The Gossip skids back in, breathless.', coverage: { size: '2S', angle: 'eye', role: 'coverage' },
+        blocking: { ...CORE_CREW, gossip: [[-3, 0, 4], 120] }, moves: { gossip: [[0.4, [2.4, 0, 3], 100]] }, faces: { hasher: [[0, 'happy']], gossip: [[0.4, 'grin']] },
+        lines: [{ who: 'hasher', text: 'Three down.' }, { who: 'hasher', text: 'Ninety-seven to go.', gap: 0.5 }, { who: 'gossip', text: "Everyone's got it! Every node!", gap: 0.4 }],
+        camera: two('hasher', 'gossip', 1, 38) },
+      { name: 'Every node', visual: 'Outside, in the black: node after node lights up, a wave rolling through the network as the block arrives.', env: 'network_void', notes: 'Ref: explorer network.js montage.',
+        coverage: { size: 'EWS', angle: 'eye', role: 'master' }, min: 6,
+        camera: (d) => cam.orbit([0, 0, -40], 40, 8, -30, 15, 50)(d), sfx: [{ file: 'sparkle', at: 0.5, gain: 0.5 }, { file: 'sparkle', at: 3, gain: 0.4 }] },
+      { name: 'Something dark', visual: 'Far off, a blind spot in the network. Black blocks, stacked one after another, giving off no light at all. A tall silhouette steps back from them.', env: 'dark_chain',
+        coverage: { size: 'WS', angle: 'low', role: 'insert' }, blocking: { rewriter: [[7, 0, -3], -120] }, min: 5.5, tension: 0.7,
+        camera: (d) => cam.move([-4, 0.6, 9], [-3, 0.8, 7.6], [10, 1.5, -6], undefined, 46, 'creep')(d), sfx: [{ file: 'hum', at: 0.5, gain: 0.4 }] },
+      { name: "Who's that?", visual: 'The Hasher, looking out through the skin of the core, frowning.', coverage: { size: 'CU', angle: 'eye', role: 'single' },
+        blocking: { hasher: [[3.55, 0, 2.41], 120] }, faces: { hasher: [[0, 'worried']] },
+        lines: [{ who: 'hasher', text: "…Who's that?" }], firstLineAt: 1, tail: 0.8, tension: 0.7,
+        camera: close('hasher', -10, 28) },
+      { name: 'Block found', visual: 'The garage. Ana’s phone buzzes and lights up. She wakes, squints at it, and sits bolt upright.', env: 'garage',
+        coverage: { size: 'MCU', angle: 'eye', role: 'single' }, blocking: { ana: [[0.4, 0, -0.2], 0] }, poses: { ana: [[0, 'crouch'], [0.45, 'idle'], [0.75, 'cheer']] }, faces: { ana: [[0, 'neutral'], [0.4, 'surprised'], [0.75, 'grin']] },
+        lines: [{ who: 'ana', text: 'No way.' }, { who: 'ana', text: 'No way!', gap: 0.7 }], firstLineAt: 2, tail: 0.8,
+        camera: close('ana', 15, 34), sfx: [{ file: 'ping', at: 0.5 }] },
+      { name: 'Calling home', visual: 'Ana, phone to her ear, pacing between the glowing rigs. The only light on her face is the phone and the fans.', env: 'garage',
+        coverage: { size: 'MS', angle: 'eye', role: 'single' }, blocking: { ana: [[0.4, 0, -0.2], 0] }, moves: { ana: [[0.4, [-0.6, 0, 0.4], 60], [0.8, [0.6, 0, 0.8], -60]] }, poses: { ana: [[0, 'think']] }, faces: { ana: [[0, 'happy'], [0.55, 'worried'], [0.9, 'happy']] },
+        lines: [{ who: 'ana', text: "Hey. Sorry, I know it's late." }, { who: 'ana', text: 'I found one. A whole block.', gap: 0.8 }, { who: 'ana', text: "No, I'm keeping it. All of it. For now.", gap: 1.4 },
+          { who: 'ana', text: 'If the dam holds through winter, I can pay off the rigs.', gap: 1.2 }, { who: 'ana', text: "I know. I know it's a lot of power.", gap: 1.3 }, { who: 'ana', text: 'Night, Mum.', gap: 1 }], firstLineAt: 0.8, tail: 1,
+        camera: (d) => cam.move([2.2, 1.5, 3], [1.8, 1.45, 2.6], [0, 1.4, 0.2], undefined, 40, 'slow push')(d), sfx: [{ file: 'hum', at: 0, gain: 0.4 }] },
+      { name: 'Waiting together', visual: 'Back inside: Sati and Bit sit side by side among the resting coins, looking up at the core. Pull back until they are two small lights in a city of light.', env: 'utxo_district',
+        coverage: { size: 'EWS', angle: 'high', role: 'master' }, blocking: { sati: look([0, 0, 1], [0, 6, -30]), bit: look([1.3, 0, 0.6], [0, 6, -30]) }, poses: { sati: [[0, 'crouch']], bit: [[0, 'crouch']] },
+        lines: [{ who: 'sati', text: 'A hundred blocks.' }, { who: 'bit', text: "We'll wait together.", gap: 0.9 }], firstLineAt: 1.2, min: 9,
+        camera: (d, b) => cam.move([0.8, 1.2, 4], [0.8, 16, 22], mid(b), mid(b), 44, 'pull back')(d) },
     ],
   },
 ];
 
-const EP2: SceneSpec[] = [
-  {
-    title: 'Finding Signals', env: 'dark_monoliths', arc: { tension: 0.5, beat: 'rising', note: 'Fear of the dark turns into purpose: they connect a lonely node.' }, summary: 'Act 1 — Nodes. The beacon is a brand-new node calling for peers; the trio carry its handshake.',
-    cue: { name: 'Finding Signals', seed: 3301, key: 'D', mode: 'phrygian', tempo: 68, density: 0.3 },
-    shots: [
-      { name: 'Into the dark', visual: 'The trio step into a forest of black monoliths, huddled close. Their own glow is the only light.', board: 'into_the_dark',
-        blocking: { mili: [[-0.9, 0, 2.4], 180], sati: [[0, 0, 2.2], 180], bit: [[1.3, 0, 2], 180] },
-        moves: { mili: [[1, [-0.6, 0, 0.4], 175]], sati: [[1, [0, 0, 0.2], 180]], bit: [[1, [1.1, 0, 0], 185]] },
-        faces: { mili: [[0, 'worried']], sati: [[0, 'determined']] },
-        lines: [{ who: 'mili', text: "It's so dark down here." }, { who: 'bit', text: 'Stay close.', face: 'determined' }], firstLineAt: 1.5, min: 6,
-        camera: (d) => cam.move([0.4, 1, -3], [0.3, 0.9, -4.4], [0, 0.6, 2.2], [0, 0.6, 0.2], 42, 'leading')(d), sfx: [{ file: 'hum', at: 0, gain: 0.4 }] },
-      { name: 'The beacon', visual: 'A glowing hexagon hums in a clearing, pulsing like a heartbeat. Sati steps closer.', env: 'signal_chamber', board: 'finding_signals',
-        blocking: { sati: [[0, 0, 0.2], 180], mili: [[-1, 0, -0.9], 200], bit: [[1.2, 0, -1], 160] }, moves: { sati: [[0.5, [0, 0, -1.4], 180]] },
-        faces: { sati: [[0, 'surprised'], [0.5, 'determined']], mili: [[0, 'surprised']] },
-        lines: [{ who: 'sati', text: "It's a node. A brand new one." }],
-        camera: (d) => cam.move([-2.8, 0.7, 2.2], [-1.9, 0.9, 1.4], [0, 1, -4], [0, 1.2, -4], 40, 'reveal')(d), sfx: [{ file: 'pulse', at: 0.2, gain: 0.6 }] },
-      { name: 'No one answers', visual: 'Close on Sati, the beacon light pulsing across their face.', env: 'signal_chamber', blocking: { sati: [[0, 0, -1.4], 160] },
-        lines: [{ who: 'sati', text: "It's calling for peers, but no one's answering.", face: 'sad' }],
-        camera: close('sati', 20), sfx: [{ file: 'chime', at: 1, gain: 0.3 }] },
-      { name: 'Carry the hello', visual: "Close on Mili, crackling with lightning, raring to go.", env: 'signal_chamber',
-        blocking: { sati: [[0, 0, -1.4], 120], mili: [[-0.9, 0, -1.2], 60] },
-        lines: [{ who: 'mili', text: "I'll take its hello to the others!", face: 'determined' }], faces: { mili: [[0, 'happy']] },
-        camera: close('mili', 10) },
-      { name: 'Version, then wait', visual: "Sati hands over the node's 'version' message. Mili spins and blurs off into the dark.", env: 'signal_chamber',
-        blocking: { sati: [[0, 0, -1.4], 120], mili: [[-0.9, 0, -1.2], 60] }, moves: { mili: [[0.82, [-0.9, 0, -1.2], -90], [1, [-9, 0, -3], -90]] },
-        faces: { sati: [[0, 'determined']], mili: [[0, 'determined']] },
-        lines: [{ who: 'sati', text: 'Tell them its version. Then wait for their answer.' }],
-        camera: ots('mili', 'sati'), sfx: [{ file: 'zap', at: 'end' }],
-        notes: 'Protocol: a new node opens a connection and sends a `version` message; the peer replies with its own `version` and a `verack`.' },
-      { name: 'They answered', visual: 'One by one, light shafts rise from the monoliths; figures step out of the dark toward the beacon. Mili skids back in, glowing.', env: 'network_awake',
-        blocking: { sati: [[0, 0, -1.4], 0], mili: [[-7, 0, -0.6], 90], bit: [[1.2, 0, -1], -10] }, moves: { mili: [[0.2, [-0.9, 0, -0.6], 10]] },
-        faces: { mili: [[0, 'happy']], sati: [[0.25, 'happy']], bit: [[0.6, 'surprised'], [0.8, 'happy']] }, crowd: 'peers', crowdFaces: [[0.3, 'happy']],
-        lines: [{ who: 'mili', text: 'They answered! Version, verack, handshake done!' }, { who: 'bit', text: "Look. They're all lighting up." }],
-        camera: (d, b) => cam.crane(mid(b), 6.5, 0.8, 5, 55)(d), sfx: [{ file: 'chime', at: 0.4 }, { file: 'sparkle', at: 1.4 }, { file: 'chime', at: 2.6, gain: 0.4 }] },
-    ],
-  },
-  {
-    title: 'The Journey', env: 'mempool_sea', arc: { tension: 0.65, beat: 'midpoint', note: 'They understand what they protect: value moving peer to peer.' }, summary: 'Act 2 — A transaction. A glowing orb: signed, verified, relayed peer to peer, then waiting in the mempool.',
-    cue: { name: 'The Journey', seed: 2140, key: 'A', mode: 'dorian', tempo: 88, density: 0.65 },
-    shots: [
-      { name: 'A shiny one', visual: 'A warm glowing orb drifts down between them, ringed with light. Mili reaches for it; other travellers drift past in the distance.', board: 'new_perspectives',
-        blocking: { sati: [[-0.4, 0, 0.6], 20], mili: [[-0.8, 0, 2], 160], bit: [[1.8, 0, 0.4], -30] }, moves: { mili: [[0.3, [-0.4, 0, 1.4], 160]] },
-        faces: { mili: [[0, 'surprised'], [0.3, 'happy']] }, crowd: 'travellers',
-        lines: [{ who: 'mili', text: 'Ooh. A shiny one.' }, { who: 'sati', text: "That's a transaction. Someone's sending value across the network.", face: 'determined' }],
-        camera: (d) => cam.push([0.4, 1.3, 0.6], 3.2, 2.2, 0.1, 38)(d), sfx: [{ file: 'sparkle', at: 0.2 }] },
-      { name: 'The key fits', visual: 'Close on Sati holding up a hand; the ring around the orb clicks into alignment and flashes.', blocking: { sati: [[-0.4, 0, 0.6], 20] },
-        lines: [{ who: 'sati', text: 'Its signature matches the key.', face: 'determined' }, { who: 'sati', text: "It's valid.", gap: 0.5, face: 'happy' }],
-        camera: (d) => cam.still([-1.2, 1.2, 2.2], [0.2, 1.3, 0.6], 32)(d), sfx: [{ file: 'click', at: 1.6 }, { file: 'chime', at: 1.7, gain: 0.5 }],
-        notes: 'Protocol: nodes check each input’s signature against the public key it spends from before relaying.' },
-      { name: 'Peer to peer', visual: 'Mili grabs the orb and blurs off — lightning zig-zags from bubble to bubble across the dark.',
-        blocking: { mili: [[-2, 0, 1], 30] }, moves: { mili: [[0.35, [1, 0, -1], 60], [0.6, [3, 0, -4], 20], [1, [6, 0, -8], 40]] }, faces: { mili: [[0, 'happy']] },
-        lines: [{ who: 'mili', text: 'Passing it on! Peer to peer to peer!' }],
-        camera: (d) => cam.move([-2, 1, 3], [3, 1.4, 2], [-1, 0.6, 0], [4, 0.6, -5], 45, 'whip-pan')(d), sfx: [{ file: 'zap', at: 0.1 }, { file: 'whoosh', at: 0.5 }, { file: 'zap', at: 1.4, gain: 0.5 }] },
-      { name: 'The waiting room', visual: 'The orb settles into a glass bubble among hundreds of others, all floating, all waiting. Other folk wait beside theirs.',
-        blocking: { sati: [[-0.6, 0, 1.2], 170], bit: [[1, 0, 1], 190], mili: [[0.1, 0, 1.6], 180] }, moves: { mili: [[0.5, [0.1, 0, 0.8], 180]] },
-        faces: { bit: [[0, 'surprised']], mili: [[0, 'happy']], sati: [[0.5, 'determined']] }, crowd: 'travellers', crowdFaces: [[0, 'worried']],
-        lines: [{ who: 'bit', text: 'So many bubbles.' }, { who: 'sati', text: "They're all waiting for the next block. Let's follow ours." }],
-        camera: (d) => cam.crane([0, 1.2, -4], 8.5, 0.7, 2.4, 50)(d), notes: 'Protocol: valid, unconfirmed transactions wait in each node’s mempool until a miner includes them in a block.' },
-    ],
-  },
-  {
-    title: 'Overcome', env: 'mining_hall', arc: { tension: 0.85, beat: 'climax', note: 'All three strengths at once — muscle, speed, brains — to find the block.' }, summary: 'Act 3 — Mining. Hash block after hash block until one comes out right. The block is found; the transaction is sealed.',
-    cue: { name: 'Overcome', seed: 21000000, key: 'E', mode: 'minor', tempo: 96, density: 0.8, instruments: {
-      pad: { on: true, enter: 0, gain: 0.55 }, bass: { on: true, enter: 0.1, gain: 0.7 }, arp: { on: true, enter: 0.2, gain: 0.35 },
-      lead: { on: true, enter: 0.5, gain: 0.4 }, perc: { on: true, enter: 0.25, gain: 0.45 } } },
-    shots: [
-      { name: 'The hall of blocks', tension: 0.7, visual: 'Rows of dark blocks with glowing edges, grinding into place again and again. Miners pace between them.', board: 'overcome',
-        crowd: 'miners', crowdFaces: [[0, 'determined']], faces: { mili: [[0, 'surprised']], bit: [[0, 'surprised']] },
-        lines: [{ who: 'sati', text: 'This is where blocks are made.' }, { who: 'sati', text: 'Miners try number after number, until the hash comes out just right.', gap: 0.5, face: 'determined' }],
-        camera: (d, b) => cam.move([4, 2.5, 5], [2.5, 1.5, 3.5], mid(b), [0, 0.6, -3], 45, 'descending')(d), sfx: [{ file: 'stone_grind', at: 0.4, gain: 0.5 }],
-        notes: 'Protocol: proof of work — miners vary the nonce and re-hash the block header until the hash is below the target.' },
-      { name: 'Heavy!', tension: 0.8, visual: 'Close on Bit, straining, shoving a block into its slot.', blocking: { bit: [[0.9, 0, 0.9], -60] },
-        moves: { bit: [[0.5, [0.6, 0, 0.7], -60], [1, [0.4, 0, 0.6], -60]] },
-        lines: [{ who: 'bit', text: 'Heavy!', face: 'determined' }], faces: { bit: [[0.8, 'happy']] }, min: 2.5,
-        camera: close('bit', 30) },
-      { name: 'Heavy lifting', tension: 0.85, visual: 'Mili spins through numbers so fast they become a blur, zig-zagging between blocks; Sati watches the hashes.',
-        blocking: { bit: [[0.4, 0, 0.6], -60], mili: [[-1.2, 0, 0.8], 30], sati: [[-0.1, 0, 1.6], 0] },
-        moves: { mili: [[0.2, [-2.2, 0, -0.6], 0], [0.4, [-0.2, 0, -0.6], 180], [0.6, [-2.2, 0, 0.8], 0], [0.8, [-1.2, 0, 0.8], 30]] },
-        faces: { mili: [[0, 'happy']], sati: [[0, 'determined']], bit: [[0, 'determined']] }, crowd: 'miners', crowdFaces: [[0, 'determined']],
-        lines: [{ who: 'mili', text: 'One, two, three, four, five, a million!' }],
-        camera: (d, b) => cam.orbit(mid(b), 4, 0.6, -30, 20, 40)(d), sfx: [{ file: 'thud', at: 0.2 }, { file: 'click', at: 1.4 }, { file: 'click', at: 1.6 }, { file: 'click', at: 1.8 }, { file: 'zap', at: 2.1, gain: 0.5 }] },
-      { name: 'More zeros', tension: 1, visual: 'Sati squints at a hash scrolling across a block face. Zeros line up at the front. Eyes go wide.',
-        blocking: { sati: [[-0.1, 0, 1.2], 180] },
-        lines: [{ who: 'sati', text: 'We need more zeros in front...', face: 'determined' }, { who: 'sati', text: "There! That's the one!", gap: 0.6, face: 'surprised' }],
-        faces: { sati: [[0.92, 'happy']] },
-        camera: (d, b) => cam.push(at(b, 'sati'), 2.2, 1.1, 0.05, 32)(d), sfx: [{ file: 'impact', at: 'end', gain: 0.6 }] },
-      { name: 'Sealed', tension: 0.6, visual: 'The winning block blazes. A shaft of light opens overhead and the orb is drawn inside — sealed. The miners cheer.', env: 'block_found', board: 'same_direction',
-        blocking: { mili: [[-1.2, 0, 0.4], 180], sati: [[0, 0, 0.3], 180], bit: [[1.5, 0, 0.2], 180] }, moves: { mili: [[0.2, [-1, 0, -0.4], 180], [0.4, [-1.2, 0, 0.4], 180]] },
-        faces: { mili: [[0, 'surprised'], [0.2, 'happy']], sati: [[0, 'happy']], bit: [[0.1, 'happy']] },
-        crowd: { folk1: [[-4, 0, -1], 120], folk2: [[4, 0, -1.4], -120], folk4: [[-3, 0, -5.5], 150], folk5: [[3.4, 0, -5], -150] }, crowdFaces: [[0, 'surprised'], [0.25, 'happy']],
-        lines: [{ who: 'mili', text: 'Our transaction is in the block!' }, { who: 'bit', text: 'Sealed. For good.', face: 'determined' }], min: 6,
-        camera: (d) => cam.crane([0, 1.5, -3], 7, 1.1, 3.4, 50)(d), sfx: [{ file: 'chime', at: 0.2 }, { file: 'sparkle', at: 0.8 }] },
-      { name: 'Same direction', tension: 0.2, visual: 'Back in the light city, the trio walk toward the sunrise, side by side, among the waking crowd.', env: 'light_city',
-        blocking: { mili: [[-1, 0, 1.2], 180], sati: [[0, 0, 1], 180], bit: [[1.5, 0, 0.8], 180] },
-        moves: { mili: [[1, [-1, 0, -2.6], 180]], sati: [[1, [0, 0, -2.8], 180]], bit: [[1, [1.5, 0, -3], 180]] },
-        faces: { mili: [[0, 'happy']], sati: [[0, 'happy']], bit: [[0, 'happy']] }, crowd: 'plaza', crowdFaces: [[0, 'happy']],
-        lines: [{ who: 'sati', text: 'Light or dark, we all follow the same rules.' }, { who: 'mili', text: 'Same direction!', gap: 0.5 }], min: 7,
-        camera: (d) => cam.move([0, 0.6, 4.6], [0, 1.8, 7], [0, 0.6, 0], [0, 1.6, -10], 45, 'pull-away')(d), sfx: [{ file: 'sparkle', at: 1, gain: 0.4 }] },
-    ],
-  },
-];
+// ---- Episodes 2–8: scene outlines (one placeholder shot each, sized to the scene)
 
-const EP3: SceneSpec[] = [
-  {
-    title: 'Found', env: 'light_plaza', arc: { tension: 0.4, beat: 'rising', note: 'A coin left in the open still belongs to a key.' }, summary: 'Back in the light, Mili finds a glowing coin that is not theirs.',
-    cue: { name: 'Found', seed: 4101, key: 'G', mode: 'mixolydian', tempo: 92, density: 0.45 },
-    shots: [
-      { name: 'Left behind', visual: 'Morning in the plaza. A warm orb sits on the marble, ringed with light, with no one standing over it. Folk stroll past.', board: 'a_more_open_world',
-        blocking: { mili: [[-2.2, 0, 1.6], 40], sati: [[-1.2, 0, 2.2], 30], bit: [[0.6, 0, 2], 20] },
-        moves: { mili: [[0.45, [-0.8, 0, 0.6], 20]] },
-        faces: { mili: [[0, 'surprised'], [0.45, 'happy']] }, crowd: 'plaza',
-        lines: [{ who: 'mili', text: 'Ooh. Somebody left a shiny one.' }], firstLineAt: 1.2, min: 5,
-        camera: (d) => cam.push([0.2, 1.2, 3.4], 4.2, 2.4, 0.15, 40)(d), sfx: [{ file: 'sparkle', at: 0.4, gain: 0.45 }] },
-      { name: 'Not yours', visual: 'Sati steps between Mili and the orb, one hand up. Close enough to see the ring, not close enough to take it.',
-        blocking: { mili: [[-0.8, 0, 0.6], 20], sati: [[0.2, 0, 1.1], 10], bit: [[1.4, 0, 1.6], -10] },
-        moves: { sati: [[0.35, [-0.15, 0, 0.7], 15]] },
-        faces: { sati: [[0, 'determined']], mili: [[0.4, 'worried']] },
-        lines: [{ who: 'sati', text: "Leave it. That coin isn't ours." }, { who: 'sati', text: 'It belongs to a key. Not to whoever stands closest.', gap: 0.4 }],
-        camera: ots('mili', 'sati'),
-        notes: 'Protocol: an output names the pubkey (or script) allowed to spend it. Finding the coin does not transfer it.' },
-      { name: 'But it is right there', visual: 'Close on Mili, fingers twitching toward the glow, then dropping.',
-        blocking: { mili: [[-0.8, 0, 0.6], 20], sati: [[-0.15, 0, 0.7], 15] },
-        lines: [{ who: 'mili', text: "But it's right there.", face: 'sad' }],
-        camera: close('mili', -15) },
-      { name: 'We wait', visual: 'Bit plants himself beside the orb, arms folded, a wall with a smile. The plaza keeps moving behind them.',
-        blocking: { mili: [[-0.8, 0, 0.6], 40], sati: [[-0.15, 0, 0.7], 15], bit: [[1.2, 0, 0.3], -25] },
-        faces: { bit: [[0, 'determined']], sati: [[0, 'happy']], mili: [[0.5, 'neutral']] },
-        crowd: 'plaza',
-        lines: [{ who: 'bit', text: "Then we wait. The owner will come.", face: 'happy' }],
-        camera: (d, b) => cam.pull(mid(b), 3.2, 6.5, 42)(d) },
-    ],
-  },
-  {
-    title: "Won't Turn", env: 'sealed_gate', arc: { tension: 0.7, beat: 'crisis', note: 'Strength and speed are the wrong key.' }, summary: 'Bit shoves and Mili crackles. The signature ring stays dark.',
-    cue: { name: "Won't Turn", seed: 5217, key: 'D', mode: 'minor', tempo: 78, density: 0.55 },
-    shots: [
-      { name: 'Still waiting', visual: 'The orb now sits under the sealed arch, ring dim. The trio have been here a while. Mili bounces on their toes.', board: 'together',
-        blocking: { mili: [[-1.1, 0, -0.4], 180], sati: [[0.2, 0, 0.4], 190], bit: [[1.6, 0, 0.2], 170] },
-        faces: { mili: [[0, 'worried']], sati: [[0, 'determined']], bit: [[0, 'neutral']] },
-        lines: [{ who: 'mili', text: 'What if nobody comes?' }], min: 4,
-        camera: (d) => cam.still([0.2, 1.3, 4.2], [0.2, 0.7, -1.5], 40)(d), sfx: [{ file: 'hum', at: 0, gain: 0.25 }] },
-      { name: 'Let me', visual: 'Bit steps up and leans a shoulder into the ring of light, the way he moved the gate. The ring does not click.',
-        blocking: { bit: [[1.2, 0, -0.2], 180], sati: [[-0.6, 0, 0.8], 160], mili: [[-1.6, 0, 0.4], 150] },
-        moves: { bit: [[0.35, [0.4, 0, -0.8], 180], [0.7, [0.7, 0, -0.4], 180]] },
-        faces: { bit: [[0, 'determined'], [0.75, 'sad']] },
-        lines: [{ who: 'bit', text: 'Let me.', face: 'determined' }, { who: 'bit', text: 'Huh. It does not care how strong I am.', gap: 0.6, face: 'worried' }], min: 5,
-        camera: close('bit', 25), sfx: [{ file: 'thud', at: 1.2, gain: 0.45 }, { file: 'click', at: 1.5, gain: 0.3 }] },
-      { name: 'Zap', visual: 'Mili blurs a loop around the orb, lightning skittering over the ring. The ring stays dark. Mili skids to a stop, frazzled.',
-        blocking: { mili: [[-1.4, 0, 0.6], 0], bit: [[0.7, 0, -0.4], 180], sati: [[-0.4, 0, 1.4], 180] },
-        moves: { mili: [[0.25, [1.2, 0, -0.2], 90], [0.5, [0.2, 0, -1.4], 180], [0.75, [-1.2, 0, 0.2], -20]] },
-        faces: { mili: [[0, 'determined'], [0.8, 'sad']] },
-        lines: [{ who: 'mili', text: 'Then speed! Zap!' }, { who: 'mili', text: 'Ow. It does not care about fast either.', gap: 0.45, face: 'worried' }],
-        camera: (d, b) => cam.orbit(mid(b), 3.8, 0.7, -40, 25, 42)(d), sfx: [{ file: 'zap', at: 0.3 }, { file: 'zap', at: 0.9, gain: 0.5 }] },
-      { name: 'Wrong key', visual: 'Close on Sati, the dim ring reflected in their eyes. Calm. Certain.',
-        blocking: { sati: [[-0.4, 0, 1.4], 180] },
-        faces: { sati: [[0, 'determined']] },
-        lines: [{ who: 'sati', text: 'Those are the wrong keys.' }, { who: 'sati', text: 'Every node checks the signature against the key that owns it. Ours will never match.', gap: 0.45 }],
-        camera: close('sati', 12, 30), sfx: [{ file: 'blip', at: 2.2, gain: 0.4 }],
-        notes: 'Protocol: a signature is checked against the pubkey named by the output. A mismatch is invalid, and every node rejects the spend.' },
-    ],
-  },
-  {
-    title: 'It Fits', env: 'open_gate', arc: { tension: 0.3, beat: 'resolution', note: 'The matching key turns the ring. Anyone can see that it did.' }, summary: 'A stranger’s key fits. The coin leaves with its owner.',
-    cue: { name: 'It Fits', seed: 6109, key: 'G', mode: 'major', tempo: 100, density: 0.6 },
-    shots: [
-      { name: 'Someone comes', visual: 'Golden light through the open arch. A citizen walks in from the city and stops at the orb. The trio step aside.', board: 'same_direction',
-        blocking: { sati: [[-1.4, 0, 0.8], 70], mili: [[-2, 0, 1.4], 60], bit: [[1.8, 0, 0.6], -40] },
-        faces: { sati: [[0, 'surprised']], mili: [[0, 'surprised']], bit: [[0, 'determined']] },
-        crowd: { folk2: [[4.2, 0, 2.4], -140, [[0.55, [0.3, 0, 0.2], 180]]] },
-        lines: [{ who: 'sati', text: 'There. Watch the ring.' }], firstLineAt: 1.4, min: 5,
-        camera: (d) => cam.move([2.4, 1.2, 3.6], [0.4, 1, 2.6], [0.2, 0.6, 0.4], [0.2, 0.7, -0.6], 38, 'arrive')(d) },
-      { name: 'Click', visual: 'The ring snaps into alignment and flares. Folk 2 stands with the orb. Mili’s eyes go wide.',
-        blocking: { sati: [[-1.4, 0, 0.8], 40], mili: [[-0.6, 0, 1.2], 20], bit: [[1.4, 0, 0.8], -20] },
-        faces: { mili: [[0, 'surprised'], [0.4, 'happy']], sati: [[0, 'happy']], bit: [[0.3, 'happy']] },
-        crowd: { folk2: [[0.3, 0, 0.2], 180] }, crowdFaces: [[0.2, 'happy']],
-        lines: [{ who: 'mili', text: 'It clicked! Their key fits.' }],
-        camera: (d) => cam.push([0.2, 1.1, 2.8], 3.4, 1.8, 0.1, 34)(d), sfx: [{ file: 'click', at: 0.6 }, { file: 'chime', at: 0.7, gain: 0.55 }, { file: 'sparkle', at: 1.1, gain: 0.4 }],
-        notes: 'Protocol: a valid signature proves the spender holds the matching private key, without revealing the key itself. Every node can check it.' },
-      { name: 'Anyone can check', visual: 'The owner walks back through the arch with the orb. Sati watches them go, then turns to the others.',
-        blocking: { sati: [[-0.4, 0, 0.6], 10], mili: [[-1.3, 0, 1], 20], bit: [[1.2, 0, 0.5], -15] },
-        moves: { sati: [[0.7, [-0.2, 0, 0.2], -10]] },
-        faces: { sati: [[0, 'determined'], [0.7, 'happy']] },
-        crowd: { folk2: [[0.3, 0, 0.2], 0, [[1, [0.3, 0, -6], 0]]] },
-        lines: [{ who: 'sati', text: 'Anyone can check the signature.' }, { who: 'sati', text: 'Only the owner can spend.', gap: 0.4, face: 'happy' }],
-        camera: ots('mili', 'sati') },
-      { name: 'Not ours', visual: 'The trio walk toward the open city, side by side, smaller against the arch. Mili grins up at Sati.',
-        blocking: { mili: [[-1, 0, 1], 0], sati: [[0.1, 0, 0.8], 0], bit: [[1.5, 0, 0.6], 0] },
-        moves: { mili: [[1, [-1, 0, -2.4], 0]], sati: [[1, [0.1, 0, -2.6], 0]], bit: [[1, [1.5, 0, -2.8], 0]] },
-        faces: { mili: [[0, 'happy']], sati: [[0, 'happy']], bit: [[0, 'happy']] }, crowd: 'plaza', crowdFaces: [[0, 'happy']],
-        lines: [{ who: 'mili', text: 'Good. I only wanted to look.', gap: 0.3 }, { who: 'bit', text: 'Next time, we look with our eyes.', face: 'happy' }], min: 6,
-        camera: (d) => cam.move([0.2, 0.7, 4.2], [0.2, 1.6, 6.4], [0.2, 0.5, 0], [0.2, 1.4, -8], 44, 'pull-away')(d), sfx: [{ file: 'sparkle', at: 1.2, gain: 0.35 }] },
-    ],
-  },
-];
+interface OutlineScene { title: string; env: string; beat: Beat; tension: number; summary: string; cast: string[]; secs: number }
+/** a placeholder shot for an outlined scene: the cast lined up on the set, a wide from the environment's preview camera */
+function outline(o: OutlineScene): SceneSpec {
+  const env = V3_ENVIRONMENTS[o.env];
+  const cast = o.cast.filter((c) => characters[c]);
+  const row: Crowd = Object.fromEntries(cast.map((c, i) => [c, [[(i - (cast.length - 1) / 2) * 1.4, 0, 0.5], 0] as Extra]));
+  return {
+    title: o.title, env: o.env, summary: o.summary, arc: { tension: o.tension, beat: o.beat, note: '' },
+    shots: [{ name: `Outline — ${o.title}`, visual: `${o.summary} (Not boarded yet.)`, crowd: row, min: o.secs, status: 'todo',
+      camera: (d) => cam.still(env.preview?.position ?? [0, 2, 10], env.preview?.target ?? [0, 1, 0], env.preview?.fov ?? 50)(d) }],
+  };
+}
+/** outline scenes run ~1.3× the first estimates: longer episodes, room for the characters to talk */
+const S = (title: string, env: string, beat: Beat, tension: number, secs: number, cast: string[], summary: string): OutlineScene => ({ title, env, beat, tension, secs: Math.round(secs * 1.3), cast, summary });
 
-/** The reflection orb is the IK target and the portal: inside the protocol / outside, the real world. */
-const EP4: SceneSpec[] = [
-  {
-    title: 'The Orb', env: 'portal_inside', arc: { tension: 0.45, beat: 'inciting', note: 'They find a mirror that shows the other world.' },
-    summary: 'Inside the protocol, a single reflection orb hangs in a black chamber. It does not show their faces. It shows daylight.',
-    cue: { name: 'The Skin of the Glass', seed: 2016, key: 'D', mode: 'dorian', tempo: 72, density: 0.35 },
-    shots: [
-      { name: 'One sphere', visual: 'A dark chamber. One glass sphere hangs at eye height, ringed with a thin halo. The floor mirrors it. The trio come in small against the dark.', min: 6, board: 'the_protocol',
-        blocking: { mili: [[-1.6, 0, 1.4], 10], sati: [[-0.2, 0, 1.8], 5], bit: [[1.5, 0, 1.5], -8] },
-        moves: { mili: [[0.7, [-1.1, 0, 0.5], 8]], sati: [[0.75, [0.15, 0, 0.9], 0]], bit: [[0.8, [1.3, 0, 0.7], -6]] },
-        faces: { mili: [[0, 'surprised']], sati: [[0, 'determined']], bit: [[0, 'surprised']] },
-        camera: (d) => cam.move([2.4, 1.2, 5.2], [0.3, 1.5, 3.6], [0, 1.35, -2.2], [0, 1.35, -2.2], 40, 'approach')(d), sfx: [{ file: 'hum', at: 0.2, gain: 0.35 }, { file: 'sparkle', at: 1.4, gain: 0.4 }] },
-      { name: 'Not our faces', visual: 'Close on the orb. The glass holds a sunlit street, trees, people — not the three friends standing in front of it.',
-        blocking: { mili: [[-1.1, 0, 0.5], 8], sati: [[0.15, 0, 0.9], 0], bit: [[1.3, 0, 0.7], -6] },
-        lines: [{ who: 'mili', text: 'It looks like a mirror.', face: 'surprised' }, { who: 'mili', text: 'It is not showing us.', gap: 0.35, face: 'worried' }],
-        camera: (d) => cam.push([0, 1.35, -2.2], 3.2, 1.7, 0.05, 28)(d) },
-      { name: 'Two worlds', visual: 'Sati studies the skin of the glass, then the dark around them. Mili and Bit wait on either side of the orb.',
-        blocking: { mili: [[-1.1, 0, 0.5], 20], sati: [[0.15, 0, 0.9], 0], bit: [[1.3, 0, 0.7], -15] },
-        lines: [
-          { who: 'sati', text: 'This side is inside the protocol.', face: 'determined' },
-          { who: 'sati', text: 'The other side is outside. The real world.', gap: 0.4, face: 'determined' },
-        ],
-        camera: ots('bit', 'sati') },
-      { name: 'Almost', visual: 'Mili reaches for the orb. The arm folds at the shoulder and the elbow and stops on the glass. A hand on the other side seems to reach back.',
-        blocking: { mili: [[-0.85, 0, 0.15], 12], sati: [[0.5, 0, 0.9], -10], bit: [[1.3, 0, 0.7], -15] },
-        moves: { mili: [[0.45, [-0.55, 0, -0.35], 8]] },
-        faces: { mili: [[0, 'determined'], [0.6, 'surprised']], sati: [[0.5, 'surprised']] },
-        lines: [{ who: 'mili', text: 'I can almost touch them.' }, { who: 'bit', text: 'Then we go through.', gap: 0.45, face: 'determined', react: { mili: 'happy' } }],
-        camera: (d, b) => cam.move([-2.2, 0.7, 1.6], [-1.2, 0.85, 0.9], at(b, 'mili'), [0, 1.2, -2.2], 34, 'reach')(d), sfx: [{ file: 'chime', at: 1.1, gain: 0.45 }] },
-    ],
-  },
-  {
-    title: 'The Reach', env: 'portal_outside', arc: { tension: 0.7, beat: 'rising', note: 'Outside, a person reaches for the orb. The arm only bends at its joints.' },
-    summary: 'They step into daylight. The same orb now reflects the dark. A stranger reaches for it the way a hand solves toward a target — only along the joints it has.',
-    shots: [
-      { name: 'Daylight', visual: 'Hard sun on a stone street. The orb sits in the square and holds the black chamber in its skin. The trio squint, suddenly small in a big ordinary world.', min: 5, board: 'a_more_open_world',
-        blocking: { mili: [[-1.2, 0, 0.6], 15], sati: [[0.1, 0, 1], 0], bit: [[1.4, 0, 0.7], -10] },
-        faces: { mili: [[0, 'surprised']], sati: [[0, 'happy']], bit: [[0, 'surprised']] },
-        crowd: { folk1: [[-5.5, 0, -5], 70], folk3: [[4.8, 0, -4.2], -110], folk4: [[6, 0, -7], -80], folk5: [[-4, 0, -6.5], 40] },
-        lines: [{ who: 'mili', text: 'We are out.' }, { who: 'sati', text: 'Outside the protocol. This is their world.', gap: 0.35, face: 'determined' }],
-        camera: (d, b) => cam.crane(mid(b), 8, 0.8, 3.2, 48)(d), sfx: [{ file: 'whoosh', at: 0.15, gain: 0.4 }] },
-      { name: 'The target', visual: 'A citizen walks up and reaches for the orb. Shoulder, then elbow, then the hand. Nothing else on the body swings free. The hand stops just short of the glass.',
-        blocking: { sati: [[-1.3, 0, 0.8], 25], mili: [[-2.1, 0, 1.1], 20], bit: [[1.6, 0, 0.9], -20] },
-        crowd: { folk2: [[1.1, 0, 1.6], 170, [[0.55, [0.55, 0, 0.15], 185]]] },
-        crowdFaces: [[0.4, 'determined']],
-        lines: [{ who: 'sati', text: 'Watch the arm. It wants the orb.' }, { who: 'sati', text: 'It only bends where it has a joint.', gap: 0.4, face: 'determined' }],
-        camera: (d) => cam.move([3.2, 1.3, 2.4], [1.8, 1.15, 1.5], [0.4, 1.1, 0.2], [0, 1.3, -2.2], 32, 'ik-follow')(d) },
-      { name: 'The joints hold', visual: 'Bit reaches too, a straight grab. The big arm still folds at the shoulder and the elbow. The orb does not move to meet him.',
-        blocking: { bit: [[0.85, 0, 0.35], 8], sati: [[-1.2, 0, 0.9], 15], mili: [[-1.9, 0, 0.7], 12] },
-        moves: { bit: [[0.4, [0.45, 0, -0.45], 5]] },
-        faces: { bit: [[0, 'determined'], [0.65, 'worried']], mili: [[0.5, 'surprised']] },
-        lines: [{ who: 'bit', text: 'I can just grab it.' }, { who: 'sati', text: 'You can want the target. The arm still has to solve the path.', gap: 0.4, face: 'determined', react: { bit: 'worried' } }],
-        camera: (d, b) => cam.orbit(at(b, 'bit'), 2.8, 0.35, -30, 15, 36)(d), sfx: [{ file: 'thud', at: 1.5, gain: 0.35 }] },
-      { name: 'Wish and rules', visual: 'Wide: the stranger and Bit both reaching, the orb between them, the street busy behind. Sati stands still, reading it.',
-        blocking: { sati: [[-1.4, 0, 1.1], 10], mili: [[-2.2, 0, 0.8], 15], bit: [[0.45, 0, -0.45], 5] },
-        crowd: { folk2: [[0.7, 0, 0.2], 190], folk1: [[-5, 0, -5], 60], folk3: [[4.5, 0, -4], -100] },
-        lines: [
-          { who: 'sati', text: 'People out here name the goal.', face: 'happy' },
-          { who: 'sati', text: 'Inside, the protocol only moves along its rules. Like that arm.', gap: 0.35 },
-        ],
-        camera: (d) => cam.move([-3.5, 1.6, 4.2], [-2.2, 1.8, 5.4], [0, 1.2, -1], [0, 1.35, -2.2], 42, 'pull-away')(d) },
-    ],
-  },
-  {
-    title: 'Both Sides', env: 'portal_inside', arc: { tension: 0.3, beat: 'resolution', note: 'The portal stays open. Neither world skips the rules.' },
-    summary: 'Back inside, the orb still shows the street and the reaching hand. The glass is where a wish meets the rules.',
-    shots: [
-      { name: 'Still reaching', visual: 'The chamber again. In the orb, the sunlit hand is still there, still short of the glass. Mili reaches back, mirroring it.', board: 'new_perspectives',
-        blocking: { mili: [[-0.55, 0, -0.2], 8], sati: [[0.7, 0, 0.8], -15], bit: [[1.6, 0, 0.6], -20] },
-        faces: { mili: [[0, 'determined']], sati: [[0, 'happy']], bit: [[0, 'happy']] },
-        lines: [{ who: 'mili', text: 'They are still reaching.' }],
-        camera: (d) => cam.move([0.2, 0.9, 2.4], [-0.2, 1.15, 1.2], [0, 1.35, -2.2], [-0.3, 1.1, -0.4], 34, 'through-glass')(d), sfx: [{ file: 'hum', at: 0, gain: 0.3 }] },
-      { name: 'The portal', visual: 'Close on Sati, the orb a soft disc of daylight behind the shoulder.',
-        blocking: { sati: [[0.7, 0, 0.8], -15], mili: [[-0.55, 0, -0.2], 8], bit: [[1.6, 0, 0.6], -20] },
-        lines: [
-          { who: 'sati', text: 'The orb is the portal. It shows both worlds.', face: 'determined' },
-          { who: 'sati', text: 'It does not let either one skip the joints.', gap: 0.4, face: 'happy' },
-        ],
-        camera: close('sati', 22) },
-      { name: 'Where they meet', visual: 'The three stand with the reflection orb between them and the dark. Daylight turns slowly inside the glass.',
-        blocking: { mili: [[-1.15, 0, 0.45], 12], sati: [[0.15, 0, 0.85], 0], bit: [[1.45, 0, 0.55], -12] },
-        faces: { mili: [[0, 'happy']], sati: [[0, 'happy']], bit: [[0, 'happy']] },
-        lines: [
-          { who: 'bit', text: 'So we keep the rules.', face: 'determined' },
-          { who: 'mili', text: 'And they keep the wish.', gap: 0.3, face: 'happy' },
-          { who: 'sati', text: 'And the glass is where they meet.', gap: 0.35, face: 'happy' },
-        ], min: 7,
-        camera: (d) => cam.orbit([0, 1.1, -0.4], 4.2, 0.55, -24, 18, 40)(d), sfx: [{ file: 'sparkle', at: 2.2, gain: 0.4 }, { file: 'chime', at: 4.5, gain: 0.35 }] },
-    ],
-  },
+const EP2 = [
+  S('Waiting', 'utxo_district', 'setup', 0.3, 110, ['sati', 'bit'], 'Blocks tick by. Sati can’t sit still; Bit can — but he sighs at every ten-minute wait. They start to learn each other.'),
+  S('Strangers Walk In', 'node_city', 'rising', 0.4, 120, ['sati', 'bit', 'folk1', 'folk2', 'validator'], 'They follow two strangers through the Validator’s gate into a transaction: input tubes flowing into a bar of light.'),
+  S('Melt', 'node_core', 'midpoint', 0.6, 130, ['sati', 'bit', 'folk1', 'folk2', 'folk5'], 'The strangers melt into light; new outputs walk out with new faces, remembering nothing. Sati is shaken — and can’t look away.'),
+  S('The Wrong Key', 'node_city', 'rising', 0.55, 120, ['validator', 'script_clerk', 'sati', 'bit', 'folk3'], 'A transaction arrives signed with the wrong key. The Validator turns it away; the Clerk shows Sati the lock she carries.'),
+  S('Ten Blocks', 'utxo_district', 'resolution', 0.35, 100, ['sati', 'bit'], 'Block ten. “When it’s my turn, I want to go.” “Even if you don’t come back?” Sati doesn’t answer.'),
+];
+const EP3 = [
+  S('The Waiting Room', 'mempool_hall', 'setup', 0.35, 120, ['sati', 'bit', 'mempool_host'], 'They sneak into the mempool: a vast spiral of waiting transactions, the bright ones bidding more. The Host runs it all.'),
+  S('Pip', 'mempool_hall', 'rising', 0.4, 140, ['sati', 'pip', 'bit'], 'Sati meets Pip, a tiny, funny coin stuck in a low-fee transaction for days. Instant friends.'),
+  S('Fee Rush', 'mempool_hall', 'crisis', 0.6, 130, ['pip', 'sati', 'mempool_host', 'folk2', 'folk4'], 'A rush: bright transactions jump the queue, block after block. Pip is passed over again. Sati wants to help and can’t.'),
+  S('Made It', 'node_core', 'resolution', 0.5, 120, ['pip', 'sati', 'bit', 'hasher'], 'The Hasher finally picks Pip’s transaction into the newest block. Pip waves goodbye, glowing. Block thirty.'),
+];
+const EP4 = [
+  S('Free Light', 'mempool_hall', 'setup', 0.4, 120, ['counterfeiter', 'mempool_host', 'folk1', 'folk3'], 'An over-bright stranger works the waiting room, handing out coins from nothing.'),
+  S('Tempted', 'mempool_hall', 'rising', 0.55, 130, ['counterfeiter', 'sati', 'bit'], 'He offers Sati a faster way to matter. She’s tempted; Bit isn’t.'),
+  S('Rejected', 'node_city', 'climax', 0.7, 140, ['validator', 'counterfeiter', 'sati', 'gossip'], 'At the gate the Validator checks his coins: their parents don’t exist. Rejected — and the Gossip carries the word to every node.'),
+  S('Nowhere', 'network_void', 'resolution', 0.5, 110, ['counterfeiter', 'rewriter'], 'Node after node turns him away. Out in the void he slips toward a dark shape that is stacking black blocks. Block forty-five.'),
+];
+const EP5 = [
+  S('Storm Warning', 'river_dam', 'setup', 0.45, 100, ['ana'], 'Outside: a storm rolls toward the town. The dam’s lights flicker. Ana, exhausted, keeps her rigs running.'),
+  S('Lights Out', 'node_city', 'inciting', 0.75, 110, ['validator', 'hasher', 'mempool_host', 'sati', 'bit'], 'The node goes dark mid-sentence. Machinery stops, no data moves, the crew freeze. Only the coins still glow.'),
+  S('Outside', 'network_void', 'midpoint', 0.6, 140, ['sati', 'bit'], 'Sati and Bit wake outside every node, like spirits in the void, and see the whole network — and a copy of themselves in every single node.'),
+  S('The Crossing', 'garage', 'rising', 0.65, 140, ['sati', 'bit', 'ana'], 'Through the core of their dark node they cross into the human world as invisible passengers, and watch Ana fight to bring the power back.'),
+  S('Resync', 'node_core', 'resolution', 0.4, 120, ['hasher', 'validator', 'gossip', 'node', 'sati', 'bit'], 'Power returns. The node reboots; the crew wake groggy with a gap in their memory and catch up block by block. Block fifty-eight.'),
+];
+const EP6 = [
+  S('A Message', 'garage', 'setup', 0.45, 110, ['ana', 'thief'], 'A friendly “support” message asks Ana to confirm her seed words. In town, a figure watches a screen.'),
+  S('The Agent', 'utxo_district', 'rising', 0.6, 130, ['sati', 'bit', 'folk4'], 'Inside, a slick stranger tries to lead Sati and Bit to a new lock.'),
+  S('No Signature', 'node_city', 'climax', 0.7, 120, ['validator', 'script_clerk', 'sati', 'bit'], 'At the gate it falls apart: no signature from the miner, no move. The Clerk shows why the lock holds.'),
+  S('Almost', 'garage', 'crisis', 0.75, 140, ['ana', 'sati', 'bit'], 'Ana nearly types the words. Sati and Bit, passengers in her phone’s glow, can’t stop her. Something feels wrong. She doesn’t.'),
+  S('Seventy-Two', 'utxo_district', 'resolution', 0.4, 90, ['sati', 'bit'], 'Block seventy-two. Sati has learned that being moved isn’t the same as going somewhere.'),
+];
+const EP7 = [
+  S('The Offer', 'river_dam', 'setup', 0.55, 120, ['ana', 'rewriter'], 'In the storm, a big mining operation’s man offers Ana good money to point her rigs at his pool. She says no.'),
+  S('The Dark Chain', 'dark_chain', 'rising', 0.7, 110, ['rewriter', 'hasher'], 'The Hasher finally sees it: a hidden chain of black blocks, growing.'),
+  S('Release', 'node_core', 'crisis', 0.9, 130, ['rewriter', 'pip', 'sati', 'bit', 'hasher'], 'He releases it. The newest block is orphaned — Pip’s block. Pip never existed. Sati is devastated.'),
+  S('Race', 'garage', 'climax', 0.95, 150, ['ana', 'hasher', 'sati', 'bit'], 'Ana keeps mining through the storm while the honest network races the dark chain. The dam is hit.'),
+  S('Heavier', 'node_core', 'resolution', 0.6, 120, ['hasher', 'node', 'sati', 'bit', 'rewriter'], 'The honest chain outweighs his; the dark chain falls apart. Sati and Bit survive because their block is buried deep enough. Block ninety-nine.'),
+];
+const EP8 = [
+  S('One Hundred', 'node_core', 'setup', 0.5, 110, ['sati', 'bit', 'hasher', 'node', 'script_clerk'], 'Block one hundred. Their locks change; they are finally real, and free to be spent.'),
+  S('The Town in the Dark', 'town_night', 'rising', 0.55, 120, ['ana'], 'The dam is broken and the town is dark. Ana decides to help pay for the repair.'),
+  S('Goodbye', 'utxo_district', 'crisis', 0.8, 150, ['sati', 'bit'], 'Sati chooses to go. Saying goodbye to Bit.'),
+  S('Spent', 'node_core', 'climax', 0.95, 140, ['sati', 'validator', 'hasher', 'node'], 'The transaction: Sati flows in, melts into light, and crosses through the core as an invisible passenger inside the payment.'),
+  S('One Light', 'town_night', 'resolution', 0.4, 110, ['ana'], 'In the dark town one light comes back on. Somewhere, a brand-new coin hums Sati’s little tune.'),
+  S('Faster', 'network_void', 'resolution', 0.35, 90, ['bit', 'mili'], 'Ana opens a channel with Bit. On the skin of the node a tiny spark races past him. Season two.'),
 ];
 
 // ------------------------------------------------------------------ build
@@ -817,62 +965,103 @@ export const STYLE_BOARD: Treatment[] = [
     camera: 'Cinematic, low angles, reflections on wet ground.', light: 'The cast is the only light. Deep blacks around them.', line: 'None. Glow defines the edge.', materials: 'Matte blacks, bloom, wet reflections.', notes: '' }),
 ];
 
+
+const SEASON = {
+  title: 'Season 1 — Unspent',
+  logline: 'Two coins born from nothing in a miner’s node have a hundred blocks to wait before they’re real — while a rival builds a chain in the dark that could erase them.',
+  plot: 'A miner in a dark river town finds a block; inside her node a silent giant, the Coinbase, breaks into new coins, and two of them — small Sati and huge Bit — wake with no idea who they are. Locked to the miner and unable to move for a hundred blocks, they learn their world: transactions that melt coins into strangers, a waiting room where Sati befriends little Pip, a forger every node rejects, a blackout that throws them outside the network to see themselves on every node, and a thief who can’t move them without the miner’s signature. Then the Rewriter releases his hidden chain: Pip’s block is orphaned, but honest work outweighs him and Sati and Bit survive by depth. At block one hundred, Sati chooses to be spent — to help relight the town — and becomes someone new, while Bit opens a door to Lightning.',
+};
+
 const EPISODES = [
-  { id: 'ep01', number: 1, title: 'Mili, Sati & Bit', theme: 'Every one of us counts — small, smart or strong.', arc: { tension: 0.4, beat: 'setup' as Beat, note: '' }, synopsis: 'In a city of white marble and floating glass, three glowing friends — fast little Mili, clever Sati and mighty Bit — discover that every one of them counts. Then something calls from the dark below.', scenes: EP1,
-    cue: { name: 'Light City', seed: 2009, key: 'C', mode: 'lydian', tempo: 96, density: 0.6 } as Partial<ScoreCue> & { seed: number; name: string } },
-  { id: 'ep02', number: 2, title: 'Into the Dark', theme: 'Rules anyone can check make the dark less scary.', arc: { tension: 0.85, beat: 'climax' as Beat, note: '' }, synopsis: 'Following the signal down into a world of black monoliths, the trio help a new node find its peers, follow a transaction across the network, and watch a block being mined.', scenes: EP2 },
-  { id: 'ep03', number: 3, title: 'The Right Key', theme: 'Only the key that owns it can spend it.', arc: { tension: 0.35, beat: 'resolution' as Beat, note: '' }, synopsis: 'Back in the light city, Mili finds a glowing coin that is not theirs. Speed and strength cannot make it move. Sati shows that the signature ring only turns for the matching key — and that anyone can see when it does not.', scenes: EP3 },
-  { id: 'ep04', number: 4, title: 'The Reflection Orb', theme: 'A wish starts outside. The protocol only bends along its rules.', arc: { tension: 0.55, beat: 'rising' as Beat, note: 'The orb is the door between the real world and the protocol.' }, synopsis: 'Deep in the protocol the trio find a reflection orb that does not show their own faces. One side of the glass is inside Bitcoin. The other side is the real world, outside the protocol. People out there reach for the orb the way an arm reaches a target: the hand can want it, and the body can only fold at the joints it has. They step through, and they step back. The portal stays open. It does not let either world skip the rules.', scenes: EP4,
-    cue: { name: 'Two Sides', seed: 1618, key: 'A', mode: 'mixolydian', tempo: 84, density: 0.4 } as Partial<ScoreCue> & { seed: number; name: string } },
+  { id: 'ep01', number: 1, title: 'Coinbase', theme: 'Everything has to start from somewhere. Almost everything.', arc: { tension: 0.35, beat: 'setup' as Beat, note: 'Birth: the world, the crew, the wait.' },
+    logline: 'A block is mined in a garage at the edge of a dark town; inside the node a silent giant is born from nothing and breaks into new coins — two of them, Sati and Bit, wake with no idea who they are.',
+    synopsis: 'Wordless, we fall from a dark town into a sleeping miner’s node: a city of light with the timechain turning at its core. The Hasher shuffles cubes until they click into a valid block. From it rises the Coinbase, a silent giant with no parents, which breaks into new coins. Sati and Bit wake, find the same lock on their chests, and learn from the crew that they belong to the miner and must wait a hundred blocks before they can be spent. Far off, something is building blocks in the dark.', scenes: EP1 },
+  { id: 'ep02', number: 2, title: 'Transaction', theme: 'To go somewhere, you stop being who you were.', arc: { tension: 0.4, beat: 'inciting' as Beat, note: 'Foreshadow: coins lose themselves when spent.' },
+    logline: 'Sati and Bit get to know each other — and watch strangers walk into a transaction and come out as someone else.',
+    synopsis: 'Waiting out their hundred blocks, Sati and Bit follow strangers through the Validator’s gate and watch them melt into a transaction and come out as new coins who remember nothing. A wrong-key transaction is turned away. Sati still wants to go.', scenes: EP2.map(outline) },
+  { id: 'ep03', number: 3, title: 'The Mempool', theme: 'Everyone is waiting for something.', arc: { tension: 0.45, beat: 'rising' as Beat, note: 'Sati makes a friend.' },
+    logline: 'In the waiting room of the node, Sati befriends Pip, a tiny coin stuck in a low-fee transaction, and cheers when he finally makes it into a block.',
+    synopsis: 'Sati and Bit sneak into the mempool, a spiral of waiting transactions that bid for space. Sati befriends Pip, passed over block after block, until the Hasher finally picks his transaction into the newest block.', scenes: EP3.map(outline) },
+  { id: 'ep04', number: 4, title: 'The Counterfeiter', theme: 'What comes from nothing is worth nothing — except once.', arc: { tension: 0.5, beat: 'rising' as Beat, note: 'The rules hold everywhere.' },
+    logline: 'An over-bright stranger offers coins from nothing; every node turns him away, and he slips into the dark toward someone else.',
+    synopsis: 'The Counterfeiter tempts the waiting room and Sati with coins from nothing. At the gate their parents don’t exist; the Validator rejects him and every node follows. In the void he drifts toward the Rewriter.', scenes: EP4.map(outline) },
+  { id: 'ep05', number: 5, title: 'The Dark Node', theme: 'You are everywhere at once — and nowhere is home.', arc: { tension: 0.65, beat: 'midpoint' as Beat, note: 'Decentralization seen from outside; first crossing.' },
+    logline: 'A storm kills the miner’s node: its crew go dark, but Sati and Bit wake outside every node and see themselves in all of them — then cross into the human world.',
+    synopsis: 'The storm cuts the power. The node goes dark and its crew freeze; only the coins glow. Sati and Bit wake in the void, seeing the whole network and a copy of themselves in every node. Through the core they cross into the human world as invisible passengers and watch Ana bring the power back. The node reboots and the crew resync.', scenes: EP5.map(outline) },
+  { id: 'ep06', number: 6, title: 'The Thief', theme: 'Being moved is not the same as going somewhere.', arc: { tension: 0.7, beat: 'rising' as Beat, note: 'Keys and signatures, across both worlds.' },
+    logline: 'A phisher works on Ana outside while his agent tries to move Sati and Bit inside — and nothing moves without her signature.',
+    synopsis: 'A fake support message asks Ana for her seed words. Inside, an agent tries to lead Sati and Bit to a new lock, but without the miner’s signature the Validator stops them. Outside, Ana almost types the words — and doesn’t.', scenes: EP6.map(outline) },
+  { id: 'ep07', number: 7, title: 'The Rewrite', theme: 'The past is only as safe as the work piled on top of it.', arc: { tension: 0.95, beat: 'crisis' as Beat, note: 'The villain strikes; a loss; honest work wins.' },
+    logline: 'The Rewriter releases his hidden chain: Pip’s block is erased, but the honest network outworks him and Sati and Bit survive by depth.',
+    synopsis: 'Ana refuses the Rewriter’s offer and mines through the storm. He releases his hidden chain and the newest block is orphaned — Pip never existed. The honest chain outweighs his and the dark chain collapses; Sati and Bit’s birth block holds. The dam is damaged.', scenes: EP7.map(outline) },
+  { id: 'ep08', number: 8, title: 'Spent', theme: 'To matter, you let go.', arc: { tension: 0.85, beat: 'climax' as Beat, note: 'Sati is spent; echo; Season 2 hook.' },
+    logline: 'At block one hundred Sati chooses to be spent to help relight the town — and becomes someone new; Bit is left looking toward Lightning.',
+    synopsis: 'Block one hundred: Sati and Bit are free to move. The town is dark; Ana pays toward the dam’s repair, and Sati goes, melting into the transaction and crossing as a passenger. A light comes back on in town, and a new coin hums her tune. Ana opens a channel with Bit, and a tiny spark races past him.', scenes: EP8.map(outline) },
 ];
 
 const onlyIdx = process.argv.indexOf('--only');
 const ONLY = onlyIdx >= 0 ? process.argv[onlyIdx + 1] : undefined;
 
-/** Append one episode onto the project already on disk. Does not touch the other episodes. */
+/** Builds one episode (scenes, shots, scene-level music cues) into `data`. Returns the cue ids it wrote. */
+async function buildEpisode(epSpec: (typeof EPISODES)[number], data: ProjectData, boards: boolean) {
+  console.log(`\n→ ${epSpec.id} ${epSpec.title} ${NO_TTS ? '(no TTS)' : '(TTS: + new, · cached)'}`);
+  const ep: Episode = SCHEMAS.episode.parse({ id: epSpec.id, number: epSpec.number, title: epSpec.title, logline: epSpec.logline, synopsis: epSpec.synopsis, theme: epSpec.theme, arc: epSpec.arc, status: 'wip' });
+  const cueIds: string[] = [];
+  let total = 0;
+  for (const [i, scSpec] of epSpec.scenes.entries()) {
+    const sc: Scene = SCHEMAS.scene.parse({ id: `${ep.id}_sc${String(i + 1).padStart(2, '0')}`, title: scSpec.title, summary: scSpec.summary, environmentId: scSpec.env, status: 'wip', arc: scSpec.arc });
+    let carry = 0;
+    const starts: number[] = [];
+    let t = 0;
+    for (const shSpec of scSpec.shots) {
+      const { shot, spill } = await buildShot(boards ? shSpec : { ...shSpec, board: undefined }, carry);
+      shot.id = `sh${String(sc.shots.length + 1).padStart(2, '0')}`;
+      carry = Math.max(spill, carry - shot.duration);
+      starts.push(t);
+      t += shot.duration;
+      sc.shots.push(shot);
+    }
+    const scLen = t;
+    total += scLen;
+    for (const [k, m] of (scSpec.music ?? []).entries()) {
+      const id = `cue_${sc.id}${k ? `_${String.fromCharCode(97 + k)}` : ''}`;
+      const start = r3(starts[m.from ?? 0] + (m.at ?? 0));
+      const end = (m.to === undefined || m.to >= starts.length ? scLen : starts[m.to]) + (m.tail ?? 0);
+      const base = SCHEMAS.cue.parse({ id, seed: MOTIF, ...m.cue });
+      data.cues[id] = { ...base, bars: Math.max(2, Math.ceil((end - start) / ((base.beatsPerBar * 60) / base.tempo)) + 1) };
+      sc.tracks.score.push({ id: uid('scr'), start, duration: r3(end - start), cueId: id, offset: 0, gain: m.gain ?? 0.45 });
+      cueIds.push(id);
+    }
+    ep.scenes.push(sc.id);
+    data.scenes[sc.id] = { ...sc, episodeId: ep.id };
+  }
+  data.episodes[ep.id] = ep;
+  console.log(`\n  ${ep.scenes.length} scenes, ${ep.scenes.reduce((n, s) => n + data.scenes[s].shots.length, 0)} shots, ${total.toFixed(1)}s`);
+  return cueIds;
+}
+
+/** Rebuild one episode on top of the project already on disk. Does not touch the other episodes. */
 async function writeEpisodes(only: string) {
   const epSpec = EPISODES.find((e) => e.id === only);
   if (!epSpec) throw new Error(`unknown episode ${only}`);
   const { data } = loadProject();
   if (!data.project.episodes.includes(epSpec.id)) data.project.episodes.push(epSpec.id);
-  for (const id of ['portal_inside', 'portal_outside'] as const) {
-    if (ENVIRONMENTS[id]) data.environments[id] = ENVIRONMENTS[id];
+  // drop the episode's old scenes and cues first
+  for (const id of data.episodes[epSpec.id]?.scenes ?? []) {
+    fs.rmSync(path.join(PROJECT_DIR, 'episodes', epSpec.id, 'scenes', `${id}.json`), { force: true });
+    delete data.scenes[id];
   }
-  const boards = fs.existsSync(path.join(PROJECT_DIR, 'media/boards/the_protocol.png'));
-  console.log(`\n→ ${epSpec.id} ${epSpec.title} ${NO_TTS ? '(no TTS)' : '(TTS: + new, · cached)'}`);
-  const ep: Episode = SCHEMAS.episode.parse({ id: epSpec.id, number: epSpec.number, title: epSpec.title, synopsis: epSpec.synopsis, theme: epSpec.theme, arc: epSpec.arc, status: 'wip' });
-  let total = 0;
-  for (const [i, scSpec] of epSpec.scenes.entries()) {
-    const sc: Scene = SCHEMAS.scene.parse({ id: `${ep.id}_sc${String(i + 1).padStart(2, '0')}`, title: scSpec.title, summary: scSpec.summary, environmentId: scSpec.env, status: 'wip', arc: scSpec.arc });
-    for (const shSpec of scSpec.shots) {
-      const shot = await buildShot(boards ? shSpec : { ...shSpec, board: undefined });
-      shot.id = `sh${String(sc.shots.length + 1).padStart(2, '0')}`;
-      sc.shots.push(shot);
-    }
-    const scLen = sc.shots.reduce((s, x) => s + x.duration, 0);
-    total += scLen;
-    if (scSpec.cue) {
-      const base = SCHEMAS.cue.parse({ id: `cue_${sc.id}`, ...scSpec.cue });
-      const cue: ScoreCue = { ...base, bars: Math.max(2, Math.ceil(scLen / ((base.beatsPerBar * 60) / base.tempo))) };
-      data.cues[cue.id] = cue;
-      sc.tracks.score.push({ id: uid('scr'), start: 0, duration: scLen, cueId: cue.id, offset: 0, gain: 0.5 });
-    }
-    ep.scenes.push(sc.id);
-    data.scenes[sc.id] = { ...sc, episodeId: ep.id };
+  for (const id of Object.keys(data.cues).filter((c) => c.startsWith(`cue_${epSpec.id}`))) {
+    fs.rmSync(path.join(PROJECT_DIR, 'score', `${id}.json`), { force: true });
+    delete data.cues[id];
   }
-  if (epSpec.cue) {
-    const base = SCHEMAS.cue.parse({ id: `cue_${ep.id}`, ...epSpec.cue });
-    const cue: ScoreCue = { ...base, bars: Math.max(2, Math.ceil(total / ((base.beatsPerBar * 60) / base.tempo))) };
-    data.cues[cue.id] = cue;
-    ep.tracks.score.push({ id: uid('scr'), start: 0, duration: total, cueId: cue.id, offset: 0, gain: 0.45 });
-  }
-  data.episodes[ep.id] = ep;
+  const boards = fs.existsSync(path.join(PROJECT_DIR, 'media/boards/hero_banner.png'));
+  const cueIds = await buildEpisode(epSpec, data, boards);
+  const ep = data.episodes[epSpec.id];
   saveDoc({ kind: 'project', id: 'project' }, data.project);
   saveDoc({ kind: 'episode', id: ep.id }, ep);
   for (const id of ep.scenes) saveDoc({ kind: 'scene', id, episodeId: ep.id }, data.scenes[id]);
-  for (const id of Object.keys(data.cues).filter((c) => c.startsWith(`cue_${ep.id}`))) saveDoc({ kind: 'cue', id }, data.cues[id]);
-  for (const id of ['portal_inside', 'portal_outside']) saveDoc({ kind: 'environment', id }, data.environments[id]);
-  console.log(`\n  ${ep.scenes.length} scenes, ${ep.scenes.reduce((n, s) => n + data.scenes[s].shots.length, 0)} shots, ${total.toFixed(1)}s`);
+  for (const id of cueIds) saveDoc({ kind: 'cue', id }, data.cues[id]);
   console.log('\n✓ episode written');
 }
 
@@ -884,21 +1073,22 @@ async function main() {
   console.log('→ generating characters, sets and SFX');
   genCharacters();
   genExtras();
-  genSets();
-  genSetDressing();
-  genSkies();
+  genV3World();
   genSfx();
   genStorySfx();
-  for (const dir of ['episodes', 'characters', 'environments', 'assets', 'score', 'credits', 'treatments', 'media/boards', 'media/audio/dialog', 'media/audio/score'])
+  // treatments are hand-edited (chosen look, boards): keep them, and only add style-board entries that are missing
+  const kept = loadProject().data.treatments;
+  // project/archive/, media/boards uploads and treatments/ are never wiped
+  for (const dir of ['episodes', 'characters', 'environments', 'assets', 'score', 'credits', 'media/audio/dialog', 'media/audio/score'])
     fs.rmSync(path.join(PROJECT_DIR, dir), { recursive: true, force: true });
   // drop documentary-only placeholder meshes
-  for (const f of ['node_box', 'network_sphere', 'gold_bar', 'coin', 'grid_floor']) fs.rmSync(path.join(PROJECT_DIR, `media/meshes/${f}.glb`), { force: true });
+  for (const f of ['network_sphere', 'gold_bar', 'coin', 'grid_floor']) fs.rmSync(path.join(PROJECT_DIR, `media/meshes/${f}.glb`), { force: true });
   fs.rmSync(path.join(PROJECT_DIR, 'media/textures/grid.png'), { force: true });
   const boards = cropSheet();
 
   const data: ProjectData = {
-    project: SCHEMAS.project.parse({ title: 'Sati', season: { title: 'Season 1 — Into the Protocol', logline: 'Three glowing friends of very different sizes leave their bright marble city to answer a call from the dark — and discover the rules that let strangers agree on value.' }, fps: 24, resolution: [1920, 1080], episodes: EPISODES.map((e) => e.id), tts: { engine: 'mlx', defaultVoice: 'am_adam' } }),
-    episodes: {}, scenes: {}, characters, environments, assets: { ...assets, ...SET_ASSETS }, cues: {}, credits: {}, treatments: {},
+    project: SCHEMAS.project.parse({ title: 'Sati', season: SEASON, fps: 24, resolution: [1920, 1080], episodes: EPISODES.map((e) => e.id), tts: { engine: 'mlx', defaultVoice: 'am_adam' } }),
+    episodes: {}, scenes: {}, characters, environments, assets, cues: {}, credits: {}, treatments: {},
   };
 
   const cueFor = (id: string, spec: Partial<ScoreCue> & { seed: number; name: string }, seconds: number) => {
@@ -908,47 +1098,21 @@ async function main() {
     return cue;
   };
 
-  for (const epSpec of EPISODES) {
-    console.log(`\n→ ${epSpec.id} ${epSpec.title} ${NO_TTS ? '(no TTS)' : '(TTS: + new, · cached)'}`);
-    const ep: Episode = SCHEMAS.episode.parse({ id: epSpec.id, number: epSpec.number, title: epSpec.title, synopsis: epSpec.synopsis, theme: epSpec.theme, arc: epSpec.arc, status: 'wip' });
-    let total = 0;
-    for (const [i, scSpec] of epSpec.scenes.entries()) {
-      const sc: Scene = SCHEMAS.scene.parse({ id: `${ep.id}_sc${String(i + 1).padStart(2, '0')}`, title: scSpec.title, summary: scSpec.summary, environmentId: scSpec.env, status: 'wip', arc: scSpec.arc });
-      for (const shSpec of scSpec.shots) {
-        const shot = await buildShot(boards ? shSpec : { ...shSpec, board: undefined });
-        shot.id = `sh${String(sc.shots.length + 1).padStart(2, '0')}`;
-        sc.shots.push(shot);
-      }
-      const scLen = sc.shots.reduce((s, x) => s + x.duration, 0);
-      total += scLen;
-      if (scSpec.cue) {
-        const cue = cueFor(`cue_${sc.id}`, scSpec.cue, scLen);
-        sc.tracks.score.push({ id: uid('scr'), start: 0, duration: scLen, cueId: cue.id, offset: 0, gain: 0.5 });
-      }
-      ep.scenes.push(sc.id);
-      data.scenes[sc.id] = { ...sc, episodeId: ep.id };
-    }
-    if (epSpec.cue) {
-      const cue = cueFor(`cue_${ep.id}`, epSpec.cue, total);
-      ep.tracks.score.push({ id: uid('scr'), start: 0, duration: total, cueId: cue.id, offset: 0, gain: 0.45 });
-    }
-    data.episodes[ep.id] = ep;
-    console.log(`\n  ${ep.scenes.length} scenes, ${ep.scenes.reduce((n, s) => n + data.scenes[s].shots.length, 0)} shots, ${total.toFixed(1)}s`);
-  }
+  for (const epSpec of EPISODES) await buildEpisode(epSpec, data, boards);
 
   // global intro / outro credits (shared by every episode)
-  // intro: sparse pad + arp bar, then bass/drums with a crash, the melody on bar 3, fills, button ending
-  const introCue = cueFor('cue_intro', { name: 'Intro theme', seed: 3297, key: 'D', mode: 'major', tempo: 137, density: 0.85,
-    notes: 'Upbeat: I-vi-IV-V, syncopated bass, 16th up/down arp, bouncy lead. 6 bars @137 = 10.5s.', instruments: {
+  // intro: the season motif, bright and quick: sparse pad + arp bar, then bass/drums, the melody on bar 3
+  const introCue = cueFor('cue_intro', { name: 'Intro theme', seed: MOTIF, key: 'C', mode: 'lydian', tempo: 132, density: 0.85,
+    notes: 'The season motif, upbeat. 6 bars @132 ≈ 10.9s.', instruments: {
     pad: { on: true, enter: 0, gain: 0.5 }, bass: { on: true, enter: 0.17, gain: 0.7 }, arp: { on: true, enter: 0, gain: 0.4 }, lead: { on: true, enter: 0.34, gain: 0.5 }, perc: { on: true, enter: 0.17, gain: 0.45 } } }, 10.5);
-  // outro: warm and lyrical, I-IV-vi-V with a soft kick/hat pulse under the roll
-  const outroCue = cueFor('cue_outro', { name: 'Outro theme', seed: 814, key: 'F', mode: 'major', tempo: 90, density: 0.55,
-    notes: 'Warm: I-IV-vi-V, half-note bass with walk-ups, flowing arp, long-note melody, soft pulse. 6 bars @90 = 16s.', instruments: {
+  // outro: the motif again, warm and slow, under the roll
+  const outroCue = cueFor('cue_outro', { name: 'Outro theme', seed: MOTIF, key: 'C', mode: 'major', tempo: 84, density: 0.5,
+    notes: 'The season motif, warm and lyrical, soft pulse under the roll.', instruments: {
     pad: { on: true, enter: 0, gain: 0.55 }, bass: { on: true, enter: 0.17, gain: 0.65 }, arp: { on: true, enter: 0, gain: 0.35 }, lead: { on: true, enter: 0.34, gain: 0.45 }, perc: { on: true, enter: 0.17, gain: 0.3 } } }, 16);
   data.credits.intro = SCHEMAS.credits.parse({
     id: 'intro', name: 'Intro', duration: 10.5, fade: 0.6, background: '#000000', color: '#ffffff',
     cards: [
-      { id: 'title', start: 0.3, duration: 3.3, lines: [{ text: '{project}', size: 'xl' }, { text: 'Mili · Sati · Bit', size: 'sm' }] },
+      { id: 'title', start: 0.3, duration: 3.3, lines: [{ text: '{project}', size: 'xl' }, { text: 'Sati · Bit', size: 'sm' }] },
       { id: 'season', start: 3.8, duration: 2.9, lines: [{ text: '{season}', size: 'md' }] },
       { id: 'episode', start: 6.9, duration: 3.4, lines: [{ text: 'Episode {episode.number}', size: 'sm' }, { text: '{episode.title}', size: 'lg' }] },
     ],
@@ -957,10 +1121,12 @@ async function main() {
   data.credits.outro = SCHEMAS.credits.parse({
     id: 'outro', name: 'Outro', duration: 16, fade: 0.8, background: '#000000', color: '#ffffff',
     roll: { start: 0.4, duration: 11.5, sections: [
-      { heading: 'Starring', names: ['Mili', 'Sati', 'Bit'] },
+      { heading: 'Starring', names: ['Sati', 'Bit', 'Ana'] },
+      { heading: 'The crew', names: ['The Node', 'Validator', 'Gossip', 'Hasher', 'Mempool Host', 'Script Clerk'] },
+      { heading: 'And', names: ['The Coinbase', 'Pip', 'The Rewriter'] },
       { heading: 'Written & directed by', names: ['Your name here'] },
-      { heading: 'Voices', names: ['Piper TTS — Amy, Lessac & Joe'] },
-      { heading: 'Music', names: ['Deterministic score — seeds 3297 · 814'] },
+      { heading: 'Voices', names: ['Kokoro TTS'] },
+      { heading: 'Music', names: [`Deterministic score — season motif, seed ${MOTIF}`] },
       { heading: 'Previz', names: ['Film Maker · three.js · Blender'] },
     ] },
     cards: [{ id: 'end', start: 12.2, duration: 3.6, lines: [{ text: '{project}', size: 'xl' }, { text: 'Thanks for watching', size: 'sm' }] }],
@@ -968,6 +1134,7 @@ async function main() {
   });
 
   for (const t of STYLE_BOARD) data.treatments[t.id] = SCHEMAS.treatment.parse(t);
+  Object.assign(data.treatments, kept);
 
   saveAll(data);
   console.log('\n✓ project written');

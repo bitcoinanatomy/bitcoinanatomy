@@ -73,25 +73,32 @@ describe('timeline + export on the test project', () => {
     expect(fillCredit('Episode {episode.number}: {episode.title}', v)).toBe(`Episode 2: ${data.episodes.ep02.title}`);
   });
   it('windows a scene and keeps episode score clipped in', () => {
-    const scId = data.episodes.ep01.scenes[1];
-    const tl = resolveTimeline(data, { kind: 'scene', episodeId: 'ep01', sceneId: scId });
-    expect(tl.duration).toBeCloseTo(sceneDuration(data.scenes[scId]));
-    const score = tl.clips.find((c) => c.track === 'score')!;
+    // an episode-wide bed under the whole of ep01 (the seed scores per scene, so add one here)
+    const withBed = structuredClone(data);
+    const total = withBed.episodes.ep01.scenes.reduce((s, id) => s + sceneDuration(withBed.scenes[id]), 0);
+    withBed.episodes.ep01.tracks.score.push({ id: 'scr_bed', start: 0, duration: total, cueId: 'cue_intro', offset: 0, gain: 0.5 });
+    const scId = withBed.episodes.ep01.scenes[1];
+    const tl = resolveTimeline(withBed, { kind: 'scene', episodeId: 'ep01', sceneId: scId });
+    expect(tl.duration).toBeCloseTo(sceneDuration(withBed.scenes[scId]));
+    const score = tl.clips.find((c) => c.track === 'score' && c.owner.kind === 'episode')!;
     expect(score.owner.kind).toBe('episode');
     expect(score.start).toBeLessThan(0);
     expect(tl.shots[0].start).toBe(0);
   });
-  it('uses scene-level score cues in episode 2', () => {
-    const tl = resolveTimeline(data, { kind: 'episode', episodeId: 'ep02' });
+  it('uses scene-level score cues', () => {
+    const tl = resolveTimeline(data, { kind: 'episode', episodeId: 'ep01' });
     const scores = tl.clips.filter((c) => c.track === 'score' && !c.credits);
-    expect(scores.length).toBe(data.episodes.ep02.scenes.length);
+    expect(scores.length).toBe(data.episodes.ep01.scenes.reduce((n, id) => n + data.scenes[id].tracks.score.length, 0));
+    expect(scores.length).toBeGreaterThan(0);
     expect(scores.every((c) => c.owner.kind === 'scene')).toBe(true);
   });
   it('interpolates cameras', () => {
-    const cam = data.scenes.ep02_sc01.shots[0].tracks.camera[0];
+    // first two-key move whose z changes: halfway sits strictly between the keys
+    const cam = Object.values(data.scenes).flatMap((sc) => sc.shots.map((sh) => sh.tracks.camera[0])).find((c) => c?.keys.length === 2 && Math.abs(c.keys[0].position[2] - c.keys[1].position[2]) > 0.5)!;
     const mid = sampleCamera(cam, cam.duration / 2);
-    expect(mid.position[2]).toBeLessThan(cam.keys[0].position[2]);
-    expect(mid.position[2]).toBeGreaterThan(cam.keys[1].position[2]);
+    const [z0, z1] = [cam.keys[0].position[2], cam.keys[1].position[2]];
+    expect(mid.position[2]).toBeGreaterThan(Math.min(z0, z1));
+    expect(mid.position[2]).toBeLessThan(Math.max(z0, z1));
   });
   it('builds a frame-accurate Blender bundle', () => {
     const b = buildBundle(data, 'ep01');
@@ -100,7 +107,8 @@ describe('timeline + export on the test project', () => {
     expect(b.credits.map((c) => c.kind)).toEqual(['intro', 'outro']);
     expect(b.credits[0].cards.find((c) => c.lines[0].text.startsWith('Episode'))?.lines[1].text).toBe(data.episodes.ep01.title);
     for (let i = 1; i < b.scenes.length; i++) expect(b.scenes[i].frame_start).toBe(b.scenes[i - 1].frame_end + 1);
-    expect(b.cues).toEqual(['cue_ep01', 'cue_intro', 'cue_outro']);
+    const sceneCues = data.episodes.ep01.scenes.flatMap((id) => data.scenes[id].tracks.score.map((c) => c.cueId));
+    expect([...b.cues].sort()).toEqual([...new Set([...sceneCues, 'cue_intro', 'cue_outro'])].sort());
     expect(b.strips.dialog.every((d) => d.file)).toBe(true);
   });
   it('carries per-shot blocking into the bundle', () => {
