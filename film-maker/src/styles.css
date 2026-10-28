@@ -364,6 +364,52 @@ audio { filter: invert(1) grayscale(1) brightness(.85); opacity: .8; }
 .arc-link { color: var(--fg-2); cursor: pointer; }
 .arc-link:hover { color: #fff; }
 
+/* ---------------------------------------------------------------- plot overview + archive */
+.plot-season { color: var(--fg-2); font-size: 13.5px; line-height: 1.55; max-width: 860px; margin: 2px 0 12px; }
+textarea.plot-season { width: 100%; }
+.plot-eps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.plot-ep { border-top: 1px solid var(--line); padding-top: 9px; }
+.plot-ep-head { display: flex; align-items: center; gap: 9px; }
+.plot-toggle { background: none; border: 0; color: var(--fg-3); cursor: pointer; width: 14px; padding: 0; font-size: 11px; }
+.plot-num { font: 500 1.05rem var(--title); color: var(--fg-3); width: 14px; }
+.plot-title { font: 500 1.05rem var(--title); text-transform: uppercase; color: #fff; }
+.plot-eps a.link { cursor: pointer; }
+.plot-eps a.link:hover { color: var(--fg-2); }
+.plot-beat { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; border: 1px solid; border-radius: 3px; padding: 1px 5px; margin-left: 8px; }
+.plot-dur { font-size: 10.5px; }
+.plot-logline { color: var(--fg-2); margin: 3px 0 0 37px; width: calc(100% - 37px); }
+.plot-scenes { list-style: none; margin: 6px 0 2px 37px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.plot-scenes li { display: flex; align-items: center; gap: 7px; font-size: 12.5px; min-height: 22px; }
+.plot-scenes li > i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.plot-scenes li > a { color: var(--fg); white-space: nowrap; }
+.plot-scenes li .input { flex: 1; min-width: 0; }
+.plot-dash { color: var(--fg-4); }
+.archive-card { display: block; color: inherit; }
+.archive-card:hover .arc-title { color: var(--fg-2); }
+.script-scene { margin-top: 18px; }
+.script-scene h4 { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 0 0 4px; color: #fff; }
+.script-dur { margin-left: auto; font-size: 10.5px; }
+.script-shot { margin: 8px 0 0 18px; }
+.script-action { color: var(--fg-3); font-size: 12px; }
+.script-line { margin: 3px 0 0 36px; }
+.script-line b { display: inline-block; min-width: 54px; color: var(--fg-2); font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: .08em; }
+
+/* ---------------------------------------------------------------- world map */
+.worldmap { padding: 0; overflow: hidden; }
+.worldmap svg { display: block; background: #000; }
+.wm-world { font: 600 11px var(--sans); letter-spacing: .14em; fill: #666; }
+.wm-world.dark { fill: #777; }
+.wm-zone-name { font: 600 9.5px var(--sans); letter-spacing: .12em; fill: #777; }
+.wm-zone-name.dark { fill: #888; }
+.wm-zone { cursor: default; }
+.wm-name { font: 500 11px var(--sans); }
+.wm-tag { font: 500 8.5px var(--sans); letter-spacing: .1em; text-transform: uppercase; opacity: .7; }
+.wm-rel-label { font: italic 9.5px var(--sans); fill: #9a9a9a; paint-order: stroke; stroke: rgba(0,0,0,.7); stroke-width: 3px; }
+.wm-rel-label.light { fill: #555; stroke: rgba(255,255,255,.9); }
+.wm-char { cursor: pointer; }
+.wm-char:hover circle { stroke-width: 2.5; }
+.row.wrap { flex-wrap: wrap; }
+
 /* ---------------------------------------------------------------- credits */
 .credits { position: absolute; inset: 0; overflow: hidden; container-type: size; z-index: 2; }
 .credits-inner { position: absolute; inset: 0; }

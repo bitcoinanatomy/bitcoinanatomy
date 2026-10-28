@@ -1,8 +1,8 @@
 import type { ProjectData } from '../model/schema';
-import type { DocRef, LoadIssue } from '../../server/projectFs';
+import type { ArchiveMeta, DocRef, LoadIssue } from '../../server/projectFs';
 import type { TtsRequest, TtsResult } from '../../server/tts';
 
-export type { DocRef, LoadIssue };
+export type { ArchiveMeta, DocRef, LoadIssue };
 
 async function call<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -23,6 +23,8 @@ export const api = {
   upload: (file: Blob, dir: string, name: string) =>
     call<{ path: string }>('POST', `/api/upload?dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}`, file),
   media: (dir: string) => call<{ files: string[] }>('GET', `/api/media?dir=${encodeURIComponent(dir)}`),
+  archives: () => call<{ archives: ArchiveMeta[] }>('GET', '/api/archive'),
+  archive: (id: string) => call<{ meta: ArchiveMeta; data: ProjectData }>('GET', `/api/archive/${encodeURIComponent(id)}`),
   exportEpisode: (episodeId: string) => call<{ dir: string; warnings: string[]; frames: number }>('POST', '/api/export', { episodeId }),
 };
 

@@ -129,7 +129,10 @@ function mlxProcAlive() {
 function mlxSpeak(text: string, voice: string, speed: number, out: string) {
   const job = mlxChain.then(() => new Promise<void>((resolve, reject) => {
     const p = mlxProcAlive();
-    mlxWait = { resolve, reject };
+    // the idle worker is unref'd so it never holds a CLI open; keep the process alive while a line is in flight
+    p.ref();
+    const done = () => void p.unref();
+    mlxWait = { resolve: () => (done(), resolve()), reject: (e) => (done(), reject(e)) };
     p.stdin!.write(JSON.stringify({ text, voice, speed, out }) + '\n');
   }));
   mlxChain = job.then(() => undefined, () => undefined);
