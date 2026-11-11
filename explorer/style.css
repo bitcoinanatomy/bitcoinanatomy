@@ -772,7 +772,7 @@ body > .navbar .nav-dropdown-panel {
 .dot {
     width: 8px;
     height: 8px;
-    background: #00ff00;
+    background: #ffffff;
     border-radius: 50%;
     animation: pulse 2s infinite;
 }
@@ -1594,7 +1594,7 @@ button:active {
 }
 
 .status-up {
-    color: #4CAF50;
+    color: #ffffff;
 }
 
 .status-down {
@@ -1711,8 +1711,8 @@ button:active {
    ================================ */
 .disclaimer {
     position: fixed;
-    bottom: -2px;
-    right: 10px;
+    bottom: 10px;
+    right: 12px;
     background: rgba(0, 0, 0, 0.8);
     color: #666;
     padding: 4px 8px;
@@ -1749,7 +1749,7 @@ button:active {
 .source-selector {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     pointer-events: auto;
 }
 
@@ -1770,7 +1770,7 @@ button:active {
     color: #888;
     font-family: monospace;
     font-size: 0.58rem;
-    padding: 1px 14px 1px 5px;
+    padding: 3px 22px 3px 8px;
     cursor: pointer;
     line-height: 1.4;
     white-space: nowrap;
@@ -1781,7 +1781,7 @@ button:active {
 .source-selector-btn::after {
     content: '▾';
     position: absolute;
-    right: 4px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
@@ -1801,7 +1801,7 @@ button:active {
 
 .source-selector-menu {
     position: absolute;
-    bottom: calc(100% + 4px);
+    bottom: calc(100% + 6px);
     right: 0;
     background: rgba(18, 18, 18, 0.97);
     border: 1px solid #444;
@@ -1824,7 +1824,7 @@ button:active {
     color: #aaa;
     font-family: monospace;
     font-size: 0.6rem;
-    padding: 6px 10px;
+    padding: 8px 12px;
     text-align: left;
     cursor: pointer;
     white-space: nowrap;
@@ -1855,15 +1855,24 @@ button:active {
 }
 
 .source-selector-option.active {
-    color: #7ec8a0;
+    color: #fff;
 }
 
 .source-selector-option.active .src-desc {
-    color: #4a8a6a;
+    color: #888;
+}
+
+/* Check sits in the left gutter so the name stays on one line */
+.source-selector-option {
+    position: relative;
+    padding-left: 24px;
 }
 
 .source-selector-option.active::before {
-    content: '✓ ';
+    content: '✓';
+    position: absolute;
+    left: 10px;
+    top: 8px;
 }
 
 

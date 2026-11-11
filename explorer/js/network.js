@@ -228,7 +228,7 @@ class BitcoinNetworkExplorer {
         
         // Renderer with mobile optimizations
         const rendererOptions = { 
-            antialias: !this.isMobile, // Disable antialiasing on mobile for better performance
+            antialias: window.ExplorerSettings ? ExplorerSettings.get('antialias') : !this.isMobile,
             powerPreference: this.isMobile ? "low-power" : "high-performance"
         };
         
@@ -299,7 +299,17 @@ class BitcoinNetworkExplorer {
         this.connections = [];
         this.connectionsMesh = null;
         this.proximityMesh = null;
-        drop([this.earthMesh, this.mapPlaneMesh].filter(Boolean));
+        [this.earthMesh, this.mapPlaneMesh].forEach((group) => {
+            if (!group) return;
+            if (group.parent) group.parent.remove(group);
+            group.traverse((o) => {
+                if (o.geometry) o.geometry.dispose();
+                if (o.material) {
+                    if (o.material.map) o.material.map.dispose();
+                    o.material.dispose();
+                }
+            });
+        });
         this.earthMesh = null;
         this.mapPlaneMesh = null;
     }
@@ -558,8 +568,8 @@ class BitcoinNetworkExplorer {
 
     zoomLimits() {
         if (this.is2DMode) return { min: 2,   max: 600 };
-        // Earth sphere radius is 33; keep camera just outside it for close-to-surface feel
-        const MIN_DISTANCE = 40;
+        // Allows zooming well in toward the node cloud / globe surface
+        const MIN_DISTANCE = 12;
         return { min: MIN_DISTANCE, max: 600 };
     }
 
@@ -1056,41 +1066,213 @@ class BitcoinNetworkExplorer {
     }
 
     createEarth() {
-        // Create Earth sphere with texture
-        const earthGeometry = new THREE.SphereGeometry(33, 64, 64);
-        
-        // Load Earth texture
+        // Globe groups: earthMesh (3D) and mapPlaneMesh (2D). toggleEarth/toggle2DView
+        // switch group visibility; the globeStyle setting picks which children show.
+        const R = 33;
         const textureLoader = new THREE.TextureLoader();
-        const earthTexture = textureLoader.load('https://blossom.primal.net/6edee6bd5ec2e128f0e5bd0b24c3672ea6908771667959ad1bdaa964f2cfe6d4.jpg');
-        
-        const earthMaterial = new THREE.MeshBasicMaterial({
-            map: earthTexture,
-            color: 0x555555, // Darken the texture
-            transparent: true,
-            opacity: 0.9
-        });
-        
-        const earth = new THREE.Mesh(earthGeometry, earthMaterial);
-        earth.rotation.y = (180 * Math.PI) / 180; // Rotate 50 degrees
-        this.earthMesh = earth;
-        this.scene.add(earth);
+        const earthTexture = textureLoader.load(
+            'https://blossom.primal.net/6edee6bd5ec2e128f0e5bd0b24c3672ea6908771667959ad1bdaa964f2cfe6d4.jpg',
+            (tex) => this.buildLandDots(tex.image)
+        );
 
-        // Flat map plane for 2D mode — same texture, equirectangular projection
-        // Width=132 covers longitude ±66 units, height=66 covers latitude ±33 units,
-        // matching the node flat-projection coordinates exactly.
-        const planeMaterial = new THREE.MeshBasicMaterial({
+        const globe = new THREE.Group();
+        globe.name = 'globe-3d';
+
+        // Photo style (original look)
+        const photo = new THREE.Mesh(
+            new THREE.SphereGeometry(R, 64, 64),
+            new THREE.MeshBasicMaterial({ map: earthTexture, color: 0x555555, transparent: true, opacity: 0.9 })
+        );
+        photo.rotation.y = Math.PI;
+        photo.userData.globeStyle = 'photo';
+        globe.add(photo);
+
+        // Dots style: dark translucent core (dims back-side nodes), land dots, rim glow, graticule
+        const core = new THREE.Mesh(
+            new THREE.SphereGeometry(R, 64, 64),
+            new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.9 })
+        );
+        core.userData.globeStyle = 'dots';
+        globe.add(core);
+
+        const rim = new THREE.Mesh(
+            new THREE.SphereGeometry(R * 1.035, 64, 64),
+            new THREE.ShaderMaterial({
+                vertexShader: [
+                    'varying vec3 vN; varying vec3 vV;',
+                    'void main() {',
+                    '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
+                    '  vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz);',
+                    '  gl_Position = projectionMatrix * mv;',
+                    '}'
+                ].join('\n'),
+                fragmentShader: [
+                    'varying vec3 vN; varying vec3 vV;',
+                    'void main() {',
+                    '  float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 4.0);',
+                    '  gl_FragColor = vec4(vec3(0.85, 0.9, 1.0) * f * 0.45, 1.0);',
+                    '}'
+                ].join('\n'),
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                depthWrite: false
+            })
+        );
+        rim.userData.globeStyle = 'dots';
+        globe.add(rim);
+
+        const grid = [];
+        const toVec = (lat, lng, r) => {
+            const phi = (90 - lat) * Math.PI / 180, theta = (-lng + 180) * Math.PI / 180;
+            return [r * Math.sin(phi) * Math.cos(theta), r * Math.cos(phi), r * Math.sin(phi) * Math.sin(theta)];
+        };
+        for (let lat = -60; lat <= 60; lat += 30) {
+            for (let lng = -180; lng < 180; lng += 3) grid.push(...toVec(lat, lng, R * 1.002), ...toVec(lat, lng + 3, R * 1.002));
+        }
+        for (let lng = -180; lng < 180; lng += 30) {
+            for (let lat = -90; lat < 90; lat += 3) grid.push(...toVec(lat, lng, R * 1.002), ...toVec(lat + 3, lng, R * 1.002));
+        }
+        const gridGeo = new THREE.BufferGeometry();
+        gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(grid, 3));
+        const graticule = new THREE.LineSegments(gridGeo, new THREE.LineBasicMaterial({
+            color: 0xffffff, transparent: true, opacity: 0.05, depthWrite: false
+        }));
+        graticule.userData.globeStyle = 'dots';
+        globe.add(graticule);
+
+        this.earthMesh = globe;
+        this.scene.add(globe);
+
+        // Flat map for 2D mode — equirectangular. Width=132 covers longitude ±66 units,
+        // height=66 covers latitude ±33 units, matching the node flat-projection coordinates.
+        const flat = new THREE.Group();
+        flat.name = 'globe-2d';
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(132, 66), new THREE.MeshBasicMaterial({
             map: earthTexture,
             color: 0x555555,
             transparent: true,
             opacity: 0.9,
             side: THREE.DoubleSide
-        });
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(132, 66), planeMaterial);
+        }));
         plane.rotation.x = -Math.PI / 2; // Lay flat in XZ plane
         plane.position.y = -0.05;        // Just below nodes at y=0
-        plane.visible = false;           // Only shown in 2D mode
-        this.mapPlaneMesh = plane;
-        this.scene.add(plane);
+        plane.userData.globeStyle = 'photo';
+        flat.add(plane);
+        flat.visible = false;            // Only shown in 2D mode
+        this.mapPlaneMesh = flat;
+        this.scene.add(flat);
+
+        // Globe/map are transparent and centred at the origin, like the connection
+        // lines, so Three's back-to-front sort flips between them as the camera
+        // orbits. Always draw the globe first: it still depth-occludes lines
+        // behind it, and lines in front draw on top.
+        [globe, flat].forEach((g) => g.traverse((o) => { o.renderOrder = -1; }));
+
+        this.applyGlobeStyle();
+        if (window.ExplorerSettings) {
+            ExplorerSettings.onChange((all, changed) => {
+                if (changed.indexOf('globeStyle') !== -1) this.applyGlobeStyle();
+            }, this._ac.signal);
+        }
+    }
+
+    applyGlobeStyle() {
+        const style = window.ExplorerSettings ? ExplorerSettings.get('globeStyle') : 'photo';
+        [this.earthMesh, this.mapPlaneMesh].forEach((group) => {
+            if (!group) return;
+            group.children.forEach((c) => { c.visible = c.userData.globeStyle === style; });
+        });
+    }
+
+    // Land mask from the earth texture → fibonacci-sphere dots (one draw call each for 3D and 2D).
+    buildLandDots(image) {
+        if (this._disposed || !this.earthMesh || !image) return;
+        const W = 720, H = 360;
+        let data;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(image, 0, 0, W, H);
+            data = ctx.getImageData(0, 0, W, H).data;
+        } catch (e) {
+            console.warn('Land dots unavailable (texture not readable):', e);
+            return;
+        }
+        // Ocean is pure black; land is faintly lit. Threshold, then open + close to drop JPEG noise and fill forests.
+        const lum = new Uint8Array(W * H);
+        let mask = new Uint8Array(W * H);
+        for (let i = 0; i < W * H; i++) {
+            lum[i] = Math.max(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]);
+            mask[i] = lum[i] >= 1 ? 1 : 0;
+        }
+        const morph = (src, keepIfAll) => {
+            const out = new Uint8Array(W * H);
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    let all = 1, any = 0;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        const yy = Math.min(H - 1, Math.max(0, y + dy));
+                        for (let dx = -1; dx <= 1; dx++) {
+                            const v = src[yy * W + ((x + dx + W) % W)];
+                            all &= v; any |= v;
+                        }
+                    }
+                    out[y * W + x] = keepIfAll ? all : any;
+                }
+            }
+            return out;
+        };
+        mask = morph(morph(mask, true), false);   // open
+        mask = morph(morph(mask, false), true);   // close
+        const isCoast = (x, y) => {
+            for (let dy = -2; dy <= 2; dy++) {
+                const yy = Math.min(H - 1, Math.max(0, y + dy));
+                for (let dx = -2; dx <= 2; dx++) if (!mask[yy * W + ((x + dx + W) % W)]) return true;
+            }
+            return false;
+        };
+
+        const N = this.isMobile ? 36000 : 70000;
+        const R = 33.03;
+        const golden = Math.PI * (3 - Math.sqrt(5));
+        const pos3 = [], pos2 = [], col = [];
+        for (let i = 0; i < N; i++) {
+            const yN = 1 - (i / (N - 1)) * 2;
+            const lat = Math.asin(yN) * 180 / Math.PI;
+            const lng = ((golden * i * 180 / Math.PI) % 360) - 180;
+            const px = Math.min(W - 1, Math.floor((lng + 180) / 360 * W));
+            const py = Math.min(H - 1, Math.floor((90 - lat) / 180 * H));
+            if (!mask[py * W + px]) continue;
+            const phi = (90 - lat) * Math.PI / 180, theta = (-lng + 180) * Math.PI / 180;
+            pos3.push(R * Math.sin(phi) * Math.cos(theta), R * Math.cos(phi), R * Math.sin(phi) * Math.sin(theta));
+            pos2.push((lng / 180) * 66, -0.04, -(lat / 90) * 33);
+            const b = isCoast(px, py) ? 0.55 : 0.16 + 0.22 * Math.min(1, lum[py * W + px] / 24);
+            col.push(b, b, b);
+        }
+
+        const dotTex = (() => {
+            const c = document.createElement('canvas');
+            c.width = c.height = 32;
+            const g = c.getContext('2d');
+            g.fillStyle = '#fff';
+            g.beginPath(); g.arc(16, 16, 14, 0, Math.PI * 2); g.fill();
+            return new THREE.CanvasTexture(c);
+        })();
+        const makePoints = (positions, size) => {
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+            const pts = new THREE.Points(geo, new THREE.PointsMaterial({
+                size, map: dotTex, alphaTest: 0.5, vertexColors: true, sizeAttenuation: true
+            }));
+            pts.userData.globeStyle = 'dots';
+            pts.raycast = () => {};
+            return pts;
+        };
+        this.earthMesh.add(makePoints(pos3, 0.2));
+        this.mapPlaneMesh.add(makePoints(pos2, 0.22));
+        this.applyGlobeStyle();
     }
 
 
@@ -1372,9 +1554,13 @@ class BitcoinNetworkExplorer {
         const nodes = this.nodeData.nodes;
         let nodeEntries = Object.entries(nodes);
         
-        // Limit nodes on mobile devices
-        if (this.isMobile && nodeEntries.length > this.maxNodes) {
-            console.log(`Mobile device detected: limiting nodes from ${nodeEntries.length} to ${this.maxNodes}`);
+        // Limit nodes: mobile default cap, or the user's "Max nodes rendered" setting
+        const userCap = window.ExplorerSettings ? (ExplorerSettings.get('maxNodes') || 0) : 0;
+        const nodeCap = userCap > 0
+            ? (this.isMobile ? Math.min(userCap, this.maxNodes) : userCap)
+            : (this.isMobile ? this.maxNodes : Infinity);
+        if (nodeEntries.length > nodeCap) {
+            console.log(`Limiting nodes from ${nodeEntries.length} to ${nodeCap}`);
             // Take a sample of nodes, prioritizing those with location data
             const nodesWithLocation = nodeEntries.filter(([address, nodeInfo]) => {
                 const lat = nodeInfo[8];
@@ -1389,12 +1575,11 @@ class BitcoinNetworkExplorer {
             });
             
             // Take proportional samples
-            const locationSample = Math.floor(this.maxNodes * 0.8); // 80% with location
-            const noLocationSample = this.maxNodes - locationSample; // 20% without location
-            
+            // ~80% with location; whichever group runs short is topped up by the other
+            const locatedTaken = nodesWithLocation.slice(0, Math.max(Math.floor(nodeCap * 0.8), nodeCap - nodesWithoutLocation.length));
             nodeEntries = [
-                ...nodesWithLocation.slice(0, locationSample),
-                ...nodesWithoutLocation.slice(0, noLocationSample)
+                ...locatedTaken,
+                ...nodesWithoutLocation.slice(0, nodeCap - locatedTaken.length)
             ];
         }
         
@@ -1836,7 +2021,7 @@ class BitcoinNetworkExplorer {
     async fetchData() {
         this.showLoadingModal('Loading network data...');
 
-        const src = this._nodeSource || 'crawler-archive';
+        const src = this._nodeSource || 'btcnodes-live';
 
         // ── Helper: convert flat node list → snapshot format ─────────────────
         const nodeListToSnapshot = (nodeList, generatedAt) => {
@@ -1934,9 +2119,9 @@ class BitcoinNetworkExplorer {
 
                 const [nodeData, bootstrap] = await Promise.all([
                     this.fetchSnapshotByUrl(this.latestSnapshot.url),
-                    this.fetchLatestNodesSnapshot(
-                        (msg, pct) => this.updateLoadingProgress(msg, Math.min(70, pct)),
-                        { maxPages: 5, pageDelayMs: 80 }
+                    this.fetchGeoPagesFromEnd(
+                        this.latestSnapshot.total_nodes,
+                        (msg, pct) => this.updateLoadingProgress(msg, Math.min(70, pct))
                     ).catch(e => { console.warn('Location bootstrap skipped:', e); return null; }),
                 ]);
                 if (!nodeData || !nodeData.nodes) throw new Error('No node data in BTC Nodes response');
@@ -2224,6 +2409,59 @@ class BitcoinNetworkExplorer {
         }
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return this.normalizeSnapshotData(await response.json());
+    }
+
+    /**
+     * /v1/nodes/ is ranked Tor/I2P first; geolocated clearnet rows sit on the
+     * last pages. Walk backwards from the last page (a few pages in parallel)
+     * and stop at the first batch with no geo rows, so locations arrive in
+     * ~1s instead of after downloading the whole list.
+     */
+    async fetchGeoPagesFromEnd(totalNodes, onProgress) {
+        const limit = this.NODES_PAGE_LIMIT;
+        const lastPage = Math.max(1, Math.ceil((totalNodes || 0) / limit));
+        const CONCURRENCY = 3;
+        const nodes = {};
+        let latestHeight = 0;
+        let reachedNonGeo = false;
+        let failed = false;
+
+        for (let hi = lastPage; hi >= 1 && !reachedNonGeo && !failed; hi -= CONCURRENCY) {
+            const pages = [];
+            for (let p = hi; p > hi - CONCURRENCY && p >= 1; p--) pages.push(p);
+            if (onProgress) {
+                const done = lastPage - hi;
+                onProgress(`Loading node locations… (${Object.keys(nodes).length.toLocaleString()})`,
+                    40 + Math.min(30, Math.floor((done / lastPage) * 60)));
+            }
+            const results = await Promise.all(pages.map((p) =>
+                fetch(this.apiUrl(`/v1/nodes/?page=${p}&limit=${limit}`))
+                    .then((r) => (r.ok ? r.json() : null))
+                    .catch(() => null)
+            ));
+            let geoInBatch = 0;
+            for (const data of results) {
+                if (!data || !Array.isArray(data.results)) { failed = true; continue; }
+                for (const row of data.results) {
+                    const mapped = this.nodeRowFromListItem(row);
+                    if (!mapped) continue;
+                    nodes[mapped.key] = mapped.info;
+                    const info = mapped.info;
+                    if (info[8] && info[9]) geoInBatch++;
+                    if (info[4] > latestHeight) latestHeight = info[4];
+                }
+            }
+            if (!failed && geoInBatch === 0) reachedNonGeo = true;
+        }
+
+        // All geolocated rows fetched — background enrichment would only
+        // re-download the Tor/I2P pages, which carry no coordinates.
+        if (reachedNonGeo || (!failed && Object.keys(nodes).length)) this._btcnodesListExhausted = true;
+
+        const count = Object.keys(nodes).length;
+        if (count === 0) return null;
+        console.log(`📍 Geo pages from end: ${count.toLocaleString()} rows (${lastPage} pages total)`);
+        return { latest_height: latestHeight, nodes };
     }
 
     /**
@@ -2618,8 +2856,13 @@ class BitcoinNetworkExplorer {
         const DEPTH_OFF  = 80;
         const DEPTH_ON   = 40;
         const MIN_BRIGHT = 0.18;
-        const SCALE_ZONE = 50;
-        const MIN_SCALE  = 0.25;
+        // Near-node shrink: fades in between SCALE_ZONE_OUT and SCALE_ZONE_IN
+        // (camera distance to origin) so there is no hard switch-on point.
+        const SCALE_ZONE_OUT = 75;
+        const SCALE_ZONE_IN  = 38;
+        const SCALE_NEAR     = 70;   // nodes closer than this to the camera shrink
+        const MIN_SCALE      = 0.2; // smallest fraction of baseScale
+        const SCALE_EASE     = 0.12; // per-frame easing toward target scale
         const orthoFactor = this.isPerspective ? 1 : (this.orthographicZoom / 100);
         const baseScale   = (this.is2DMode ? 1.2 : 1.0) * orthoFactor;
 
@@ -2652,6 +2895,15 @@ class BitcoinNetworkExplorer {
             });
             const distRange = maxDist - minDist;
 
+            // How strongly near nodes shrink (smoothstep over the zone).
+            const zt = Math.min(1, Math.max(0,
+                (SCALE_ZONE_OUT - cameraToOrigin) / (SCALE_ZONE_OUT - SCALE_ZONE_IN)));
+            const scaleStrength = zt * zt * (3 - 2 * zt);
+            // Orthographic: uniform size, using the nearest node's shrink.
+            const rn = Math.min(1, minDist / SCALE_NEAR);
+            const orthoTarget = baseScale * (1 - (1 - MIN_SCALE) * (1 - rn * rn * (3 - 2 * rn)) * scaleStrength);
+            let settling = false;
+
             // Pass 2 — depth brightness + anti-overlap scale
             this.nodes.forEach(node => {
                 if (!node.visible) return;
@@ -2665,33 +2917,23 @@ class BitcoinNetworkExplorer {
                 const brightness = 1 - depthStrength * (1 - fullBright);
                 node.material.color.setScalar(brightness);
 
-                // Scale shrinkage only when camera is close enough to origin (proximity-based for all shots)
-                if (cameraToOrigin < SCALE_ZONE) {
-                    const ratio = Math.min(1, dist / SCALE_ZONE);
-                    const s = Math.max(MIN_SCALE, ratio * ratio * baseScale);
-                    if (Math.abs(node.scale.x - s) > 0.0005) node.scale.setScalar(s);
+                // Near-node shrink, eased toward its target so zooming never pops.
+                if (scaleStrength > 0 || this.nearScalingActive) {
+                    const r = Math.min(1, dist / SCALE_NEAR);
+                    const shrink = (1 - MIN_SCALE) * (1 - r * r * (3 - 2 * r)) * scaleStrength;
+                    const target = this.isPerspective ? baseScale * (1 - shrink) : orthoTarget;
+                    const cur = node.scale.x;
+                    if (Math.abs(cur - target) > 0.0005) {
+                        node.scale.setScalar(cur + (target - cur) * SCALE_EASE);
+                        settling = true;
+                    } else if (cur !== target) {
+                        node.scale.setScalar(target);
+                    }
                 }
             });
 
-            // Orthographic mode: all nodes share the same size (the smallest computed
-            // scale) so they appear uniform regardless of depth position.
-            if (!this.isPerspective && cameraToOrigin < SCALE_ZONE) {
-                let minScale = baseScale;
-                this.nodes.forEach(node => {
-                    if (node.visible && node.scale.x < minScale) minScale = node.scale.x;
-                });
-                this.nodes.forEach(node => {
-                    if (node.visible && Math.abs(node.scale.x - minScale) > 0.0005)
-                        node.scale.setScalar(minScale);
-                });
-            }
-
-            // Restore scales when leaving the scale zone
-            if (cameraToOrigin >= SCALE_ZONE && this.nearScalingActive) {
-                this.nearScalingActive = false;
-                this.nodes.forEach(node => node.scale.setScalar(baseScale));
-            }
-            if (cameraToOrigin < SCALE_ZONE) this.nearScalingActive = true;
+            if (scaleStrength > 0) this.nearScalingActive = true;
+            else if (!settling) this.nearScalingActive = false;
         }
 
         // Rotate scene (optional; when montage is active rotation is handled above)
@@ -2701,7 +2943,7 @@ class BitcoinNetworkExplorer {
         
 this.updateCameraCoordsDisplay();
         this.vrManager && this.vrManager.update();
-        this.renderer.render(this.scene, this.camera);
+        (window.ExplorerFX ? ExplorerFX.render(this.renderer, this.scene, this.camera) : this.renderer.render(this.scene, this.camera));
     }
 
     /** Update sidebar camera coords display (throttled). Target phi/theta = spherical angles of target from origin. */
@@ -3458,7 +3700,7 @@ this.updateCameraCoordsDisplay();
             'bitnodes-archive': 'Bitnodes · archive',
         };
         const fromUrl = new URLSearchParams(location.search).get('source');
-        this._nodeSource = sources[fromUrl] ? fromUrl : 'crawler-archive';
+        this._nodeSource = sources[fromUrl] ? fromUrl : 'btcnodes-live';
         const btn = document.getElementById('node-source-btn');
         const menu = document.getElementById('node-source-menu');
         const label = document.getElementById('node-source-label');
@@ -3767,14 +4009,40 @@ this.updateCameraCoordsDisplay();
             count++;
         }
 
+        // Dense hubs (Europe, US) collect hundreds of overlapping endpoints and
+        // blow out to pure white, especially with the globe hidden. Dim each
+        // vertex by how crowded its neighbourhood is: with normal alpha blending
+        // stacked lines converge to the vertex colour, so hubs cap at grey while
+        // sparse regions keep full brightness.
+        const CELL = 3;
+        const cellKey = (x, y, z) => `${Math.floor(x / CELL)},${Math.floor(y / CELL)},${Math.floor(z / CELL)}`;
+        const density = new Map();
+        for (const n of visibleNodes) {
+            const k = cellKey(n.position.x, n.position.y, n.position.z);
+            density.set(k, (density.get(k) || 0) + 1);
+        }
+        const DENSITY_REF = 6;   // cells with ≤ this many nodes stay full brightness
+        const MIN_TONE = 0.3;
+        const lineColors = (pos) => {
+            const col = new Float32Array(pos.length);
+            for (let i = 0; i < pos.length; i += 3) {
+                const d = density.get(cellKey(pos[i], pos[i + 1], pos[i + 2])) || 1;
+                const tone = Math.max(MIN_TONE, Math.min(1, Math.sqrt(DENSITY_REF / d)));
+                col[i] = col[i + 1] = col[i + 2] = tone;
+            }
+            return new THREE.BufferAttribute(col, 3);
+        };
+
         const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions.slice(0, count * 6), 3));
+        const linePos = positions.slice(0, count * 6);
+        geometry.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
+        geometry.setAttribute('color', lineColors(linePos));
 
         const sharedMaterial = new THREE.LineBasicMaterial({
             color: 0xffffff,
+            vertexColors: true,
             transparent: true,
             opacity: 0.07,
-            blending: THREE.ScreenBlending,
             depthWrite: false
         });
 
@@ -3831,7 +4099,9 @@ this.updateCameraCoordsDisplay();
 
         if (proxCount > 0) {
             const proxGeometry = new THREE.BufferGeometry();
-            proxGeometry.setAttribute('position', new THREE.BufferAttribute(proxPositions.slice(0, proxCount * 6), 3));
+            const proxPos = proxPositions.slice(0, proxCount * 6);
+            proxGeometry.setAttribute('position', new THREE.BufferAttribute(proxPos, 3));
+            proxGeometry.setAttribute('color', lineColors(proxPos));
             this.proximityMesh = new THREE.LineSegments(proxGeometry, sharedMaterial);
             this.scene.add(this.proximityMesh);
         }
@@ -4049,7 +4319,7 @@ this.updateCameraCoordsDisplay();
         if (this.tableOpen)       p.set('table',       '1');
         if (!this.isRotating)     p.set('rotate',      '0');
         if (this.tableFilter !== 'all') p.set('filter', this.tableFilter);
-        if (this._nodeSource && this._nodeSource !== 'crawler-archive') p.set('source', this._nodeSource);
+        if (this._nodeSource && this._nodeSource !== 'btcnodes-live') p.set('source', this._nodeSource);
         if (document.body.classList.contains('ui-hidden')) p.set('ui', 'hidden');
         if (this.montageActive) p.set('montage', '1');
         const current = new URLSearchParams(location.search);
