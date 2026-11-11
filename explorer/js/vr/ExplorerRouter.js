@@ -74,6 +74,44 @@
         return _loadedScripts[src];
     }
 
+    // Load the classic <script src> dependencies a page declares (d3, voronoijs, ...) that the
+    // current document doesn't have yet, in document order. Soft-nav only swaps #ui, so without
+    // this a page's libraries are missing until a full reload.
+    function loadPageDeps(doc) {
+        var chain = Promise.resolve();
+        var pageScripts = {};
+        Object.keys(PAGE_SCRIPTS).forEach(function (k) { pageScripts[PAGE_SCRIPTS[k]] = true; });
+        doc.querySelectorAll('script[src]').forEach(function (el) {
+            var type = (el.getAttribute('type') || '').toLowerCase();
+            if (type && type !== 'text/javascript') return;   // skip modules / importmaps
+            var src = el.getAttribute('src');
+            if (!src) return;
+            var bare = src.split('?')[0];   // page scripts are cache-busted (network.js?v=5)
+            if (pageScripts[bare] || _loadedScripts[src]) return;
+            var have = false;
+            document.querySelectorAll('script[src]').forEach(function (e) {
+                if ((e.getAttribute('src') || '').split('?')[0] === bare) have = true;
+            });
+            if (have) return;
+            var cross = el.getAttribute('crossorigin');
+            chain = chain.then(function () {
+                if (_loadedScripts[src]) return _loadedScripts[src];
+                _loadedScripts[src] = new Promise(function (resolve) {
+                    var s = document.createElement('script');
+                    s.src = src;
+                    s.async = false;
+                    if (cross !== null) s.crossOrigin = cross || 'anonymous';
+                    s.onload = function () { resolve(); };
+                    // A missing optional library shouldn't block navigation
+                    s.onerror = function () { console.warn('[ExplorerRouter] failed to load ' + src); resolve(); };
+                    document.head.appendChild(s);
+                });
+                return _loadedScripts[src];
+            });
+        });
+        return chain;
+    }
+
     function disposeObject3D(root) {
         if (!root) return;
         root.traverse(function (child) {
@@ -303,7 +341,9 @@
                 var oldUi = document.getElementById('ui');
                 if (!newUi || !oldUi) throw new Error('Missing #ui');
 
-                // Ensure page script + registry entry
+                // Ensure the page's libraries, then its script + registry entry
+                await loadPageDeps(doc);
+                if (myGen !== _gen) return;
                 if (file === 'blockchain.html') {
                     await loadScriptOnce('js/difficultySpiral.js');
                 }
