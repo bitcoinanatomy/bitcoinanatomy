@@ -24,7 +24,7 @@
     }
 
     // Explorer version, shown at the bottom of the nav drawer. Bump on release.
-    var EXPLORER_VERSION = '0.9.0';
+    var EXPLORER_VERSION = '0.10.0';
     window.EXPLORER_VERSION = EXPLORER_VERSION;
 
     // Settings link + version pinned to the bottom of the Explore drawer, on every page
