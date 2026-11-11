@@ -1161,13 +1161,23 @@ class BitcoinTransactionExplorer {
     }
 
     // Voronoi layout for one transaction, used for the current tx and every traced one:
-    // disc radius = total input value (log scale, like the tubes); inputs and outputs (+ fee)
-    // split that disc by share of the input value; every arm keeps its cell's equal-area
-    // radius; lanes are stacked in the cells' top-to-bottom order so arms fan out without
-    // crossing. inY / outY are lane heights relative to the tx centre. Cached per txid.
-    _txArmLayout(tx) {
+    // each arm is a round tube whose cross-section area is ∝ its value (see _radiusForSats),
+    // so a UTXO keeps one width from the tx that creates it to the tx that spends it. Inputs
+    // and outputs (+ fee) tile the disc with cells of their tubes' areas — value in = value
+    // out, so both faces fill exactly — and each arm morphs from its cell into its tube. Lanes are stacked in the cells' top-to-bottom order
+    // (or branch out in tree mode). inY/inZ, outY/outZ are lane ends relative to the tx centre;
+    // inStub / outStub are trace-arm lengths long enough for each side's bends. Cached per
+    // txid, layout mode and constraints.
+    // req = { in: Map(vin → radius), out: Map(vout → radius) } pins arms that a traced bridge
+    // links to an already-drawn tx: they get exactly that width (and a cell sized for it), so
+    // a coin is one width end to end even where the other tx had to draw it wider than its
+    // value. Any area this leaves over on a face goes to that face's unlinked arms.
+    _txArmLayout(tx, req) {
         if (!this._txLayoutCache) this._txLayoutCache = new Map();
-        const cached = tx.txid && this._txLayoutCache.get(tx.txid);
+        const reqIn = (req && req.in) || new Map(), reqOut = (req && req.out) || new Map();
+        const sig = (m) => Array.from(m, ([k, r]) => `${k}=${r.toFixed(3)}`).join(',');
+        const cacheKey = tx.txid && `${tx.txid}:${this.treeLayout ? 'tree' : 'aligned'}:${sig(reqIn)}|${sig(reqOut)}`;
+        const cached = cacheKey && this._txLayoutCache.get(cacheKey);
         if (cached) return cached;
         const vins = tx.vin || [], vouts = tx.vout || [];
         const isCb = vins.length > 0 && (vins[0].coinbase !== undefined ||
@@ -1175,30 +1185,60 @@ class BitcoinTransactionExplorer {
         const totalOut = vouts.reduce((a, o) => a + (o.value || 0), 0);
         const totalInSats = isCb ? totalOut : vins.reduce((a, v) => a + (v.prevout?.value || 0), 0);
         const totalIn = Math.max(totalInSats, totalOut, 1);
-        const discR = this._radiusForSats(totalIn);
         const fee = isCb ? 0 : Math.max(0, totalInSats - totalOut);
-        const inShares = vins.map((v, i) => ((isCb && i === 0) ? totalOut : (v.prevout?.value || 0)) / totalIn);
-        const outShares = vouts.map(o => (o.value || 0) / totalIn);
-        if (fee > 0) outShares.push(fee / totalIn);
+        // Tube radius per arm from its own value, so a UTXO keeps one width across transactions
+        const inValueR = vins.map((v, i) => this._radiusForSats((isCb && i === 0) ? totalOut : (v.prevout?.value || 0)));
+        const outValueR = vouts.map(o => this._radiusForSats(o.value || 0));
+        // Each cell's area is its tube's cross-section (∝ value), so the cells on both faces
+        // tile the disc and every arm fills its cell; pinned arms use their pinned width
+        const inTarget = inValueR.map((r, i) => reqIn.has(i) ? reqIn.get(i) : r);
+        const outTarget = outValueR.map((r, i) => reqOut.has(i) ? reqOut.get(i) : r);
+        const inShares = inTarget.map(r => r * r);
+        const outShares = outTarget.map(r => r * r);
+        if (fee > 0) outShares.push(this._radiusForSats(fee) ** 2);
+        // Pinned widths can unbalance the faces (in ≠ out + fee); hand the shortfall on the
+        // lighter face to its unpinned arms (fee last) so pinned cells stay exactly their size
+        const faceA = (a) => a.reduce((t, v) => t + v, 0);
+        const total = Math.max(faceA(inShares), faceA(outShares));
+        const topUp = (shares, pinned, n) => {
+            const deficit = total - faceA(shares);
+            if (deficit <= 1e-9) return;
+            let free = shares.map((v, i) => i).filter(i => i < n && !pinned.has(i));
+            if (!free.length) free = shares.map((v, i) => i).filter(i => !pinned.has(i));
+            if (!free.length) return;
+            const fs = free.reduce((t, i) => t + shares[i], 0);
+            free.forEach(i => { shares[i] += fs > 0 ? deficit * shares[i] / fs : deficit / free.length; });
+        };
+        topUp(inShares, reqIn, vins.length);
+        topUp(outShares, reqOut, vouts.length);
         // Visibility floor so dust, OP_RETURN and tiny fees still get a cell
         const withFloor = (w) => {
             if (!w.length) return w;
             const sum = w.reduce((a, v) => a + v, 0) || 1;
-            const floor = Math.min(0.015, 0.5 / w.length);
+            const floor = Math.min(0.004, 0.5 / w.length);
             const f = w.map(v => Math.max(v / sum, floor));
             const fs = f.reduce((a, v) => a + v, 0);
             return f.map(v => v / fs);
         };
+        const inW = withFloor(inShares), outW = withFloor(outShares);
+        // Disc = total tube area (inputs = outputs + fee). Sized so every cell still covers its
+        // tube where the dust floor takes a little area from the others (r² / share).
+        const fit = (radii, w) => radii.reduce((m, r, i) => Math.max(m, (r * r) / (w[i] || 1)), 0);
+        const discR = Math.max(0.05, Math.sqrt(Math.max(
+            fit(inShares.map(Math.sqrt), inW), fit(outShares.map(Math.sqrt), outW))));
         const gap = discR * 0.012;
-        const inputPorts = this._voronoiPorts(withFloor(inShares), discR, `${tx.txid}:in`);
-        const outputCells = this._voronoiPorts(withFloor(outShares), discR, `${tx.txid}:out`);
+        const inputPorts = this._voronoiPorts(inW, discR, `${tx.txid}:in`);
+        const outputCells = this._voronoiPorts(outW, discR, `${tx.txid}:out`);
         inputPorts.forEach(p => { p.gap = gap; });
         outputCells.forEach(p => { p.gap = gap; });
         const outputPorts = outputCells.slice(0, vouts.length);
         const feePort = fee > 0 ? outputCells[vouts.length] : null;
+        // Each arm keeps its cell's width (equal-area radius) all the way out. On the linear
+        // scale that is its value width to within the treemap's fit; small coins held at the
+        // visibility floor come out wider, and the tx they link to is pinned to that width.
         const cellRadius = (port) => Math.sqrt(port.area / Math.PI);
-        const inputArmR = inputPorts.map(cellRadius);
-        const outputArmR = outputPorts.map(cellRadius);
+        const inputArmR = inputPorts.map((p, i) => reqIn.has(i) ? reqIn.get(i) : cellRadius(p));
+        const outputArmR = outputPorts.map((p, i) => reqOut.has(i) ? reqOut.get(i) : cellRadius(p));
         const stack = (ports, radii) => {
             const lanes = new Array(ports.length).fill(0);
             if (ports.length < 2) return { lanes, height: (radii[0] || 0) * 2 };
@@ -1208,13 +1248,32 @@ class BitcoinTransactionExplorer {
             return { lanes, height: st.totalHeight };
         };
         const ins = stack(inputPorts, inputArmR), outs = stack(outputPorts, outputArmR);
+        const inZ = inputPorts.map(() => 0), outZ = outputPorts.map(() => 0);
+        if (this.treeLayout) {
+            // Tree: each arm keeps branching in its cell's direction instead of lining up
+            this._treeLanes(inputPorts, inputArmR, ins.lanes, inZ);
+            this._treeLanes(outputPorts, outputArmR, outs.lanes, outZ);
+        }
+        const holdLen = Math.max(3, discR * 0.25);
+        // Vertical reach of the lane ends (tree lanes can go well past the stacked height)
+        const reach = (lanes, radii) => lanes.reduce((m, y, i) => Math.max(m, Math.abs(y) + (radii[i] || 0)), 0);
+        // Arm length per face: long enough for every arm's hold + bend (see _laneTubePath),
+        // used for traced txs (min 20) and the current tx (min 120)
+        const needFor = (ports, ys, zs, radii) =>
+            ports.reduce((m, p, i) => Math.max(m, this._armLengthFor(p, ys[i], zs[i], radii[i], holdLen)), 0);
+        const inNeed = needFor(inputPorts, ins.lanes, inZ, inputArmR);
+        const outNeed = needFor(outputPorts, outs.lanes, outZ, outputArmR);
         const layout = {
             discR, fee, totalIn, totalInSats, inputPorts, outputCells, outputPorts, feePort,
-            inputArmR, outputArmR, inY: ins.lanes, outY: outs.lanes,
-            halfHeight: Math.max(ins.height, outs.height, discR * 2, 2) / 2,
-            holdLen: Math.max(3, discR * 0.25)
+            inputArmR, outputArmR, inY: ins.lanes, outY: outs.lanes, inZ, outZ,
+            halfHeight: Math.max(reach(ins.lanes, inputArmR), reach(outs.lanes, outputArmR), discR, 1),
+            holdLen,
+            inStub: Math.min(400, Math.max(20, inNeed)),
+            outStub: Math.min(400, Math.max(20, outNeed)),
+            inLen: Math.min(400, Math.max(120, inNeed)),
+            outLen: Math.min(400, Math.max(120, outNeed))
         };
-        if (tx.txid) this._txLayoutCache.set(tx.txid, layout);
+        if (cacheKey) this._txLayoutCache.set(cacheKey, layout);
         return layout;
     }
 
@@ -1223,13 +1282,16 @@ class BitcoinTransactionExplorer {
     // face straight as part of the cell bundle (holdLen), then S-bends into its lane over a
     // run proportional to its vertical travel, so a big fan opens at one steady angle instead
     // of every arm bending sharply in the same few units. Far end stays at 35 + straightLength.
-    _laneTubePath(dir, port, y, straightLength, holdLen = 3, laneZ = 0, bendScale = 0.45) {
+    // Thick tubes (radius) leave the face straight for longer and bend over a longer run, so
+    // their curves stay wide instead of kinking (see _armBend).
+    _laneTubePath(dir, port, y, straightLength, holdLen = 3, laneZ = 0, bendScale = 0.45, radius = 0) {
         const faceX = BitcoinTransactionExplorer.FACE_X;
         const farX = 35 + straightLength;
-        const bundleX = faceX + holdLen;
         const travel = Math.hypot(y - port.y, laneZ - port.z);
+        const hold = this._armHold(holdLen, radius, travel);
+        const bundleX = faceX + hold;
         const maxBend = Math.max(8, farX - 8 - bundleX);
-        const bend = Math.min(maxBend, Math.max(35 - bundleX, travel * bendScale));
+        const bend = Math.min(maxBend, Math.max(35 - bundleX, this._armBend(travel, radius, bendScale)));
         const connX = bundleX + bend;
         const face = new THREE.Vector3(dir * faceX, port.y, port.z);
         const bundle = new THREE.Vector3(dir * bundleX, port.y, port.z);
@@ -1247,9 +1309,32 @@ class BitcoinTransactionExplorer {
             path.add(new THREE.CubicBezierCurve3(connection, c2, c1, bundle));
             path.add(new THREE.LineCurve3(bundle, face));
         }
-        path.holdLen = holdLen;
+        path.holdLen = hold;
         path.bendLen = bend;
         return path;
+    }
+
+    // Straight run off the face before an arm bends: longer for thick tubes that change lane,
+    // so they round off from their cell before turning
+    _armHold(holdLen, radius, travel) {
+        return travel > 1e-3 ? Math.max(holdLen, radius * 0.6) : holdLen;
+    }
+
+    // Length of an arm's S-bend for a sideways travel: the mode's steady angle, but never so
+    // short that a tube of this radius kinks (an S over length L and travel h bends with a
+    // radius of roughly L² / 6h; keep that at ≥ 2.5× the tube radius)
+    _armBend(travel, radius, bendScale) {
+        if (travel <= 1e-3) return 0;
+        return Math.max(travel * bendScale, Math.sqrt(15 * travel * (radius || 0)));
+    }
+
+    // Shortest straightLength (see _laneTubePath) that fits an arm's hold + bend and leaves a
+    // short straight lead at its far end
+    _armLengthFor(port, y, z, radius, holdLen) {
+        const travel = Math.hypot((y ?? 0) - port.y, (z ?? 0) - port.z);
+        const hold = this._armHold(holdLen, radius, travel);
+        const bend = Math.max(35 - BitcoinTransactionExplorer.FACE_X - hold, this._armBend(travel, radius, this._bendScale()));
+        return Math.ceil(BitcoinTransactionExplorer.FACE_X + hold + bend + 14 - 35);
     }
 
     // Diagonal hatch (u = along the stub, v = around it) used to mark the fee without colour
@@ -1687,10 +1772,7 @@ class BitcoinTransactionExplorer {
         const inputParams = inputs.map((input, index) => {
             // For coinbase transactions, use total output value as the amount
             const amount = isCoinbase ? totalOutputValue : (input.prevout?.value || 0);
-            const amountBTC = amount / 100000000;
-            const logValue = Math.log10(amountBTC + 1);
-            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
-            const radius = 1 * sizeScale;
+            const radius = this._radiusForSats(amount);
             return { index, input, radius, isCoinbase, coinbaseAmount: isCoinbase ? amount : null };
         });
 
@@ -1734,10 +1816,7 @@ class BitcoinTransactionExplorer {
         // Precompute output radii and vertical positions to avoid overlaps and align with tubes
         const outputParams = outputs.map((output, index) => {
             const amount = output.value || 0;
-            const amountBTC = amount / 100000000;
-            const logValue = Math.log10(amountBTC + 1);
-            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
-            const radius = 1 * sizeScale;
+            const radius = this._radiusForSats(amount);
             return { index, output, radius };
         });
 
@@ -1857,13 +1936,8 @@ class BitcoinTransactionExplorer {
         // Lanes follow the cells' top-to-bottom order (arrays updated in place: shared via this.yPositions*)
         L.inY.forEach((y, i) => { yPositions[i] = y; });
         L.outY.forEach((y, i) => { yPositionsOutputs[i] = y; });
-        this.zPositionsInputs = inputs.map(() => 0);
-        this.zPositionsOutputs = outputs.map(() => 0);
-        if (this.treeLayout) {
-            // Tree: each arm keeps branching in its cell's direction instead of lining up
-            this._treeLanes(inputPorts, inputArmR, yPositions, this.zPositionsInputs);
-            this._treeLanes(outputPorts, outputArmR, yPositionsOutputs, this.zPositionsOutputs);
-        }
+        this.zPositionsInputs = inputs.map((_, i) => L.inZ[i] || 0);
+        this.zPositionsOutputs = outputs.map((_, i) => L.outZ[i] || 0);
         this.armHoldLen = holdLen;
 
         const faceX = BitcoinTransactionExplorer.FACE_X;
@@ -1919,9 +1993,9 @@ class BitcoinTransactionExplorer {
             const tubeRadius = inputArmR[index];
             
             // Coinbase inputs have shorter straight section (they originate from block reward)
-            const straightLength = inputIsCoinbase ? 15 : 120;
+            const straightLength = inputIsCoinbase ? 15 : L.inLen;
             const port = inputPorts[index];
-            const curvePath = this._laneTubePath(-1, port, y, straightLength, holdLen, this.zPositionsInputs[index], this._bendScale());
+            const curvePath = this._laneTubePath(-1, port, y, straightLength, holdLen, this.zPositionsInputs[index], this._bendScale(), tubeRadius);
             const tubeGeometry = this._morphArmGeometry(curvePath, port, tubeRadius, false);
             
             let material;
@@ -1958,9 +2032,9 @@ class BitcoinTransactionExplorer {
             
             const tubeRadius = outputArmR[index];
             
-            const straightLength = 120; // Length of the straight portion
+            const straightLength = L.outLen; // long enough for every output's bend
             const port = outputPorts[index];
-            const curvePath = this._laneTubePath(1, port, y, straightLength, holdLen, this.zPositionsOutputs[index], this._bendScale());
+            const curvePath = this._laneTubePath(1, port, y, straightLength, holdLen, this.zPositionsOutputs[index], this._bendScale(), tubeRadius);
             const tubeGeometry = this._morphArmGeometry(curvePath, port, tubeRadius, true);
             
             const tones = BitcoinTransactionExplorer.TUBE_TONES;
@@ -2047,7 +2121,7 @@ class BitcoinTransactionExplorer {
         const inputs = tx.vin || [], outputs = tx.vout || [];
         inputs.forEach((input, i) => {
             const cb = isCoinbase && i === 0;
-            const farX = 35 + (cb ? 15 : 120);
+            const farX = 35 + (cb ? 15 : L.inLen);
             const amount = cb ? totalOutputValue : (input.prevout?.value || 0);
             this._addSceneLabel(`${this._btcShort(amount)} BTC`,
                 cb ? 'Coinbase' : this._shortAddr(input.prevout?.scriptpubkey_address) || `Input ${i + 1}`,
@@ -2058,7 +2132,7 @@ class BitcoinTransactionExplorer {
             const addr = this._shortAddr(output.scriptpubkey_address) ||
                 (output.scriptpubkey_type === 'op_return' ? 'OP_RETURN' : `Output ${i + 1}`);
             this.outputLabels[i] = this._addSceneLabel(`${this._btcShort(output.value)} BTC`, addr,
-                new THREE.Vector3(155, outLanes[i] ?? 0, this.zPositionsOutputs?.[i] || 0), 1, { type: 'output-label', index: i });
+                new THREE.Vector3(35 + L.outLen, outLanes[i] ?? 0, this.zPositionsOutputs?.[i] || 0), 1, { type: 'output-label', index: i });
         });
         // Transaction: centred above the cylinder
         const shortId = tx.txid ? `${tx.txid.slice(0, 8)}…${tx.txid.slice(-6)}` : 'Transaction';
@@ -2132,12 +2206,12 @@ class BitcoinTransactionExplorer {
     
     // ---- Trace Inputs: load parent transactions one level deep -------------
 
-    // Logarithmic radius from a satoshi amount (matches input/output tube sizing)
+    // Tube radius from a satoshi amount: cross-section area ∝ value on one global scale
+    // (1 BTC → radius 2.5), so value is conserved like a fluid — a tx's input tubes and its
+    // output tubes + fee have the same total area, and a UTXO keeps one width everywhere.
+    // Small floor so dust stays visible.
     _radiusForSats(sats) {
-        const amountBTC = (sats || 0) / 100000000;
-        const logValue = Math.log10(amountBTC + 1);
-        const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
-        return 1 * sizeScale;
+        return Math.max(0.04, 2.5 * Math.sqrt(Math.max(0, sats || 0) / 100000000));
     }
 
     // Stack a set of radii vertically, centered on 0, avoiding overlap.
@@ -2342,8 +2416,6 @@ class BitcoinTransactionExplorer {
         const group = opts.group || 'parent';
         const level = opts.level || 1;
         const fade = this._traceFade(level);
-        const STUB = 20;
-        const farX = 35 + STUB;
         // Older (parent) tubes are greyer/dimmer than the current tx so generations read as depth.
         const tones = BitcoinTransactionExplorer.TUBE_TONES;
         const PARENT_INPUT_GRAD = tones.PARENT_INPUT;
@@ -2352,7 +2424,7 @@ class BitcoinTransactionExplorer {
         const centre = new THREE.Vector3(centerX, centerY, 0);
 
         // Same Voronoi treatment as the current tx: disc = input total, cells by share
-        const L = this._txArmLayout(tx);
+        const L = this._txArmLayout(tx, opts.req);
         const vins = tx.vin || [];
         const vouts = tx.vout || [];
 
@@ -2422,11 +2494,11 @@ class BitcoinTransactionExplorer {
             const port = L.inputPorts[i];
             if (!port) return;
             const r = L.inputArmR[i];
-            const y = L.inY[i] ?? 0;
-            const anchor = { x: centerX - farX, y: centerY + y, r };
+            const y = L.inY[i] ?? 0, z = L.inZ[i] || 0;
+            const anchor = { x: centerX - 35 - L.inStub, y: centerY + y, z, r };
             const sources = sourceByVin.get(i);
             const funded = (fundedInputKeys && fundedInputKeys.has(`${tx.txid}:${i}`)) || (sources && sources.length);
-            const geo = this._morphArmGeometry(this._laneTubePath(-1, port, y, STUB, L.holdLen), port, r, false);
+            const geo = this._morphArmGeometry(this._laneTubePath(-1, port, y, L.inStub, L.holdLen, z, this._bendScale(), r), port, r, false);
             this._addTraceMesh(geo,
                 funded ? FLAT_TONE : PARENT_INPUT_GRAD[0], funded ? FLAT_TONE : PARENT_INPUT_GRAD[1],
                 funded
@@ -2453,12 +2525,12 @@ class BitcoinTransactionExplorer {
             const port = L.outputPorts[i];
             if (!port) return;
             const r = L.outputArmR[i];
-            const y = L.outY[i] ?? 0;
-            const anchor = { x: centerX + farX, y: centerY + y, r };
+            const y = L.outY[i] ?? 0, z = L.outZ[i] || 0;
+            const anchor = { x: centerX + 35 + L.outStub, y: centerY + y, z, r };
             const targets = fundingByVout.get(i);
             const spent = spentOutKeys && spentOutKeys.has(`${tx.txid}:vout:${i}`);
             const flat = (targets && targets.length) || spent;
-            const geo = this._morphArmGeometry(this._laneTubePath(1, port, y, STUB, L.holdLen), port, r, true);
+            const geo = this._morphArmGeometry(this._laneTubePath(1, port, y, L.outStub, L.holdLen, z, this._bendScale(), r), port, r, true);
             this._addTraceMesh(geo,
                 flat ? FLAT_TONE : PARENT_OUTPUT_GRAD[0], flat ? FLAT_TONE : PARENT_OUTPUT_GRAD[1],
                 (targets && targets.length)
@@ -2831,6 +2903,24 @@ class BitcoinTransactionExplorer {
         }
     }
 
+    // Extra x distance for one trace level beyond the fixed level spacing (sized for 20-unit
+    // arms): room for longer arms on the side facing the previous level (nearStub), and for a
+    // bridge long enough to cover its sideways jump at a gentle slope and a wide curve.
+    // `links` returns this node's [{ from: anchor already drawn, y, z: its own lane end
+    // relative to the node, r: its own arm radius }]. layoutFor(node) is its (pinned) layout.
+    _traceLevelShift(nodes, layoutFor, nearStub, links, baseGap) {
+        let near = 0, need = 0;
+        nodes.forEach((node) => {
+            near = Math.max(near, nearStub(layoutFor(node)) - 20);
+            links(node).forEach(({ from, y, z, r }) => {
+                const h = Math.hypot(from.y - (node.centerY + y), (from.z || 0) - z);
+                // gentle slope, and a wide enough S for a thick bridge (see _armBend)
+                need = Math.max(need, h * 1.5, Math.sqrt(20 * h * Math.max(from.r || 0, r || 0)));
+            });
+        });
+        return near + Math.min(600, Math.max(0, need - baseGap));
+    }
+
     _layoutChildren(spread) {
         this._disposeChildMeshes();
         if (!(this.traceOutNodes || []).length) {
@@ -2840,9 +2930,10 @@ class BitcoinTransactionExplorer {
         }
 
         const outputAnchorMap = new Map();
+        const curL = this._txArmLayout(this.transactionData);
         const outputs = this.transactionData?.vout || [];
         outputs.forEach((_, i) => {
-            outputAnchorMap.set(`${this.txid}:vout:${i}`, { x: 155, y: this.yPositionsOutputs?.[i] ?? 0, z: this.zPositionsOutputs?.[i] || 0, r: this.outputArmR?.[i] });
+            outputAnchorMap.set(`${this.txid}:vout:${i}`, { x: 35 + curL.outLen, y: this.yPositionsOutputs?.[i] ?? 0, z: this.zPositionsOutputs?.[i] || 0, r: this.outputArmR?.[i] });
         });
 
         const spentOutputKeys = new Set();
@@ -2864,8 +2955,23 @@ class BitcoinTransactionExplorer {
                 this._parentHalfHeight(this.transactionData), this.txid);
         }
 
+        // Accumulated extra spacing for long tree arms / big bridges (0 for short aligned arms)
+        let shift = 0, prevFar = curL.outLen - 120;
         for (let lvl = 1; lvl <= this.traceOutDepth; lvl++) {
             const nodes = this.traceOutNodes.filter((n) => n.level === lvl);
+            // Inputs spending an output already drawn take that output's width
+            const reqFor = (node) => {
+                const m = new Map();
+                node.links.forEach((l) => { const a = outputAnchorMap.get(l.shallowKey); if (a && a.r) m.set(l.vin, a.r); });
+                return { in: m };
+            };
+            const layoutFor = (node) => this._txArmLayout(node.tx, reqFor(node));
+            shift += prevFar + this._traceLevelShift(nodes, layoutFor, (L) => L.inStub, (node) => {
+                const L = layoutFor(node);
+                return node.links.map((l) => ({ from: outputAnchorMap.get(l.shallowKey), y: L.inY[l.vin] ?? 0, z: L.inZ[l.vin] || 0, r: L.inputArmR[l.vin] }))
+                    .filter((x) => x.from);
+            }, lvl === 1 ? 20 : LEVEL_GAP - 110);
+            prevFar = nodes.reduce((m, n) => Math.max(m, layoutFor(n).outStub - 20), 0);
             nodes.forEach((node) => {
                 let centerX;
                 if (spread && currentHeight && node.blockHeight) {
@@ -2874,6 +2980,7 @@ class BitcoinTransactionExplorer {
                 } else {
                     centerX = BASE_X + (lvl - 1) * LEVEL_GAP;
                 }
+                centerX += shift;
                 maxX = Math.max(maxX, centerX);
                 const sourceLinks = node.links
                     .map((l) => ({ vin: l.vin, target: outputAnchorMap.get(l.shallowKey) }))
@@ -2883,7 +2990,8 @@ class BitcoinTransactionExplorer {
                     group: 'child',
                     sourceLinks,
                     spentOutputKeys,
-                    level: lvl
+                    level: lvl,
+                    req: reqFor(node)
                 });
                 (drawn.outputAnchors || []).forEach((pt, j) => {
                     outputAnchorMap.set(`${node.tx.txid}:vout:${j}`, pt);
@@ -2924,11 +3032,12 @@ class BitcoinTransactionExplorer {
     _layoutParents(spread) {
         this._disposeParentMeshes();
 
-        // Seed anchors with the current tx's input far ends (fixed at x=-155).
+        // Seed anchors with the current tx's input far ends (x = -(35 + inLen)).
+        const curL = this._txArmLayout(this.transactionData);
         const anchorMap = new Map();
         const inputs = this.transactionData?.vin || [];
         inputs.forEach((input, i) => {
-            anchorMap.set(`${this.txid}:${i}`, { x: -155, y: this.yPositionsInputs?.[i] ?? 0, z: this.zPositionsInputs?.[i] || 0, r: this.inputArmR?.[i] });
+            anchorMap.set(`${this.txid}:${i}`, { x: -35 - curL.inLen, y: this.yPositionsInputs?.[i] ?? 0, z: this.zPositionsInputs?.[i] || 0, r: this.inputArmR?.[i] });
         });
 
         // Every input that some node funds (across all levels) — these get a flat, uninterrupted
@@ -2951,8 +3060,23 @@ class BitcoinTransactionExplorer {
         noteColumn(0, currentHeight, this.transactionData?.status?.block_time,
             this._parentHalfHeight(this.transactionData), this.txid);
 
+        // Accumulated extra spacing for long tree arms / big bridges (0 for short aligned arms)
+        let shift = 0, prevFar = curL.inLen - 120;
         for (let lvl = 1; lvl <= this.traceDepth; lvl++) {
             const nodes = this.traceNodes.filter((n) => n.level === lvl);
+            // Outputs funding an input already drawn take that input's width
+            const reqFor = (node) => {
+                const m = new Map();
+                node.links.forEach((l) => { const a = anchorMap.get(l.shallowKey); if (a && a.r) m.set(l.vout, a.r); });
+                return { out: m };
+            };
+            const layoutFor = (node) => this._txArmLayout(node.tx, reqFor(node));
+            shift += prevFar + this._traceLevelShift(nodes, layoutFor, (L) => L.outStub, (node) => {
+                const L = layoutFor(node);
+                return node.links.map((l) => ({ from: anchorMap.get(l.shallowKey), y: L.outY[l.vout] ?? 0, z: L.outZ[l.vout] || 0, r: L.outputArmR[l.vout] }))
+                    .filter((x) => x.from);
+            }, lvl === 1 ? 20 : LEVEL_GAP - 110);
+            prevFar = nodes.reduce((m, n) => Math.max(m, layoutFor(n).inStub - 20), 0);
             nodes.forEach((node) => {
                 let centerX;
                 if (spread && currentHeight && node.blockHeight) {
@@ -2963,11 +3087,12 @@ class BitcoinTransactionExplorer {
                 } else {
                     centerX = BASE_X - (lvl - 1) * LEVEL_GAP;
                 }
+                centerX -= shift;
                 minX = Math.min(minX, centerX);
                 const fundingLinks = node.links
                     .map((l) => ({ vout: l.vout, target: anchorMap.get(l.shallowKey) }))
                     .filter((x) => x.target);
-                const drawn = this.drawTraceNode(node.tx, centerX, node.centerY, fundingLinks, fundedInputKeys, { level: lvl });
+                const drawn = this.drawTraceNode(node.tx, centerX, node.centerY, fundingLinks, fundedInputKeys, { level: lvl, req: reqFor(node) });
                 (drawn.inputAnchors || []).forEach((pt, j) => anchorMap.set(`${node.tx.txid}:${j}`, pt));
                 noteColumn(centerX, node.blockHeight, node.tx.status?.block_time,
                     node.centerY + this._parentHalfHeight(node.tx), node.tx.txid);
@@ -3188,13 +3313,14 @@ class BitcoinTransactionExplorer {
                             console.log(`Output ${i} is SPENT - greyed out`);
                         } else {
                             // Unspent output: shorter straight section + hemisphere cap
-                            const unspentStraightLength = 15;
+                            const unspentStraightLength = Math.max(15, this._armLengthFor(this.outputPorts?.[i] || { y: 0, z: 0 },
+                                y, this.zPositionsOutputs?.[i] || 0, tubeRadius, this.armHoldLen));
                             const farEndX = 35 + unspentStraightLength;
                             
                             // Recreate tube with shorter path (same Voronoi port)
                             const port = this.outputPorts?.[i] || { y: 0, z: 0, r: tubeRadius,
                                 poly: this.createCircularPolygon(0, 0, tubeRadius, 24).map(p => ({ y: p.y, z: p.x })) };
-                            const curvePath = this._laneTubePath(1, port, y, unspentStraightLength, this.armHoldLen, this.zPositionsOutputs?.[i] || 0, this._bendScale());
+                            const curvePath = this._laneTubePath(1, port, y, unspentStraightLength, this.armHoldLen, this.zPositionsOutputs?.[i] || 0, this._bendScale(), tubeRadius);
                             
                             // Replace tube geometry
                             const newGeometry = this._morphArmGeometry(curvePath, port, tubeRadius, true);
