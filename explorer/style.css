@@ -2849,10 +2849,10 @@ body.raw-data-open .navigation-controls {
 
 .raw-data-modal {
     position: fixed;
-    top: 60px;
+    top: 0;
     right: 0;
     width: 50%;
-    height: calc(100% - 60px);
+    height: 100%;
     background: #0a0a0a;
     border-left: 1px solid var(--glass-stroke-soft);
     box-shadow: inset 1px 0 0 0 rgba(255, 255, 255, 0.03);
@@ -3269,6 +3269,139 @@ body.raw-data-open .navigation-controls {
         var(--glass-border-gradient-hover);
 }
 
+/* ---- Raw data / treemap panel controls: one height, one type size, even spacing ---- */
+.raw-data-modal,
+.treemap-container {
+    --panel-ctl-h: 28px;
+}
+
+.raw-data-modal .raw-data-btn,
+.raw-data-modal .raw-data-btn-small,
+.raw-data-modal .view-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: var(--panel-ctl-h);
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.03rem;
+    white-space: nowrap;
+}
+
+.raw-data-modal .raw-data-actions {
+    gap: 8px;
+}
+
+/* Thin line close icon (replaces the bold × glyph) */
+.close-icon {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.1;
+    stroke-linecap: round;
+}
+
+.raw-data-modal .raw-data-close,
+.treemap-container .treemap-close {
+    width: var(--panel-ctl-h);
+    height: var(--panel-ctl-h);
+    padding: 0;
+    color: #aaa;
+    font-size: 0;
+}
+
+.raw-data-modal .raw-data-close:hover,
+.treemap-container .treemap-close:hover {
+    color: #fff;
+}
+
+.treemap-container .treemap-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+}
+
+/* Info bar: size on the left, controls wrap neatly instead of squeezing the size text */
+.raw-data-modal .raw-data-info {
+    padding: 12px 16px;
+    gap: 10px;
+}
+
+.raw-data-modal .raw-data-top-row {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+}
+
+.raw-data-modal #raw-data-size {
+    white-space: nowrap;
+}
+
+.raw-data-modal .raw-data-controls-row {
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    margin-left: auto;
+}
+
+.raw-data-modal .raw-data-bytes-control label {
+    white-space: nowrap;
+}
+
+/* Select styled like the buttons, with its own thin chevron */
+.raw-data-modal .raw-data-bytes-control select,
+.raw-data-modal .raw-data-bytes-control select:hover,
+.raw-data-modal .raw-data-bytes-control select:focus {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    height: var(--panel-ctl-h);
+    min-width: 64px;
+    padding: 0 26px 0 10px;
+    font-size: 11px;
+    line-height: 1;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-repeat: no-repeat;
+    background-position: right 9px center, 0 0;
+    background-size: 9px 6px, auto;
+    background-origin: padding-box, padding-box;
+    background-clip: padding-box, padding-box;
+}
+
+.raw-data-modal .raw-data-bytes-control select {
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Cpath d='M1 1l3.5 3.5L8 1' fill='none' stroke='%23aaa' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+        linear-gradient(#1a1a1a, #1a1a1a);
+}
+
+.raw-data-modal .raw-data-bytes-control select:hover,
+.raw-data-modal .raw-data-bytes-control select:focus {
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Cpath d='M1 1l3.5 3.5L8 1' fill='none' stroke='%23fff' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+        linear-gradient(#222, #222);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.raw-data-modal .raw-data-bytes-control select option {
+    background: #111;
+    color: #fff;
+}
+
+.raw-data-modal .find-tx-input-wrapper {
+    gap: 8px;
+}
+
+.raw-data-modal .find-tx-input-wrapper input {
+    box-sizing: border-box;
+    height: var(--panel-ctl-h);
+    font-size: 11px;
+    padding: 0 10px;
+    width: 240px;
+}
+
 .find-tx-input-wrapper input::placeholder {
     color: #666;
 }
@@ -3279,7 +3412,7 @@ body.raw-data-open .navigation-controls {
 }
 
 .find-tx-result.found {
-    color: #4CAF50;
+    color: #ffffff;
 }
 
 .find-tx-result.not-found {
@@ -3502,10 +3635,10 @@ body.treemap-open .navigation-controls {
 
 .treemap-container {
     position: fixed;
-    top: 60px;
+    top: 0;
     right: 0;
     width: 50%;
-    height: calc(100% - 60px);
+    height: 100%;
     background: #0a0a0a;
     border-left: 1px solid var(--glass-stroke-soft);
     box-shadow: inset 1px 0 0 0 rgba(255, 255, 255, 0.03);
@@ -3593,14 +3726,40 @@ body.treemap-open .navigation-controls {
     letter-spacing: 0.05rem;
 }
 
+.treemap-caption {
+    margin-top: 12px;
+    font-size: .75rem;
+    font-weight: 300;
+    color: #9a9a9a;
+    letter-spacing: 0.03rem;
+    text-align: center;
+}
+
 .treemap-svg {
     width: 100%;
     aspect-ratio: 1;
     max-width: 300px;
     max-height: 300px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 50%;
-    overflow: hidden;
+    background: transparent;
+    overflow: visible;
+}
+
+.treemap-svg svg {
+    overflow: visible;
+}
+
+.treemap-fee-label {
+    fill: #e6e6e6;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.treemap-fee-leader {
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-width: 0.75;
+    pointer-events: none;
 }
 
 .treemap-svg svg {
@@ -3609,16 +3768,15 @@ body.treemap-open .navigation-controls {
 }
 
 /* Treemap cell styles */
+/* Stroke/fill come from the SVG attributes (set to match the 3D cells) */
 .treemap-cell {
-    stroke: #000;
-    stroke-width: 0.5px;
-    transition: opacity 0.2s, stroke-width 0.2s;
+    transition: fill-opacity 0.2s, stroke-width 0.2s;
     cursor: pointer;
 }
 
 .treemap-cell:hover {
-    stroke-width: 1px;
-    opacity: 0.85;
+    stroke-width: 1.5px;
+    filter: brightness(1.6);
 }
 
 .treemap-label {
@@ -3661,7 +3819,7 @@ body.treemap-open .navigation-controls {
 }
 
 .treemap-tooltip .amount {
-    color: #4ade80;
+    color: #ffffff;
     font-weight: bold;
 }
 
@@ -3786,10 +3944,10 @@ body.table-open .controls-main {
 
 .node-table-pane {
     position: fixed;
-    top: 60px; /* below navbar */
+    top: 0;
     right: 0;
     width: 50%;
-    height: calc(100vh - 60px);
+    height: 100vh;
     background: #0a0a0a;
     border-left: 1px solid var(--glass-stroke-soft);
     box-shadow: inset 1px 0 0 0 rgba(255, 255, 255, 0.03);
@@ -4249,7 +4407,9 @@ body.table-open .controls-main {
     font-size: 0.75rem;
 }
 
-/* Active state for Table button */
+/* Active state for Table / Labels buttons */
+#toggle-tree.active,
+#toggle-labels.active,
 #toggle-table.active {
     background: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.25);

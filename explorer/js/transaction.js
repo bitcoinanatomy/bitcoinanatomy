@@ -6,10 +6,17 @@ class BitcoinTransactionExplorer {
         CURRENT_INPUT: ['#22222200', '#eeeeeedd'],
         CURRENT_OUTPUT: ['#ffffffee', '#ffffff00'],
         CURRENT_FLAT: '#ffffffff',
-        HISTORY_FLAT: '#3a3a3a66',
-        PARENT_INPUT: ['#11111100', '#33333355'],
-        PARENT_OUTPUT: ['#3a3a3a55', '#3a3a3a00']
+        HISTORY_FLAT: '#c8c8c8dd',                 // traced funding path: the story, kept bright
+        PARENT_INPUT: ['#44444400', '#9a9a9aaa'],  // untraced branches: visible but secondary
+        PARENT_OUTPUT: ['#9a9a9aaa', '#44444400']
     };
+
+    // Alternating tints so neighbouring input arms/cells read as separate pieces (3D + panel)
+    static INPUT_SHADES = [0xffffff, 0xb4b4b4, 0xe0e0e0, 0x969696];
+    static INPUT_PANEL_OPACITY = [0.42, 0.2, 0.32, 0.13];
+
+    // Half-length of the central cylinder: the treemap faces sit at x = ±FACE_X
+    static FACE_X = 1.25;
 
     constructor(opts) {
         opts = opts || {};
@@ -60,6 +67,9 @@ class BitcoinTransactionExplorer {
         // Gradient texture cache for cylinders
         this.cylinderGradientTexture = null;
         this.outputCylinderGradientTexture = null;
+        // Arm layout: aligned column (default) or branching tree (remembered per browser)
+        this.treeLayout = false;
+        try { this.treeLayout = localStorage.getItem('tx.treeLayout') === '1'; } catch (e) { /* storage blocked */ }
         
         // Get transaction ID and other params from URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -169,7 +179,7 @@ class BitcoinTransactionExplorer {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 60000);
         this.updateCameraPosition();
         
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ antialias: (window.ExplorerSettings ? ExplorerSettings.get('antialias') : true) });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -378,16 +388,23 @@ class BitcoinTransactionExplorer {
         document.body.appendChild(tooltip);
         this._hoverTooltipEl = tooltip;
         
+        let clickStartX = 0, clickStartY = 0;
         this.renderer.domElement.addEventListener('mousedown', (e) => {
             isMouseDown = true;
+            clickStartX = e.clientX;
+            clickStartY = e.clientY;
             lastMouseX = e.clientX;
             lastMouseY = e.clientY;
             this.isRotating = false; // Stop auto rotation when user interacts
             this.updateRotationButtonState();
         });
         
-        this.renderer.domElement.addEventListener('mouseup', () => {
+        this.renderer.domElement.addEventListener('mouseup', (e) => {
             isMouseDown = false;
+            // A click (not a drag) selects / deselects
+            if (e.button === 0 && Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY) < 5) {
+                this._handleSelectClick(e.clientX, e.clientY);
+            }
         });
         
         this.renderer.domElement.addEventListener('mousemove', (e) => {
@@ -414,7 +431,7 @@ class BitcoinTransactionExplorer {
                     }
                     if (typeof child.userData.originalEmissive === 'number' && child.material.emissive) {
                         child.material.emissive.setHex(child.userData.originalEmissive);
-                        child.material.emissiveIntensity = 0;
+                        child.material.emissiveIntensity = child.userData.originalEmissiveIntensity || 0;
                     }
                     if (typeof child.userData.originalColor === 'number' && child.material.color) {
                         child.material.color.setHex(child.userData.originalColor);
@@ -541,6 +558,16 @@ class BitcoinTransactionExplorer {
                         ${escapedAddress ? `${escapedAddress}<br>` : ''}
                         <em>Shift+double-click → address</em>
                     `;
+                } else if (userData.type === 'fee') {
+                    const { fee, totalIn } = userData.data;
+                    const escapedFee = this.escapeHtml((fee / 100000000).toFixed(8));
+                    const escapedPct = this.escapeHtml(totalIn ? (fee / totalIn * 100).toFixed(3) : '0');
+                    tooltipContent = `
+                        <strong>Fee</strong><br>
+                        Amount: ${escapedFee} BTC<br>
+                        ${escapedPct}% of inputs<br>
+                        <em>Inputs − outputs, claimed by the miner</em>
+                    `;
                 } else if (userData.type === 'transaction') {
                     const tx = userData.data;
                     const totalInput = tx.vin ? tx.vin.reduce((sum, input) => sum + (input.prevout?.value || 0), 0) : 0;
@@ -618,7 +645,7 @@ class BitcoinTransactionExplorer {
                             }
                             if (typeof child.userData.originalEmissive === 'number' && child.material?.emissive) {
                                 child.material.emissive.setHex(child.userData.originalEmissive);
-                                child.material.emissiveIntensity = 0;
+                                child.material.emissiveIntensity = child.userData.originalEmissiveIntensity || 0;
                             }
                             if (typeof child.userData.originalColor === 'number' && child.material?.color) {
                                 child.material.color.setHex(child.userData.originalColor);
@@ -627,7 +654,8 @@ class BitcoinTransactionExplorer {
                     }
                 });
             }
-            
+            this._applySelection();
+
             // Handle camera controls
             if (!isMouseDown) return;
 
@@ -666,7 +694,7 @@ class BitcoinTransactionExplorer {
                         }
                         if (typeof child.userData.originalEmissive === 'number' && child.material?.emissive) {
                             child.material.emissive.setHex(child.userData.originalEmissive);
-                            child.material.emissiveIntensity = 0;
+                            child.material.emissiveIntensity = child.userData.originalEmissiveIntensity || 0;
                         }
                         if (typeof child.userData.originalColor === 'number' && child.material?.color) {
                             child.material.color.setHex(child.userData.originalColor);
@@ -674,6 +702,7 @@ class BitcoinTransactionExplorer {
                     }
                 }
             });
+            this._applySelection();
         });
         
         this.renderer.domElement.addEventListener('wheel', (e) => {
@@ -933,7 +962,7 @@ class BitcoinTransactionExplorer {
 
     // FrontSide only: DoubleSide transparent tubes show an inner wall (nested shell / grain).
     _makeTubeMaterial(map) {
-        return new THREE.MeshLambertMaterial({
+        return this._glassify(new THREE.MeshLambertMaterial({
             color: 0xffffff,
             map: map,
             opacity: 1.0,
@@ -941,7 +970,440 @@ class BitcoinTransactionExplorer {
             side: THREE.FrontSide,
             depthWrite: false,
             depthTest: true
+        }), { core: 0.22, rim: 0.55, flow: 0.08 });
+    }
+
+    // X-ray glass look on a Lambert material: see-through at the centre, solid and glowing at
+    // the silhouette (fresnel), plus faint light pulses travelling along the tube (uv.x = length).
+    // Patches the shader so existing color/opacity/emissive/map highlight logic keeps working.
+    _glassify(material, opts) {
+        const o = Object.assign({ core: 0.3, rim: 0.5, flow: 0 }, opts);
+        if (!this._glassTime) this._glassTime = { value: 0 };
+        const time = this._glassTime;
+        const glass = { core: { value: o.core }, rim: { value: o.rim }, flow: { value: o.flow }, fade: { value: 1 } };
+        material.userData.glass = glass;   // _setGlass() edits these live
+        material.onBeforeCompile = (shader) => {
+            shader.uniforms.uGlassTime = time;
+            shader.uniforms.uGlassCore = glass.core;
+            shader.uniforms.uGlassRim = glass.rim;
+            shader.uniforms.uGlassFlow = glass.flow;
+            shader.uniforms.uGlassFade = glass.fade;
+            shader.vertexShader = shader.vertexShader
+                .replace('#include <common>', '#include <common>\nvarying vec2 vGlassUv;')
+                .replace('#include <uv_vertex>', '#include <uv_vertex>\nvGlassUv = uv;');
+            shader.fragmentShader = shader.fragmentShader
+                .replace('#include <common>', [
+                    '#include <common>',
+                    'varying vec2 vGlassUv;',
+                    'uniform float uGlassTime, uGlassCore, uGlassRim, uGlassFlow, uGlassFade;'
+                ].join('\n'))
+                .replace('#include <opaque_fragment>', [
+                    'float glassFr = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.5);',
+                    // Soft comet pulses: long gradient tail rising to a blurred head, moving along +uv
+                    'float glassPh = fract(vGlassUv.x * 6.0 - uGlassTime * 0.25);',
+                    'float glassPulse = uGlassFlow * 1.1 * pow(glassPh, 2.0) * smoothstep(1.0, 0.55, glassPh);',
+                    'outgoingLight += diffuseColor.rgb * (glassFr * uGlassRim + glassPulse);',
+                    'diffuseColor.a *= clamp(mix(uGlassCore, 1.0, glassFr) + glassPulse, 0.0, 1.0) * uGlassFade;',
+                    '#include <opaque_fragment>'
+                ].join('\n'));
+        };
+        material.customProgramCacheKey = () => 'tx-glass';
+        return material;
+    }
+
+    _setGlass(material, opts) {
+        const g = material && material.userData.glass;
+        if (!g) return;
+        if (opts.core != null) g.core.value = opts.core;
+        if (opts.rim != null) g.rim.value = opts.rim;
+        if (opts.flow != null) g.flow.value = opts.flow;
+        if (opts.fade != null) g.fade.value = opts.fade;
+    }
+
+    // ---- Click selection: highlight one input/output (or the fee), fade the rest ----------
+
+    _selectionKey(userData) {
+        const t = userData && userData.type;
+        if (t === 'input' || t === 'input-cap' || t === 'input-label') return `input:${userData.index}`;
+        if (t === 'output' || t === 'output-cap' || t === 'output-label') return `output:${userData.index}`;
+        if (t === 'fee' || t === 'fee-label') return 'fee';
+        return null;
+    }
+
+    // Re-applied after every hover reset, since hover restores colours/opacities to originals
+    _applySelection() {
+        const sel = this._selection || null;
+        this._syncTreemapSelection();
+        this.scene.children.forEach((child) => {
+            const key = this._selectionKey(child.userData);
+            if (!key || !child.material) return;
+            const fade = !sel || key === sel ? 1 : 0.08;
+            const g = child.material.userData && child.material.userData.glass;
+            if (g) {
+                this._setGlass(child.material, { fade });
+                // Make the selected arm read clearly: denser glass core, restored on deselect
+                const picked = sel && key === sel;
+                if (picked && g._baseCore == null) {
+                    g._baseCore = g.core.value;
+                    g.core.value = Math.max(g._baseCore, 0.75);
+                } else if (!picked && g._baseCore != null) {
+                    g.core.value = g._baseCore;
+                    delete g._baseCore;
+                }
+            } else if (typeof child.userData.originalOpacity === 'number') {
+                // Plain (non-glass) caps
+                child.material.opacity = child.userData.originalOpacity * fade;
+                child.material.transparent = true;
+            }
         });
+    }
+
+    // Click on an arm/cap/fee selects it; click on anything else (or empty space) clears
+    _handleSelectClick(clientX, clientY) {
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((clientX - rect.left) / rect.width) * 2 - 1,
+            -((clientY - rect.top) / rect.height) * 2 + 1);
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, this.camera);
+        // First selectable hit, so the open cylinder / cuboid in front don't swallow clicks
+        const hit = raycaster.intersectObjects(this.scene.children)
+            .find(h => h.object.visible && this._selectionKey(h.object.userData));
+        this._selection = hit ? this._selectionKey(hit.object.userData) : null;
+        this._applySelection();
+    }
+
+    // Lay the arms meeting the transaction out as a weighted circular Voronoi treemap that
+    // tiles the cylinder's cross-section (radius discR, YZ plane), so the cells literally add
+    // up to the whole. Returns [{ y, z, r, area, poly }] in input order: (y, z) is the cell's
+    // area centroid, poly the cell outline relative to it, r the room left for a round tube.
+    // Small seeded PRNG (mulberry32) keyed by a string, for deterministic treemaps
+    _seededRandom(key) {
+        let h = 1779033703 ^ String(key).length;
+        for (let i = 0; i < String(key).length; i++) {
+            h = Math.imul(h ^ String(key).charCodeAt(i), 3432918353);
+            h = (h << 13) | (h >>> 19);
+        }
+        let a = h >>> 0;
+        return () => {
+            a = (a + 0x6D2B79F5) | 0;
+            let t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    _voronoiPorts(values, discR, seed = 'treemap') {
+        const n = values.length;
+        if (n === 0) return [];
+        const circle = (r, sides) => this.createCircularPolygon(0, 0, r, sides).map(p => ({ y: p.y, z: p.x }));
+        if (n === 1) return [{ y: 0, z: 0, r: discR, area: Math.PI * discR * discR, poly: circle(discR, 96) }];
+        const total = values.reduce((a, v) => a + Math.max(v, 1e-6), 0);
+        const S = 100; // work in a 200×200 box, centre (S,S), radius S
+        const spiral = values.map((v, i) => {
+            const w = Math.sqrt(Math.max(v, 1e-6) / total);
+            const a = i * 2.399963229728653, d = S * (0.2 + 0.5 * (1 - w));
+            return { x: S + d * Math.cos(a), y: S + d * Math.sin(a) };
+        });
+        let cells = null;
+        if (typeof voronoi !== 'undefined' && voronoi.Treemap) {
+            // The library seeds sites (and re-seeds collapsed cells) with Math.random; swap in a
+            // PRNG keyed by the tx + face so the same transaction always gets the same diagram.
+            const realRandom = Math.random;
+            Math.random = this._seededRandom(seed);
+            try {
+                const children = values.map((v, i) => ({ value: Math.max(v, 1e-6), originalData: { index: i } }));
+                const tm = new voronoi.Treemap({ children }, this.createCircularPolygon(S, S, S, 96), 2 * S, 2 * S);
+                for (let k = 0; k < 120; k++) tm.compute();
+                const sites = tm.getSites(), polys = tm.getPolygons();
+                cells = new Array(n);
+                sites.forEach((site, k) => {
+                    const poly = polys[k];
+                    if (!site || !poly || poly.length < 3 || !site.originalData) return;
+                    cells[site.originalData.index] = { site, poly };
+                });
+                for (let c = 0; c < n; c++) if (!cells[c]) { cells = null; break; } // (some() skips holes)
+            } catch (e) {
+                console.warn('Voronoi port layout failed, using spiral:', e);
+                cells = null;
+            } finally {
+                Math.random = realRandom;
+            }
+        }
+        const k = discR / S;
+        return values.map((v, i) => {
+            if (!cells) {
+                const p = spiral[i];
+                const r = discR * Math.sqrt(Math.max(v, 1e-6) / total) * 0.8;
+                return { y: (p.y - S) * k, z: (p.x - S) * k, r, area: Math.PI * r * r, poly: circle(r, 24) };
+            }
+            // Area-weighted centroid, area, and distance to the nearest edge (room for a round tube)
+            const poly = cells[i].poly;
+            let A = 0, cx = 0, cy = 0;
+            for (let a = 0; a < poly.length; a++) {
+                const p1 = poly[a], p2 = poly[(a + 1) % poly.length];
+                const cr = p1.x * p2.y - p2.x * p1.y;
+                A += cr; cx += (p1.x + p2.x) * cr; cy += (p1.y + p2.y) * cr;
+            }
+            A /= 2; cx /= 6 * A; cy /= 6 * A;
+            let inR = Infinity;
+            for (let a = 0; a < poly.length; a++) {
+                const p1 = poly[a], p2 = poly[(a + 1) % poly.length];
+                const ex = p2.x - p1.x, ey = p2.y - p1.y, len2 = ex * ex + ey * ey || 1;
+                const t = Math.max(0, Math.min(1, ((cx - p1.x) * ex + (cy - p1.y) * ey) / len2));
+                inR = Math.min(inR, Math.hypot(cx - (p1.x + ex * t), cy - (p1.y + ey * t)));
+            }
+            return {
+                y: (cy - S) * k, z: (cx - S) * k, r: inR * k * 0.9, area: Math.abs(A) * k * k,
+                poly: poly.map(q => ({ y: (q.y - cy) * k, z: (q.x - cx) * k }))
+            };
+        });
+    }
+
+    // Voronoi layout for one transaction, used for the current tx and every traced one:
+    // disc radius = total input value (log scale, like the tubes); inputs and outputs (+ fee)
+    // split that disc by share of the input value; every arm keeps its cell's equal-area
+    // radius; lanes are stacked in the cells' top-to-bottom order so arms fan out without
+    // crossing. inY / outY are lane heights relative to the tx centre. Cached per txid.
+    _txArmLayout(tx) {
+        if (!this._txLayoutCache) this._txLayoutCache = new Map();
+        const cached = tx.txid && this._txLayoutCache.get(tx.txid);
+        if (cached) return cached;
+        const vins = tx.vin || [], vouts = tx.vout || [];
+        const isCb = vins.length > 0 && (vins[0].coinbase !== undefined ||
+            vins[0].txid === '0000000000000000000000000000000000000000000000000000000000000000');
+        const totalOut = vouts.reduce((a, o) => a + (o.value || 0), 0);
+        const totalInSats = isCb ? totalOut : vins.reduce((a, v) => a + (v.prevout?.value || 0), 0);
+        const totalIn = Math.max(totalInSats, totalOut, 1);
+        const discR = this._radiusForSats(totalIn);
+        const fee = isCb ? 0 : Math.max(0, totalInSats - totalOut);
+        const inShares = vins.map((v, i) => ((isCb && i === 0) ? totalOut : (v.prevout?.value || 0)) / totalIn);
+        const outShares = vouts.map(o => (o.value || 0) / totalIn);
+        if (fee > 0) outShares.push(fee / totalIn);
+        // Visibility floor so dust, OP_RETURN and tiny fees still get a cell
+        const withFloor = (w) => {
+            if (!w.length) return w;
+            const sum = w.reduce((a, v) => a + v, 0) || 1;
+            const floor = Math.min(0.015, 0.5 / w.length);
+            const f = w.map(v => Math.max(v / sum, floor));
+            const fs = f.reduce((a, v) => a + v, 0);
+            return f.map(v => v / fs);
+        };
+        const gap = discR * 0.012;
+        const inputPorts = this._voronoiPorts(withFloor(inShares), discR, `${tx.txid}:in`);
+        const outputCells = this._voronoiPorts(withFloor(outShares), discR, `${tx.txid}:out`);
+        inputPorts.forEach(p => { p.gap = gap; });
+        outputCells.forEach(p => { p.gap = gap; });
+        const outputPorts = outputCells.slice(0, vouts.length);
+        const feePort = fee > 0 ? outputCells[vouts.length] : null;
+        const cellRadius = (port) => Math.sqrt(port.area / Math.PI);
+        const inputArmR = inputPorts.map(cellRadius);
+        const outputArmR = outputPorts.map(cellRadius);
+        const stack = (ports, radii) => {
+            const lanes = new Array(ports.length).fill(0);
+            if (ports.length < 2) return { lanes, height: (radii[0] || 0) * 2 };
+            const order = ports.map((p, i) => i).sort((a, b) => (ports[b].y - ports[a].y) || (ports[a].z - ports[b].z));
+            const st = this.computeStackYPositions(order.map(i => radii[i]));
+            order.forEach((idx, k) => { lanes[idx] = st.yPositions[k]; });
+            return { lanes, height: st.totalHeight };
+        };
+        const ins = stack(inputPorts, inputArmR), outs = stack(outputPorts, outputArmR);
+        const layout = {
+            discR, fee, totalIn, totalInSats, inputPorts, outputCells, outputPorts, feePort,
+            inputArmR, outputArmR, inY: ins.lanes, outY: outs.lanes,
+            halfHeight: Math.max(ins.height, outs.height, discR * 2, 2) / 2,
+            holdLen: Math.max(3, discR * 0.25)
+        };
+        if (tx.txid) this._txLayoutCache.set(tx.txid, layout);
+        return layout;
+    }
+
+    // Path for an arm between the cylinder face (x = ±FACE_X, at its Voronoi cell) and its
+    // stacked lane at height y. dir = +1 for outputs, -1 for inputs. The arm first leaves the
+    // face straight as part of the cell bundle (holdLen), then S-bends into its lane over a
+    // run proportional to its vertical travel, so a big fan opens at one steady angle instead
+    // of every arm bending sharply in the same few units. Far end stays at 35 + straightLength.
+    _laneTubePath(dir, port, y, straightLength, holdLen = 3, laneZ = 0, bendScale = 0.45) {
+        const faceX = BitcoinTransactionExplorer.FACE_X;
+        const farX = 35 + straightLength;
+        const bundleX = faceX + holdLen;
+        const travel = Math.hypot(y - port.y, laneZ - port.z);
+        const maxBend = Math.max(8, farX - 8 - bundleX);
+        const bend = Math.min(maxBend, Math.max(35 - bundleX, travel * bendScale));
+        const connX = bundleX + bend;
+        const face = new THREE.Vector3(dir * faceX, port.y, port.z);
+        const bundle = new THREE.Vector3(dir * bundleX, port.y, port.z);
+        const c1 = new THREE.Vector3(dir * (bundleX + bend * 0.5), port.y, port.z);
+        const c2 = new THREE.Vector3(dir * (bundleX + bend * 0.5), y, laneZ);
+        const connection = new THREE.Vector3(dir * connX, y, laneZ);
+        const far = new THREE.Vector3(dir * farX, y, laneZ);
+        const path = new THREE.CurvePath();
+        if (dir > 0) {
+            path.add(new THREE.LineCurve3(face, bundle));
+            path.add(new THREE.CubicBezierCurve3(bundle, c1, c2, connection));
+            if (farX > connX + 1e-3) path.add(new THREE.LineCurve3(connection, far));
+        } else {
+            if (farX > connX + 1e-3) path.add(new THREE.LineCurve3(far, connection));
+            path.add(new THREE.CubicBezierCurve3(connection, c2, c1, bundle));
+            path.add(new THREE.LineCurve3(bundle, face));
+        }
+        path.holdLen = holdLen;
+        path.bendLen = bend;
+        return path;
+    }
+
+    // Diagonal hatch (u = along the stub, v = around it) used to mark the fee without colour
+    _feeHatchTexture() {
+        if (this._feeHatch) return this._feeHatch;
+        const c = document.createElement('canvas');
+        c.width = c.height = 64;
+        const g = c.getContext('2d');
+        g.fillStyle = 'rgba(255,255,255,0.28)';
+        g.fillRect(0, 0, 64, 64);
+        g.strokeStyle = 'rgba(255,255,255,1)';
+        g.lineWidth = 9;
+        for (let k = -64; k <= 128; k += 21) {
+            g.beginPath(); g.moveTo(k, 0); g.lineTo(k + 64, 64); g.stroke();
+        }
+        const t = new THREE.CanvasTexture(c);
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.repeat.set(1, 6);
+        this._feeHatch = t;
+        return t;
+    }
+
+    // Extrude a Voronoi cell along an arm path: the cross-section is the cell polygon at the
+    // cylinder face, is held through the path's bundle (path.holdLen), then morphs into a
+    // round tube of `radius` over `morphLen` world units.
+    // atStart = the face is at u = 0 (outputs); otherwise at u = 1 (inputs).
+    // morphLen = Infinity keeps the polygon the whole way; capEnd closes the far end.
+    _morphArmGeometry(path, port, radius, atStart, morphLen, capEnd = false) {
+        const M = 72, length = path.getLength();
+        // Keep the cell shape through the straight bundle, then round off during the bend
+        const hold = path.holdLen || 0;
+        if (morphLen === undefined) morphLen = Math.max(10, (path.bendLen || 20) * 0.6);
+        // Ring positions as distance from the face: dense through the bundle and morph (where
+        // the shape changes), then ~1 per unit (capped) along the rest of the arm
+        const near = Math.min(length, hold + (Number.isFinite(morphLen) ? morphLen : 0));
+        const dists = [];
+        const nNear = near > 0 ? 40 : 0;
+        for (let i = 0; i < nNear; i++) dists.push(near * i / nNear);
+        const nFar = Math.max(8, Math.min(180, Math.ceil((length - near) * 1.2)));
+        for (let i = 0; i <= nFar; i++) dists.push(near + (length - near) * i / nFar);
+        const us = dists.map(d => Math.min(1, Math.max(0, atStart ? d / length : 1 - d / length))).sort((a, b) => a - b);
+        const tubular = us.length - 1;
+        // Inset each cell a little so neighbouring arms read as separate pieces
+        const inset = (port.gap || 0);
+        const src = port.poly.map(p => {
+            const d = Math.hypot(p.y, p.z) || 1, s = Math.max(0, d - inset) / d;
+            return { y: p.y * s, z: p.z * s };
+        });
+        // Resample by arc length, starting where the cell crosses angle 0, so ring vertex j
+        // and its circle target share a direction (no twisting during the morph)
+        const ang = (p) => Math.atan2(p.z, p.y);
+        let start = 0, best = Infinity;
+        src.forEach((p, i) => { const a = Math.abs(ang(p)); if (a < best) { best = a; start = i; } });
+        const ring = src.slice(start).concat(src.slice(0, start));
+        if (ring.length > 2) {
+            let area2 = 0;
+            for (let i = 0; i < ring.length; i++) {
+                const a = ring[i], b = ring[(i + 1) % ring.length];
+                area2 += a.y * b.z - b.y * a.z;
+            }
+            if (area2 < 0) ring.reverse(), ring.unshift(ring.pop()); // CCW in (y, z), same start
+        }
+        const segLen = ring.map((p, i) => { const q = ring[(i + 1) % ring.length]; return Math.hypot(q.y - p.y, q.z - p.z); });
+        const perim = segLen.reduce((a, v) => a + v, 0) || 1;
+        const poly = [];
+        for (let j = 0, seg = 0, acc = 0; j < M; j++) {
+            const target = (j / M) * perim;
+            while (seg < ring.length - 1 && acc + segLen[seg] < target) acc += segLen[seg++];
+            const p = ring[seg], q = ring[(seg + 1) % ring.length];
+            const t = segLen[seg] ? (target - acc) / segLen[seg] : 0;
+            poly.push({ y: p.y + (q.y - p.y) * t, z: p.z + (q.z - p.z) * t });
+        }
+        const round = poly.map(p => { const a = ang(p); return { y: Math.cos(a) * radius, z: Math.sin(a) * radius }; });
+
+        // Rotation-minimising frames propagated from the face, seeded with N = +Y, B = +Z so
+        // the cell lands exactly where the treemap placed it on the face
+        const P = [], T = [];
+        for (let i = 0; i <= tubular; i++) {
+            const u = us[i];
+            P.push(path.getPointAt(u)); T.push(path.getTangentAt(u).normalize());
+        }
+        const N = new Array(tubular + 1), B = new Array(tubular + 1);
+        const f0 = atStart ? 0 : tubular, step = atStart ? 1 : -1;
+        N[f0] = new THREE.Vector3(0, 1, 0); B[f0] = new THREE.Vector3(0, 0, 1);
+        for (let i = f0 + step; i >= 0 && i <= tubular; i += step) {
+            const prev = i - step;
+            const v1 = P[i].clone().sub(P[prev]), c1 = v1.dot(v1) || 1e-9;
+            const rL = N[prev].clone().sub(v1.clone().multiplyScalar(2 * v1.dot(N[prev]) / c1));
+            const tL = T[prev].clone().sub(v1.clone().multiplyScalar(2 * v1.dot(T[prev]) / c1));
+            const v2 = T[i].clone().sub(tL), c2 = v2.dot(v2) || 1e-9;
+            N[i] = rL.sub(v2.multiplyScalar(2 * v2.dot(rL) / c2)).normalize();
+            B[i] = new THREE.Vector3().crossVectors(T[i], N[i]).normalize();
+        }
+
+        const positions = [], uvs = [], indices = [];
+        for (let i = 0; i <= tubular; i++) {
+            const u = us[i];
+            const s = (atStart ? u : 1 - u) * length;
+            const e = Number.isFinite(morphLen) ? Math.max(0, Math.min(1, (s - hold) / morphLen)) : 0;
+            const w = e * e * (3 - 2 * e);
+            for (let j = 0; j <= M; j++) {
+                const a = poly[j % M], b = round[j % M];
+                const cy = a.y + (b.y - a.y) * w, cz = a.z + (b.z - a.z) * w;
+                positions.push(
+                    P[i].x + N[i].x * cy + B[i].x * cz,
+                    P[i].y + N[i].y * cy + B[i].y * cz,
+                    P[i].z + N[i].z * cy + B[i].z * cz
+                );
+                uvs.push(u, j / M);
+            }
+        }
+        // Rings run CCW around T (both directions travel +X at the face), so this winding faces out
+        for (let i = 0; i < tubular; i++) {
+            for (let j = 0; j < M; j++) {
+                const a = i * (M + 1) + j, b = (i + 1) * (M + 1) + j, c = b + 1, d = a + 1;
+                indices.push(a, d, b, b, d, c);
+            }
+        }
+        if (capEnd) {
+            const ci = atStart ? tubular : 0, base = positions.length / 3;
+            positions.push(P[ci].x, P[ci].y, P[ci].z); uvs.push(atStart ? 1 : 0, 0.5);
+            for (let j = 0; j < M; j++) {
+                const a = ci * (M + 1) + j, b = a + 1;
+                if (atStart) indices.push(base, a, b); else indices.push(base, b, a);
+            }
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geo.setIndex(indices);
+        geo.computeVertexNormals();
+        return geo;
+    }
+
+    // Faint outline of every treemap cell plus the rim on one cylinder face (x = faceX).
+    // Not pickable: a Line's default raycast threshold would swallow hovers on the arms.
+    _treemapOutline(ports, discR, faceX) {
+        const pts = [];
+        const seg = (y1, z1, y2, z2) => pts.push(faceX, y1, z1, faceX, y2, z2);
+        ports.forEach((p) => p.poly.forEach((a, i) => {
+            const b = p.poly[(i + 1) % p.poly.length];
+            seg(p.y + a.y, p.z + a.z, p.y + b.y, p.z + b.z);
+        }));
+        const rim = this.createCircularPolygon(0, 0, discR, 128);
+        rim.forEach((a, i) => { const b = rim[(i + 1) % rim.length]; seg(a.y, a.x, b.y, b.x); });
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+        const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
+            color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false
+        }));
+        lines.raycast = () => {};
+        lines.renderOrder = 3;
+        lines.userData = { type: 'treemap-outline' };
+        return lines;
     }
 
     updateCameraPosition() {
@@ -1210,6 +1672,7 @@ class BitcoinTransactionExplorer {
     }
 
     createInputOutputVisualization() {
+        this._selection = null;
         const inputs = this.transactionData.vin || [];
         const outputs = this.transactionData.vout || [];
         
@@ -1368,89 +1831,98 @@ class BitcoinTransactionExplorer {
         const height = Math.max(0.01, (this.transactionData.size || 250) / 3360); // Based on transaction size (halved vs width/depth)
         
         const txGeometry = new THREE.BoxGeometry(width, height, depth);
-        const txMaterial = new THREE.MeshLambertMaterial({ 
+        const txMaterial = this._glassify(new THREE.MeshLambertMaterial({ 
             color: 0xffffff,
             transparent: true,
             opacity: 0.8, // Slightly transparent for better visibility
             depthWrite: true,
             depthTest: true
-        });
+        }), { core: 0.55, rim: 0.6 });
         const txCuboid = new THREE.Mesh(txGeometry, txMaterial);
         txCuboid.renderOrder = 0; // Render before spheres
         txCuboid.position.set(0, 0, 0);
         txCuboid.userData = { type: 'transaction', data: this.transactionData };
         this.scene.add(txCuboid);
 
-        // Add circles perpendicular to the sides of the cuboid
-        // Calculate total satoshis from inputs and outputs
-        const totalInputSats = this.transactionData.vin ? 
-            this.transactionData.vin.reduce((sum, input) => sum + (input.prevout?.value || 0), 0) : 0;
-        const totalOutputSats = this.transactionData.vout ? 
-            this.transactionData.vout.reduce((sum, output) => sum + output.value, 0) : 0;
-        
-        // Scale radius based on output value (what's actually being transferred)
-        const baseRadius = Math.max(width, height) * 0.6;
-        
-        // Both discs use output value since that's what's being transferred
-        const totalOutputBTC = totalOutputSats / 100000000;
-        const logValue = Math.log10(totalOutputBTC + 1); // +1 to handle 0 values
-        const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1)); // Ultra extreme logarithmic scaling
-        const circleRadius = 1 * sizeScale;
-        
-        // Single spanning cylinder ring across the transaction and adjacent space
-        // Make its length 1/8th of the transaction cuboid height
-        const spanLength = 2.5;
-        const spanGeometry = new THREE.CylinderGeometry(circleRadius, circleRadius, spanLength, 32, 1, true);
-        const spanMaterial = new THREE.MeshLambertMaterial({
+        // The central cylinder is the whole; both faces are circular Voronoi treemaps that tile
+        // it by share of the input value (see _txArmLayout, shared with traced transactions).
+        const L = this._txArmLayout(this.transactionData);
+        const { discR, inputPorts, outputCells, outputPorts, feePort, fee, inputArmR, outputArmR, holdLen } = L;
+        this.outputPorts = outputPorts;
+        this.feePort = feePort;
+        // Shared with the Treemap side panel so it draws exactly these cells
+        this.treemapLayout = { discR, inputPorts, outputCells, fee, totalIn: L.totalInSats };
+        this.inputArmR = inputArmR;
+        this.outputArmR = outputArmR;
+        // Lanes follow the cells' top-to-bottom order (arrays updated in place: shared via this.yPositions*)
+        L.inY.forEach((y, i) => { yPositions[i] = y; });
+        L.outY.forEach((y, i) => { yPositionsOutputs[i] = y; });
+        this.zPositionsInputs = inputs.map(() => 0);
+        this.zPositionsOutputs = outputs.map(() => 0);
+        if (this.treeLayout) {
+            // Tree: each arm keeps branching in its cell's direction instead of lining up
+            this._treeLanes(inputPorts, inputArmR, yPositions, this.zPositionsInputs);
+            this._treeLanes(outputPorts, outputArmR, yPositionsOutputs, this.zPositionsOutputs);
+        }
+        this.armHoldLen = holdLen;
+
+        const faceX = BitcoinTransactionExplorer.FACE_X;
+        const spanLength = faceX * 2;
+        const spanGeometry = new THREE.CylinderGeometry(discR, discR, spanLength, 96, 1, true);
+        const spanMaterial = this._glassify(new THREE.MeshLambertMaterial({
             color: 0xffffff,
             transparent: true,
             opacity: 0.1,
             side: THREE.DoubleSide,
             depthWrite: false,
             depthTest: true
-        });
+        }), { core: 0.4, rim: 1.2 });
         const spanRing = new THREE.Mesh(spanGeometry, spanMaterial);
         spanRing.position.set(0, 0, 0);
         spanRing.rotation.z = Math.PI / 2; // Align along X axis
         spanRing.renderOrder = 1;
         this.scene.add(spanRing);
 
-        // Create unified input tubes (straight section + curved connection as one object)
+        this.scene.add(this._treemapOutline(inputPorts, discR, -faceX));
+        this.scene.add(this._treemapOutline(outputCells, discR, faceX));
+
+        // Fee: a short stub of its cell that leaves the output face and goes nowhere
+        if (feePort) {
+            const feePath = new THREE.LineCurve3(
+                new THREE.Vector3(faceX, feePort.y, feePort.z),
+                new THREE.Vector3(faceX + holdLen, feePort.y, feePort.z));
+            // Grey, but marked: diagonal hatching wraps the stub and a slow pulse runs along it
+            const feeMaterial = this._glassify(new THREE.MeshLambertMaterial({
+                color: 0xbdbdbd,
+                map: this._feeHatchTexture(),
+                transparent: true,
+                opacity: 1,
+                side: THREE.FrontSide,
+                depthWrite: false,
+                depthTest: true
+            }), { core: 0.55, rim: 1.0, flow: 0.25 });
+            const feeMesh = new THREE.Mesh(this._morphArmGeometry(feePath, feePort, 0, true, Infinity, true), feeMaterial);
+            feeMesh.renderOrder = 2;
+            feeMesh.userData = { type: 'fee', data: { fee, totalIn: L.totalInSats }, originalColor: 0xbdbdbd };
+            this.scene.add(feeMesh);
+
+            // Label just past the stub (shown with the Labels toggle)
+            this._addSceneLabel('FEE', `${this._btcShort(fee)} BTC`,
+                new THREE.Vector3(faceX + holdLen, feePort.y, feePort.z), 1, { type: 'fee-label' });
+        }
+
+        // Create unified input arms (straight section + curve + Voronoi cell as one object)
         inputs.forEach((input, index) => {
             const y = yPositions[index] ?? ((inputs.length - 1) - index * 2);
             const inputIsCoinbase = isCoinbase && index === 0;
             
-            // Calculate tube radius based on input value (logarithmic scaling)
-            const amount = inputIsCoinbase ? totalOutputValue : (input.prevout?.value || 0);
-            const amountBTC = amount / 100000000;
-            const logValue = Math.log10(amountBTC + 1);
-            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
-            const tubeRadius = 1 * sizeScale;
+            const tubeRadius = inputArmR[index];
             
-            // Create a combined path: straight section + curved section
             // Coinbase inputs have shorter straight section (they originate from block reward)
             const straightLength = inputIsCoinbase ? 15 : 120;
-            const farPoint = new THREE.Vector3(-35 - straightLength, y, 0); // Far end
-            const connectionPoint = new THREE.Vector3(-35, y, 0); // Where straight meets curve
-            const endPoint = new THREE.Vector3(-1, 0, 0); // At the transaction
-            
-            // Combine curves into one path
-            const curvePath = new THREE.CurvePath();
-            
-            // Straight section (from far end to connection point)
-            const straightCurve = new THREE.LineCurve3(farPoint, connectionPoint);
-            curvePath.add(straightCurve);
-            
-            // Curved section (from connection point to transaction)
-            const yDiff = Math.abs(y - 0);
-            const curveAmount = yDiff < 0.1 ? 0 : 1;
-            const controlPoint1 = new THREE.Vector3(-15, y + curveAmount, 0);
-            const controlPoint2 = new THREE.Vector3(-8, curveAmount * 0.5, 0);
-            const bezierCurve = new THREE.CubicBezierCurve3(connectionPoint, controlPoint1, controlPoint2, endPoint);
-            curvePath.add(bezierCurve);
-            
-            // Create tube geometry from the combined path
-            const tubeGeometry = new THREE.TubeGeometry(curvePath, 128, tubeRadius, 16, false);
+            const port = inputPorts[index];
+            const curvePath = this._laneTubePath(-1, port, y, straightLength, holdLen, this.zPositionsInputs[index], this._bendScale());
+            const tubeGeometry = this._morphArmGeometry(curvePath, port, tubeRadius, false);
             
             let material;
             if (inputIsCoinbase) {
@@ -1460,6 +1932,10 @@ class BitcoinTransactionExplorer {
                 material = this._makeTubeMaterial(
                     this.createHorizontalGradientTexture(tones.CURRENT_INPUT[0], tones.CURRENT_INPUT[1])
                 );
+                // Denser glass + brighter edges, and a per-input tint, so arms stand apart
+                const shades = BitcoinTransactionExplorer.INPUT_SHADES;
+                material.color.setHex(shades[index % shades.length]);
+                this._setGlass(material, { core: 0.32, rim: 0.9 });
             }
             
             const tube = new THREE.Mesh(tubeGeometry, material);
@@ -1469,47 +1945,23 @@ class BitcoinTransactionExplorer {
                 index: index, 
                 data: input, 
                 radius: tubeRadius,
-                originalColor: inputIsCoinbase ? 0xffffff : 0x555555,
+                originalColor: inputIsCoinbase ? 0xffffff : BitcoinTransactionExplorer.INPUT_SHADES[index % BitcoinTransactionExplorer.INPUT_SHADES.length],
                 isCoinbase: inputIsCoinbase,
                 coinbaseAmount: inputIsCoinbase ? totalOutputValue : null
             };
             this.scene.add(tube);
         });
 
-        // Create unified output tubes (curved connection + straight section as one object)
+        // Create unified output arms (Voronoi cell + curve + straight section as one object)
         outputs.forEach((output, index) => {
             const y = yPositionsOutputs[index] ?? ((outputs.length - 1) - index * 2);
             
-            // Calculate tube radius based on output value (logarithmic scaling)
-            const amount = output.value || 0;
-            const amountBTC = amount / 100000000;
-            const logValue = Math.log10(amountBTC + 1);
-            const sizeScale = Math.max(0.05, Math.min(50.0, logValue * 8.0 + 0.1));
-            const tubeRadius = 1 * sizeScale;
+            const tubeRadius = outputArmR[index];
             
-            // Create a combined path: curved section + straight section
             const straightLength = 120; // Length of the straight portion
-            const startPoint = new THREE.Vector3(1, 0, 0); // At the transaction
-            const connectionPoint = new THREE.Vector3(35, y, 0); // Where curve meets straight
-            const farPoint = new THREE.Vector3(35 + straightLength, y, 0); // Far end
-            
-            // Combine curves into one path
-            const curvePath = new THREE.CurvePath();
-            
-            // Curved section (from transaction to connection point)
-            const yDiff = Math.abs(y - 0);
-            const curveAmount = yDiff < 0.1 ? 0 : 1;
-            const controlPoint1 = new THREE.Vector3(8, curveAmount * 0.5, 0);
-            const controlPoint2 = new THREE.Vector3(15, y + curveAmount, 0);
-            const bezierCurve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, connectionPoint);
-            curvePath.add(bezierCurve);
-            
-            // Straight section (from connection point to far end)
-            const straightCurve = new THREE.LineCurve3(connectionPoint, farPoint);
-            curvePath.add(straightCurve);
-            
-            // Create tube geometry from the combined path
-            const tubeGeometry = new THREE.TubeGeometry(curvePath, 128, tubeRadius, 16, false);
+            const port = outputPorts[index];
+            const curvePath = this._laneTubePath(1, port, y, straightLength, holdLen, this.zPositionsOutputs[index], this._bendScale());
+            const tubeGeometry = this._morphArmGeometry(curvePath, port, tubeRadius, true);
             
             const tones = BitcoinTransactionExplorer.TUBE_TONES;
             const material = this._makeTubeMaterial(
@@ -1529,6 +1981,153 @@ class BitcoinTransactionExplorer {
             };
             this.scene.add(tube);
         });
+
+        this._buildIoLabels(L, isCoinbase, totalOutputValue, yPositions, yPositionsOutputs);
+    }
+
+    // ---- Labels toggle: amounts/addresses at the arms' far ends, tx summary, fee ----------
+
+    _btcShort(sats) {
+        return ((sats || 0) / 1e8).toFixed(8).replace(/\.?0+$/, '') || '0';
+    }
+
+    _shortAddr(a) {
+        if (!a) return '';
+        return a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
+    }
+
+    // Label sprite anchored to a point, hidden unless labels are on. Its width tracks the zoom
+    // (constant on-screen size); side = -1 grows left of the anchor, +1 right, 0 centred above.
+    _addSceneLabel(line1, line2, anchor, side, userData) {
+        const sprite = this._makeLabelSprite(line1, line2);
+        sprite.raycast = () => {};
+        Object.assign(sprite.userData, { originalOpacity: 1, labelAnchor: anchor.clone(), labelSide: side }, userData);
+        sprite.visible = !!this.showLabels;
+        this.scene.add(sprite);
+        this._placeSceneLabel(sprite);
+        return sprite;
+    }
+
+    _placeSceneLabel(sprite) {
+        const u = sprite.userData;
+        const w = 90 * this._traceLabelZoomScale();
+        const h = w * u.labelAspect;
+        sprite.scale.set(w, h, 1);
+        sprite.position.copy(u.labelAnchor);
+        if (u.labelSide) sprite.position.x += u.labelSide * w * 0.55;
+        else sprite.position.y += h * 0.6;
+        return h;
+    }
+
+    // Resize all scene labels for the current zoom, and declutter: an input/output label is
+    // shown only if it clears the one above it (so 100+ inputs don't pile into a smear)
+    _updateSceneLabels() {
+        const groups = { 'input-label': [], 'output-label': [] };
+        let h = 0;
+        this.scene.children.forEach((c) => {
+            const t = c.userData.type;
+            if (t !== 'input-label' && t !== 'output-label' && t !== 'fee-label' && t !== 'tx-label') return;
+            h = this._placeSceneLabel(c);
+            if (groups[t]) groups[t].push(c);
+            else c.visible = !!this.showLabels;
+        });
+        Object.values(groups).forEach((list) => {
+            list.sort((a, b) => b.position.y - a.position.y);
+            let lastY = Infinity;
+            list.forEach((c) => {
+                const fits = lastY - c.position.y >= h * 0.95;
+                c.visible = !!this.showLabels && fits;
+                if (fits) lastY = c.position.y;
+            });
+        });
+    }
+
+    _buildIoLabels(L, isCoinbase, totalOutputValue, inLanes, outLanes) {
+        const tx = this.transactionData;
+        const inputs = tx.vin || [], outputs = tx.vout || [];
+        inputs.forEach((input, i) => {
+            const cb = isCoinbase && i === 0;
+            const farX = 35 + (cb ? 15 : 120);
+            const amount = cb ? totalOutputValue : (input.prevout?.value || 0);
+            this._addSceneLabel(`${this._btcShort(amount)} BTC`,
+                cb ? 'Coinbase' : this._shortAddr(input.prevout?.scriptpubkey_address) || `Input ${i + 1}`,
+                new THREE.Vector3(-farX - (L.inputArmR[i] || 0), inLanes[i] ?? 0, this.zPositionsInputs?.[i] || 0), -1, { type: 'input-label', index: i });
+        });
+        this.outputLabels = [];
+        outputs.forEach((output, i) => {
+            const addr = this._shortAddr(output.scriptpubkey_address) ||
+                (output.scriptpubkey_type === 'op_return' ? 'OP_RETURN' : `Output ${i + 1}`);
+            this.outputLabels[i] = this._addSceneLabel(`${this._btcShort(output.value)} BTC`, addr,
+                new THREE.Vector3(155, outLanes[i] ?? 0, this.zPositionsOutputs?.[i] || 0), 1, { type: 'output-label', index: i });
+        });
+        // Transaction: centred above the cylinder
+        const shortId = tx.txid ? `${tx.txid.slice(0, 8)}…${tx.txid.slice(-6)}` : 'Transaction';
+        this._addSceneLabel(shortId, `${this._btcShort(L.totalInSats)} BTC · ${tx.size || '?'} B`,
+            new THREE.Vector3(0, L.discR, 0), 0, { type: 'tx-label' });
+        this._updateSceneLabels();
+    }
+
+    // Tree mode flares out over a much longer run (gentle branches); aligned keeps the tighter S
+    _bendScale() {
+        return this.treeLayout ? 1.6 : 0.45;
+    }
+
+    // Tree layout: an arm's far end = its cell centre pushed outward by one common factor,
+    // just large enough that no two tubes touch (and at least 3×, so the branching reads).
+    _treeLanes(ports, radii, ys, zs) {
+        if (ports.length < 2) return;
+        let k = 3;
+        for (let a = 0; a < ports.length; a++) {
+            for (let b = a + 1; b < ports.length; b++) {
+                const d = Math.hypot(ports[a].y - ports[b].y, ports[a].z - ports[b].z) || 1e-3;
+                k = Math.max(k, (radii[a] + radii[b] + 0.5) / d);
+            }
+        }
+        k = Math.min(k, 80);
+        ports.forEach((p, i) => { ys[i] = p.y * k; zs[i] = p.z * k; });
+    }
+
+    // Rebuild with arms aligned (one vertical sheet) or branching like a tree; keeps traces
+    async toggleTreeLayout() {
+        this.treeLayout = !this.treeLayout;
+        try { localStorage.setItem('tx.treeLayout', this.treeLayout ? '1' : '0'); } catch (e) { /* storage blocked */ }
+        document.getElementById('toggle-tree')?.classList.toggle('active', this.treeLayout);
+        if (!this.transactionData) return;
+        const keep = {
+            traceNodes: this.traceNodes, traceDepth: this.traceDepth, parentsLoaded: this.parentsLoaded,
+            traceOutNodes: this.traceOutNodes, traceOutDepth: this.traceOutDepth, childrenLoaded: this.childrenLoaded,
+            parentsSpread: this.parentsSpread, showTraceLabels: this.showTraceLabels
+        };
+        this.createTransactionVisualization();
+        await this.checkOutputSpendingStatus();
+        Object.assign(this, keep);
+        if (this.parentsLoaded && (this.traceNodes || []).length) {
+            const traced = new Set();
+            this.traceNodes.filter(n => n.level === 1).forEach(n => n.links.forEach((l) => {
+                const [t, idx] = l.shallowKey.split(':');
+                if (t === this.txid) traced.add(parseInt(idx, 10));
+            }));
+            this._flattenTracedInputs(traced);
+            this._layoutParents(this.parentsSpread);
+        }
+        if (this.childrenLoaded && (this.traceOutNodes || []).length) {
+            const traced = new Set();
+            this.traceOutNodes.filter(n => n.level === 1).forEach(n => n.links.forEach((l) => {
+                const m = /:vout:(\d+)$/.exec(l.shallowKey);
+                if (m && l.shallowKey.startsWith(this.txid)) traced.add(parseInt(m[1], 10));
+            }));
+            this._flattenTracedOutputs(traced);
+            this._layoutChildren(this.parentsSpread);
+        }
+        this._syncTraceMenuButtons();
+    }
+
+    toggleLabels() {
+        this.showLabels = !this.showLabels;
+        const types = { 'input-label': 1, 'output-label': 1, 'fee-label': 1, 'tx-label': 1 };
+        this.scene.children.forEach((c) => { if (types[c.userData.type]) c.visible = this.showLabels; });
+        this._updateSceneLabels();
+        document.getElementById('toggle-labels')?.classList.toggle('active', this.showLabels);
     }
     
     // ---- Trace Inputs: load parent transactions one level deep -------------
@@ -1589,31 +2188,54 @@ class BitcoinTransactionExplorer {
     }
 
     // Build a tube mesh, tag it, add it flat to the scene, and track it for cleanup.
-    _addParentTube(curvePath, radius, gradStart, gradEnd, userData, meshList) {
-        const geometry = new THREE.TubeGeometry(curvePath, 64, Math.max(radius, 0.02), 12, false);
-        const material = this._makeTubeMaterial(
-            this.createHorizontalGradientTexture(gradStart, gradEnd)
-        );
+    // Trace tubes: funding paths ('parent-connection') are bright with a flow pulse so the
+    // value's route reads first; untraced branches are dimmer. Each older generation (level)
+    // fades a little more, so depth reads left-to-right without anything disappearing.
+    _traceFade(level) {
+        return Math.max(0.45, Math.pow(0.82, (level || 1) - 1));
+    }
+
+    _styleTraceMaterial(material, userData) {
+        const isPath = userData && userData.type === 'parent-connection';
+        const fade = this._traceFade(userData && userData.level);
+        this._setGlass(material, isPath
+            ? { core: 0.4 * fade, rim: 0.9 * fade, flow: 0.18 }
+            : { core: 0.28 * fade, rim: 0.6 * fade, flow: 0 });
+        return material;
+    }
+
+    _addTraceMesh(geometry, gradStart, gradEnd, userData, meshList, position) {
+        const material = this._styleTraceMaterial(
+            this._makeTubeMaterial(this.createHorizontalGradientTexture(gradStart, gradEnd)), userData);
         const mesh = new THREE.Mesh(geometry, material);
         mesh.renderOrder = 0;
         mesh.userData = userData;
+        if (position) mesh.position.copy(position);
         this.scene.add(mesh);
         (meshList || this.parentMeshes).push(mesh);
         return mesh;
     }
 
+    // Bridge between two arms' far ends (from → to, left to right), tapering from one arm's
+    // radius to the other's: an output's cell size in one tx becomes an input's in the next.
+    _addTraceBridge(from, to, userData, meshList, tone) {
+        if (Math.hypot(to.x - from.x, to.y - from.y) < 0.5) return null;
+        const midX = (from.x + to.x) / 2;
+        const fz = from.z || 0, tz = to.z || 0;
+        const path = new THREE.CubicBezierCurve3(
+            new THREE.Vector3(from.x, from.y, fz),
+            new THREE.Vector3(midX, from.y, fz),
+            new THREE.Vector3(midX, to.y, tz),
+            new THREE.Vector3(to.x, to.y, tz));
+        const r0 = Math.max(0.05, from.r || 0.25), r1 = Math.max(0.05, to.r || r0);
+        const port = { poly: this.createCircularPolygon(0, 0, r0, 32).map(p => ({ y: p.y, z: p.x })) };
+        const geo = this._morphArmGeometry(path, port, r1, true, path.getLength());
+        return this._addTraceMesh(geo, tone, tone, userData, meshList);
+    }
+
     // Approximate half the vertical extent a parent will occupy (for de-overlap stacking).
     _parentHalfHeight(parentTx) {
-        const vins = parentTx.vin || [];
-        const vouts = parentTx.vout || [];
-        const isCb = vins.length > 0 && (vins[0].coinbase !== undefined ||
-            vins[0].txid === '0000000000000000000000000000000000000000000000000000000000000000');
-        const totalOut = vouts.reduce((s, o) => s + (o.value || 0), 0);
-        const inRadii = vins.map((v, i) => this._radiusForSats(isCb && i === 0 ? totalOut : (v.prevout?.value || 0)));
-        const outRadii = vouts.map(o => this._radiusForSats(o.value || 0));
-        const inH = this.computeStackYPositions(inRadii).totalHeight;
-        const outH = this.computeStackYPositions(outRadii).totalHeight;
-        return Math.max(inH, outH, 2) / 2;
+        return this._txArmLayout(parentTx).halfHeight;
     }
 
     // Load the next level of the input trace. Level 1 = parents of the current tx's inputs;
@@ -1645,11 +2267,7 @@ class BitcoinTransactionExplorer {
             const deepest = this.traceNodes.filter((n) => n.level === this.traceDepth);
             deepest.forEach((node) => {
                 const vins = node.tx.vin || [];
-                const vouts = node.tx.vout || [];
-                const isCb = vins.length > 0 && isCoinbaseVin(vins[0]);
-                const totalOut = vouts.reduce((s, o) => s + (o.value || 0), 0);
-                const inRadii = vins.map((v, i) => this._radiusForSats(isCb && i === 0 ? totalOut : (v.prevout?.value || 0)));
-                const { yPositions: inY } = this.computeStackYPositions(inRadii);
+                const inY = this._txArmLayout(node.tx).inY;
                 vins.forEach((v, j) => {
                     if (isCoinbaseVin(v)) return;
                     addLink(v.txid, `${node.tx.txid}:${j}`, v.vout, node.centerY + (inY[j] ?? 0));
@@ -1722,18 +2340,21 @@ class BitcoinTransactionExplorer {
         opts = opts || {};
         const meshList = opts.meshList || this.parentMeshes;
         const group = opts.group || 'parent';
+        const level = opts.level || 1;
+        const fade = this._traceFade(level);
         const STUB = 20;
+        const farX = 35 + STUB;
         // Older (parent) tubes are greyer/dimmer than the current tx so generations read as depth.
         const tones = BitcoinTransactionExplorer.TUBE_TONES;
         const PARENT_INPUT_GRAD = tones.PARENT_INPUT;
         const PARENT_OUTPUT_GRAD = tones.PARENT_OUTPUT;
-        const FLAT_TONE = tones.HISTORY_FLAT; // uninterrupted funding path (dimmer than current)
+        const FLAT_TONE = tones.HISTORY_FLAT; // uninterrupted funding path
+        const centre = new THREE.Vector3(centerX, centerY, 0);
 
+        // Same Voronoi treatment as the current tx: disc = input total, cells by share
+        const L = this._txArmLayout(tx);
         const vins = tx.vin || [];
         const vouts = tx.vout || [];
-        const isCb = vins.length > 0 && (vins[0].coinbase !== undefined ||
-            vins[0].txid === '0000000000000000000000000000000000000000000000000000000000000000');
-        const totalOut = vouts.reduce((s, o) => s + (o.value || 0), 0);
 
         // Cuboid
         const width = 2;
@@ -1741,13 +2362,52 @@ class BitcoinTransactionExplorer {
         const height = Math.max(0.01, (tx.size || 250) / 3360);
         const cuboid = new THREE.Mesh(
             new THREE.BoxGeometry(width, height, depth),
-            new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: true, depthTest: true })
+            this._glassify(new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: true, depthTest: true }), { core: 0.55, rim: 0.6 })
         );
         cuboid.renderOrder = 0;
-        cuboid.position.set(centerX, centerY, 0);
+        cuboid.position.copy(centre);
         cuboid.userData = { type: 'parent-transaction', group, data: tx };
         this.scene.add(cuboid);
         meshList.push(cuboid);
+
+        // Cylinder hub + treemap outlines on both faces
+        const faceX = BitcoinTransactionExplorer.FACE_X;
+        const hub = new THREE.Mesh(
+            new THREE.CylinderGeometry(L.discR, L.discR, faceX * 2, 64, 1, true),
+            this._glassify(new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false }),
+                { core: 0.3, rim: 1.1 * fade })
+        );
+        hub.rotation.z = Math.PI / 2;
+        hub.position.copy(centre);
+        hub.renderOrder = 1;
+        hub.userData = { type: 'parent-hub', group };
+        hub.raycast = () => {}; // decorative: don't steal hovers from the cuboid / tubes
+        this.scene.add(hub);
+        meshList.push(hub);
+        [this._treemapOutline(L.inputPorts, L.discR, -faceX), this._treemapOutline(L.outputCells, L.discR, faceX)]
+            .forEach((lines) => {
+                lines.position.copy(centre);
+                lines.material.opacity *= fade;
+                lines.userData = { type: 'parent-outline', group };
+                this.scene.add(lines);
+                meshList.push(lines);
+            });
+
+        // Fee stub
+        if (L.feePort) {
+            const feePath = new THREE.LineCurve3(
+                new THREE.Vector3(faceX, L.feePort.y, L.feePort.z),
+                new THREE.Vector3(faceX + L.holdLen, L.feePort.y, L.feePort.z));
+            const feeMesh = new THREE.Mesh(
+                this._morphArmGeometry(feePath, L.feePort, 0, true, Infinity, true),
+                this._glassify(new THREE.MeshLambertMaterial({ color: 0xbdbdbd, map: this._feeHatchTexture(), transparent: true, opacity: 1, depthWrite: false }),
+                    { core: 0.5 * fade, rim: 0.9 * fade }));
+            feeMesh.position.copy(centre);
+            feeMesh.renderOrder = 2;
+            feeMesh.userData = { type: 'parent-fee', group };
+            this.scene.add(feeMesh);
+            meshList.push(feeMesh);
+        }
 
         const sourceByVin = new Map();
         (opts.sourceLinks || []).forEach((sl) => {
@@ -1757,103 +2417,59 @@ class BitcoinTransactionExplorer {
         });
 
         // Inputs (extend left); record anchors for deeper levels.
-        const inRadii = vins.map((v, i) => this._radiusForSats(isCb && i === 0 ? totalOut : (v.prevout?.value || 0)));
-        const { yPositions: inY } = this.computeStackYPositions(inRadii);
         const inputAnchors = [];
         vins.forEach((vin, i) => {
-            const radius = inRadii[i];
-            const y = centerY + (inY[i] ?? 0);
-            const farPoint = new THREE.Vector3(centerX - 35 - STUB, y, 0);
-            const connectionPoint = new THREE.Vector3(centerX - 35, y, 0);
-            const endPoint = new THREE.Vector3(centerX - 1, centerY, 0);
-            const cAmt = Math.abs(y - centerY) < 0.1 ? 0 : 1;
+            const port = L.inputPorts[i];
+            if (!port) return;
+            const r = L.inputArmR[i];
+            const y = L.inY[i] ?? 0;
+            const anchor = { x: centerX - farX, y: centerY + y, r };
             const sources = sourceByVin.get(i);
             const funded = (fundedInputKeys && fundedInputKeys.has(`${tx.txid}:${i}`)) || (sources && sources.length);
-            const gradA = funded ? FLAT_TONE : PARENT_INPUT_GRAD[0];
-            const gradB = funded ? FLAT_TONE : PARENT_INPUT_GRAD[1];
-            if (sources && sources.length) {
-                sources.forEach((source) => {
-                    const midX = (source.x + farPoint.x) / 2;
-                    const path = new THREE.CurvePath();
-                    path.add(new THREE.CubicBezierCurve3(
-                        new THREE.Vector3(source.x, source.y, 0),
-                        new THREE.Vector3(midX, source.y, 0),
-                        new THREE.Vector3(midX, y, 0),
-                        farPoint.clone()
-                    ));
-                    path.add(new THREE.LineCurve3(farPoint.clone(), connectionPoint));
-                    path.add(new THREE.CubicBezierCurve3(
-                        connectionPoint,
-                        new THREE.Vector3(centerX - 15, y + cAmt, 0),
-                        new THREE.Vector3(centerX - 8, centerY + cAmt * 0.5, 0),
-                        endPoint
-                    ));
-                    this._addParentTube(path, radius, FLAT_TONE, FLAT_TONE,
-                        { type: 'parent-connection', group, data: { parentTxid: tx.txid, vin: i }, radius }, meshList);
-                });
-            } else {
-                const path = new THREE.CurvePath();
-                path.add(new THREE.LineCurve3(farPoint, connectionPoint));
-                path.add(new THREE.CubicBezierCurve3(
-                    connectionPoint,
-                    new THREE.Vector3(centerX - 15, y + cAmt, 0),
-                    new THREE.Vector3(centerX - 8, centerY + cAmt * 0.5, 0),
-                    endPoint
-                ));
-                this._addParentTube(path, radius, gradA, gradB,
-                    { type: 'parent-input', group, index: i, data: vin, radius, originalColor: 0x555555, parentTxid: tx.txid }, meshList);
-            }
-            inputAnchors[i] = { x: farPoint.x, y };
+            const geo = this._morphArmGeometry(this._laneTubePath(-1, port, y, STUB, L.holdLen), port, r, false);
+            this._addTraceMesh(geo,
+                funded ? FLAT_TONE : PARENT_INPUT_GRAD[0], funded ? FLAT_TONE : PARENT_INPUT_GRAD[1],
+                funded
+                    ? { type: 'parent-connection', group, level, data: { parentTxid: tx.txid, vin: i }, radius: r }
+                    : { type: 'parent-input', group, level, index: i, data: vin, radius: r, originalColor: 0x555555, parentTxid: tx.txid },
+                meshList, centre);
+            (sources || []).forEach((source) => {
+                this._addTraceBridge(source, anchor,
+                    { type: 'parent-connection', group, level, data: { parentTxid: tx.txid, vin: i }, radius: r }, meshList, FLAT_TONE);
+            });
+            inputAnchors[i] = anchor;
         });
 
-        // Outputs (extend right). Funding outputs -> one continuous flat tube to each target.
+        // Outputs (extend right). Funding outputs bridge to the input they fund.
         const fundingByVout = new Map();
         (fundingLinks || []).forEach((fl) => {
             if (!fl.target) return;
             if (!fundingByVout.has(fl.vout)) fundingByVout.set(fl.vout, []);
             fundingByVout.get(fl.vout).push(fl.target);
         });
-        const outRadii = vouts.map((o) => this._radiusForSats(o.value || 0));
-        const { yPositions: outY } = this.computeStackYPositions(outRadii);
         const outputAnchors = [];
         const spentOutKeys = opts.spentOutputKeys;
         vouts.forEach((vout, i) => {
-            const radius = outRadii[i];
-            const y = centerY + (outY[i] ?? 0);
-            const startPoint = new THREE.Vector3(centerX + 1, centerY, 0);
-            const connectionPoint = new THREE.Vector3(centerX + 35, y, 0);
-            const farPoint = new THREE.Vector3(centerX + 35 + STUB, y, 0);
-            const cAmt = Math.abs(y - centerY) < 0.1 ? 0 : 1;
-            const outCurveA = new THREE.Vector3(centerX + 8, centerY + cAmt * 0.5, 0);
-            const outCurveB = new THREE.Vector3(centerX + 15, y + cAmt, 0);
-
+            const port = L.outputPorts[i];
+            if (!port) return;
+            const r = L.outputArmR[i];
+            const y = L.outY[i] ?? 0;
+            const anchor = { x: centerX + farX, y: centerY + y, r };
             const targets = fundingByVout.get(i);
-            if (targets && targets.length) {
-                targets.forEach((target) => {
-                    const midX = (farPoint.x + target.x) / 2;
-                    const path = new THREE.CurvePath();
-                    path.add(new THREE.CubicBezierCurve3(startPoint, outCurveA, outCurveB, connectionPoint));
-                    path.add(new THREE.LineCurve3(connectionPoint, farPoint));
-                    path.add(new THREE.CubicBezierCurve3(
-                        farPoint.clone(),
-                        new THREE.Vector3(midX, y, 0),
-                        new THREE.Vector3(midX, target.y, 0),
-                        new THREE.Vector3(target.x, target.y, 0)
-                    ));
-                    this._addParentTube(path, radius, FLAT_TONE, FLAT_TONE,
-                        { type: 'parent-connection', group, data: { parentTxid: tx.txid, vout: i }, radius }, meshList);
-                });
-            } else {
-                const spent = spentOutKeys && spentOutKeys.has(`${tx.txid}:vout:${i}`);
-                const path = new THREE.CurvePath();
-                path.add(new THREE.CubicBezierCurve3(startPoint, outCurveA, outCurveB, connectionPoint));
-                path.add(new THREE.LineCurve3(connectionPoint, farPoint));
-                this._addParentTube(path, radius,
-                    spent ? FLAT_TONE : PARENT_OUTPUT_GRAD[0],
-                    spent ? FLAT_TONE : PARENT_OUTPUT_GRAD[1],
-                    { type: 'parent-output', group, index: i, data: vout, radius, originalColor: 0x8a8a8a, originalOpacity: 1.0, parentTxid: tx.txid }, meshList);
-            }
-            outputAnchors[i] = { x: farPoint.x, y };
+            const spent = spentOutKeys && spentOutKeys.has(`${tx.txid}:vout:${i}`);
+            const flat = (targets && targets.length) || spent;
+            const geo = this._morphArmGeometry(this._laneTubePath(1, port, y, STUB, L.holdLen), port, r, true);
+            this._addTraceMesh(geo,
+                flat ? FLAT_TONE : PARENT_OUTPUT_GRAD[0], flat ? FLAT_TONE : PARENT_OUTPUT_GRAD[1],
+                (targets && targets.length)
+                    ? { type: 'parent-connection', group, level, data: { parentTxid: tx.txid, vout: i }, radius: r }
+                    : { type: 'parent-output', group, level, index: i, data: vout, radius: r, originalColor: 0x8a8a8a, originalOpacity: 1.0, parentTxid: tx.txid },
+                meshList, centre);
+            (targets || []).forEach((target) => {
+                this._addTraceBridge(anchor, target,
+                    { type: 'parent-connection', group, level, data: { parentTxid: tx.txid, vout: i }, radius: r }, meshList, FLAT_TONE);
+            });
+            outputAnchors[i] = anchor;
         });
 
         return { inputAnchors, outputAnchors };
@@ -1949,7 +2565,7 @@ class BitcoinTransactionExplorer {
             if (mesh.geometry && !mesh.isSprite) mesh.geometry.dispose();
             if (mesh.material) {
                 const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-                mats.forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); });
+                mats.forEach((m) => { if (m.map && m.map !== this._feeHatch) m.map.dispose(); m.dispose(); });
             }
         });
     }
@@ -2135,9 +2751,7 @@ class BitcoinTransactionExplorer {
             await Promise.all(workers);
             if (this._disposed) return 0;
             perNode.forEach(({ node, outspends }) => {
-                const vouts = node.tx.vout || [];
-                const outRadii = vouts.map((o) => this._radiusForSats(o.value || 0));
-                const { yPositions: outY } = this.computeStackYPositions(outRadii);
+                const outY = this._txArmLayout(node.tx).outY;
                 collectFromOutspends(node.tx.txid, outspends, (vout) => outY[vout] ?? 0, node.centerY);
             });
         }
@@ -2228,7 +2842,7 @@ class BitcoinTransactionExplorer {
         const outputAnchorMap = new Map();
         const outputs = this.transactionData?.vout || [];
         outputs.forEach((_, i) => {
-            outputAnchorMap.set(`${this.txid}:vout:${i}`, { x: 155, y: this.yPositionsOutputs?.[i] ?? 0 });
+            outputAnchorMap.set(`${this.txid}:vout:${i}`, { x: 155, y: this.yPositionsOutputs?.[i] ?? 0, z: this.zPositionsOutputs?.[i] || 0, r: this.outputArmR?.[i] });
         });
 
         const spentOutputKeys = new Set();
@@ -2268,7 +2882,8 @@ class BitcoinTransactionExplorer {
                     meshList: this.childMeshes,
                     group: 'child',
                     sourceLinks,
-                    spentOutputKeys
+                    spentOutputKeys,
+                    level: lvl
                 });
                 (drawn.outputAnchors || []).forEach((pt, j) => {
                     outputAnchorMap.set(`${node.tx.txid}:vout:${j}`, pt);
@@ -2313,7 +2928,7 @@ class BitcoinTransactionExplorer {
         const anchorMap = new Map();
         const inputs = this.transactionData?.vin || [];
         inputs.forEach((input, i) => {
-            anchorMap.set(`${this.txid}:${i}`, { x: -155, y: this.yPositionsInputs?.[i] ?? 0 });
+            anchorMap.set(`${this.txid}:${i}`, { x: -155, y: this.yPositionsInputs?.[i] ?? 0, z: this.zPositionsInputs?.[i] || 0, r: this.inputArmR?.[i] });
         });
 
         // Every input that some node funds (across all levels) — these get a flat, uninterrupted
@@ -2352,7 +2967,7 @@ class BitcoinTransactionExplorer {
                 const fundingLinks = node.links
                     .map((l) => ({ vout: l.vout, target: anchorMap.get(l.shallowKey) }))
                     .filter((x) => x.target);
-                const drawn = this.drawTraceNode(node.tx, centerX, node.centerY, fundingLinks, fundedInputKeys);
+                const drawn = this.drawTraceNode(node.tx, centerX, node.centerY, fundingLinks, fundedInputKeys, { level: lvl });
                 (drawn.inputAnchors || []).forEach((pt, j) => anchorMap.set(`${node.tx.txid}:${j}`, pt));
                 noteColumn(centerX, node.blockHeight, node.tx.status?.block_time,
                     node.centerY + this._parentHalfHeight(node.tx), node.tx.txid);
@@ -2437,6 +3052,7 @@ class BitcoinTransactionExplorer {
     }
 
     _updateTraceLabelScales() {
+        if (this.showLabels) this._updateSceneLabels();
         if (!this.parentsSpread) return;
         const apply = (mesh) => {
             if (mesh && mesh.userData && mesh.userData.type === 'parent-label') {
@@ -2518,13 +3134,14 @@ class BitcoinTransactionExplorer {
     // Repositioning is handled during creation based on input radii
 
     animate() {
+        if (this._glassTime) this._glassTime.value = performance.now() / 1000;
         if (this.isRotating) {
             this.controls.theta += 0.001;
             this.updateCameraPosition();
         }
 
         this.vrManager && this.vrManager.update();
-        this.renderer.render(this.scene, this.camera);
+        (window.ExplorerFX ? ExplorerFX.render(this.renderer, this.scene, this.camera) : this.renderer.render(this.scene, this.camera));
     }
 
     async checkOutputSpendingStatus() {
@@ -2538,10 +3155,18 @@ class BitcoinTransactionExplorer {
         // Check each output's spending status
         for (let i = 0; i < this.transactionData.vout.length; i++) {
             try {
-                const response = await fetch(`https://mempool.space/api/tx/${this.txid}/outspend/${i}`);
+                // Cached per tx so a layout rebuild (Tree toggle) doesn't refetch every output
+                if (!this._outspendCache || this._outspendCache.txid !== this.txid) {
+                    this._outspendCache = { txid: this.txid, data: [] };
+                }
+                let spendingData = this._outspendCache.data[i];
+                let response = { ok: true };
+                if (!spendingData) {
+                    response = await fetch(`https://mempool.space/api/tx/${this.txid}/outspend/${i}`);
+                    if (response.ok) spendingData = this._outspendCache.data[i] = await response.json();
+                }
                 
                 if (response.ok) {
-                    const spendingData = await response.json();
                     console.log(`Output ${i} spending status:`, spendingData);
                     
                     // Find the corresponding tube
@@ -2556,31 +3181,23 @@ class BitcoinTransactionExplorer {
                         
                         if (spendingData.spent) {
                             // Spent output: grey out the tube (keeps long length)
-                            tube.material.color.setHex(0x666666);
-                            tube.userData.originalColor = 0x666666;
+                            tube.material.color.setHex(0xdddddd);
+                            tube.userData.originalColor = 0xdddddd;
+                            // Lighter glass with a bright edge but no flow: value has moved on
+                            this._setGlass(tube.material, { core: 0.32, rim: 1.1, flow: 0 });
                             console.log(`Output ${i} is SPENT - greyed out`);
                         } else {
                             // Unspent output: shorter straight section + hemisphere cap
                             const unspentStraightLength = 15;
                             const farEndX = 35 + unspentStraightLength;
                             
-                            // Recreate tube with shorter path
-                            const startPoint = new THREE.Vector3(1, 0, 0);
-                            const connectionPoint = new THREE.Vector3(35, y, 0);
-                            const farPoint = new THREE.Vector3(farEndX, y, 0);
-                            
-                            const curvePath = new THREE.CurvePath();
-                            const yDiff = Math.abs(y - 0);
-                            const curveAmount = yDiff < 0.1 ? 0 : 1;
-                            const controlPoint1 = new THREE.Vector3(8, curveAmount * 0.5, 0);
-                            const controlPoint2 = new THREE.Vector3(15, y + curveAmount, 0);
-                            const bezierCurve = new THREE.CubicBezierCurve3(startPoint, controlPoint1, controlPoint2, connectionPoint);
-                            curvePath.add(bezierCurve);
-                            const straightCurve = new THREE.LineCurve3(connectionPoint, farPoint);
-                            curvePath.add(straightCurve);
+                            // Recreate tube with shorter path (same Voronoi port)
+                            const port = this.outputPorts?.[i] || { y: 0, z: 0, r: tubeRadius,
+                                poly: this.createCircularPolygon(0, 0, tubeRadius, 24).map(p => ({ y: p.y, z: p.x })) };
+                            const curvePath = this._laneTubePath(1, port, y, unspentStraightLength, this.armHoldLen, this.zPositionsOutputs?.[i] || 0, this._bendScale());
                             
                             // Replace tube geometry
-                            const newGeometry = new THREE.TubeGeometry(curvePath, 128, tubeRadius, 16, false);
+                            const newGeometry = this._morphArmGeometry(curvePath, port, tubeRadius, true);
                             tube.geometry.dispose();
                             tube.geometry = newGeometry;
                             
@@ -2595,6 +3212,10 @@ class BitcoinTransactionExplorer {
                             tube.userData.originalOpacity = 1.0;
                             tube.userData.originalEmissive = 0xffffff;
                             tube.userData.originalEmissiveIntensity = 0.6;
+                            // Solid, glowing and pulsing: value still sits here
+                            tube.material.emissiveIntensity = 1.0;
+                            tube.userData.originalEmissiveIntensity = 1.0;
+                            this._setGlass(tube.material, { core: 1.0, rim: 0.9, flow: 0.3 });
                             
                             // Add hemisphere cap at the far end with strong emission
                             const capGeometry = new THREE.SphereGeometry(tubeRadius, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
@@ -2603,7 +3224,7 @@ class BitcoinTransactionExplorer {
                                 transparent: true,
                                 opacity: 1.0,
                                 emissive: 0xffffff,
-                                emissiveIntensity: 0.6,
+                                emissiveIntensity: 1.0,
                                 side: THREE.DoubleSide,
                                 depthWrite: true,
                                 depthTest: true
@@ -2615,7 +3236,9 @@ class BitcoinTransactionExplorer {
                             hemisphere.rotation.z = -Math.PI / 2;
                             
                             // Position at the far end of the shorter tube
-                            hemisphere.position.set(farEndX, y, 0);
+                            hemisphere.position.set(farEndX, y, this.zPositionsOutputs?.[i] || 0);
+                            const outLabel = this.outputLabels?.[i];
+                            if (outLabel) { outLabel.userData.labelAnchor.x = farEndX + tubeRadius; this._placeSceneLabel(outLabel); }
                             hemisphere.userData = { 
                                 type: 'output-cap', 
                                 index: i,
@@ -2624,7 +3247,7 @@ class BitcoinTransactionExplorer {
                                 originalOpacity: 1.0,
                                 originalColor: 0xffffff,
                                 originalEmissive: 0xffffff,
-                                originalEmissiveIntensity: 0.6
+                                originalEmissiveIntensity: 1.0
                             };
                             this.scene.add(hemisphere);
                             
@@ -3051,6 +3674,11 @@ class BitcoinTransactionExplorer {
     // Voronoi Treemap methods
     setupTreemapPanel() {
         // Treemap button - toggle panel
+        document.getElementById('toggle-labels')?.addEventListener('click', () => this.toggleLabels());
+        document.getElementById('toggle-tree')?.addEventListener('click', () => this.toggleTreeLayout());
+        document.getElementById('toggle-tree')?.classList.toggle('active', !!this.treeLayout);
+        document.getElementById('toggle-labels')?.classList.toggle('active', !!this.showLabels);
+
         document.getElementById('show-treemap')?.addEventListener('click', () => {
             const container = document.getElementById('treemap-container');
             if (container.style.display === 'none' || container.style.display === '') {
@@ -3211,242 +3839,159 @@ class BitcoinTransactionExplorer {
         this.renderVoronoiTreemap('#output-treemap', outputData, 'output');
     }
     
+    // Draw one face of the 3D cylinder: the very same Voronoi cells (this.treemapLayout),
+    // seen face-on with z → right and y → up. Both discs share one radius, as in 3D; the
+    // output disc includes the fee cell, so outputs + fee visibly fill the same circle.
     renderVoronoiTreemap(selector, data, type) {
         const container = document.querySelector(selector);
-        if (!container) return;
-        
-        // Check if Voronoi.js is loaded (library exposes as window.voronoi, lowercase)
-        if (typeof voronoi === 'undefined' || !voronoi.Treemap) {
-            console.error('Voronoi.js library not loaded');
-            container.innerHTML = '<div style="color: #fff; padding: 20px; text-align: center;">Error: Voronoi.js library failed to load. Please check your internet connection and try again.</div>';
-            return;
-        }
-        
-        // Clear previous
+        const layout = this.treemapLayout;
+        if (!container || !layout) return;
         container.innerHTML = '';
-        
-        // Get dimensions
-        const width = container.clientWidth || 400;
-        const height = container.clientHeight || 400;
-        const radius = Math.min(width, height) / 2 - 5;
-        const centerX = width / 2;
-        const centerY = height / 2;
-        
-        // Create SVG
-        const svg = d3.select(selector)
-            .append('svg')
-            .attr('width', width)
-            .attr('height', height);
-        
-        // Get leaves data
-        const leaves = data.children || [];
-        if (leaves.length === 0) return;
-        
-        // Calculate total value
-        const totalValue = leaves.reduce((sum, d) => sum + (d.value || 0), 0);
-        
-        // Color scales - black and white theme
-        // Generate grayscale colors from light to dark
-        const grayscaleColors = [];
-        for (let i = 0; i < 20; i++) {
-            // Range from #ffffff (white) to #000000 (black)
-            const intensity = Math.floor(255 - (i / 19) * 255);
-            const hex = '#' + intensity.toString(16).padStart(2, '0').repeat(3);
-            grayscaleColors.push(hex);
+
+        const width = container.clientWidth || 300;
+        const height = container.clientHeight || 300;
+        // Margin leaves room for the fee's outside label; same on both discs so they compare 1:1
+        const radius = Math.min(width, height) / 2 - 28;
+        const cx = width / 2, cy = height / 2;
+        const k = radius / layout.discR;
+
+        const leaves = (data.children || []).slice();
+        const ports = type === 'input' ? layout.inputPorts : layout.outputCells;
+        if (type === 'output' && layout.fee > 0) {
+            leaves.push({ name: 'Fee', value: layout.fee, index: leaves.length, isFee: true });
         }
-        
-        const inputColors = d3.scaleOrdinal()
-            .domain(d3.range(20))
-            .range(grayscaleColors);
-        
-        const outputColors = d3.scaleOrdinal()
-            .domain(d3.range(20))
-            .range(grayscaleColors);
-        
-        const colorScale = type === 'input' ? inputColors : outputColors;
-        
-        // Create circular clipping polygon (64 sides for smooth circle)
-        const clipPolygon = this.createCircularPolygon(centerX, centerY, radius, 64);
-        
-        // Create circular clipping path
-        const clipId = `clip-${type}-${Date.now()}`;
-        svg.append('defs')
-            .append('clipPath')
-            .attr('id', clipId)
-            .append('circle')
-            .attr('cx', centerX)
-            .attr('cy', centerY)
-            .attr('r', radius);
-        
-        // Prepare data structure for Voronoi treemap
-        // The library expects a hierarchy with children that have values
-        // Sort by value (largest first) for consistent ordering
-        const sortedLeaves = [...leaves].sort((a, b) => (b.value || 0) - (a.value || 0));
-        
-        const treemapData = {
-            children: sortedLeaves.map((leaf, i) => {
-                // Set deterministic initial positions using spiral layout
-                // Larger values start closer to center
-                const value = leaf.value || 1;
-                const weight = Math.sqrt(value / totalValue);
-                const angle = i * 2.399963229728653; // Golden angle for even distribution
-                const distance = radius * (0.2 + 0.5 * (1 - weight)); // Larger values closer to center
-                
-                return {
-                    value: value,
-                    originalData: leaf, // Store original data for later access
-                    x: centerX + distance * Math.cos(angle), // Set initial x position
-                    y: centerY + distance * Math.sin(angle)  // Set initial y position
-                };
-            })
+
+        const svg = d3.select(selector).append('svg')
+            .attr('width', width).attr('height', height)
+            .attr('viewBox', `0 0 ${width} ${height}`);
+
+        const cells = leaves.map((leaf, i) => {
+            const port = ports[i];
+            if (!port) return null;
+            const pts = port.poly.map(q => [cx + (port.z + q.z) * k, cy - (port.y + q.y) * k]);
+            const key = leaf.isFee ? 'fee' : `${type}:${leaf.index}`;
+            return { leaf, port, pts, key, areaPx: port.area * k * k };
+        }).filter(Boolean);
+
+        // Same look as the 3D faces: see-through glass cells with thin white outlines;
+        // unspent outputs glow solid white, inputs carry their 3D tint, the fee is grey.
+        const shades = BitcoinTransactionExplorer.INPUT_SHADES;
+        const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+        const fillFor = (c) => {
+            if (c.leaf.isFee) return '#8a8a8a';
+            if (type === 'input') return c.leaf.isCoinbase ? '#ffffff' : hex(shades[c.leaf.index % shades.length]);
+            return '#ffffff';
         };
-        
-        // Create Voronoi treemap
-        const treemap = new voronoi.Treemap(treemapData, clipPolygon, width, height);
-        
-        // Compute the treemap iteratively for convergence
-        let iterations = 0;
-        const maxIterations = 50;
-        const updateInterval = setInterval(() => {
-            treemap.compute();
-            iterations++;
-            
-            // Update rendering
-            this.renderTreemapCells(svg, treemap, colorScale, type, totalValue, radius, centerX, centerY, clipId);
-            
-            if (iterations >= maxIterations) {
-                clearInterval(updateInterval);
-            }
-        }, 10);
-        
-        // Initial render
-        this.renderTreemapCells(svg, treemap, colorScale, type, totalValue, radius, centerX, centerY, clipId);
-        
-        // Store treemap for continuous updates
-        this[`${type}Treemap`] = treemap;
-        this[`${type}TreemapUpdateInterval`] = updateInterval;
-    }
-    
-    renderTreemapCells(svg, treemap, colorScale, type, totalValue, radius, centerX, centerY, clipId) {
-        // Get polygons and sites
-        const polygons = treemap.getPolygons();
-        const sites = treemap.getSites();
-        
-        if (!polygons || polygons.length === 0) return;
-        
-        // Remove old cells
-        svg.selectAll('.treemap-cell').remove();
-        svg.selectAll('.treemap-label').remove();
-        
-        // Draw Voronoi cells
-        let cellGroup = svg.select('g.treemap-cell-group');
-        if (cellGroup.empty()) {
-            cellGroup = svg.append('g')
-                .attr('class', 'treemap-cell-group')
-                .attr('clip-path', `url(#${clipId})`);
-        }
-        
-        const cells = cellGroup
+        const baseOpacity = (c) => {
+            if (c.leaf.isFee) return 1;
+            if (type === 'input') return c.leaf.isCoinbase ? 0.3 : 0.12;
+            return c.leaf.isSpent === false ? 0.9 : 0.08;
+        };
+
+        // Glass edge: brighter toward the rim, like the 3D cylinder's fresnel
+        const gradId = `glass-${type}-${Date.now()}`;
+        const defs = svg.append('defs');
+        const grad = defs.append('radialGradient').attr('id', gradId);
+        // Fee: grey diagonal hatch, matching the striped stub in 3D
+        const hatchId = `fee-hatch-${type}-${Date.now()}`;
+        const hatch = defs.append('pattern').attr('id', hatchId)
+            .attr('patternUnits', 'userSpaceOnUse').attr('width', 5).attr('height', 5)
+            .attr('patternTransform', 'rotate(45)');
+        hatch.append('rect').attr('width', 5).attr('height', 5).attr('fill', '#8a8a8a').attr('fill-opacity', 0.35);
+        hatch.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 5)
+            .attr('stroke', '#dcdcdc').attr('stroke-width', 2.2);
+        grad.append('stop').attr('offset', '55%').attr('stop-color', '#fff').attr('stop-opacity', 0);
+        grad.append('stop').attr('offset', '100%').attr('stop-color', '#fff').attr('stop-opacity', 0.14);
+
+        svg.append('g').attr('class', 'treemap-cell-group')
             .selectAll('path.treemap-cell')
-            .data(polygons);
-        
-        cells.enter()
+            .data(cells)
+            .enter()
             .append('path')
             .attr('class', 'treemap-cell')
-            .merge(cells)
-            .attr('d', (d) => {
-                if (!d || d.length < 3) return '';
-                return 'M' + d.map(p => `${p.x},${p.y}`).join('L') + 'Z';
-            })
-            .attr('fill', (d, i) => {
-                const siteData = sites[i]?.originalData;
-                
-                if (type === 'input') {
-                    // Inputs: dark gray
-                    if (siteData?.isCoinbase) {
-                        return '#666666'; // Dark gray for coinbase
-                    }
-                    return '#333333'; // Dark gray for regular inputs
-                } else {
-                    // Outputs: white for unspent, gray tones for spent
-                    if (siteData?.isSpent === false) {
-                        return '#ffffff'; // White for unspent outputs
-                    } else {
-                        // Spent outputs: use gray tones based on index
-                        const grayLevels = ['#999999', '#888888', '#777777', '#666666', '#555555', '#444444'];
-                        return grayLevels[i % grayLevels.length];
-                    }
-                }
-            })
-            .attr('fill-opacity', (d, i) => {
-                const siteData = sites[i]?.originalData;
-                // Full opacity for white (unspent) outputs, slightly transparent for others
-                if (type === 'output' && siteData?.isSpent === false) {
-                    return 1.0; // Fully opaque for white backgrounds
-                }
-                return 0.85; // Slightly transparent for gray backgrounds
-            })
-            .attr('stroke', (d, i) => {
-                const siteData = sites[i]?.originalData;
-                // Darker stroke for white (unspent) outputs
-                if (type === 'output' && siteData?.isSpent === false) {
-                    return '#333333'; // Dark gray stroke for white cells
-                }
-                return '#000000'; // Black stroke for gray cells
-            })
-            .attr('stroke-width', 0.5)
-            .on('mouseover', (event, d, i) => {
-                const siteData = sites[i]?.originalData;
-                if (siteData) this.showTreemapTooltip(event, siteData, type);
-            })
+            .attr('data-key', c => c.key)
+            .attr('d', c => 'M' + c.pts.map(p => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join('L') + 'Z')
+            .attr('fill', c => c.leaf.isFee ? `url(#${hatchId})` : fillFor(c))
+            .attr('fill-opacity', c => c.leaf.isFee ? 1 : baseOpacity(c))
+            .attr('data-base-opacity', baseOpacity)
+            .attr('stroke', 'rgba(255,255,255,0.55)')
+            .attr('stroke-width', 0.75)
+            .attr('stroke-linejoin', 'round')
+            .on('mouseover', (event, c) => this.showTreemapTooltip(event, c.leaf, c.leaf.isFee ? 'fee' : type))
             .on('mousemove', (event) => this.moveTreemapTooltip(event))
             .on('mouseout', () => this.hideTreemapTooltip())
-            .on('click', (event, d, i) => {
-                const siteData = sites[i]?.originalData;
-                if (siteData) this.handleTreemapClick(event, siteData, type);
-            });
-        
-        cells.exit().remove();
-        
-        // Add labels for larger cells
-        svg.selectAll('.treemap-label').remove();
-        sites.forEach((site, i) => {
-            if (!site || !site.originalData) return;
-            const siteData = site.originalData;
-            const value = siteData.value || 0;
-            const area = (value / totalValue) * Math.PI * radius * radius;
-            
-            if (area > 2000 && site.x && site.y) {
-                // Determine text color: black for white (unspent outputs), white for gray (inputs and spent outputs)
-                let textColor = '#ffffff'; // Default white
-                if (type === 'output' && siteData.isSpent === false) {
-                    textColor = '#000000'; // Black text for white (unspent) outputs
-                }
-                
-                svg.append('text')
-                    .attr('class', area > 5000 ? 'treemap-label' : 'treemap-label treemap-label-small')
-                    .attr('x', site.x)
-                    .attr('y', site.y)
-                    .attr('dy', '0.35em')
-                    .attr('text-anchor', 'middle')
-                    .attr('fill', textColor)
-                    .text(siteData.name);
+            // Click selects (same as clicking the arm in 3D); double-click navigates
+            .on('click', (event, c) => {
+                this._selection = this._selection === c.key ? null : c.key;
+                this._applySelection();
+            })
+            .on('dblclick', (event, c) => { if (!c.leaf.isFee) this.handleTreemapClick(event, c.leaf, type); });
+
+        // Fee is always labelled: inside its cell if it fits, else just outside the rim
+        cells.filter(c => c.leaf.isFee).forEach((c) => {
+            const px = cx + c.port.z * k, py = cy - c.port.y * k;
+            if (c.areaPx >= 1800) {
+                svg.append('text').attr('class', 'treemap-label treemap-fee-label')
+                    .attr('x', px).attr('y', py).attr('dy', '0.35em').text('FEE');
+                return;
             }
+            const ang = Math.atan2(py - cy, px - cx);
+            const lx = cx + Math.cos(ang) * (radius + 16), ly = cy + Math.sin(ang) * (radius + 16);
+            svg.append('line').attr('class', 'treemap-fee-leader')
+                .attr('x1', px).attr('y1', py).attr('x2', lx).attr('y2', ly);
+            svg.append('text').attr('class', 'treemap-label treemap-fee-label')
+                .attr('x', lx + (Math.cos(ang) >= 0 ? 4 : -4)).attr('y', ly).attr('dy', '0.35em')
+                .attr('text-anchor', Math.cos(ang) >= 0 ? 'start' : 'end').text('FEE');
         });
-        
-        // Draw circle border (only once)
-        if (svg.select('circle.treemap-border').empty()) {
-            svg.append('circle')
-                .attr('class', 'treemap-border')
-                .attr('cx', centerX)
-                .attr('cy', centerY)
-                .attr('r', radius)
-                .attr('fill', 'none')
-                .attr('stroke', '#fff')
-                .attr('stroke-width', 1);
-        }
+
+        // Labels on cells big enough to hold one
+        cells.forEach((c) => {
+            if (c.leaf.isFee || c.areaPx < 1800) return;
+            const dark = type === 'output' && c.leaf.isSpent === false;
+            svg.append('text')
+                .attr('class', c.areaPx > 4500 ? 'treemap-label' : 'treemap-label treemap-label-small')
+                .attr('x', cx + c.port.z * k)
+                .attr('y', cy - c.port.y * k)
+                .attr('dy', '0.35em')
+                .style('fill', dark ? '#000' : '#fff')
+                .style('text-shadow', dark ? 'none' : null)
+                .text(c.leaf.name);
+        });
+
+        svg.append('circle')
+            .attr('class', 'treemap-border')
+            .attr('cx', cx).attr('cy', cy).attr('r', radius)
+            .attr('fill', `url(#${gradId})`)
+            .attr('pointer-events', 'none')
+            .attr('stroke', 'rgba(255,255,255,0.85)').attr('stroke-width', 1.25);
+
+        // Totals under the disc: inputs = outputs + fee
+        const btc = (sats) => (sats / 1e8).toFixed(8).replace(/\.?0+$/, '') + ' BTC';
+        const outTotal = (this.transactionData.vout || []).reduce((a, o) => a + (o.value || 0), 0);
+        const caption = document.createElement('div');
+        caption.className = 'treemap-caption';
+        caption.textContent = type === 'input'
+            ? `${btc(layout.totalIn)} in`
+            : (layout.fee > 0 ? `${btc(outTotal)} out + ${btc(layout.fee)} fee` : `${btc(outTotal)} out`);
+        container.parentElement.querySelector('.treemap-caption')?.remove();
+        container.parentElement.appendChild(caption);
+
+        this._syncTreemapSelection();
     }
-    
+
+    // Mirror the 3D selection in the side panel: selected cell bright, the rest faded
+    _syncTreemapSelection() {
+        const sel = this._selection || null;
+        document.querySelectorAll('#treemap-container path.treemap-cell').forEach((el) => {
+            const base = parseFloat(el.getAttribute('data-base-opacity')) || 0.1;
+            const key = el.getAttribute('data-key');
+            const op = !sel ? base : (key === sel ? Math.max(base, 0.85) : base * 0.25);
+            el.setAttribute('fill-opacity', op);
+            el.setAttribute('stroke-width', sel && key === sel ? 1.75 : 0.75);
+            el.setAttribute('stroke', sel && key !== sel ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.55)');
+        });
+    }
+
     createCircularPolygon(centerX, centerY, radius, sides) {
         const polygon = [];
         for (let i = 0; i < sides; i++) {
@@ -3468,6 +4013,16 @@ class BitcoinTransactionExplorer {
         const amount = (data.value / 100000000).toFixed(8);
         const amountSats = data.value.toLocaleString();
         
+        if (type === 'fee') {
+            const tl = this.treemapLayout;
+            const pct = tl && tl.totalIn ? ((data.value / tl.totalIn) * 100).toFixed(3) : '0';
+            d3.select('body').append('div').attr('class', 'treemap-tooltip')
+                .style('left', (event.pageX + 10) + 'px').style('top', (event.pageY - 10) + 'px')
+                .html(`<strong>Fee</strong><br><span class="amount">${(data.value / 1e8).toFixed(8)} BTC</span>` +
+                    `<br><span style="color: #94a3b8; font-size: 10px;">${pct}% of inputs</span>` +
+                    `<br><em>Inputs − outputs, claimed by the miner</em>`);
+            return;
+        }
         let content = `<strong>${type === 'input' ? 'Input' : 'Output'} ${data.index + 1}</strong>`;
         content += `<br><span class="amount">${amount} BTC</span>`;
         content += `<br><span style="color: #94a3b8; font-size: 10px;">${amountSats} satoshis</span>`;

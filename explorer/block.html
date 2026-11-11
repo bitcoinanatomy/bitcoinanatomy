@@ -87,7 +87,7 @@
                 <h3>Raw Block Data</h3>
                 <div class="raw-data-actions">
                     <button id="download-raw-data" class="raw-data-btn" title="Download">Download</button>
-                    <button id="close-raw-data" class="raw-data-btn raw-data-close" title="Close">&times;</button>
+                    <button id="close-raw-data" class="raw-data-btn raw-data-close" title="Close" aria-label="Close"><svg class="close-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>
                 </div>
             </div>
             <div class="raw-data-info">
@@ -119,7 +119,7 @@
                     <div id="find-tx-input-wrapper" class="find-tx-input-wrapper hidden">
                         <input type="text" id="find-tx-input" placeholder="Paste transaction ID..." />
                         <button id="find-tx-btn" class="raw-data-btn-small">Find</button>
-                        <button id="find-tx-close" class="raw-data-btn-small">&times;</button>
+                        <button id="find-tx-close" class="raw-data-btn-small raw-data-close" title="Close" aria-label="Close"><svg class="close-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>
                     </div>
                     <span id="find-tx-result" class="find-tx-result"></span>
                 </div>
@@ -218,6 +218,8 @@
     <script src="js/vr/SpatialPanel.js"></script>
     <script src="js/vr/VRNavMenu.js"></script>
     <script src="js/vr/VRManager.js"></script>
+    <script src="js/settings/ExplorerSettings.js"></script>
+    <script src="js/fx/ExplorerFX.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/vr/ExplorerRouter.js"></script>
     <script src="js/block.js"></script>

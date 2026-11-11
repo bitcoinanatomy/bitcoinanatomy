@@ -88,6 +88,8 @@
                     </div>
                     <button id="show-raw-data">Raw Data</button>
                     <button id="show-treemap">Treemap</button>
+                    <button id="toggle-tree" title="Arms: aligned in one column, or branching like a tree from their cells">Tree</button>
+                    <button id="toggle-labels" title="Show amounts and addresses on inputs, outputs, fee and the transaction">Labels</button>
                     <button id="change-transaction">Go to</button>
                 </div>
             
@@ -107,7 +109,7 @@
                 <div class="raw-data-actions">
                     <button id="copy-raw-data" class="raw-data-btn" title="Copy to clipboard">Copy</button>
                     <button id="download-raw-data" class="raw-data-btn" title="Download">Download</button>
-                    <button id="close-raw-data" class="raw-data-btn raw-data-close" title="Close">&times;</button>
+                    <button id="close-raw-data" class="raw-data-btn raw-data-close" title="Close" aria-label="Close"><svg class="close-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>
                 </div>
             </div>
             <div class="raw-data-info">
@@ -211,7 +213,7 @@
     <div id="treemap-container" class="treemap-container" style="display: none;">
         <div class="treemap-header">
             <h3>Input/Output Distribution</h3>
-            <button id="close-treemap" class="treemap-close">&times;</button>
+            <button id="close-treemap" class="treemap-close" title="Close" aria-label="Close"><svg class="close-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>
         </div>
         <div class="treemap-content">
             <div class="treemap-panel">
@@ -226,7 +228,7 @@
     </div>
 
     <!-- D3.js -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js" crossorigin="anonymous"></script>
     <!-- Voronoi.js for Voronoi Treemaps -->
     <script src="js/voronoijs.min.js"></script>
 
@@ -252,6 +254,8 @@
     <script src="js/vr/SpatialPanel.js"></script>
     <script src="js/vr/VRNavMenu.js"></script>
     <script src="js/vr/VRManager.js"></script>
+    <script src="js/settings/ExplorerSettings.js"></script>
+    <script src="js/fx/ExplorerFX.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/vr/ExplorerRouter.js"></script>
     <script src="js/transaction.js"></script>
