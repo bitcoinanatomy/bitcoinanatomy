@@ -283,7 +283,7 @@ class BitcoinScriptExplorer {
         this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.camera.position.set(0, 6.5, 17);
         this.camera.lookAt(0, 3.8, 0);
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        this.renderer = new THREE.WebGLRenderer({ antialias: (window.ExplorerSettings ? ExplorerSettings.get('antialias') : true), alpha: false });
         this._applyPixelRatio();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         container.appendChild(this.renderer.domElement);
@@ -1136,7 +1136,7 @@ class BitcoinScriptExplorer {
             this.controls.update();
         }
         if (this.vrManager && this.vrManager.update) this.vrManager.update();
-        this.renderer.render(this.scene, this.camera);
+        (window.ExplorerFX ? ExplorerFX.render(this.renderer, this.scene, this.camera) : this.renderer.render(this.scene, this.camera));
     }
 
     onWindowResize() {

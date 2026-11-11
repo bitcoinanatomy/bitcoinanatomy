@@ -23,7 +23,28 @@
         if (closing) syncNavDuck(false);
     }
 
+    // Explorer version, shown at the bottom of the nav drawer. Bump on release.
+    var EXPLORER_VERSION = '0.9.0';
+    window.EXPLORER_VERSION = EXPLORER_VERSION;
+
+    // Settings link + version pinned to the bottom of the Explore drawer, on every page
+    // (idempotent across soft-navs).
+    function ensureSettingsLink() {
+        document.querySelectorAll('.navbar .nav-dropdown-panel').forEach(function (panel) {
+            if (panel.querySelector('.nav-drawer-footer')) return;
+            var li = document.createElement('li');
+            li.className = 'nav-drawer-footer';
+            var onSettings = /(^|\/)settings\.html$/.test(window.location.pathname);
+            li.innerHTML = '<a href="settings.html" class="nav-link nav-settings' + (onSettings ? ' active' : '') +
+                '" title="Effects &amp; performance settings">' +
+                '<img class="nav-settings-icon" src="imgs/icons/settings.svg" alt="">Settings</a>' +
+                '<div class="nav-version">v' + EXPLORER_VERSION + '</div>';
+            panel.appendChild(li);
+        });
+    }
+
     function bindExplorerNav() {
+        ensureSettingsLink();
         document.querySelectorAll('.nav-dropdown-toggle').forEach(function (btn) {
             var next = btn.cloneNode(true);
             btn.parentNode.replaceChild(next, btn);

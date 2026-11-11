@@ -409,7 +409,7 @@ class BitcoinNodeExplorer {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.camera.position.set(0, 10, 15);
         
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ antialias: (window.ExplorerSettings ? ExplorerSettings.get('antialias') : true) });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1983,7 +1983,7 @@ class BitcoinNodeExplorer {
         this.updateTextLabels();
 
         this.vrManager && this.vrManager.update();
-        this.renderer.render(this.scene, this.camera);
+        (window.ExplorerFX ? ExplorerFX.render(this.renderer, this.scene, this.camera) : this.renderer.render(this.scene, this.camera));
     }
 
     updateTextLabels() {

@@ -4256,3 +4256,233 @@ body.table-open .controls-main {
     color: #fff;
 }
 
+
+/* ================================
+   FX (js/fx/ExplorerFX.js) + SETTINGS PAGE
+   ================================ */
+/* Drawer footer: Settings + version, pushed to the bottom of the Explore drawer */
+.nav-drawer-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--glass-stroke-soft);
+}
+
+.nav-dropdown-panel .nav-drawer-footer .nav-settings {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 0;
+}
+
+.nav-version {
+    padding: 4px 20px 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.08rem;
+    color: #6a6a6a;
+}
+
+.nav-settings-icon {
+    width: 14px;
+    height: 14px;
+    filter: brightness(0) invert(1);
+    opacity: 0.55;
+}
+
+.nav-settings:hover .nav-settings-icon,
+.nav-settings.active .nav-settings-icon {
+    opacity: 0.9;
+}
+
+.fx-fps {
+    position: fixed;
+    right: 12px;
+    bottom: 36px;
+    z-index: 34000;
+    padding: 3px 7px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.75);
+    font: 500 0.68rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    pointer-events: none;
+}
+
+/* CSS grain + vignette for pages without a WebGL scene */
+.fx-overlay,
+.fx-overlay > div {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+}
+
+.fx-overlay {
+    z-index: 22000; /* under the navbar so the vignette never dims navigation */
+    overflow: hidden;
+}
+
+.fx-overlay-grain {
+    inset: -180px !important;
+    background-size: 180px 180px;
+    mix-blend-mode: screen;
+    animation: fx-grain 0.5s steps(6) infinite;
+}
+
+.fx-overlay-vignette {
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+@keyframes fx-grain {
+    0%   { transform: translate(0, 0); }
+    20%  { transform: translate(-63px, 41px); }
+    40%  { transform: translate(52px, -97px); }
+    60%  { transform: translate(-121px, -18px); }
+    80%  { transform: translate(88px, 117px); }
+    100% { transform: translate(-27px, 72px); }
+}
+
+.fx-overlay-still .fx-overlay-grain {
+    animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fx-overlay-grain { animation: none; }
+}
+
+body.settings-page {
+    overflow-y: auto;
+}
+
+.settings-main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 84px 16px 48px;
+}
+
+.settings-title {
+    font-family: "BureauGrotesque", sans-serif;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 2.4rem;
+    line-height: 1;
+    margin: 0 0 6px;
+}
+
+.settings-intro {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0 0 20px;
+}
+
+.settings-preview {
+    position: relative;
+    height: 240px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #000;
+    margin: 4px 0 2px;
+}
+
+.settings-preview canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.settings-preview-label {
+    position: absolute;
+    left: 10px;
+    bottom: 8px;
+    font-size: 0.62rem;
+    letter-spacing: 0.1rem;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    pointer-events: none;
+}
+
+.settings-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 16px;
+    padding: 10px 8px;
+    border-top: 1px solid var(--glass-stroke-soft);
+}
+
+.settings-row:first-child {
+    border-top: none;
+}
+
+.settings-row label {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.settings-hint {
+    grid-column: 1 / -1;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.38);
+}
+
+.settings-hint.reload {
+    color: rgba(247, 147, 26, 0.75);
+}
+
+.settings-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-self: end;
+}
+
+.settings-control output {
+    min-width: 38px;
+    text-align: right;
+    font: 500 0.72rem ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-control input[type="range"] {
+    width: 150px;
+    accent-color: #ddd;
+}
+
+.settings-control input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #ddd;
+}
+
+.settings-control select {
+    background: rgba(255, 255, 255, 0.06);
+    color: #eee;
+    border: 1px solid var(--glass-stroke-strong);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font: inherit;
+    font-size: 0.8rem;
+}
+
+.settings-row.is-disabled label,
+.settings-row.is-disabled .settings-control {
+    opacity: 0.35;
+}
+
+.settings-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.settings-actions a {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.8rem;
+}
+
+@media (max-width: 480px) {
+    .settings-row { grid-template-columns: 1fr; }
+    .settings-control { justify-self: stretch; }
+    .settings-control input[type="range"] { flex: 1; width: auto; }
+}

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Explorer - Settings</title>
+    <meta name="description" content="Visual effects and performance settings for the Bitcoin explorer">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="settings-page">
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="index.html">Anatomy of Bitcoin</a>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-dropdown">
+                <button type="button" class="nav-link nav-dropdown-toggle" aria-expanded="false">Explore</button>
+                <ul class="nav-dropdown-panel">
+                    <li><a href="network.html" class="nav-link">Network</a></li>
+                    <li><a href="node.html" class="nav-link">Node</a></li>
+                    <li><a href="blockchain.html" class="nav-link">Blockchain</a></li>
+                    <li><a href="difficulty.html" class="nav-link">Difficulty</a></li>
+                    <li><a href="block.html" class="nav-link">Block</a></li>
+                    <li><a href="transaction.html" class="nav-link">Transaction</a></li>
+                    <li><a href="address.html" class="nav-link">Address</a></li>
+                    <li><a href="mempool.html" class="nav-link">Mempool</a></li>
+                    <li><a href="curve.html" class="nav-link">Curve</a></li>
+                    <li><a href="script.html" class="nav-link">Script</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="settings-main">
+        <h1 class="settings-title">Settings</h1>
+        <p class="settings-intro">
+            Visual effects and performance options for every explorer page. Changes are saved in this browser
+            and apply live, including to explorer tabs that are already open. <span id="tier-note"></span>
+        </p>
+
+        <section class="panel">
+            <div class="panel-header"><h3>Preview</h3></div>
+            <div class="settings-preview" id="preview">
+                <span class="settings-preview-label">Live preview</span>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header"><h3>Quality</h3></div>
+            <div class="settings-row">
+                <label for="s-preset">Preset</label>
+                <div class="settings-control">
+                    <select id="s-preset" data-key="preset">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+                <div class="settings-hint">A preset fills in the options below. Changing any option switches to Custom.</div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header"><h3>Effects</h3></div>
+            <div class="settings-row">
+                <label for="s-postprocessing">Post-processing</label>
+                <div class="settings-control"><input type="checkbox" id="s-postprocessing" data-key="postprocessing"></div>
+                <div class="settings-hint">Master switch for grain, vignette, bloom and chromatic aberration. Always off in VR.</div>
+            </div>
+            <div class="settings-row" data-needs="postprocessing">
+                <label for="s-grain">Film grain</label>
+                <div class="settings-control">
+                    <input type="range" id="s-grain" data-key="grain" min="0" max="0.15" step="0.01">
+                    <output for="s-grain"></output>
+                </div>
+            </div>
+            <div class="settings-row" data-needs="postprocessing">
+                <label for="s-grainMotionOnly">Animate grain only while moving</label>
+                <div class="settings-control"><input type="checkbox" id="s-grainMotionOnly" data-key="grainMotionOnly"></div>
+                <div class="settings-hint">Grain stays visible but holds still when the camera stops; it flickers only while the view moves.</div>
+            </div>
+            <div class="settings-row" data-needs="postprocessing">
+                <label for="s-vignette">Vignette</label>
+                <div class="settings-control">
+                    <input type="range" id="s-vignette" data-key="vignette" min="0" max="1" step="0.05">
+                    <output for="s-vignette"></output>
+                </div>
+            </div>
+            <div class="settings-row" data-needs="postprocessing">
+                <label for="s-bloom">Bloom</label>
+                <div class="settings-control">
+                    <input type="range" id="s-bloom" data-key="bloom" min="0" max="1.5" step="0.05">
+                    <output for="s-bloom"></output>
+                </div>
+                <div class="settings-hint">Glow around bright points and lines. The most expensive effect; set to 0 on slow GPUs.</div>
+            </div>
+            <div class="settings-row" data-needs="postprocessing">
+                <label for="s-chromatic">Chromatic aberration</label>
+                <div class="settings-control"><input type="checkbox" id="s-chromatic" data-key="chromatic"></div>
+                <div class="settings-hint">Subtle red/blue lens fringing towards the screen edges.</div>
+            </div>
+            <div class="settings-row">
+                <label for="s-backdrop">Space backdrop</label>
+                <div class="settings-control"><input type="checkbox" id="s-backdrop" data-key="backdrop"></div>
+                <div class="settings-hint">Faint nebula behind every scene instead of flat black.</div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header"><h3>Rendering</h3></div>
+            <div class="settings-row">
+                <label for="s-resolutionScale">Resolution scale</label>
+                <div class="settings-control">
+                    <input type="range" id="s-resolutionScale" data-key="resolutionScale" min="0.5" max="1" step="0.05">
+                    <output for="s-resolutionScale"></output>
+                </div>
+                <div class="settings-hint">Lower renders fewer pixels; grain hides most of the softness.</div>
+            </div>
+            <div class="settings-row">
+                <label for="s-pixelRatioCap">Max pixel ratio</label>
+                <div class="settings-control">
+                    <select id="s-pixelRatioCap" data-key="pixelRatioCap" data-type="number">
+                        <option value="1">1×</option>
+                        <option value="1.5">1.5×</option>
+                        <option value="2">2×</option>
+                        <option value="3">3×</option>
+                    </select>
+                </div>
+                <div class="settings-hint" id="dpr-note"></div>
+            </div>
+            <div class="settings-row">
+                <label for="s-antialias">Antialiasing</label>
+                <div class="settings-control"><input type="checkbox" id="s-antialias" data-key="antialias"></div>
+                <div class="settings-hint reload">Applies the next time a page is loaded.</div>
+            </div>
+            <div class="settings-row">
+                <label for="s-shadows">Shadows</label>
+                <div class="settings-control"><input type="checkbox" id="s-shadows" data-key="shadows"></div>
+                <div class="settings-hint">On uses each page's own shadow setup; off disables shadow maps everywhere.</div>
+            </div>
+            <div class="settings-row">
+                <label for="s-showFps">Show FPS counter</label>
+                <div class="settings-control"><input type="checkbox" id="s-showFps" data-key="showFps"></div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header"><h3>Network page</h3></div>
+            <div class="settings-row">
+                <label for="s-globeStyle">Globe style</label>
+                <div class="settings-control">
+                    <select id="s-globeStyle" data-key="globeStyle">
+                        <option value="photo">Photo map</option>
+                        <option value="dots">Dot grid</option>
+                        <option value="hidden">Hidden</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-row">
+                <label for="s-maxNodes">Max nodes rendered</label>
+                <div class="settings-control">
+                    <select id="s-maxNodes" data-key="maxNodes" data-type="number">
+                        <option value="0">All</option>
+                        <option value="10000">10,000</option>
+                        <option value="5000">5,000</option>
+                        <option value="2000">2,000</option>
+                    </select>
+                </div>
+                <div class="settings-hint reload">Each node is its own draw call; capping helps slower devices. Applies on next load.</div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header"><h3>Audio</h3></div>
+            <div class="settings-row">
+                <label for="s-muted">Mute sound</label>
+                <div class="settings-control"><input type="checkbox" id="s-muted" data-key="muted"></div>
+            </div>
+        </section>
+
+        <div class="settings-actions">
+            <a id="back-link" href="network.html">← Back to explorer</a>
+            <button type="button" id="reset-settings">Reset to defaults</button>
+        </div>
+    </main>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js"
+      }
+    }
+    </script>
+    <script src="js/settings/ExplorerSettings.js"></script>
+    <script src="js/fx/ExplorerFX.js"></script>
+    <script src="js/nav.js"></script>
+    <script>
+        (function () {
+            var S = window.ExplorerSettings;
+            var controls = document.querySelectorAll('[data-key]');
+
+            function format(key, v) {
+                if (key === 'resolutionScale') return Math.round(v * 100) + '%';
+                return Number(v).toFixed(2);
+            }
+
+            function sync(all) {
+                controls.forEach(function (el) {
+                    var v = all[el.dataset.key];
+                    if (el.type === 'checkbox') el.checked = !!v;
+                    else el.value = String(v);
+                    var out = el.parentNode.querySelector('output');
+                    if (out) out.textContent = format(el.dataset.key, v);
+                });
+                document.querySelectorAll('[data-needs]').forEach(function (row) {
+                    row.classList.toggle('is-disabled', !all[row.dataset.needs]);
+                });
+                var dpr = window.devicePixelRatio || 1;
+                document.getElementById('dpr-note').textContent =
+                    'This screen is ' + dpr + '×; rendering at ' + S.pixelRatio().toFixed(2) + '×.';
+            }
+
+            controls.forEach(function (el) {
+                var evt = el.type === 'range' ? 'input' : 'change';
+                el.addEventListener(evt, function () {
+                    var v;
+                    if (el.type === 'checkbox') v = el.checked;
+                    else if (el.type === 'range' || el.dataset.type === 'number') v = parseFloat(el.value);
+                    else v = el.value;
+                    if (el.dataset.key === 'preset' && v === 'custom') return;
+                    S.set(el.dataset.key, v);
+                });
+            });
+
+            document.getElementById('reset-settings').addEventListener('click', function () { S.reset(); });
+
+            try {
+                var ref = document.referrer ? new URL(document.referrer) : null;
+                if (ref && ref.origin === location.origin && !/settings\.html$/.test(ref.pathname)) {
+                    document.getElementById('back-link').href = ref.href;
+                }
+            } catch (e) { /* keep default */ }
+
+            document.getElementById('tier-note').textContent =
+                'Defaults for this device: ' + S.tier + ' quality.';
+
+            S.onChange(sync);
+            sync(S.all());
+        })();
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        window.THREE = THREE;
+
+        const host = document.getElementById('preview');
+        const renderer = new THREE.WebGLRenderer({ antialias: ExplorerSettings.get('antialias') });
+        renderer.setPixelRatio(ExplorerSettings.pixelRatio());
+        host.insertBefore(renderer.domElement, host.firstChild);
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+        camera.position.set(0, 0, 4.2);
+
+        // Dot-grid sphere + a few bright "nodes" — enough to show grain, bloom and fringing.
+        const globe = new THREE.Group();
+        const N = 6000, pos = new Float32Array(N * 3);
+        const golden = Math.PI * (3 - Math.sqrt(5));
+        for (let i = 0; i < N; i++) {
+            const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), t = golden * i;
+            pos.set([Math.cos(t) * r, y, Math.sin(t) * r], i * 3);
+        }
+        const dotGeo = new THREE.BufferGeometry();
+        dotGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        globe.add(new THREE.Points(dotGeo, new THREE.PointsMaterial({ color: 0x3a3a3a, size: 0.012 })));
+        globe.add(new THREE.Mesh(new THREE.SphereGeometry(0.99, 48, 32), new THREE.MeshBasicMaterial({ color: 0x050505 })));
+        const nodeGeo = new THREE.SphereGeometry(0.018, 8, 8);
+        const colors = [0xffffff, 0xf7931a, 0x4fc3f7, 0xffffff, 0xffd54f];
+        for (let i = 0; i < 90; i++) {
+            const m = new THREE.Mesh(nodeGeo, new THREE.MeshBasicMaterial({ color: colors[i % colors.length] }));
+            const v = new THREE.Vector3().randomDirection().multiplyScalar(1.01);
+            m.position.copy(v);
+            globe.add(m);
+        }
+        globe.rotation.z = 0.35;
+        scene.add(globe);
+
+        function resize() {
+            const w = host.clientWidth, h = host.clientHeight;
+            renderer.setSize(w, h, false);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        }
+        new ResizeObserver(resize).observe(host);
+        resize();
+
+        renderer.setAnimationLoop(() => {
+            globe.rotation.y += 0.003;
+            ExplorerFX.render(renderer, scene, camera);
+        });
+    </script>
+</body>
+</html>

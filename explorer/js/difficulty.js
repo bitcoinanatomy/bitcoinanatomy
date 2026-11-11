@@ -160,7 +160,7 @@ class BitcoinDifficultyExplorer {
         this.camera.position.set(0, 50, 80);
         this.camera.lookAt(0, 0, 0);
         
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ antialias: (window.ExplorerSettings ? ExplorerSettings.get('antialias') : true) });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1594,7 +1594,7 @@ class BitcoinDifficultyExplorer {
         this.updateDiscOpacity();
 
         this.vrManager && this.vrManager.update();
-        this.renderer.render(this.scene, this.camera);
+        (window.ExplorerFX ? ExplorerFX.render(this.renderer, this.scene, this.camera) : this.renderer.render(this.scene, this.camera));
     }
     
     updateDiscOpacity() {
