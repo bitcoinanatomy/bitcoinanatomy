@@ -20,8 +20,8 @@
         { name: 'TRANSACTION', file: 'transaction.html', img: 'imgs/transaction.png' },
         { name: 'ADDRESS',     file: 'address.html',     img: 'imgs/address.png'     },
         { name: 'MEMPOOL',     file: 'mempool.html',     img: 'imgs/mempool.png'     },
-        { name: 'CURVE',       file: 'curve.html',       img: 'imgs/crypto.png'      },
         { name: 'SCRIPT',      file: 'script.html',       img: 'imgs/script.png'      },
+        { name: 'CURVE',       file: 'curve.html',       img: 'imgs/crypto.png'      },
     ];
 
     // Grid layout

@@ -1170,7 +1170,8 @@ class BitcoinCryptoExplorer {
                     const t = n <= 1 ? 1 : k / (n - 1);
                     let along = 1;
                     if (t > 0.42) {
-                        const u = (t - 0.42) / 0.58;
+                        // Clamp: (1 − 0.42) / 0.58 rounds past 1, and pow(<0, 2.1) is NaN.
+                        const u = Math.min(1, (t - 0.42) / 0.58);
                         along = Math.pow(1 - u, 2.1);
                     }
                     colors[k * 3] = col.r * along;

@@ -195,7 +195,26 @@
         });
     }
 
+    // three's sRGBTransferOETF evaluates pow(c, 0.41666) for every channel and
+    // lets mix() pick the linear branch near 0. Some GPUs (Metal via ANGLE) return
+    // NaN for pow(0.0, y), and mix() keeps it. The canvas clamps that to black, but
+    // our HalfFloat target stores the NaN and bloom smears it into bright blobs
+    // wherever a colour fades to exactly 0 (grid fade edges, faded line ends).
+    // Flooring the pow input is invisible: those channels take the linear branch.
+    var _oetfPatched = false;
+    function patchSRGBEncode() {
+        if (_oetfPatched || !THREE.ShaderChunk) return;
+        _oetfPatched = true;
+        var key = 'colorspace_pars_fragment';
+        var src = THREE.ShaderChunk[key];
+        var from = 'pow( value.rgb, vec3( 0.41666 ) )';
+        if (typeof src === 'string' && src.indexOf(from) !== -1) {
+            THREE.ShaderChunk[key] = src.replace(from, 'pow( max( value.rgb, vec3( 1e-6 ) ), vec3( 0.41666 ) )');
+        }
+    }
+
     function createState(renderer) {
+        patchSRGBEncode();
         var geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
         var quad = new THREE.Mesh(geo);
